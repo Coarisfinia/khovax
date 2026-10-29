@@ -63,13 +63,12 @@ RIGHT = {
     "glow": ("glow.R", marked_eyes.linear(frostfire.MAGMA_EYE), 1.0),
     "skin": ("skin.R", marked_eyes.linear(frostfire.BASALT[0]), 0.0),
 }
-# A pup's eyes: a round pupil and a soft brow.
-EYE_SHAPE = {"pupil": (0.35, 0.45), "brow_size": 0.6}
+# A pup's eyes: a round pupil and a soft brow, seated in the sockets the generator modelled for
+# its own (the owner, #1733: snapped to the nearest skin, they sank onto the sockets' lower rims).
+EYE_SHAPE = {"pupil": (0.35, 0.45), "brow_size": 0.6, "socket": True}
 # Ours are this share of the generator's eye balls across (marked_eyes.modelled gives each mark
-# its ball's size): as large, they stood out of the head like buttons. They sit this share of
-# their width further out than the balls' fronts, clear of the head's skin around the sockets,
-# which otherwise crossed the right eye's top (the brow check).
-EYE_SHARE, EYE_OUT = 0.85, 0.15
+# its ball's size): as large, they stood out of their sockets like buttons.
+EYE_SHARE = 0.85
 # Faint's frames over which the lids shut (eyes.Lids): as it sinks.
 FAINT_LIDS = (14, 34)
 
@@ -223,7 +222,6 @@ def build(out):
     marked_eyes.modelled(skin, marks)
     for mark in marks:
         mark.width, mark.height = mark.width * EYE_SHARE, mark.height * EYE_SHARE
-        mark.middle = mark.middle + mark.normal * mark.width * EYE_OUT
     colour, glow = frostfire.paint(skin, {polygon.index: "body" for polygon in skin.data.polygons}, LOOK)
     frostfire.material(skin, "kavrikka", colour, glow)
     lids, spots = eyes(rig, skin, marks)

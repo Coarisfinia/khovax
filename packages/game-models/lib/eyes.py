@@ -34,7 +34,7 @@ GROWS, MARGIN = 8, 0.03
 MIRROR = "mirrored"
 
 def eye(body, name, guess, forward, size, mats, bone, almond=1.0, tilt=0.0, brow=0.0, brow_size=1.0,
-        pupil=(0.16, 0.55), lid=None, middle=0.0):
+        pupil=(0.16, 0.55), lid=None, middle=0.0, socket=False):
     """An eye on the body near `guess`, of radius `size`, looking between the surface's normal
     there and `forward`. `brow` angles the ridge over it down toward the snout (radians), and
     `brow_size` scales the ridge (1 is a predator's heavy brow; less for a softer, younger face),
@@ -42,9 +42,13 @@ def eye(body, name, guess, forward, size, mats, bone, almond=1.0, tilt=0.0, brow
     eye: a predator's upright slit by default, wide and round for a gentler creature.
     `mats` needs "dark", "glow" and "skin" (the brow). Returns its pieces, all weighted to `bone`,
     and with a `lid` bone's name, the eye's lid, weighted to that bone (`Lids` adds it). An eye
-    left (+X) of the plane x = `middle`, the head's middle, is a left one."""
+    left (+X) of the plane x = `middle`, the head's middle, is a left one. With `socket`, `guess`
+    is the middle of a socket the generator modelled for its own eye (#1733): the eye sits there,
+    looking along `forward`, since the skin nearest it is the socket's rim, not where it goes."""
     found, location, normal, _index = body.closest_point_on_mesh(Vector(guess))
     normal = normal if found else Vector(forward)
+    if socket:
+        location, normal = Vector(guess), Vector(forward).normalized()
     looking = (normal * 0.55 + Vector(forward).normalized() * 0.45).normalized()
     # pointing() builds a rotation, never a mirror, so the eye's own X runs toward the outer
     # corner on the left (+X) side and toward the inner corner on the right: `outer` turns every

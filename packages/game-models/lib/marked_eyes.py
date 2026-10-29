@@ -594,7 +594,7 @@ def modelled(skin, marks):
         under = {number for number, (low, high) in bounds.items()
                  if (mark.middle >= low - slack).all() and (mark.middle <= high + slack).all()}
         if not under:
-            raise ValueError("the marked eye at %s lies on no piece of its own" % tuple(mark.middle.round(3)))
+            raise ValueError("the marked eye at %s lies on no piece of its own" % (tuple(mark.middle.round(3)),))
         gone |= under
         # The mark is only the glowing part of the generator's eye that `find` picked out; the
         # piece is the whole eye it drew, so ours take its size across the head.

@@ -1308,18 +1308,20 @@ func _check_passive_strikes(spots: Array[Vector2i], hemmed: Vector2i) -> String:
 
 
 ## The companion attacks an instance builds read each passive's haste and heal from the ability data
-## (#1500): Kazri-tazri's and Lakvu-rakvu's hastes (#1685), and Lombu-bombu's and Novvi-lovvi's
-## heals (#1620).
+## (#1500): Kazri-tazri's, Lakvu-rakvu's and Vakku-rakku's hastes (#1685, #1733), and Lombu-bombu's
+## and Novvi-lovvi's heals (#1620).
 func _check_passive_data() -> String:
 	var built: CompanionAttackFeature = CompanionAttackFactory.build(null)
 	var kazri: int = AbilityContent.cached().abilities["tikazzir_kazri_tazri"].hurt_haste
 	var lakvu: int = AbilityContent.cached().abilities["kalvrakkor_lakvu_rakvu"].hurt_haste
+	var vakku: int = AbilityContent.cached().abilities["kavrikka_vakku_rakku"].hurt_haste
 	var lombu: int = AbilityContent.cached().abilities["ombulumo_lombu_bombu"].rest_heal
 	var novvi: int = AbilityContent.cached().abilities["nuvvoluvvo_novvi_lovvi"].rest_heal
-	if kazri < 1 or lakvu < 1 or lombu < 1 or novvi < 1:
-		return "a haste (Kazri-tazri, Lakvu-rakvu) or a heal (Lombu-bombu, Novvi-lovvi) is missing"
+	if kazri < 1 or lakvu < 1 or vakku < 1 or lombu < 1 or novvi < 1:
+		return "a haste (Kazri-tazri, Lakvu-rakvu, Vakku-rakku) or a heal is missing"
 	var hastes: Dictionary[String, int] = {
 		"kalvrakkor_lakvu_rakvu": lakvu,
+		"kavrikka_vakku_rakku": vakku,
 		"tikazzir_kazri_tazri": kazri,
 	}
 	var heals: Dictionary[String, int] = {

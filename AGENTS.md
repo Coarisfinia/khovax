@@ -622,7 +622,10 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
       generator, as diverse, unique and weird as possible: no generic puppies or cute blobs.
     - **A baby form or any other evolution** (owner, #1754): the best picture of the earlier form
       (a clean render) and 20 variations of the evolution copypasta in the model skill, word for
-      word, each with its own `The change:` line (e.g. "it should float").
+      word, each with its own `The change:` line (e.g. "it should float"). A later form looks
+      more powerful and more fantastical, never the same animal recoloured (owner, #1772): each
+      variation adds something unique, unusual or fantastical, such as nine tails, a
+      skateboard, wings, extra heads or a landscape on its back.
     - **Every beast is rigged and animated by us** (owner, #1732, #1754): a model Meshy can't rig
       ("no rig possible") gets its own skeleton and the full set of clips in Blender (the model
       skill, "Rig").

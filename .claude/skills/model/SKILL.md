@@ -21,7 +21,9 @@ designed without eyes leaves the sentence out and says so in its issue.
 **Every evolution prompt is this copypasta** (owner, #1754): a baby form or any other evolution
 of an existing beast is asked for with the best picture of the earlier form attached and this
 block, word for word, only its `The change:` line differing between the issue's 20 variations. It
-ends with the eye sentence too.
+ends with the eye sentence too. A later form looks more powerful and more fantastical, never the
+same animal recoloured (owner, #1772): every `The change:` line adds something unique, unusual or
+fantastical, such as nine tails, a skateboard, wings, extra heads or a landscape on its back.
 
 ```text
 Generate a brand-new image of a creature. The attached picture is only a reference for it: it shows this creature's earlier form. Draw its next form: the same creature line, so keep its colours, materials, markings and character recognisable, and change only what the line below asks for.
