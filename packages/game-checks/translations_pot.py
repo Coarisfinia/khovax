@@ -30,7 +30,7 @@ from pathlib import Path
 from typing import Any
 
 from game_shared import log
-from game_shared.gdscript_code import Kind, tokens
+from game_shared.gdscript_code import Kind, Token, tokens
 from game_shared.git_files import git_files
 
 TEMPLATE = Path("translations/khovax.pot")
@@ -52,9 +52,19 @@ SCENE_TEXT = re.compile(
     re.MULTILINE | re.DOTALL,
 )
 SCENE_SECTION = re.compile(r"^\[", re.MULTILINE)
-UNTRANSLATED = re.compile(r"^auto_translate_mode = 2$", re.MULTILINE)
+SCENE_NODE = re.compile(r'^\[node name="((?:[^"\\]|\\.)*)"(?:[^\]\n]*? parent="((?:[^"\\]|\\.)*)")?')
+SCENE_MODE = re.compile(r"^auto_translate_mode = ([0-9]+)$", re.MULTILINE)
+# Node.AUTO_TRANSLATE_MODE_*: inherit from the parent, always, disabled.
+ALWAYS, DISABLED = 1, 2
 REALM_CODEX = re.compile(r"^- (?:Entry|Gloss): (.+)$", re.MULTILINE)
-ESCAPES = {"n": "\n", "t": "\t", "r": "\r", '"': '"', "'": "'", "\\": "\\"}
+# Control characters other than the line break, tab and carriage return, which quoted() escapes.
+UNWRITABLE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+# Godot's string escapes (\uXXXX and \UXXXXXX are read apart).
+ESCAPES = {
+    "n": "\n", "t": "\t", "r": "\r", "a": "\a", "b": "\b", "f": "\f", "v": "\v",
+    '"': '"', "'": "'", "\\": "\\",
+}
+HEX_ESCAPES = {"u": 4, "U": 6}
 
 
 @dataclass
@@ -79,16 +89,18 @@ def unescaped(text: str) -> str:
     while i < len(text):
         if text[i] == "\\" and i + 1 < len(text):
             char = text[i + 1]
-            if char == "u" and re.fullmatch(r"[0-9a-fA-F]{4}", text[i + 2 : i + 6]):
-                out.append(chr(int(text[i + 2 : i + 6], 16)))
-                i += 6
+            digits = text[i + 2 : i + 2 + HEX_ESCAPES.get(char, 0)]
+            if char in HEX_ESCAPES and re.fullmatch(f"[0-9a-fA-F]{{{HEX_ESCAPES[char]}}}", digits):
+                out.append(chr(int(digits, 16)))
+                i += 2 + len(digits)
                 continue
             out.append(ESCAPES.get(char, "\\" + char))
             i += 2
         else:
             out.append(text[i])
             i += 1
-    return "".join(out)
+    # A pair of \u escapes written for one character outside the BMP joins into it.
+    return "".join(out).encode("utf-16", "surrogatepass").decode("utf-16")
 
 
 def literal(token: str) -> str:
@@ -118,15 +130,50 @@ def script_texts(source: str) -> Iterator[Found]:
             at += 2
         if match[1].endswith("_n"):
             if len(strings) >= 2:
-                yield Found(strings[0], plural=strings[1])
+                yield Found(strings[0], context=_plural_context(runs, at), plural=strings[1])
         else:
             yield Found(strings[0], context=strings[1] if len(strings) > 1 else "")
 
 
+def _plural_context(runs: list[Token], at: int) -> str:
+    """tr_n()'s literal context, its fourth argument: `at` is the run after the plural, so the
+    count comes after its first comma, then a comma at the call's own depth and the string."""
+    depth = 0
+    commas = 0
+    for run in runs[at:]:
+        if run.kind == Kind.STRING:
+            if commas == 2 and depth == 0:
+                return literal(run.text)
+            continue
+        for char in run.text:
+            if char in "([{":
+                depth += 1
+            elif char in ")]}":
+                depth -= 1
+                if depth < 0:
+                    return ""
+            elif char == "," and depth == 0:
+                commas += 1
+            elif commas == 2 and not char.isspace():
+                return ""
+    return ""
+
+
 def scene_texts(source: str) -> Iterator[Found]:
-    """The texts a scene's nodes show, which Godot translates unless a node turns that off."""
+    """The texts a scene's nodes show, which Godot translates unless a node turns that off, or
+    inherits it turned off from its parent."""
+    disabled: dict[str, bool] = {}
     for section in SCENE_SECTION.split(source):
-        if UNTRANSLATED.search(section):
+        node = SCENE_NODE.match("[" + section)
+        if node is None:
+            continue
+        name, parent = node[1], node[2]
+        path = "." if parent is None else name if parent == "." else f"{parent}/{name}"
+        mode = SCENE_MODE.search(section)
+        inherited = parent is not None and disabled.get(parent, False)
+        own = int(mode[1]) if mode else 0
+        disabled[path] = own == DISABLED or (own != ALWAYS and inherited)
+        if disabled[path]:
             continue
         for match in SCENE_TEXT.finditer(section):
             yield Found(unescaped(match[1]))
@@ -173,7 +220,7 @@ def marked_paths(schema: dict[str, Any]) -> set[tuple[str, ...]]:
     def resolve(reference: str) -> Any:
         node: Any = schema
         for part in reference.removeprefix("#").split("/")[1:]:
-            node = node[part]
+            node = node[part.replace("~1", "/").replace("~0", "~")]
         return node
 
     def walk(node: Any, path: tuple[str, ...], seen: frozenset[str]) -> None:
@@ -242,27 +289,38 @@ def found_in(path: str, marked: dict[str, set[tuple[str, ...]]]) -> Iterator[Fou
         yield from content_texts(source, marked[schema])
 
 
-def entries() -> list[Entry]:
-    """Every translatable text, each once with every file it's in."""
+def entries() -> tuple[list[Entry], list[tuple[str, str]]]:
+    """Every translatable text, each once with every file it's in, and the conflicts (a message
+    and its file): one text with two plurals, or both with and without one, which gettext can't
+    hold in one entry."""
     files = git_files("*.gd", "*.tscn", "core/data/*.jsonc", "slices/*/data/*.jsonc", "realms/*.md")
     # The tools and tests are never shown to a player.
     files = [path for path in files if not path.startswith(("tools/", "tests/"))]
     marked: dict[str, set[tuple[str, ...]]] = {}
     by_key: dict[tuple[str, str], Entry] = {}
+    conflicts: list[tuple[str, str]] = []
     for path in sorted(files):
         for found in found_in(path, marked):
             if not found.text:
                 continue
             key = (found.context, found.text)
             entry = by_key.setdefault(key, Entry(found.context, found.text, found.plural))
-            if entry.plural is None:
-                entry.plural = found.plural
+            if entry.plural != found.plural:
+                conflicts.append(
+                    (
+                        f"{found.text!r} is used with the plurals {entry.plural!r} and"
+                        f" {found.plural!r}: give one of them a context",
+                        path,
+                    )
+                )
             if path not in entry.files:
                 entry.files.append(path)
-    return list(by_key.values())
+    return list(by_key.values()), conflicts
 
 
 def quoted(text: str) -> str:
+    """The text as a PO string; main() refuses a control character the escapes here don't
+    cover."""
     escaped = text.replace("\\", "\\\\").replace('"', '\\"')
     return '"' + escaped.replace("\n", "\\n").replace("\t", "\\t").replace("\r", "\\r") + '"'
 
@@ -285,12 +343,22 @@ def template(found: list[Entry]) -> str:
 def main() -> int:
     # The game's project folder (#1101): every path below is relative to it.
     os.chdir(Path(__file__).resolve().parents[1] / "game")
-    text = template(entries())
+    found, conflicts = entries()
+    for entry in found:
+        if UNWRITABLE.search(entry.context + entry.text + (entry.plural or "")):
+            message = f"{entry.text!r} holds a control character a PO file can't"
+            conflicts.append((message, entry.files[0]))
+    for message, file in conflicts:
+        log.error(message, file)
+    if conflicts:
+        return 1
+    text = template(found)
     if "--check" not in sys.argv[1:]:
         TEMPLATE.parent.mkdir(exist_ok=True)
-        TEMPLATE.write_text(text, encoding="utf-8", newline="\n")
+        TEMPLATE.write_bytes(text.encode("utf-8"))
         return 0
-    if not TEMPLATE.is_file() or TEMPLATE.read_text(encoding="utf-8") != text:
+    # Compared as bytes, so line endings count too.
+    if not TEMPLATE.is_file() or TEMPLATE.read_bytes() != text.encode("utf-8"):
         log.error(
             "out of date: run `uv run --locked --package khovax-game-checks"
             " packages/game-checks/translations_pot.py` and commit the result",
