@@ -90,7 +90,7 @@ func _read_on(tree: SceneTree, driver: GameDriver, screen: DialogScreen) -> Stri
 	if (screen.shown_speaker() != "Teska na Amvrel"
 			or not screen.shown_line().begins_with("Careful")):
 		return "the greeting showed %s saying %s" % [screen.shown_speaker(), screen.shown_line()]
-	if screen.choices() != [DialogScreen.READ_ON_TEXT] or _focused(screen) != 0:
+	if screen.choices() != ["Continue"] or _focused(screen) != 0:
 		return "the first line offered %s, focused %d" % [screen.choices(), _focused(screen)]
 	Input.action_press("move_right")
 	var standing: Command = (driver.input as LocalInput).command(driver.state)

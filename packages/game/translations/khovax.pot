@@ -327,6 +327,18 @@ msgstr ""
 msgid "${PLACE:lumwen_hoal}, thick with ${MONSTER:ombulumo}. Something has soured it lately; they won't sit still."
 msgstr ""
 
+#: slices/dialogs/ui/dialog_screen.gd
+msgid "Leave"
+msgstr ""
+
+#: slices/dialogs/ui/dialog_screen.gd
+msgid "Farewell"
+msgstr ""
+
+#: slices/dialogs/ui/dialog_screen.gd
+msgid "Continue"
+msgstr ""
+
 #: slices/exits/look/exit_hold_hint.gd
 msgid "Loading the way ahead…"
 msgstr ""
@@ -848,6 +860,10 @@ msgstr ""
 msgid "From your carried monsters: %d"
 msgstr ""
 
+#: slices/notices/ui/guide_notice_tie.gd
+msgid "I'll go on ahead and open the way."
+msgstr ""
+
 #: slices/npcs/data/people/ausvren_vo_tormaesk.jsonc
 msgid "A guide of Brekhal Varn, of the Tormaesk kin, who keep the old ways through the rock. Only a Tormaesk can shift the boulders sealing the passage into Hrovumel Stolm, and Ausvren waits on the pass for someone to walk there with. The name is Hearth-speech, the everyday tongue: the given name Ausvren, soft as breath, then vo Tormaesk, of their kin, a name as hard as the stone they keep."
 msgstr ""
@@ -924,8 +940,84 @@ msgstr ""
 msgid "The way into ${PLACE:hrovumel_stolm}"
 msgstr ""
 
+#: slices/quests/ui/quest_list_view.gd
+msgid "%s or %s"
+msgstr ""
+
+#: slices/quests/ui/quest_list_view.gd
+msgid "Open a chest"
+msgstr ""
+
+#: slices/quests/ui/quest_list_view.gd
+msgid "Go to the %s"
+msgstr ""
+
+#: slices/quests/ui/quest_list_view.gd
+msgid "Enter %s"
+msgstr ""
+
+#: slices/quests/ui/quest_list_view.gd
+msgid "Enter the %s"
+msgstr ""
+
+#: slices/quests/ui/quest_list_view.gd
+msgid "Collect %s"
+msgstr ""
+
+#: slices/quests/ui/quest_list_view.gd
+msgid "Dominate an %s"
+msgstr ""
+
+#: slices/quests/ui/quest_list_view.gd
+msgid "Dominate a %s"
+msgstr ""
+
+#: slices/quests/ui/quest_list_view.gd
+msgid "Dominate the %s"
+msgstr ""
+
+#: slices/quests/ui/quest_list_view.gd
+msgid "Dominate a monster"
+msgstr ""
+
+#: slices/quests/ui/quest_list_view.gd
+msgid "Answer %s"
+msgstr ""
+
+#: slices/quests/ui/quest_list_view.gd
+msgid "Tell %s: \"%s\""
+msgstr ""
+
+#: slices/quests/ui/quest_list_view.gd
+msgid "Done"
+msgstr ""
+
 #: slices/quests/ui/quests_tab.gd
 msgid "Quests"
+msgstr ""
+
+#: slices/quests/ui/quests_tab.gd
+msgid "Now: %s"
+msgstr ""
+
+#: slices/quests/ui/quests_tab.gd
+msgid "Later: %s"
+msgstr ""
+
+#: slices/quests/ui/quests_tab.gd
+msgid "Done: %s"
+msgstr ""
+
+#: slices/quests/ui/quests_tab.gd
+msgid "No open quests"
+msgstr ""
+
+#: slices/quests/ui/quests_tab.gd
+msgid "★ Following"
+msgstr ""
+
+#: slices/quests/ui/quests_tab.gd
+msgid "Follow"
 msgstr ""
 
 #: slices/settings/look/graphics.gd

@@ -24,12 +24,6 @@ signal name_selected(kind: String, id: String)
 const GAP: float = 8.0
 ## How far a quest's steps sit in from its name, in gaps.
 const STEP_INDENT: float = 3.0
-const DONE_STEP: String = "Done: "
-const CURRENT_STEP: String = "Now: "
-const LATER_STEP: String = "Later: "
-const NONE_TEXT: String = "No open quests"
-const FOLLOW_TEXT: String = "Follow"
-const FOLLOWED_TEXT: String = "★ Following"
 ## A quest pill: the instance a step counts in.
 const PILL: PackedScene = preload("res://slices/quests/ui/quest_pill.tscn")
 
@@ -114,9 +108,11 @@ static func quest_lines(quests: QuestTracker, id: String, tagged: bool = false) 
 	var lines: Array[String] = _done_lines(quest, progress)
 	var current: QuestStep = quest.step_at(progress.step)
 	if current != null:
-		lines.append(CURRENT_STEP + QuestListView.step_tagged(current, progress.count))
+		var now: String = QuestListView.step_tagged(current, progress.count)
+		lines.append(TranslationServer.tr("Now: %s") % now)
 	for index: int in quest.steps_after(progress.step):
-		lines.append(LATER_STEP + QuestListView.step_tagged(quest.steps[index], 0))
+		var later: String = QuestListView.step_tagged(quest.steps[index], 0)
+		lines.append(TranslationServer.tr("Later: %s") % later)
 	if not tagged:
 		for at: int in lines.size():
 			lines[at] = TextTags.shown(lines[at])
@@ -134,7 +130,8 @@ static func _done_lines(quest: QuestDefinition, progress: QuestProgress) -> Arra
 		if step != null:
 			var taken: QuestStep = quest.choice_to(way[at], way[at + 1])
 			var shown_step: QuestStep = taken if taken != null else step
-			lines.append(DONE_STEP + QuestListView.step_tagged(shown_step, shown_step.count))
+			var line: String = QuestListView.step_tagged(shown_step, shown_step.count)
+			lines.append(TranslationServer.tr("Done: %s") % line)
 	return lines
 
 
@@ -161,7 +158,7 @@ func _show(
 	for row: Node in _rows.get_children():
 		row.queue_free()
 	if names.is_empty():
-		_rows.add_child(MenuWidgets.label(NONE_TEXT))
+		_rows.add_child(MenuWidgets.label(tr("No open quests")))
 	for id: String in names:
 		pills[id] = _add_quest(names[id], lines[id], id, id == followed)
 		pills[id].show_instance(wheres[id], wheres[id] == here)
@@ -176,7 +173,7 @@ func _add_quest(quest_name: String, lines: String, id: String, followed: bool) -
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	heading.add_child(title)
 	var follow: Button = MenuWidgets.button(
-		FOLLOWED_TEXT if followed else FOLLOW_TEXT,
+		tr("★ Following") if followed else tr("Follow"),
 		_follow.bind(id),
 	)
 	follow.disabled = followed
