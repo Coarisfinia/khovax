@@ -634,9 +634,12 @@ class Flow:
         """The values a format() fills in: a constant dictionary's values (#1715), or a local or
         member holding them, whose assignments are followed the same way (#1734)."""
         word = arg[0].text if len(arg) == 1 and arg[0].kind == "id" else ""
-        if word in func.names and word not in func.params:
+        if [tok.text for tok in arg[:2]] == ["self", "."] and len(arg) == 3:
+            word = arg[2].text if arg[2].text in script.members else ""
+        elif word in func.names and word not in func.params:
             self.mark(self.format_locals.setdefault(id(func), set()), word)
-        elif word in script.members and word not in func.names:
+            return
+        if word in script.members and (len(arg) == 3 or word not in func.names):
             self.mark(self.format_members.setdefault(script.path, set()), word)
         elif carry_only or not self.format_const(script, func, arg):
             self.expression(script, func, arg, carry_only)
