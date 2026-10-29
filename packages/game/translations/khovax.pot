@@ -5,6 +5,10 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
+#: game/boot.gd
+msgid "Loading the world…"
+msgstr ""
+
 #: realms/ardvaun.md
 msgid "The high land at the heart of the world, where the settlers made their first camps and named the ground in Land-speech. Every realm's name ends in -vaun, the Land-speech word for land."
 msgstr ""
@@ -101,12 +105,32 @@ msgstr ""
 msgid "the thronging ring"
 msgstr ""
 
+#: slices/credits/ui/credits_tab.gd
+msgid "The credits couldn't be read."
+msgstr ""
+
+#: slices/credits/ui/credits_tab.gd
+msgid "[b]Version:[/b] %s"
+msgstr ""
+
+#: slices/credits/ui/credits_tab.gd
+msgid "[b]Error log:[/b] %s"
+msgstr ""
+
 #: slices/credits/ui/credits_tab.tscn
 msgid "Report a bug"
 msgstr ""
 
 #: slices/credits/ui/credits_tab.tscn
 msgid "Error log: save it as a file"
+msgstr ""
+
+#: slices/damage_numbers/ui/damage_numbers_choice.gd
+msgid "Damage numbers"
+msgstr ""
+
+#: slices/damage_numbers/ui/damage_numbers_choice.gd
+msgid "Damage number size"
 msgstr ""
 
 #: slices/dialogs/data/teska_na_amvrel_greeting.jsonc
@@ -313,6 +337,14 @@ msgstr ""
 msgid "Warding charm"
 msgstr ""
 
+#: slices/menu/ui/character_tab.gd
+msgid "Auto: this world's color"
+msgstr ""
+
+#: slices/menu/ui/character_tab.gd
+msgid "Your own color"
+msgstr ""
+
 #: slices/menu/ui/character_tab.tscn
 msgid "Name"
 msgstr ""
@@ -326,7 +358,98 @@ msgid "Personal color"
 msgstr ""
 
 #: slices/menu/ui/character_tab.tscn
+#: slices/settings/ui/settings_tab.gd
 msgid "Auto"
+msgstr ""
+
+#: slices/menu/ui/game_menu.gd
+msgid "Pause in single player"
+msgstr ""
+
+#: slices/menu/ui/game_menu.gd
+#: slices/settings/look/graphics.gd
+msgid "Off"
+msgstr ""
+
+#: slices/menu/ui/game_menu.gd
+msgid "On"
+msgstr ""
+
+#: slices/menu/ui/game_menu.gd
+msgid "Close the menu"
+msgstr ""
+
+#: slices/menu/ui/game_menu.gd
+msgid "Easy"
+msgstr ""
+
+#: slices/menu/ui/game_menu.gd
+msgid "Standard"
+msgstr ""
+
+#: slices/menu/ui/game_menu.gd
+msgid "Hard"
+msgstr ""
+
+#: slices/menu/ui/game_menu.gd
+#: slices/settings/ui/settings_tab.gd
+msgid "Difficulty"
+msgstr ""
+
+#: slices/menu/ui/game_menu.gd
+msgid "50%"
+msgstr ""
+
+#: slices/menu/ui/game_menu.gd
+msgid "Standard (100%)"
+msgstr ""
+
+#: slices/menu/ui/game_menu.gd
+msgid "150%"
+msgstr ""
+
+#: slices/menu/ui/game_menu.gd
+msgid "200%"
+msgstr ""
+
+#: slices/menu/ui/game_menu.gd
+msgid "Drop rate"
+msgstr ""
+
+#: slices/menu/ui/game_menu.gd
+msgid "15 min"
+msgstr ""
+
+#: slices/menu/ui/game_menu.gd
+msgid "30 min"
+msgstr ""
+
+#: slices/menu/ui/game_menu.gd
+msgid "Standard (1 hour)"
+msgstr ""
+
+#: slices/menu/ui/game_menu.gd
+msgid "2 hours"
+msgstr ""
+
+#: slices/menu/ui/game_menu.gd
+msgid "4 hours"
+msgstr ""
+
+#: slices/menu/ui/game_menu.gd
+msgid "Instance reset delay"
+msgstr ""
+
+#: slices/menu/ui/game_menu.gd
+msgid "Menu"
+msgstr ""
+
+#: slices/menu/ui/game_menu.gd
+msgid "Menu: %s"
+msgstr ""
+
+#: slices/menu/ui/host_choice.gd
+msgid "%s (the host chooses)"
 msgstr ""
 
 #: slices/npcs/data/people/ausvren_vo_tormaesk.jsonc
@@ -387,6 +510,50 @@ msgstr ""
 
 #: slices/quests/data/tormaesk_escort.jsonc
 msgid "The way into ${PLACE:hrovumel_stolm}"
+msgstr ""
+
+#: slices/settings/look/graphics.gd
+msgid "%d× MSAA"
+msgstr ""
+
+#: slices/settings/meta/setting_choice.gd
+msgid "Auto (%s)"
+msgstr ""
+
+#: slices/settings/ui/settings_tab.gd
+msgid "Anti-aliasing"
+msgstr ""
+
+#: slices/settings/ui/settings_tab.gd
+msgid "World"
+msgstr ""
+
+#: slices/settings/ui/settings_tab.gd
+msgid "Graphics"
+msgstr ""
+
+#: slices/settings/ui/settings_tab.gd
+msgid "Interface"
+msgstr ""
+
+#: slices/settings/ui/settings_tab.gd
+msgid "Game"
+msgstr ""
+
+#: slices/settings/ui/settings_tab.gd
+msgid "Downloads and guide (README)"
+msgstr ""
+
+#: slices/settings/ui/settings_tab.gd
+msgid "Back"
+msgstr ""
+
+#: slices/settings/ui/settings_tab.gd
+msgid "Previous choice"
+msgstr ""
+
+#: slices/settings/ui/settings_tab.gd
+msgid "Next choice"
 msgstr ""
 
 #: slices/species/data/abilities/ombulumo_bolmu_wolmu.jsonc
@@ -691,6 +858,14 @@ msgstr ""
 
 #: slices/species/data/vynnimu.jsonc
 msgid "Vynnimu"
+msgstr ""
+
+#: slices/survey/ui/survey_choice.gd
+msgid "Survey"
+msgstr ""
+
+#: slices/survey/ui/survey_choice.gd
+msgid "Survey zoom"
 msgstr ""
 
 #: slices/survey/ui/survey_tab.tscn

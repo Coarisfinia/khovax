@@ -17,21 +17,22 @@ const PACK: String = "## "
 const FILES: String = "- **Files:**"
 ## What starts a pack's field.
 const FIELD: String = "- **"
-const UNREADABLE: String = "The credits couldn't be read."
 
 
 func _ready() -> void:
 	var markdown: String = FileAccess.get_file_as_string(PATH)
-	var credits: String = to_bbcode(markdown) if not markdown.is_empty() else UNREADABLE
-	text = "[b]Version:[/b] %s\n%s%s" % [BuildVersion.version(), log_line(), credits]
+	var unreadable: String = tr("The credits couldn't be read.")
+	var credits: String = to_bbcode(markdown) if not markdown.is_empty() else unreadable
+	text = tr("[b]Version:[/b] %s") % BuildVersion.version() + "\n" + log_line() + credits
 
 
 ## The line naming where the error log is (ErrorLog), or "" where there's none to name (the web).
+## Static, so it's translated through the TranslationServer rather than a node's tr().
 static func log_line() -> String:
 	var location: String = ErrorLog.location()
 	if location.is_empty():
 		return ""
-	return "[b]Error log:[/b] %s\n" % location.replace("[", "[lb]")
+	return TranslationServer.tr("[b]Error log:[/b] %s") % location.replace("[", "[lb]") + "\n"
 
 
 ## CREDITS.md's packs as BBCode: a bold heading each, then its fields as bullets with their bold

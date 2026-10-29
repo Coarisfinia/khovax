@@ -6,9 +6,6 @@ extends Node
 ## their next command, so it changes on the fly, the same way on every machine. Until the world
 ## applied it, the row shows the choice waiting in the outbox.
 
-## Beside the choice for a player who isn't the host, who sees it but can't change it.
-const HOSTS: String = "%s (the host chooses)"
-
 var session: Session
 ## This player's requests waiting in their profile's outbox (an Array[OutboxEntry]), and what posts
 ## one there (its kind and data): handed in by the profile (ProfilePanelsTie), whose slice comes
@@ -26,10 +23,11 @@ func _init(running: Session = null, key: String = "", called: Array[String] = []
 	names = called
 
 
-## What the setting is on, for the row.
+## What the setting is on, for the row, and beside it for a player who isn't the host that they
+## see it but can't change it.
 func label() -> String:
 	var named: String = names[HostSettings.CHOICES[setting].find(current())]
-	return named if is_host() else HOSTS % named
+	return named if is_host() else tr("%s (the host chooses)") % named
 
 
 ## Steps the setting `steps` choices on (back for fewer), stopping at the first and the last; only

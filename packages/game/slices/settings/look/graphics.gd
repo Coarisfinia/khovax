@@ -98,7 +98,7 @@ func _anti_aliasing() -> SettingChoice:
 	)
 
 
-static func _msaa_name(msaa: int) -> String:
+func _msaa_name(msaa: int) -> String:
 	if msaa == Viewport.MSAA_DISABLED:
-		return "Off"
-	return "%d× MSAA" % (1 << msaa)
+		return tr("Off")
+	return tr("%d× MSAA") % (1 << msaa)

@@ -50,7 +50,7 @@ func value() -> int:
 func label(words: String) -> String:
 	if chosen() >= 0:
 		return words
-	return "Auto (%s)" % words
+	return tr("Auto (%s)") % words
 
 
 ## Chooses the choice `steps` on from the one in use (back for fewer), after the last round to the

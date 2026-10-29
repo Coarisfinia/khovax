@@ -15,12 +15,12 @@ extends ScrollContainer
 ## After a pick changed a setting, so what follows it (the menu's pause) follows at once.
 signal changed
 
-## The buttons that step a setting back and on: their icons (#584) and their words on hover.
+## The buttons that step a setting back and on: their icons (#584); add_row gives their words on
+## hover.
 const PREVIOUS_ICON: Texture2D = preload("res://assets/game-icons/plain-arrow-left.svg")
 const NEXT_ICON: Texture2D = preload("res://assets/game-icons/plain-arrow-right.svg")
-const PREVIOUS_TIP: String = "Previous choice"
-const NEXT_TIP: String = "Next choice"
-## The submenus, in the order the list shows them. The difficulty's and the world's rows, the
+## The submenus, in the order the list shows them, by their English names, which their nodes keep
+## too; _ready names them in the player's language. The difficulty's and the world's rows, the
 ## world's own settings (#1315, #1316), come from the menu (`add_row`).
 const DIFFICULTY: String = "Difficulty"
 const WORLD: String = "World"
@@ -31,7 +31,6 @@ const GAME: String = "Game"
 const LIST: String = ""
 ## The README's downloads, where every build can be fetched (#1312).
 const README_URL: String = "https://github.com/Coarisfinia/khovax#download"
-const README_TEXT: String = "Downloads and guide (README)"
 
 ## Whose settings the graphics rows show; it keeps every setting's choice (Settings' one owner).
 var graphics: Graphics
@@ -55,15 +54,16 @@ var _open: String = LIST
 
 
 func _ready() -> void:
-	for submenu: String in [DIFFICULTY, WORLD, GRAPHICS, INTERFACE, GAME]:
-		_add_submenu(submenu)
-	readme_button = MenuWidgets.button(README_TEXT, open_readme)
+	var titles: Dictionary[String, String] = submenu_titles()
+	for submenu: String in titles:
+		_add_submenu(submenu, titles[submenu])
+	readme_button = MenuWidgets.button(readme_text(), open_readme)
 	_list.add_child(readme_button)
 	if graphics != null:
 		add_auto_row(
 			GRAPHICS,
 			Graphics.ANTI_ALIASING,
-			"Anti-aliasing",
+			tr("Anti-aliasing"),
 			graphics.anti_aliasing_label,
 			graphics.step_anti_aliasing,
 		)
@@ -101,6 +101,22 @@ func back() -> void:
 	_show_open()
 	if focused and _openers.has(left):
 		_openers[left].grab_focus()
+
+
+## Each submenu's title in the player's language, by its name, in the order the list shows them.
+func submenu_titles() -> Dictionary[String, String]:
+	return {
+		DIFFICULTY: tr("Difficulty"),
+		WORLD: tr("World"),
+		GRAPHICS: tr("Graphics"),
+		INTERFACE: tr("Interface"),
+		GAME: tr("Game"),
+	}
+
+
+## What the button that opens the README says.
+func readme_text() -> String:
+	return tr("Downloads and guide (README)")
 
 
 ## Opens the README's downloads, as its button does.
@@ -167,10 +183,10 @@ func button(setting: String, which: String) -> Button:
 	return _values[setting].get_parent().get_node(which) as Button
 
 
-## A submenu named `submenu`, hidden until it's opened: a Back button and its name at its top,
-## and a button in the list that opens it.
-func _add_submenu(submenu: String) -> void:
-	var opens: Button = MenuWidgets.button(submenu, open.bind(submenu))
+## A submenu named `submenu`, hidden until it's opened: a Back button and its `title` at its top,
+## and a button in the list, saying its title, that opens it.
+func _add_submenu(submenu: String, title_text: String) -> void:
+	var opens: Button = MenuWidgets.button(title_text, open.bind(submenu))
 	opens.name = submenu
 	_list.add_child(opens)
 	_openers[submenu] = opens
@@ -179,12 +195,12 @@ func _add_submenu(submenu: String) -> void:
 	box.visible = false
 	box.add_theme_constant_override("separation", _rows.get_theme_constant("separation"))
 	var top: HBoxContainer = HBoxContainer.new()
-	var leave: Button = MenuWidgets.button("Back", back)
+	var leave: Button = MenuWidgets.button(tr("Back"), back)
 	leave.icon = PREVIOUS_ICON
 	# A controller's B goes back too (_unhandled_input), and the button shows it.
 	var _glyph: ActionGlyph = ActionGlyph.badge(leave, &"ui_cancel")
 	top.add_child(_named(leave, "Back"))
-	var title: Label = MenuWidgets.label(submenu)
+	var title: Label = MenuWidgets.label(title_text)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	top.add_child(title)
@@ -217,7 +233,7 @@ func add_auto_row(
 		stepper: Callable,
 ) -> void:
 	var row: HBoxContainer = add_row(submenu, setting, title, label, stepper)
-	row.add_child(_named(MenuWidgets.button("Auto", choose_auto.bind(setting)), "Auto"))
+	row.add_child(_named(MenuWidgets.button(tr("Auto"), choose_auto.bind(setting)), "Auto"))
 
 
 ## A row in `submenu` for `setting`, named `title`: what `label` says it's on, and buttons that
@@ -241,11 +257,15 @@ func add_row(
 	_values[setting] = value
 	var previous: Button = MenuWidgets.icon_button(
 		PREVIOUS_ICON,
-		PREVIOUS_TIP,
+		tr("Previous choice"),
 		step.bind(setting, -1),
 	)
 	row.add_child(_named(previous, "Previous"))
-	var next: Button = MenuWidgets.icon_button(NEXT_ICON, NEXT_TIP, step.bind(setting, 1))
+	var next: Button = MenuWidgets.icon_button(
+		NEXT_ICON,
+		tr("Next choice"),
+		step.bind(setting, 1),
+	)
 	row.add_child(_named(next, "Next"))
 	rows.add_child(row)
 	return row

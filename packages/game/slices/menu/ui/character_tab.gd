@@ -21,8 +21,6 @@ signal fitted(font: int)
 
 ## The wheel's side, in font sizes, so it grows with the text on a phone.
 const WHEEL_FONTS: float = 10.0
-const AUTO_TEXT: String = "Auto: this world's color"
-const CHOSEN_TEXT: String = "Your own color"
 
 ## The driver: whose world gives the default and which slot is this machine's player's.
 var driver: Session
@@ -30,7 +28,8 @@ var driver: Session
 var profile: CharacterProfile = CharacterProfile.new()
 ## The player's dominated monsters.
 var monsters: DominatedMonstersList
-## What the tab says the color is now: AUTO_TEXT or CHOSEN_TEXT. Kept here so tests can read it.
+## What the tab says the color is now: auto_text() or chosen_text(). Kept here so tests can read
+## it.
 var shown: String = ""
 ## The player's standing with each faction, below their Might (#533).
 var factions: FactionStandingsPanel
@@ -112,10 +111,10 @@ func ascend(short_id: String) -> void:
 	profile.keep_ascension.call(short_id)
 	if monster != null and monster.species != before:
 		var known: Dictionary[String, Species] = SpeciesContent.cached().species
-		var from: String = known[before].name if known.has(before) else before
+		var from: String = tr(known[before].name) if known.has(before) else before
 		var now: String = monster.species
-		var into: String = known[now].name if known.has(now) else now
-		monsters.details.tell_ascended(MonsterDetails.ASCENDED_TEXT % [from, into])
+		var into: String = tr(known[now].name) if known.has(now) else now
+		monsters.details.tell_ascended(tr(MonsterDetails.ASCENDED_TEXT) % [from, into])
 	monsters.refresh()
 
 
@@ -179,5 +178,15 @@ func _on_picked(color: Color) -> void:
 ## Says whether the color is the player's own or Auto's.
 func _show_state() -> void:
 	var auto: bool = not profile.chose_color.is_valid() or not profile.chose_color.call()
-	shown = AUTO_TEXT if auto else CHOSEN_TEXT
+	shown = auto_text() if auto else chosen_text()
 	_state.text = shown
+
+
+## What the tab says while Auto picks the color.
+func auto_text() -> String:
+	return tr("Auto: this world's color")
+
+
+## What the tab says while the player picked the color.
+func chosen_text() -> String:
+	return tr("Your own color")

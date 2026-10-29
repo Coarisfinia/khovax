@@ -30,14 +30,14 @@ func add_rows(tab: SettingsTab) -> void:
 	tab.add_auto_row(
 		SettingsTab.INTERFACE,
 		SHOWN_SETTING,
-		"Damage numbers",
+		tr("Damage numbers"),
 		shown_label,
 		step_shown,
 	)
 	tab.add_auto_row(
 		SettingsTab.INTERFACE,
 		SIZE_SETTING,
-		"Damage number size",
+		tr("Damage number size"),
 		size_label,
 		step_size,
 	)

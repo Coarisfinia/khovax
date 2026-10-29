@@ -85,7 +85,8 @@ func _check_boot(tree: SceneTree) -> String:
 	var boot: Boot = (load("res://game/boot.tscn") as PackedScene).instantiate() as Boot
 	tree.root.add_child(boot)
 	var fogged: bool = boot.cover.color == Boot.FOG and boot.game == null
-	fogged = fogged and boot.caption.text == Boot.LOADING and boot.caption.is_visible_in_tree()
+	fogged = fogged and boot.caption.text == boot.loading_text()
+	fogged = fogged and boot.caption.is_visible_in_tree()
 	# Nothing loads before the fog has been drawn once.
 	fogged = fogged and not boot.is_processing()
 	# A game that never starts fails the flow on the runner's timeout.
