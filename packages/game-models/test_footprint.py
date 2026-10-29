@@ -95,18 +95,20 @@ def build(width, clips):
 # A tiny Godot project: a figure view with its constants, a chest view that preloads its model at a
 # scale and shares the figure's hidden parts, and a scene that instances the figure under the view.
 PROJECT = {
-    "figure_view.gd": (
+    "slices/figures/look/figure_view.gd": (
         'class_name FigureView\n'
         'const IDLE: StringName = &"Idle"\n'
         'const MOVE: StringName = &"Run"  # moving\n'
         'const CLIPS: Array[StringName] = [IDLE, MOVE]\n'
         'const HIDDEN_PARTS: Array[String] = [\n\t"Knife",\n\t"Bow",\n]\n'),
-    "chest_view.gd": (
-        'const MODEL: PackedScene = preload("res://assets/chest.glb")\n'
+    "slices/chests/look/chest_view.gd": (
+        'const MODEL: PackedScene = preload("res://chest.glb")\n'
         'const MODEL_SCALE: float = 0.5\n'
+        'const CLIPS: Array[StringName] = []\n'
         'func _hide() -> void:\n\tfor part: String in FigureView.HIDDEN_PARTS:\n\t\tpass\n'),
+    "tools/render_lamp.gd": 'const MODEL: PackedScene = preload("res://lamp.glb")\n',
     "main.tscn": (
-        '[ext_resource type="Script" path="res://figure_view.gd" id="1_view"]\n'
+        '[ext_resource type="Script" path="res://slices/figures/look/figure_view.gd" id="1_view"]\n'
         '[ext_resource type="PackedScene" path="res://assets/figure.glb" id="2_figure"]\n\n'
         '[node name="Main" type="Node3D"]\n\n'
         '[node name="Player" type="Node3D" parent="."]\nscript = ExtResource("1_view")\n\n'
@@ -117,6 +119,8 @@ PROJECT = {
 VIEWS = {
     "figure": [("figure_view", 2.0, ["Idle", "Run"], "Idle", ["Knife", "Bow"])],
     "chest": [("chest_view", 0.5, [], None, ["Knife", "Bow"])],
+    # Only a view in a slice's look/ counts: a tool that preloads a model is no view.
+    "lamp": [],
     "pebble": [],
 }
 
@@ -126,6 +130,7 @@ def views_read():
     passed = True
     with tempfile.TemporaryDirectory() as game:
         for name, text in PROJECT.items():
+            os.makedirs(os.path.dirname(os.path.join(game, name)), exist_ok=True)
             with open(os.path.join(game, name), "w", encoding="utf-8") as out:
                 out.write(text)
         for model, expected in sorted(VIEWS.items()):

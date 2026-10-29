@@ -137,7 +137,7 @@ def measure(model, glb, fps, scripts):
         # A figure stands in its idle clip and plays only the view's clips; a static model has
         # only its rest pose. It's held to a prop's limits: it neither walks on nor strikes.
         standing = view.standing if rig is not None else None
-        report, _passed = footprint.report(rig, meshes, footprint.PROP, view.clips or None, standing)
+        report, _passed = footprint.report(rig, meshes, footprint.PROP, view.clips, standing)
         tag = " (%s, scale %.2f)" % (view.name, view.scale)
         lines += [(line, tag) for line in report]
     return lines

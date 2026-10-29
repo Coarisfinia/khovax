@@ -250,8 +250,9 @@ jobs:
         # The rebuild check below needs Blender, so it runs only where it can find something: a
         # change to the model scripts and their library, to a .glb or its .import (whose clip rate
         # the checks sample at), to Blender's pin, or to the tile blueprints (whose models the
-        # footprint check leaves out as decorations, #1651), or to the views and scenes (whose scale,
-        # clips and hidden parts it measures a pack's model by, #1652), against the parent. A
+        # footprint check leaves out as decorations, #1651), or to the slices' look/ scripts and the
+        # scenes (the views whose scale, clips and hidden parts it measures a pack's model by, read
+        # only from there, #1652), against the parent. A
         # failing diff counts as a change, so the check runs rather than being skipped.
         run: |
           if git diff --quiet HEAD^1 -- ':(top)packages/game-models' ':(top)*.glb' ':(top)*.glb.import' \

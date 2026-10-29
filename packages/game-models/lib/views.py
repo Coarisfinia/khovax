@@ -3,14 +3,15 @@ check_footprint.py: a pack's model (the players' and people's figure, the chest)
 packages/game-models/, and its .glb isn't at the size the game shows it, since the view that puts it
 on a tile sizes it.
 
-A **view** of a model is a script that preloads its .glb (`preload("res://…/chest.glb")`), or the
-script on the node a scene instances it under (main.tscn's player). From it come, each from a
+A **view** of a model is a script in a slice's `look/` that preloads its .glb
+(`preload("res://…/chest.glb")`), or the script on the node a scene instances it under (main.tscn's
+player): CI reruns the check when either changes. From it come, each from a
 constant of that name in the view, or the one of another script it uses as `Class.NAME` (a value
 may name another constant too, in the view or as `Class.NAME`):
 
 - `MODEL_SCALE`: the scale it draws the model at (1 without one), times the instance's own scale in
   a scene;
-- `CLIPS`: the clips it plays (none for a static model);
+- `CLIPS`: the clips it plays (every clip without one, an empty list for none);
 - `IDLE`: the clip it stands in, measured in place of the rest pose (a figure's is a T-pose);
 - `HIDDEN_PARTS`: the parts it hides (the figure's weapons), left out of the measure.
 
@@ -36,7 +37,8 @@ class View:
         self.name, self.scale, self.clips, self.standing, self.hidden = name, scale, clips, standing, hidden
 
     def key(self):
-        return (self.scale, tuple(self.clips), self.standing, tuple(sorted(self.hidden)))
+        clips = None if self.clips is None else tuple(self.clips)
+        return (self.scale, clips, self.standing, tuple(sorted(self.hidden)))
 
 
 class Scripts:
@@ -108,7 +110,7 @@ class Scripts:
         return View(
             os.path.splitext(os.path.basename(path))[0],
             scale * self.setting(path, "MODEL_SCALE", 1.0),
-            self.setting(path, "CLIPS", []),
+            self.setting(path, "CLIPS"),
             self.setting(path, "IDLE"),
             self.setting(path, "HIDDEN_PARTS", []))
 
@@ -118,8 +120,11 @@ def find(game, model, scripts=None):
     in the Godot project at `game`. Raises ValueError where a view can't be read."""
     scripts = scripts or Scripts(game)
     glb = re.escape(model) + r"\.glb"
-    preload = re.compile(r'preload\("res://[^"]*/' + glb + r'"\)')
-    views = [scripts.view(path) for path in scripts.paths if preload.search(scripts.text(path))]
+    preload = re.compile(r'preload\("res://(?:[^"]*/)?' + glb + r'"\)')
+    looks = os.path.join(game, "slices", "*", "look", "**", "*.gd")
+    views = [
+        scripts.view(path) for path in sorted(glob.glob(looks, recursive=True))
+        if preload.search(scripts.text(path))]
     for scene in sorted(glob.glob(os.path.join(game, "**", "*.tscn"), recursive=True)):
         if not _skipped(game, scene):
             views += _instanced(game, scripts, scene, glb)
@@ -137,7 +142,7 @@ def _instanced(game, scripts, scene, glb):
     resources = {
         found.group("id"): found.group("path")
         for found in re.finditer(r'\[ext_resource [^\]]*path="(?P<path>[^"]+)"[^\]]*id="(?P<id>[^"]+)"', text)}
-    models = {key for key, path in resources.items() if re.search("/" + glb + "$", path)}
+    models = {key for key, path in resources.items() if re.search("(^res://|/)" + glb + "$", path)}
     if not models:
         return []
     nodes = {}
