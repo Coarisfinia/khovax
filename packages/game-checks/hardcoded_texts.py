@@ -6,7 +6,8 @@ A text is player-facing when it flows into what a Control shows:
 - passed to Godot's text methods (set_text, add_item, add_tab, set_tab_title, append_text, …);
 - passed to a game function whose parameter flows into one of these (MenuWidgets.label's text,
   NoticeScreen.notify's title), returned by a function whose result does, or put into a local,
-  a member (a line, an Array[String] of lines) or, inside its function, a parameter that does.
+  a member (a line, an Array[String] of lines, also read as self.<member>) or, inside its
+  function, a parameter that does.
   The flow is followed to a fixed point, through the presentation's scripts only (game/, ui/,
   look/): the rules, meta and core hand it data, and their strings are ids and error messages. A
   call names its function by its class, by self or bare in its own script where it can, and only
@@ -801,6 +802,13 @@ class Flow:
         """A name in a shown expression: a constant's text is a hit, and a parameter or local
         carries the text further."""
         word = toks[at].text
+        if at >= 2 and toks[at - 1].text == "." and toks[at - 2].text == "self":
+            # `self.lines` is the script's member, even where a local shadows it (#1753).
+            if word in script.members:
+                self.mark(self.text_members.setdefault(script.path, set()), word)
+            elif not carry_only:
+                self.const(script, word)
+            return
         if at >= 2 and toks[at - 1].text == ".":
             owner = self.by_class.get(toks[at - 2].text)
             if owner is not None and not carry_only:
