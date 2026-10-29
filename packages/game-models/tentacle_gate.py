@@ -1,7 +1,9 @@
 """The tentacle gate (#1634): a stone arch with an eye at its crown, a dark, starry portal in its
 opening and four tentacles curling out from its feet onto the ground. Its mesh and colour come from
 the owner's generated model (`sources/tentacle_gate.glb`, made by import_source.py from the
-download at `scale` 2.2, so a player walks upright through its opening: see the asset's SOURCE.md).
+download at `scale` 2.2: see the asset's SOURCE.md). That made it two hexes wide, far too big for
+the game (the owner, on #1636), so the script shrinks it by SCALE: like every model, it stands
+within its hex, tentacles and all (a prop's limits in lib/footprint.py, #1641).
 
     uv run --locked packages/game-models/blender.py --background --factory-startup \
         --python packages/game-models/tentacle_gate.py -- packages/game/assets/tentacle_gate/tentacle_gate.glb
@@ -33,6 +35,9 @@ SOURCE = os.path.join(HERE, "sources", "tentacle_gate.glb")
 FPS = 30
 # The loop's length (frames): slow, so the gate breathes rather than fidgets.
 LOOP = 180
+# How much the source is shrunk, so the gate's rest pose reaches within a prop's limit on its hex
+# with lib/footprint.py's slack and its tentacles' sway stays inside it (check_footprint.py).
+SCALE = 0.37
 
 # The portal is the smallest of the mesh's pieces (a thin slab behind the arch's opening), the
 # arch the largest; the other two each hold one side's pair of tentacles.
@@ -42,8 +47,8 @@ PORTAL_CUTS = 6
 # as an ellipse), so the rim stays in the arch while the middle turns and swells.
 PORTAL_FULL, PORTAL_RIM = 0.2, 0.85
 # Its slow turn about its own facing (radians), its swell in its plane (a share of its size) and
-# how far its middle bulges out to the front (metres).
-PORTAL_TURN, PORTAL_SWELL, PORTAL_BULGE = math.radians(12.0), 0.05, 0.03
+# how far its middle bulges out to the front (metres, at the source's size).
+PORTAL_TURN, PORTAL_SWELL, PORTAL_BULGE = math.radians(12.0), 0.05, 0.03 * SCALE
 
 # Each tentacle's chain: bones laid through the middle of equal bands of the tentacle, from where
 # it leaves the arch's foot (ROOT_DEPTH, how far it lies before or behind the arch, a share of the
@@ -262,7 +267,7 @@ def build(out):
                 and not any("glTF_not_exported" in collection.name for collection in obj.users_collection))
     matrix = skin.matrix_world.copy()
     skin.parent = None
-    skin.data.transform(matrix)
+    skin.data.transform(Matrix.Scale(SCALE, 4) @ matrix)
     skin.matrix_world = Matrix.Identity(4)
     skin.modifiers.clear()
     skin.vertex_groups.clear()

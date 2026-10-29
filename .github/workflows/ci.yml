@@ -249,11 +249,12 @@ jobs:
         id: models
         # The rebuild check below needs Blender, so it runs only where it can find something: a
         # change to the model scripts and their library, to a .glb or its .import (whose clip rate
-        # the checks sample at), or to Blender's pin, against the parent. A failing diff counts as
+        # the checks sample at), to Blender's pin, or to the tile blueprints (whose models the
+        # footprint check leaves out as decorations, #1651), against the parent. A failing diff counts as
         # a change, so the check runs rather than being skipped.
         run: |
           if git diff --quiet HEAD^1 -- ':(top)packages/game-models' ':(top)*.glb' ':(top)*.glb.import' \
-            ':(top).github/actions/setup-blender'; then
+            ':(top).github/actions/setup-blender' ':(top)packages/game/core/data/tiles'; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -328,9 +329,20 @@ jobs:
             ../game-models/blender.py --background --factory-startup \
             --python ../game-models/check_connectivity.py --
 
-      - name: "⬡ Check every monster stays within its hex"
-        # Every frame of every clip of every .glb, how far the mesh reaches across the hex the game
-        # stands it on, seen from above (#1520); a prop without a rig passes.
+      - name: "🧪 Test the hex footprint check on boxes"
+        # Monsters, props and static models that fit their hex or are too big for it (#1641): the
+        # check passes and fails them.
+        if: steps.models.outputs.changed == 'true'
+        timeout-minutes: 2
+        run: |
+          uv run --locked --package khovax-game-models ../game-models/blender.py --background --factory-startup \
+            --python ../game-models/test_footprint.py
+
+      - name: "⬡ Check every monster and prop stays within its hex"
+        # Every frame of every clip of every .glb built by a script here, how far the mesh reaches
+        # across the hex the game stands it on, seen from above (#1520); a prop is held to limits
+        # of its own, a static one by its rest pose, and none is let off through a list (#1641); a
+        # tile's decoration is the tile's own look and isn't measured (#1651).
         if: steps.models.outputs.changed == 'true'
         timeout-minutes: 5
         run: |
