@@ -14,7 +14,6 @@ const SLICES: String = "res://slices/"
 const UNWORN_MODELS: Array[String] = [
 	"res://assets/drakkudor/drakkudor.glb",
 	"res://assets/fohossa/fohossa.glb",
-	"res://assets/frostfire_hound/frostfire_hound.glb",
 ]
 ## Animated props built before the view that places them (#1634), with the clips each plays:
 ## checked like a view's model, until a view names it and it leaves this list.

@@ -556,6 +556,54 @@ msgstr ""
 msgid "Next choice"
 msgstr ""
 
+#: slices/species/data/abilities/kalvrakkor_kalvik_kolvak.jsonc
+msgid "The sharp crack of ice, then the low hiss of magma on it. Dominators called it to send their beast's two tails across a foe, one after the other."
+msgstr ""
+
+#: slices/species/data/abilities/kalvrakkor_kalvik_kolvak.jsonc
+msgid "crack, then hiss"
+msgstr ""
+
+#: slices/species/data/abilities/kalvrakkor_kalvik_kolvak.jsonc
+msgid "The ${MONSTER:kalvrakkor} whips both its tails across its target: the ice tail cracks, then the magma tail sears."
+msgstr ""
+
+#: slices/species/data/abilities/kalvrakkor_kalvik_kolvak.jsonc
+msgid "Kalvik-kolvak"
+msgstr ""
+
+#: slices/species/data/abilities/kalvrakkor_krivvu_vrivvu.jsonc
+msgid "The rumble a hound keeps up as it paces around its own, hot on one side and cold on the other. Dominators said it of a guard no foe wants to brush past."
+msgstr ""
+
+#: slices/species/data/abilities/kalvrakkor_krivvu_vrivvu.jsonc
+msgid "warm side, cold side, stay back"
+msgstr ""
+
+#: slices/species/data/abilities/kalvrakkor_krivvu_vrivvu.jsonc
+msgid "While the ${MONSTER:kalvrakkor} is out, the player takes a little less harm: frost on one flank and heat on the other keep foes back."
+msgstr ""
+
+#: slices/species/data/abilities/kalvrakkor_krivvu_vrivvu.jsonc
+msgid "Krivvu-vrivvu"
+msgstr ""
+
+#: slices/species/data/abilities/kalvrakkor_lakvu_rakvu.jsonc
+msgid "The bubbling of magma welling up through cracked basalt. Dominators said it of a beast that burns brighter the deeper it is cut."
+msgstr ""
+
+#: slices/species/data/abilities/kalvrakkor_lakvu_rakvu.jsonc
+msgid "it burns as it bleeds"
+msgstr ""
+
+#: slices/species/data/abilities/kalvrakkor_lakvu_rakvu.jsonc
+msgid "The ${MONSTER:kalvrakkor}'s magma runs hotter the more it's hurt, and it strikes faster."
+msgstr ""
+
+#: slices/species/data/abilities/kalvrakkor_lakvu_rakvu.jsonc
+msgid "Lakvu-rakvu"
+msgstr ""
+
 #: slices/species/data/abilities/ombulumo_bolmu_wolmu.jsonc
 msgid "The gurgle of a wet hide rolling off a blow. Dominators said it of anything that shrugs off harm and stays damp and whole."
 msgstr ""
@@ -810,6 +858,18 @@ msgstr ""
 
 #: slices/species/data/abilities/vynnimu_vummi_nummi.jsonc
 msgid "Vummi-nummi"
+msgstr ""
+
+#: slices/species/data/kalvrakkor.jsonc
+msgid "The frost-and-fire hound: a heavy hound split along its spine, one side dark basalt cracked with glowing magma, the other pale ice cracked with frost, and behind it a magma tail and an ice tail. Where it lies down, the snow melts on one side and freezes hard on the other. Its name is a beast-call, the sound it makes: the crack of ice in its k's, doubled where it splits, and the low growl of its molten side in l, v and r."
+msgstr ""
+
+#: slices/species/data/kalvrakkor.jsonc
+msgid "the crack of ice, the growl of fire"
+msgstr ""
+
+#: slices/species/data/kalvrakkor.jsonc
+msgid "Kalvrakkor"
 msgstr ""
 
 #: slices/species/data/ombulumo.jsonc

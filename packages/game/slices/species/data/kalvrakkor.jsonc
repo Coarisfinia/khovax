@@ -1,0 +1,24 @@
+// The frost-and-fire hound (#1685, named on it): it wears the Frostfire Hound model (#1609).
+// Titan for its basalt and magma side, Tempest for its ice side: two families, as dual types must.
+// A heavy hound of a regular monster's size, sturdier and harder-hitting than the wolves, a little
+// slower. Its stats are placeholders to tune (#960).
+{
+	"id": "kalvrakkor",
+	"name": "Kalvrakkor",
+	"codex": {
+		"entry": "The frost-and-fire hound: a heavy hound split along its spine, one side dark basalt cracked with glowing magma, the other pale ice cracked with frost, and behind it a magma tail and an ice tail. Where it lies down, the snow melts on one side and freezes hard on the other. Its name is a beast-call, the sound it makes: the crack of ice in its k's, doubled where it splits, and the low growl of its molten side in l, v and r.",
+		"gloss": "the crack of ice, the growl of fire"
+	},
+	"types": ["titan", "tempest"],
+	"strike_type": "titan", // its bite carries the magma side's weight (#626)
+	"hp": 110,
+	"strength": 65,
+	"speed": 55,
+	"special": "kalvrakkor_kalvik_kolvak",
+	"player_passive": "kalvrakkor_krivvu_vrivvu",
+	"self_passive": "kalvrakkor_lakvu_rakvu",
+	// A hound: it hunts with its pack, and with heat on one side and cold on the other it never
+	// settles into day or night, sleeping in bouts (#1200).
+	"behaviour": ["cathemeral", "predator", "pack_species"],
+	"model": "res://assets/frostfire_hound/frostfire_hound.glb"
+}
