@@ -967,6 +967,15 @@ func _menu_submenus(menu: GameMenu) -> String:
 	for setting: String in homes:
 		if tab.submenu_of(setting) != homes[setting]:
 			return "%s is in the submenu %s" % [setting, tab.submenu_of(setting)]
+	# The Interface submenu's rows in the order they show, though the menu and game/ add them
+	# (#1614).
+	var titles: Array[String] = []
+	var interface: Node = tab.back_button(SettingsTab.INTERFACE).get_parent().get_parent()
+	for row: Node in interface.get_children():
+		if row is Label:
+			titles.append((row as Label).text)
+	if titles != ["Survey", "Survey zoom", "Damage numbers", "Damage number size"]:
+		return "the Interface submenu shows the rows %s" % [titles]
 	var tabs: TabContainer = tab.get_parent() as TabContainer
 	var was_on: int = tabs.current_tab
 	tabs.current_tab = tab.get_index()
