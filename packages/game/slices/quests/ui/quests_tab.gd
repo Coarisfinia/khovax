@@ -34,9 +34,10 @@ const FOLLOWED_TEXT: String = "★ Following"
 const PILL: PackedScene = preload("res://slices/quests/ui/quest_pill.tscn")
 
 ## Whose quests are shown: this machine's player's.
-var keeper: QuestKeeper
+@export var keeper: QuestKeeper
 ## The running session, which says the instance this machine's player is in, for the pills.
-var driver: Session
+@export var driver: Session
+
 ## What the tab shows for each open quest, by quest id: its steps' lines, one per line. Kept here
 ## so tests can read it. As the player reads them; `_tagged` keeps them with their text tags.
 var shown: Dictionary[String, String] = {}

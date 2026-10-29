@@ -12,6 +12,8 @@ extends Node
 @export var menu: GameMenu
 ## The profile they show.
 @export var holder: ProfileHolder
+## The Character tab's gear panel, which game/ hands the tab (#1614).
+@export var gear: GearPanel
 
 
 func _ready() -> void:
@@ -24,8 +26,9 @@ func _ready() -> void:
 		return
 	tab.factions.standings = _standings
 	tab.materials.materials = _materials
-	tab.gear.slots = _gear
-	tab.gear.equip = holder.equip
+	if gear != null:
+		gear.slots = _gear
+		gear.equip = holder.equip
 	tab.monsters.order = _order
 	tab.monsters.carried = _carried
 	tab.monsters.monster_of = _monster_of

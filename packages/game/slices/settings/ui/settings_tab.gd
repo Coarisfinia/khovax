@@ -4,9 +4,10 @@ extends ScrollContainer
 ## submenus (#1314). It opens on a list of them; each shows its own rows, one per setting with its
 ## name and what it's on now, "Auto (…)" while Auto picks it, and buttons to step to the previous
 ## or next choice or to hand it back to Auto, and a Back button (or `ui_cancel`, a controller's B)
-## back to the list. The settings' owners (Graphics, SurveyChoice, DamageNumbersChoice, the menu's
-## pause) know each setting's choices and keep the player's; the tab only shows them and passes the
-## player's picks on. It says everything in words, never by color alone (#68). It scrolls when the
+## back to the list. The settings' owners (Graphics, and those of the slices after this one, which
+## add their own rows with `add_auto_row`, #1614) know each setting's choices and keep the player's;
+## the tab only shows them and passes the player's picks on. It says everything in words, never by
+## color alone (#68). It scrolls when the
 ## screen is too short for every row. Its layout lives in its scene, settings_tab.tscn (#437): the
 ## rows sit in the middle of the tab, as wide as `fit` makes them. Below the list of submenus, a
 ## button opens the README (#1312), with its download links.
@@ -34,13 +35,6 @@ const README_TEXT: String = "Downloads and guide (README)"
 
 ## Whose settings the graphics rows show; it keeps every setting's choice (Settings' one owner).
 var graphics: Graphics
-## The Survey's place and zoom.
-var survey: SurveyChoice
-## The menu, whose pause is a setting.
-var menu: GameMenu
-## Whether the damage numbers show and how large, kept in `graphics`' Settings; held here so the
-## rows' callables stay bound to it.
-var damage_numbers: DamageNumbersChoice
 ## What each setting's row says it's on, by the setting's name. Kept here so tests can read it.
 var shown: Dictionary[String, String] = {}
 ## What opens a link in the system's browser (a new tab on the web); tests swap it so none opens.
@@ -66,45 +60,12 @@ func _ready() -> void:
 	readme_button = MenuWidgets.button(README_TEXT, open_readme)
 	_list.add_child(readme_button)
 	if graphics != null:
-		_auto_row(
+		add_auto_row(
 			GRAPHICS,
 			Graphics.ANTI_ALIASING,
 			"Anti-aliasing",
 			graphics.anti_aliasing_label,
 			graphics.step_anti_aliasing,
-		)
-	if survey != null:
-		_auto_row(INTERFACE, SurveyChoice.PLACE_SETTING, "Survey", survey.place_label, survey.cycle)
-		_auto_row(
-			INTERFACE,
-			SurveyChoice.ZOOM_SETTING,
-			"Survey zoom",
-			survey.zoom_label,
-			survey.zoom_by,
-		)
-	if graphics != null:
-		damage_numbers = DamageNumbersChoice.new(graphics)
-		_auto_row(
-			INTERFACE,
-			DamageNumbersChoice.SHOWN_SETTING,
-			"Damage numbers",
-			damage_numbers.shown_label,
-			damage_numbers.step_shown,
-		)
-		_auto_row(
-			INTERFACE,
-			DamageNumbersChoice.SIZE_SETTING,
-			"Damage number size",
-			damage_numbers.size_label,
-			damage_numbers.step_size,
-		)
-	if menu != null and graphics != null:
-		_auto_row(
-			GAME,
-			GameMenu.PAUSE_SETTING,
-			"Pause in single player",
-			menu.pause_label,
-			menu.step_pause,
 		)
 
 
@@ -246,8 +207,9 @@ func _has_focus() -> bool:
 
 
 ## A row in `submenu` for `setting`, named `title`: what `label` says it's on, and buttons that
-## `stepper` steps it with (back and on) and one back to Auto.
-func _auto_row(
+## `stepper` steps it with (back and on) and one back to Auto. The menu and the slices after this
+## one add theirs this way once the tab is ready (#1614).
+func add_auto_row(
 		submenu: String,
 		setting: String,
 		title: String,

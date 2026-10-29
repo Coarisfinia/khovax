@@ -23,6 +23,26 @@ func _init(settings_owner: Graphics) -> void:
 	graphics = settings_owner
 
 
+## Adds its rows, whether the numbers show and how large, to the Settings tab's Interface submenu
+## (#1614): the tab comes before this slice, so it doesn't name them. The tab's rows call this
+## choice, so whoever adds them keeps it.
+func add_rows(tab: SettingsTab) -> void:
+	tab.add_auto_row(
+		SettingsTab.INTERFACE,
+		SHOWN_SETTING,
+		"Damage numbers",
+		shown_label,
+		step_shown,
+	)
+	tab.add_auto_row(
+		SettingsTab.INTERFACE,
+		SIZE_SETTING,
+		"Damage number size",
+		size_label,
+		step_size,
+	)
+
+
 ## Whether the damage numbers show: the player's choice, or Auto's.
 func shown() -> bool:
 	return _shown().value() == 1

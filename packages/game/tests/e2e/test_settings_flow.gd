@@ -288,13 +288,13 @@ func _menu_monsters(menu: GameMenu, main: Node) -> String:
 	var profile: Profile = FlowGame.holder(main).keeper.profile
 	var species: Dictionary[String, Species] = SpeciesContent.load_species().species
 	var part: int = Might.monsters_part(profile, species)
-	tab.might.refresh()
-	if part <= 0 or tab.might.shown != [
+	_might(tab).refresh()
+	if part <= 0 or _might(tab).shown != [
 		MightPanel.TOTAL_TEXT % part,
 		MightPanel.MONSTERS_TEXT % part,
 	]:
 		return "the Character tab's Might is %s, not the carried monsters' %d" % [
-			tab.might.shown,
+			_might(tab).shown,
 			part,
 		]
 	tab.materials.refresh()
@@ -382,11 +382,11 @@ func _menu_gear(tab: CharacterTab, main: Node) -> String:
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	var nearby: Array[int] = wild.monsters.duplicate()
 	wild.monsters.clear()
-	var result: String = _gear_starts_empty(tab.gear)
+	var result: String = _gear_starts_empty(_gear(tab))
 	if result.is_empty():
-		result = _gear_changes(tab.gear, main)
+		result = _gear_changes(_gear(tab), main)
 	if result.is_empty():
-		result = _menu_gear_fight(tab.gear, main, nearby)
+		result = _menu_gear_fight(_gear(tab), main, nearby)
 	wild.monsters.assign(nearby)
 	return result if not result.is_empty() else _menu_reorder(tab, main)
 
@@ -1176,15 +1176,15 @@ func _open_button_placed(menu: GameMenu, screen: Vector2) -> String:
 	var button: Button = menu.open_button()
 	var shown: bool = button.visible
 	var hidden_top: float = _list_top(menu, screen, false)
-	var hidden_room: float = menu.quest_list.room_above
+	var hidden_room: float = _quest_list(menu).room_above
 	var list_top: float = _list_top(menu, screen, true)
-	var room: float = menu.quest_list.room_above
+	var room: float = _quest_list(menu).room_above
 	var at: Rect2 = button.get_rect()
 	var badged: Rect2 = GameMenu.with_badge(button)
 	badged.position += at.position
 	button.visible = shown
 	menu.lay_out(screen)
-	var column: Rect2 = menu.quest_list.column_in(screen)
+	var column: Rect2 = _quest_list(menu).column_in(screen)
 	var placed: bool = (is_equal_approx(at.get_center().x, screen.x / 2.0)
 			and is_equal_approx(at.position.y, GameMenu.MARGIN) and room == 0.0)
 	if screen.y > screen.x:
@@ -1219,8 +1219,8 @@ static func _at_side(at: Rect2, badged: Rect2, column: Rect2, screen: Vector2) -
 static func _list_top(menu: GameMenu, screen: Vector2, shown: bool) -> float:
 	menu.open_button().visible = shown
 	menu.lay_out(screen)
-	menu.quest_list.lay_out_in(screen, 1.0)
-	return menu.quest_list.position.y
+	_quest_list(menu).lay_out_in(screen, 1.0)
+	return _quest_list(menu).position.y
 
 
 ## The Credits tab's button that saves the error log as a file (#1541) shows only on the web, and
@@ -1473,3 +1473,18 @@ func _label_of(msaa: int) -> String:
 func _forget() -> void:
 	SaveStore.remove(SETTINGS_PATH)
 	SaveStore.remove(PROFILE_PATH)
+
+
+## The Character tab's Might panel, which game/ hands in (#1614).
+static func _might(tab: CharacterTab) -> MightPanel:
+	return tab.find_child("Might", true, false) as MightPanel
+
+
+## The Character tab's gear panel, which game/ hands in (#1614).
+static func _gear(tab: CharacterTab) -> GearPanel:
+	return tab.find_child("Gear", true, false) as GearPanel
+
+
+## The quest list at the top's side, beside the menu in the main scene's HUD.
+static func _quest_list(menu: GameMenu) -> QuestListView:
+	return menu.get_parent().get_node("QuestList") as QuestListView

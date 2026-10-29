@@ -93,6 +93,13 @@ func zoom_by(steps: int) -> String:
 	return _keep()
 
 
+## Adds its rows, where the Survey shows and how close, to the Settings tab's Interface submenu
+## (#1614): the tab comes before the Survey's slice, so it doesn't name them.
+func add_rows(tab: SettingsTab) -> void:
+	tab.add_auto_row(SettingsTab.INTERFACE, PLACE_SETTING, "Survey", place_label, cycle)
+	tab.add_auto_row(SettingsTab.INTERFACE, ZOOM_SETTING, "Survey zoom", zoom_label, zoom_by)
+
+
 ## Puts the Survey where it shows, at its zoom, sized to the screen.
 func place() -> void:
 	if view != null:
