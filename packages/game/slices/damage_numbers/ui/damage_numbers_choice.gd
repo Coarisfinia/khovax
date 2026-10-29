@@ -8,8 +8,8 @@ extends RefCounted
 
 const SHOWN_SETTING: String = "damage_numbers"
 const SIZE_SETTING: String = "damage_number_size"
-## Whether they show, saved by number: never reorder.
-const SHOWN_CHOICES: Array[String] = ["Off", "On"]
+## Whether they show, saved by number: 0 off, 1 on; never reorder.
+const SHOWN_STEPS: int = 2
 const AUTO_SHOWN: int = 1
 ## The text sizes, in percent of the usual size, from small to large.
 const SIZES: Array[int] = [50, 75, 100, 125, 150, 200]
@@ -56,7 +56,7 @@ func size_share() -> float:
 ## Whether they show, as the Settings tab says it: "Off", or "Auto (On)" while Auto picks it.
 func shown_label() -> String:
 	var choice: SettingChoice = _shown()
-	return choice.label(SHOWN_CHOICES[choice.value()])
+	return choice.label(tr("On") if choice.value() == 1 else tr("Off"))
 
 
 ## Their text size as the Settings tab says it: "150%", or "Auto (100%)" while Auto picks it.
@@ -79,9 +79,9 @@ func step_size(steps: int) -> String:
 	return _keep()
 
 
-## Whether they show, an index into SHOWN_CHOICES; Auto while there's no Graphics to keep it.
+## Whether they show, 0 off or 1 on; Auto while there's no Graphics to keep it.
 func _shown() -> SettingChoice:
-	return SettingChoice.new(_settings(), SHOWN_SETTING, SHOWN_CHOICES.size(), AUTO_SHOWN)
+	return SettingChoice.new(_settings(), SHOWN_SETTING, SHOWN_STEPS, AUTO_SHOWN)
 
 
 ## Their text size, an index into SIZES; Auto while there's no Graphics to keep it.

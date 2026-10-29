@@ -8,11 +8,6 @@ extends VBoxContainer
 ## outside a fight (owner, #223, Fight): during one, the buttons still show the slots but don't
 ## change them, and a line says why. It keeps up with the profile and the fight while shown.
 
-const TITLE: String = "Gear"
-const EMPTY_TEXT: String = "empty"
-const SLOT_TEXT: String = "%s: %s"
-const FREE_TEXT: String = "Press a slot to change its gear."
-const FIGHT_TEXT: String = "Gear can't be changed during a fight."
 ## Each slot's icon (#459): white shapes, drawn in ink by the UI's theme.
 const ICONS: Dictionary[String, Texture2D] = {
 	"ward": preload("res://assets/game-icons/magic-shield.svg"),
@@ -45,7 +40,7 @@ func _ready() -> void:
 	if not content.problem.is_empty():
 		push_warning("the gear can't be read, so gear shows its ids: " + content.problem)
 	_items = content.items
-	add_child(MenuWidgets.label(TITLE))
+	add_child(MenuWidgets.label(tr("Gear")))
 	for slot: String in GearSlots.SLOTS:
 		_add_slot(slot)
 	_note = MenuWidgets.label("")
@@ -86,12 +81,18 @@ func refresh() -> void:
 	var lines: Array[String] = []
 	for slot: String in GearSlots.SLOTS:
 		var gear_id: String = _equipped().get(slot, "")
-		var line: String = SLOT_TEXT % [slot.capitalize(), _described(gear_id)]
+		var line: String = tr("{slot}: {gear}").format(
+			{ "slot": slot.capitalize(), "gear": _described(gear_id) }
+		)
 		lines.append(line)
 		buttons[slot].text = line
 		pictures[slot].show_model(_model_of(gear_id))
 		buttons[slot].disabled = fighting
-	_note.text = FIGHT_TEXT if fighting else FREE_TEXT
+	_note.text = (
+		tr("Gear can't be changed during a fight.")
+		if fighting
+		else tr("Press a slot to change its gear.")
+	)
 	lines.append(_note.text)
 	shown = lines
 
@@ -142,9 +143,9 @@ func _model_of(gear_id: String) -> String:
 	return item.model if item != null else ""
 
 
-## The gear `gear_id`, in words: its name and rarity, its id where the data lacks it, or EMPTY_TEXT.
+## The gear `gear_id`, in words: its name and rarity, its id where the data lacks it, or "empty".
 func _described(gear_id: String) -> String:
 	if gear_id.is_empty():
-		return EMPTY_TEXT
+		return tr("empty")
 	var item: GearItem = _items.get(gear_id)
 	return item.described() if item != null else gear_id.capitalize()

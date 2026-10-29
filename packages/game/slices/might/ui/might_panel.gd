@@ -5,10 +5,6 @@ extends VBoxContainer
 ## abilities and boons add their lines with their parts. It only reads the profile, and keeps up
 ## with it while shown.
 
-const TITLE: String = "Might"
-const TOTAL_TEXT: String = "Might: %d"
-const MONSTERS_TEXT: String = "From your carried monsters: %d"
-
 ## Whose Might is shown: this machine's player's profile.
 @export var holder: ProfileHolder
 
@@ -23,7 +19,7 @@ func _ready() -> void:
 	if not species.problem.is_empty():
 		push_warning("the species can't be read, so Might counts no monsters: " + species.problem)
 	_species = species.species
-	add_child(MenuWidgets.label(TITLE))
+	add_child(MenuWidgets.label(tr("Might")))
 	_lines = VBoxContainer.new()
 	add_child(_lines)
 	refresh()
@@ -41,8 +37,8 @@ func refresh() -> void:
 	if holder != null and holder.keeper != null:
 		profile = holder.keeper.profile
 	var lines: Array[String] = [
-		TOTAL_TEXT % Might.of(profile, _species),
-		MONSTERS_TEXT % Might.monsters_part(profile, _species),
+		tr("Might: %d") % Might.of(profile, _species),
+		tr("From your carried monsters: %d") % Might.monsters_part(profile, _species),
 	]
 	if lines == shown:
 		return

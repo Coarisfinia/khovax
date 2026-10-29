@@ -1360,10 +1360,10 @@ func _check_special(state: GameState, first: int, spots: Array[Vector2i]) -> Str
 		return "the felling special doesn't say it was the player's: slot %d" % felled[0].slot
 	# Its look (#431): the damage rises from the monster, and says in words that it fainted.
 	var shown: String = DamageNumbersView.text_of(felled[0])
-	if shown != "-%d\n%s" % [damage, DamageNumbersView.FAINTED_TEXT]:
+	if shown != "-%d\nfainted" % damage:
 		return "the special's strike shows %s, not its damage and that it fainted" % shown
 	# With the damage numbers off (#764), only that it fainted.
-	if DamageNumbersView.text_of(felled[0], false) != DamageNumbersView.FAINTED_TEXT:
+	if DamageNumbersView.text_of(felled[0], false) != "fainted":
 		return "with the damage numbers off, the special's strike still shows its damage"
 	var movement: MovementFeature = state.feature(MovementFeature.ID) as MovementFeature
 	if state.entity(first) == null or not movement.is_occupied(state, state.entity(first).tile):
@@ -1749,7 +1749,7 @@ func _check_dodges() -> String:
 		missed += 1 if struck.dodged else 0
 	if missed == 0 or missed == hits:
 		return "a companion dodging half the hits dodged %d of %d" % [missed, hits]
-	if DamageNumbersView.auto_text(0, true) != DamageNumbersView.MISS_TEXT:
+	if DamageNumbersView.auto_text(0, true) != "miss":
 		return "a dodged hit's damage number shows %s" % DamageNumbersView.auto_text(0, true)
 	if _hp(state, companion_id) != full - (hits - missed) * guarded:
 		return "a dodging companion has %d HP after %d hits landed" % [

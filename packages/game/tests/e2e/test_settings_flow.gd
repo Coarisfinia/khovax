@@ -295,15 +295,15 @@ func _menu_monsters(menu: GameMenu, main: Node) -> String:
 	var part: int = Might.monsters_part(profile, species)
 	_might(tab).refresh()
 	if part <= 0 or _might(tab).shown != [
-		MightPanel.TOTAL_TEXT % part,
-		MightPanel.MONSTERS_TEXT % part,
+		"Might: %d" % part,
+		"From your carried monsters: %d" % part,
 	]:
 		return "the Character tab's Might is %s, not the carried monsters' %d" % [
 			_might(tab).shown,
 			part,
 		]
 	tab.materials.refresh()
-	if tab.materials.shown != ([MaterialsList.NONE_TEXT] as Array[String]):
+	if tab.materials.shown != (["No materials yet"] as Array[String]):
 		return "the Character tab lists materials before any is found: %s" % [tab.materials.shown]
 	var found: Gain = Gain.new()
 	found.materials.assign({ "moss": 3, "berry": 1 })
@@ -319,7 +319,7 @@ func _menu_monsters(menu: GameMenu, main: Node) -> String:
 ## by its id in words once the content no longer has it; neutral again, it leaves the list.
 func _menu_factions(tab: CharacterTab, main: Node) -> String:
 	var panel: FactionStandingsPanel = tab.factions
-	var neutral: Array[String] = [FactionStandingsPanel.NONE_TEXT]
+	var neutral: Array[String] = ["No faction standings yet"]
 	panel.refresh()
 	if panel.shown != neutral:
 		return "the Character tab lists factions while neutral with all: %s" % [panel.shown]
@@ -371,7 +371,7 @@ func _menu_met_factions(tab: CharacterTab, main: Node) -> String:
 	panel.refresh()
 	var odun: Faction = FactionContent.cached().factions["odun_kragothai"]
 	var listed: Array[String] = [
-		FactionStandingsPanel.LINE_TEXT % [odun.name, -1, odun.rank_name(-1)],
+		"%s: -1, %s" % [odun.name, odun.rank_name(-1)],
 	]
 	if panel.shown != listed:
 		return "the met factions on the Character tab are %s, not %s" % [panel.shown, listed]
@@ -402,11 +402,11 @@ func _gear_starts_empty(panel: GearPanel) -> String:
 	panel.refresh()
 	var empty: Array[String] = []
 	for slot: String in GearSlots.SLOTS:
-		empty.append(GearPanel.SLOT_TEXT % [slot.capitalize(), GearPanel.EMPTY_TEXT])
+		empty.append(slot.capitalize() + ": empty")
 		var button: Button = panel.buttons[slot]
 		if button.icon != GearPanel.ICONS[slot] or button.focus_mode != Control.FOCUS_ALL:
 			return "the %s slot's button lacks its icon or a controller's focus" % slot
-	empty.append(GearPanel.FREE_TEXT)
+	empty.append("Press a slot to change its gear.")
 	if panel.shown != empty:
 		return "the gear slots don't start empty and free to change: %s" % [panel.shown]
 	return ""
@@ -441,7 +441,7 @@ func _gear_changes(panel: GearPanel, main: Node) -> String:
 		"Ward: Warding charm (Loose)",
 		"Trap: Thorn spikes (Loose)",
 		"Throw: empty",
-		GearPanel.FREE_TEXT,
+		"Press a slot to change its gear.",
 	]
 	if panel.shown != lines or kept.gear.equipped != expected:
 		return "pressing the slots put in %s, kept %s" % [panel.shown, kept.gear.equipped]
@@ -513,7 +513,7 @@ func _menu_gear_fight(panel: GearPanel, main: Node, nearby: Array[int]) -> Strin
 	fighter.tile = state.player(FlowGame.driver(main).input.slot).tile
 	wild.monsters.assign([fighter.id])
 	var expected: Array[String] = panel.shown.slice(0, GearSlots.SLOTS.size())
-	expected.append(GearPanel.FIGHT_TEXT)
+	expected.append("Gear can't be changed during a fight.")
 	panel.buttons["ward"].pressed.emit()
 	panel.refresh()
 	var locked: bool = panel.buttons["ward"].disabled
@@ -1109,7 +1109,7 @@ func _menu_damage_numbers(menu: GameMenu) -> String:
 	if (tab.shown[DamageNumbersChoice.SHOWN_SETTING] != "Off"
 			or kept.chosen.get(DamageNumbersChoice.SHOWN_SETTING) != 0
 			or numbers.strikes.size() != 1
-			or numbers.strikes[0].text != DamageNumbersView.FAINTED_TEXT):
+			or numbers.strikes[0].text != "fainted"):
 		return "turned off, the damage numbers show %s, kept as %s" % [
 			numbers.strikes.map(func(label: Label3D) -> String: return label.text),
 			kept.chosen,
@@ -1317,6 +1317,13 @@ func _menu_controls(menu: GameMenu) -> String:
 	var listed: Array[StringName] = []
 	for words: String in ControlsTab.ROWS:
 		listed.append_array(ControlsTab.ROWS[words])
+		# Each row's label shows its words, translated (in English, the same words).
+		var label: Label = tab.rows[words].get_child(0).get_child(0) as Label
+		if label == null or label.text != words or tab.words_of(words) != words:
+			return "the Controls tab's row %s shows %s" % [
+				words,
+				label.text if label else "nothing",
+			]
 	# The actions the project binds itself, not Godot's own UI actions it leaves as they are.
 	var project: ConfigFile = ConfigFile.new()
 	var _read: Error = project.load("res://project.godot")

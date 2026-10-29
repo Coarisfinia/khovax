@@ -16,15 +16,6 @@ signal name_selected(kind: String, id: String)
 ## A line showed a faction's name: the player met it (#1174).
 signal name_shown(kind: String, id: String)
 
-const TITLE: String = "Factions"
-## Shown while no standing has moved from its start: not "neutral", since some factions start off it
-## (#1378), and without naming one the player may not have met.
-const NONE_TEXT: String = "No faction standings yet"
-## A faction's line: its name, the standing with its sign, and the rank's name.
-const LINE_TEXT: String = "%s: %+d, %s"
-## A faction's line when the content doesn't know it: its id in words and the standing.
-const UNKNOWN_TEXT: String = "%s: %+d"
-
 ## This machine's player's standings (Standings), handed in by the profile (ProfilePanelsTie),
 ## whose slice comes after this one; none without it.
 var standings: Callable = Callable()
@@ -44,7 +35,7 @@ func _ready() -> void:
 	if not content.problem.is_empty():
 		push_warning("the factions can't be read, so their ranks aren't named: " + content.problem)
 	_factions = content.factions
-	add_child(MenuWidgets.label(TITLE))
+	add_child(MenuWidgets.label(tr("Factions")))
 	_rows = VBoxContainer.new()
 	add_child(_rows)
 	# No rows until it's shown (_process): showing a row meets its faction (#1447), which a row
@@ -73,8 +64,10 @@ func refresh() -> void:
 			# Neutral isn't listed, even a standing moved back to it from another start (#1378).
 			if held.of(id) != 0:
 				lines.append(line_of(id, held.of(id)))
+	# While no standing has moved from its start: not "neutral", since some factions start off it
+	# (#1378), and without naming one the player may not have met.
 	if lines.is_empty():
-		lines.append(NONE_TEXT)
+		lines.append(tr("No faction standings yet"))
 	if lines == tagged:
 		return
 	tagged = lines
@@ -97,9 +90,18 @@ func _add_row(line: String) -> void:
 
 
 ## The line for the standing `standing` with the faction `id`: a text with text tags, the
-## faction's name tagged.
+## faction's name tagged, the standing with its sign, and the rank's name; one the content doesn't
+## know shows its id in words and the standing.
 func line_of(id: String, standing: int) -> String:
 	var faction: Faction = _factions.get(id)
+	var signed: String = "%+d" % standing
 	if faction == null:
-		return UNKNOWN_TEXT % [id.capitalize(), standing]
-	return LINE_TEXT % [TextTags.tag(TextTags.FACTION, id), standing, faction.rank_name(standing)]
+		var unknown: String = tr("{faction}: {standing}")
+		return unknown.format({ "faction": id.capitalize(), "standing": signed })
+	return tr("{faction}: {standing}, {rank}").format(
+		{
+			"faction": TextTags.tag(TextTags.FACTION, id),
+			"standing": signed,
+			"rank": tr(faction.rank_name(standing)),
+		}
+	)

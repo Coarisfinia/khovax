@@ -8,8 +8,8 @@ extends ScrollContainer
 ## button, and the tab scrolls to it. Its layout lives in its scene, controls_tab.tscn (#437): this
 ## script keeps only what it does.
 
-## The rows, in order: what each says, then the actions it covers, whose glyphs it shows in that
-## order, each glyph once.
+## The rows, in order: what each says in English (its key, which names its node; words_of() gives
+## what it shows), then the actions it covers, whose glyphs it shows in that order, each glyph once.
 const ROWS: Dictionary[String, Array] = {
 	"Walk": [&"move_up", &"move_left", &"move_down", &"move_right"],
 	"Special attack": [&"special_attack"],
@@ -113,7 +113,7 @@ func _row(words: String) -> PanelContainer:
 	var line: HBoxContainer = HBoxContainer.new()
 	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var label: Label = Label.new()
-	label.text = words
+	label.text = words_of(words)
 	# Cut short rather than wrapped, so a phone's narrow screen keeps the glyphs in view.
 	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -127,6 +127,41 @@ func _row(words: String) -> PanelContainer:
 	rows[words] = row
 	_glyph_boxes[words] = box
 	return row
+
+
+## What the row `words` (a key of ROWS) says, translated: a literal tr() each, so the translation
+## template has them.
+func words_of(words: String) -> String:
+	match words:
+		"Walk":
+			return tr("Walk")
+		"Special attack":
+			return tr("Special attack")
+		"Focus another wild monster":
+			return tr("Focus another wild monster")
+		"Place a totem":
+			return tr("Place a totem")
+		"Swap to monster 1, 2 or 3":
+			return tr("Swap to monster 1, 2 or 3")
+		"Revive a fainted monster":
+			return tr("Revive a fainted monster")
+		"Respawn when knocked down":
+			return tr("Respawn when knocked down")
+		"Harvest a tile by hand":
+			return tr("Harvest a tile by hand")
+		"Move the Survey":
+			return tr("Move the Survey")
+		"Zoom the Survey in or out":
+			return tr("Zoom the Survey in or out")
+		"Open or close the menu":
+			return tr("Open or close the menu")
+		"Confirm":
+			return tr("Confirm")
+		"Back":
+			return tr("Back")
+	# Every key of ROWS has its words above (the settings flow checks it).
+	push_warning("the Controls tab has no words for the row " + words)
+	return ""
 
 
 ## Frames `row` in ink while `focused`, and not otherwise.

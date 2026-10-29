@@ -6,8 +6,6 @@ extends RefCounted
 ## to its codex page. Never a rank (#484). The factions are read once, the first time they're
 ## needed.
 
-const HELD_TEXT: String = "Held by %s %s"
-const NOT_HELD_TEXT: String = "Held by no faction"
 ## The symbol of a holder the content doesn't know.
 const UNKNOWN_SYMBOL: String = "?"
 
@@ -24,10 +22,12 @@ static func symbol_of(faction_id: String) -> String:
 ## with text tags, the faction's name tagged; one the content doesn't know shows its id in words.
 static func held_text(faction_id: String) -> String:
 	if faction_id.is_empty():
-		return NOT_HELD_TEXT
+		return TranslationServer.tr("Held by no faction")
 	var known: bool = _factions().factions.has(faction_id)
 	var tagged: String = TextTags.tag(TextTags.FACTION, faction_id)
-	return HELD_TEXT % [symbol_of(faction_id), tagged if known else faction_id.capitalize()]
+	return TranslationServer.tr("Held by {symbol} {faction}").format(
+		{ "symbol": symbol_of(faction_id), "faction": tagged if known else faction_id.capitalize() }
+	)
 
 
 ## The factions' content; when it doesn't load, no faction is known.
