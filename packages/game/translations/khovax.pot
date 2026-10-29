@@ -941,7 +941,7 @@ msgid "The way into ${PLACE:hrovumel_stolm}"
 msgstr ""
 
 #: slices/quests/ui/quest_list_view.gd
-msgid "%s or %s"
+msgid "{ways} or {way}"
 msgstr ""
 
 #: slices/quests/ui/quest_list_view.gd
@@ -965,11 +965,11 @@ msgid "Collect %s"
 msgstr ""
 
 #: slices/quests/ui/quest_list_view.gd
-msgid "%d/%d"
+msgid "{count}/{total}"
 msgstr ""
 
 #: slices/quests/ui/quest_list_view.gd
-msgid "%s  %d/%d"
+msgid "{asks}  {count}/{total}"
 msgstr ""
 
 #: slices/quests/ui/quest_list_view.gd
@@ -993,7 +993,7 @@ msgid "Answer %s"
 msgstr ""
 
 #: slices/quests/ui/quest_list_view.gd
-msgid "Tell %s: \"%s\""
+msgid "Tell {person}: \"{answer}\""
 msgstr ""
 
 #: slices/quests/ui/quest_list_view.gd

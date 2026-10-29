@@ -110,7 +110,8 @@ static func step_line(step: QuestStep, count: int) -> String:
 ## are tags, so a NameLinks shows them as links to their codex pages (#1446). A step with choices
 ## (#573) offers each of them, joined by "or". A new condition gets its own wording here; one
 ## without any shows only the count. Each wording is one whole sentence through `tr()`, the names
-## filled in, so a language can order it its own way (#1655).
+## filled in, so a language can order it its own way (#1655): a format with more than one value
+## names them (`{count}`), since `%` fills its values in order.
 static func step_tagged(step: QuestStep, count: int) -> String:
 	if not step.choices.is_empty():
 		var ways: String = ""
@@ -120,7 +121,8 @@ static func step_tagged(step: QuestStep, count: int) -> String:
 				ways = way
 			else:
 				var lower: String = way.left(1).to_lower() + way.substr(1)
-				ways = TranslationServer.tr("%s or %s") % [ways, lower]
+				var joined: Dictionary[String, String] = { "ways": ways, "way": lower }
+				ways = TranslationServer.tr("{ways} or {way}").format(joined)
 		return ways
 	var asks: String = ""
 	match step.condition:
@@ -139,12 +141,13 @@ static func step_tagged(step: QuestStep, count: int) -> String:
 			asks = _answer_line(step)
 		QuestStep.OBTAINED:
 			asks = TranslationServer.tr("Collect %s") % _words(step.item)
-	if step.count > 1 and asks.is_empty():
-		return TranslationServer.tr("%d/%d") % [count, step.count]
-	if step.count > 1:
-		# The count after the words, as one format, so a language can put it elsewhere.
-		return TranslationServer.tr("%s  %d/%d") % [asks, count, step.count]
-	return asks
+	if step.count <= 1:
+		return asks
+	var parts: Dictionary[String, Variant] = { "asks": asks, "count": count, "total": step.count }
+	if asks.is_empty():
+		return TranslationServer.tr("{count}/{total}").format(parts)
+	# The count after the words, as one format, so a language can put it elsewhere.
+	return TranslationServer.tr("{asks}  {count}/{total}").format(parts)
 
 
 ## What a dominated step asks for, `quarry`: a species, after "a" or "an" by its English name's
@@ -169,7 +172,8 @@ static func _answer_line(step: QuestStep) -> String:
 		return TranslationServer.tr("Answer %s") % _words(step.answer.id)
 	var speaker: String = TextTags.tag(TextTags.PERSON, step.answer.speaker)
 	var answer: String = TranslationServer.tr(step.answer.text)
-	return TranslationServer.tr("Tell %s: \"%s\"") % [speaker, answer]
+	var parts: Dictionary[String, String] = { "person": speaker, "answer": answer }
+	return TranslationServer.tr("Tell {person}: \"{answer}\"").format(parts)
 
 
 ## An id (a place, a region piece, an item or a quest target) as words: they have no
