@@ -633,7 +633,9 @@ class Flow:
     ) -> None:
         """The values a format() fills in: a constant dictionary's values (#1715), or a local or
         member holding them, whose assignments are followed the same way (#1734)."""
-        word = arg[0].text if len(arg) == 1 and arg[0].kind == "id" else ""
+        while len(arg) > 2 and arg[0].text == "(" and matching(arg, 0) == len(arg) - 1:
+            arg = arg[1:-1]  # `(VALUES)` is VALUES
+        word =arg[0].text if len(arg) == 1 and arg[0].kind == "id" else ""
         if [tok.text for tok in arg[:2]] == ["self", "."] and len(arg) == 3:
             word = arg[2].text if arg[2].text in script.members else ""
         elif word in func.names and word not in func.params:
