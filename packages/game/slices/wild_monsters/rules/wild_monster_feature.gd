@@ -4,7 +4,9 @@ extends Feature
 ## as an entity no player controls, and each is of a species (#133). A spot whose region piece names
 ## its species gets that one (a boss arena pins its boss); every other spot rolls one from the
 ## blueprint's weighted list, from the feature's own random stream, so a replay places the same
-## species. Each gets its short id (#700) from the same stream once every spot has its species. Each
+## species. Each gets its short id (#700) from the same stream once every spot has its species.
+## Some of the rolled ones start as babies (#1697, WildBabies), of the first form of their line,
+## rolled from a stream of their own, so the species rolled and the short ids stay as before. Each
 ## stands where it is (its look is a placeholder, #85), unless no ring could enclose it there
 ## (#364, RingableGround): then it steps, once every STEP_TICKS, toward the nearest tile where one
 ## could, never onto the trail or onto anyone, so it never walks into a ring. One held (hiding,
@@ -49,6 +51,9 @@ var roster: Array[String] = []
 var weights: Array[int] = []
 ## Each species' base strength, by species id, from the content data (the species slice reads it).
 var strengths: Dictionary[String, int] = {}
+## The first form of each species' line (#1697), by species id, which its babies are of; a species
+## not in it has babies of its own kind.
+var first_forms: Dictionary[String, String] = {}
 ## Each wild monster's own data (#820), standing or fainted, by entity id: one record, so its
 ## parts never drift apart.
 var _wild: Dictionary[int, WildMonster] = {}
@@ -61,6 +66,9 @@ var held: Array[int] = []
 ## them by their schedules, and a strike (`wound`) or rage (`enrage`) wakes one at once. Saved,
 ## since a woken one stays awake until its schedule wakes it anyway.
 var asleep: Array[int] = []
+## The wild monsters that are babies (#1697, WildBabies), standing or fainted, in id order: young
+## of their line, level 1 and unevolved. Saved, since a save's start may roll others.
+var babies: Array[int] = []
 ## Every species id this instance can place, sorted: the hash counts a species by its place here.
 var _known: Array[String] = []
 ## The ground it steps onto (WildGround), which keeps the region's tiles no ring can enclose a wild
@@ -77,10 +85,12 @@ func _init(
 	roster_ids: Array[String] = [],
 	roster_weights: Array[int] = [],
 	species_strengths: Dictionary[String, int] = {},
+	species_first_forms: Dictionary[String, String] = {},
 ) -> void:
 	roster = roster_ids
 	weights = roster_weights
 	strengths = species_strengths
+	first_forms = species_first_forms
 
 
 func id() -> String:
@@ -95,42 +105,93 @@ func requires() -> Array[String]:
 func start(state: GameState) -> void:
 	var rng: Rng = Rng.new(state.rng_seed, stream())
 	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
-	_known = roster.duplicate()
 	var placed: Dictionary[Vector2i, String] = state.region.placed(WildSpotPlacements.KIND)
+	var young: Array[Vector2i] = []
+	var species_at: Dictionary[Vector2i, String] = _species_at(state, placed, rng, young)
 	for spot: Vector2i in state.region.wild_monsters:
 		var named: WildSpot = WildSpot.read(placed[spot]) if placed.has(spot) else null
-		var species: String = named.species if named != null else ""
-		if species.is_empty() and not roster.is_empty():
-			species = roster[rng.pick_weighted(weights)]
-		if not _known.has(species):
-			_known.append(species)
+		var species: String = species_at[spot]
 		# Can't be refused: an entity without a slot is always added.
 		var monster: Entity = state.add_entity(Entity.NO_SLOT, spot)
 		monsters.append(monster.id)
 		var wild: WildMonster = WildMonster.of(species)
+		if young.has(spot):
+			babies.append(monster.id)
 		health.track(monster.id, species)
 		if named != null:
 			wild.emits = named.emits
 			wild.target = named.target
 			if named.wounded:
-				var full: int = health.max_hp_of(state, monster.id)
-				var _fell: bool = health.hurt(
-					state,
-					monster.id,
-					full - maxi(Fixed.scale(full, WOUNDED_HP), 1),
-					false,
-				)
+				_wound_at_start(state, health, monster.id)
 		# Wild after its starting wound, so a region's wounded share doesn't hang on the difficulty.
 		health.track(monster.id, species, true)
 		_wild[monster.id] = wild
-	# Drawn after every species, so the short ids never shift which species roll; one already
-	# taken here is drawn again, so no two share one.
+	_draw_short_ids(rng)
+	_known.sort()
+	# Already in id order, as the spots are walked in order; sorted so it stays so, as loading keeps
+	# it.
+	babies.sort()
+
+
+## Leaves the new wild monster `entity_id` with WOUNDED_HP of its full HP, at least 1 (#389).
+static func _wound_at_start(state: GameState, health: HealthFeature, entity_id: int) -> void:
+	var full: int = health.max_hp_of(state, entity_id)
+	var _fell: bool = health.hurt(
+		state,
+		entity_id,
+		full - maxi(Fixed.scale(full, WOUNDED_HP), 1),
+		false,
+	)
+
+
+## Gives every wild monster its short id (#700) from `rng`: drawn after every species, so the short
+## ids never shift which species roll; one already taken here is drawn again, so no two share one.
+func _draw_short_ids(rng: Rng) -> void:
 	for monster: int in monsters:
 		var drawn: String = ShortId.drawn(rng)
 		while _short_id_taken(drawn):
 			drawn = ShortId.drawn(rng)
 		_wild[monster].short_id = drawn
-	_known.sort()
+
+
+## Each wild monster spot's species: the one its region names, else one rolled from the roster
+## with `rng`. Of the rolled ones whose species has an earlier form (owner, on #1722: a species
+## with none has no baby yet), those WildBabies picks, from the babies' own stream, so the
+## species and the short ids stay as they were before there were babies (#1697), are the first
+## form of their line instead, and their spots go into `young`. Every species placed,
+## listed or a listed one's first form is one this instance knows.
+func _species_at(
+	state: GameState,
+	placed: Dictionary[Vector2i, String],
+	rng: Rng,
+	young: Array[Vector2i],
+) -> Dictionary[Vector2i, String]:
+	var species_at: Dictionary[Vector2i, String] = {}
+	var rolled: Array[Vector2i] = []
+	var lined: Dictionary[Vector2i, bool] = {}
+	for spot: Vector2i in state.region.wild_monsters:
+		var named: WildSpot = WildSpot.read(placed[spot]) if placed.has(spot) else null
+		species_at[spot] = named.species if named != null else ""
+		if species_at[spot].is_empty() and not roster.is_empty():
+			species_at[spot] = roster[rng.pick_weighted(weights)]
+			rolled.append(spot)
+			if _first_form(species_at[spot]) != species_at[spot]:
+				lined[spot] = true
+	var baby_stream: int = StateHash.mix(stream(), StateHash.name_code("babies"))
+	young.append_array(WildBabies.chosen(rolled, lined, Rng.new(state.rng_seed, baby_stream)))
+	for spot: Vector2i in young:
+		species_at[spot] = _first_form(species_at[spot])
+	# A save's babies are of their line's first form, whichever this start rolled.
+	_known = roster.duplicate()
+	for species: String in roster.map(_first_form) + species_at.values():
+		if not _known.has(species):
+			_known.append(species)
+	return species_at
+
+
+## The first form of `species`' line (#1697): its own, when the feature wasn't given one.
+func _first_form(species: String) -> String:
+	return first_forms.get(species, species)
 
 
 ## Every wild monster no ring could enclose where it stands steps toward where one could, each on
@@ -199,6 +260,7 @@ func entity_removed(_state: GameState, removed_id: int) -> void:
 	fainted.erase(removed_id)
 	held.erase(removed_id)
 	asleep.erase(removed_id)
+	babies.erase(removed_id)
 	var _dropped: bool = _wild.erase(removed_id)
 
 
@@ -295,7 +357,8 @@ func enrage(state: GameState, entity_id: int, heal: int) -> void:
 ## Each wild monster still in the instance as its entity's id, its species, its short id and
 ## whether it fainted, in id order, its rage, whether a standing one is asleep (#1202), the event
 ## a standing one emits when it
-## faints, if any (#541), and the quest target it is, if any (#625). The roster, the species this
+## faints, if any (#541), the quest target it is, if any (#625), and whether it's a baby (#1697).
+## The roster, the species this
 ## instance can place and their stats follow from the blueprint, the region and the content.
 func save_values() -> Dictionary:
 	var saved: Array[Dictionary] = []
@@ -311,6 +374,8 @@ func save_values() -> Dictionary:
 			"fainted": 1 if fainted.has(monster) else 0,
 		}
 		entry["rage"] = wild.rage
+		if babies.has(monster):
+			entry["baby"] = 1
 		if asleep.has(monster):
 			entry["asleep"] = 1
 		if not wild.emits.is_empty():
@@ -326,6 +391,7 @@ func load_values(state: GameState, values: DataReader) -> void:
 	fainted.clear()
 	held.clear()
 	asleep.clear()
+	babies.clear()
 	_wild.clear()
 	for entry: DataReader in values.entries("wild_monsters"):
 		var monster: int = entry.whole("entity", 1, DataReader.MOST)
@@ -349,6 +415,9 @@ func load_values(state: GameState, values: DataReader) -> void:
 		_wild[monster] = wild
 		if (entry.data as Dictionary).has("target"):
 			wild.target = entry.text("target")
+		# Saves from before babies (#1697) have none.
+		if (entry.data as Dictionary).has("baby") and entry.whole("baby", 0, 1) == 1:
+			babies.append(monster)
 		if entry.whole("fainted", 0, 1) == 1:
 			fainted.append(monster)
 			continue
@@ -362,6 +431,7 @@ func load_values(state: GameState, values: DataReader) -> void:
 	monsters.sort()
 	fainted.sort()
 	asleep.sort()
+	babies.sort()
 	_track_loaded(state, values)
 
 
@@ -401,6 +471,8 @@ func hash_values() -> Array[int]:
 			targets[monster] = _wild[monster].target
 	_hash_names(values, emits)
 	_hash_names(values, targets)
+	values.append(babies.size())
+	values.append_array(babies)
 	return values
 
 

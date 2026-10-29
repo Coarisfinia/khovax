@@ -81,6 +81,9 @@ const HUNT_GIVE_UP_TICKS: int = 20 * Simulation.TICKS_PER_SECOND
 const PACK_SIZE: int = 4
 const PACK_REACH: int = 6
 const PACK_KEEP_NEAR: int = 2
+## How likely each bundle of wild monsters is to hold babies, in thousandths (owner's ground rule,
+## #1697): young of its line, level 1 and unevolved, beside the grown ones.
+const WILD_BABY_CHANCE: int = 600
 # Wild monsters' days (#1201).
 ## How many hours a diurnal or nocturnal monster sleeps in one block, and over how many hours after
 ## dusk (diurnal) or dawn (nocturnal) its bedtime is spread. A night or a day has room for both:

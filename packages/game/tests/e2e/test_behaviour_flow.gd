@@ -43,6 +43,13 @@ extends RefCounted
 ## next member, a pack down to one is gone, and a save plays on the same. The content's Vynakiir
 ## band in Ivenwhal Wudhen.
 ##
+## Babies live beside the grown ones (#1697): each bundle of rolled wild monsters whose species has
+## an earlier form holds babies in WildBabies.CHANCE thousandths of cases, over many seeds within a
+## tolerance; a baby is of the first form of its line (level 1 and unevolved), a grown one keeps its
+## species, a monster the region names never starts as a baby, a species with no earlier form has
+## no babies (owner, on #1722), and a save gives the babies back, in the state hash. In Hrovumel
+## Stolm, a Vynakiir's baby is a Vynnimu, and every baby there is a first form with a later one.
+##
 ## In its grazing hours a grazer walks to the nearest grass and eats there, and in its drinking
 ## hours a drinker finds its way round a rock wall to the nearest water and drinks (#1203).
 
@@ -114,6 +121,23 @@ const PACK_SPOTS: Dictionary[Vector2i, String] = {
 	Vector2i(3, 2): "sha",
 	Vector2i(4, -2): "lon",
 }
+## The baby flow's bundles (#1697), each of rolled monsters, too far apart to gather into one; a
+## spot the region names beside the first; the species they roll, and its line's first form; how
+## many seeds it rolls, and how far from WildBabies.CHANCE the share of bundles with babies may be,
+## in thousandths.
+const BABY_BUNDLES: Array[Array] = [
+	[Vector2i(-7, 0), Vector2i(-7, 1), Vector2i(-6, 0)],
+	[Vector2i(6, 0), Vector2i(6, 1), Vector2i(7, 0)],
+]
+const BABY_NAMED: Vector2i = Vector2i(-6, 1)
+const BABY_ADULT: String = "big"
+const BABY_FIRST_FORM: String = "pup"
+## A species with no earlier form (owner, on #1722): it has no babies.
+const BABY_LONE: String = "own"
+const BABY_SEEDS: int = 1000
+const BABY_TOLERANCE: int = 50
+## How many seeds of Hrovumel Stolm the content's baby check plays.
+const CONTENT_BABY_SEEDS: int = 40
 ## A test grazer and drinker (#1203), and what each does in its hours of need.
 const FORAGERS: Dictionary[String, Array] = {
 	"gra": ["diurnal", "grazer"],
@@ -160,6 +184,8 @@ func run(_tree: SceneTree) -> String:
 		_check_pack_leader_lost,
 		_check_pack_saved,
 		_check_content_packs,
+		_check_wild_babies,
+		_check_content_babies,
 		_check_grazing_and_drinking,
 	]
 	for check: Callable in steps:
@@ -1396,6 +1422,121 @@ func _check_content_packs() -> String:
 		if not banded.has(species):
 			return "the %s of Ivenwhal Wudhen don't band into a pack" % species
 	return ""
+
+
+## Over BABY_SEEDS seeds, each of the baby flow's bundles (BABY_BUNDLES) holds babies in
+## WildBabies.CHANCE thousandths of cases, within BABY_TOLERANCE: then its last spot only, a baby
+## of its line's first form; its grown ones and the named monster beside them keep their species.
+func _check_wild_babies() -> String:
+	var held: int = 0
+	for seed_value: int in BABY_SEEDS:
+		var state: GameState = _baby_state(seed_value)
+		var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+		var at: Dictionary[Vector2i, int] = {}
+		for monster: int in wild.monsters:
+			at[state.entity(monster).tile] = monster
+		if wild.babies.has(at[BABY_NAMED]) or wild.species_of(at[BABY_NAMED]) != BABY_ADULT:
+			return "the monster the region names started as a baby (seed %d)" % seed_value
+		for bundle: Array in BABY_BUNDLES:
+			var last_spot: Vector2i = bundle[bundle.size() - 1]
+			var last: int = at[last_spot]
+			var expected: String = BABY_FIRST_FORM if wild.babies.has(last) else BABY_ADULT
+			if wild.species_of(last) != expected:
+				return "a bundle's last is a %s, not a %s" % [wild.species_of(last), expected]
+			if wild.babies.has(last):
+				held += 1
+			for spot: Vector2i in bundle.slice(0, bundle.size() - 1):
+				if wild.babies.has(at[spot]) or wild.species_of(at[spot]) != BABY_ADULT:
+					return "more than the last of a bundle of %d started as a baby" % bundle.size()
+	for seed_value: int in BABY_SEEDS:
+		var lone: GameState = _baby_state(seed_value, BABY_LONE)
+		if not (lone.feature(WildMonsterFeature.ID) as WildMonsterFeature).babies.is_empty():
+			return "a species with no earlier form had a baby (seed %d)" % seed_value
+	var share: int = Fixed.ratio(held, BABY_SEEDS * BABY_BUNDLES.size())
+	if absi(share - WildBabies.CHANCE) > BABY_TOLERANCE:
+		return "%d thousandths of the bundles held babies, not about %d" % [
+			share,
+			WildBabies.CHANCE,
+		]
+	return _baby_saved()
+
+
+## A save gives a state's babies back, and whether one is a baby is in the state hash.
+func _baby_saved() -> String:
+	var seed_value: int = 0
+	var state: GameState = _baby_state(seed_value)
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	while wild.babies.is_empty():
+		seed_value += 1
+		state = _baby_state(seed_value)
+		wild = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	var loaded: GameState = _baby_state(seed_value)
+	loaded.load_data(DataReader.new(state.to_data()))
+	var back: WildMonsterFeature = loaded.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	for monster: int in wild.monsters:
+		if back.babies.has(monster) != wild.babies.has(monster):
+			return "a save didn't give back which wild monsters are babies"
+	if loaded.state_hash() != state.state_hash():
+		return "a save with babies didn't give the same state hash"
+	var data: Dictionary = state.to_data()
+	for feature: Dictionary in data["features"]:
+		if feature["id"] == WildMonsterFeature.ID:
+			for entry: Dictionary in feature["values"]["wild_monsters"]:
+				var _dropped: bool = entry.erase("baby")
+	var grown: GameState = _baby_state(seed_value)
+	grown.load_data(DataReader.new(data))
+	if grown.state_hash() == state.state_hash():
+		return "whether a wild monster is a baby isn't in the state hash"
+	return ""
+
+
+## In Hrovumel Stolm, whose blueprint rolls Vynakiir, some seed has a Vynakiir's baby, a Vynnimu,
+## and every baby there is the first form of its line: nothing ascends into it.
+func _check_content_babies() -> String:
+	var content: SpeciesContent = SpeciesContent.cached()
+	var pups: int = 0
+	for seed_value: int in CONTENT_BABY_SEEDS:
+		var state: GameState = InstanceBlueprints.create("hrovumel_stolm", seed_value, 1)
+		var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+		for monster: int in wild.monsters:
+			if not wild.babies.has(monster):
+				continue
+			var species: String = wild.species_of(monster)
+			if content.first_form(species) != species:
+				return "a baby in Hrovumel Stolm is a %s, which is no first form" % species
+			if not content.ascensions.has(species):
+				return "a baby in Hrovumel Stolm is a %s, which has no later form" % species
+			if species == "vynnimu":
+				pups += 1
+	if content.first_form("vynakiir") != "vynnimu":
+		return "the Vynakiir's line doesn't start with the Vynnimu"
+	if pups == 0:
+		return "no Vynakiir in Hrovumel Stolm had a Vynnimu baby"
+	return ""
+
+
+## A disc with the baby flow's bundles of rolled monsters (BABY_BUNDLES), all of `rolled`: by
+## default BABY_ADULT, whose line's first form is BABY_FIRST_FORM; and a monster the region names
+## beside the first.
+static func _baby_state(seed_value: int, rolled: String = BABY_ADULT) -> GameState:
+	var region: Region = Region.disc(10)
+	for bundle: Array in BABY_BUNDLES:
+		for spot: Vector2i in bundle:
+			region.wild_monsters.append(spot)
+	region.wild_monsters.append(BABY_NAMED)
+	region.add_placement(WildSpotPlacements.KIND, BABY_NAMED, WildSpot.NAMED + BABY_ADULT)
+	var roster: Array[String] = [rolled]
+	var weights: Array[int] = [1]
+	var first_forms: Dictionary[String, String] = { BABY_ADULT: BABY_FIRST_FORM }
+	var hp: Dictionary[String, int] = { BABY_ADULT: 10, BABY_FIRST_FORM: 5, BABY_LONE: 10 }
+	var ordered: Array[Feature] = [
+		MovementFeature.new(),
+		KnockdownFeature.new(),
+		TrailFeature.new(),
+		HealthFeature.new(hp),
+		WildMonsterFeature.new(roster, weights, {}, first_forms),
+	]
+	return GameState.new(region, seed_value, ordered)
 
 
 ## A disc with the pack flow's wild monsters (PACK_SPOTS), with the packs or, not `packed`,
