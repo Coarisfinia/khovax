@@ -63,6 +63,12 @@ func is_hidden(entity_id: int) -> bool:
 	return hidden.has(entity_id)
 
 
+## The hidden wild monsters are out of sight (GameState.concealed), so their views needn't know
+## this slice.
+func conceals(entity_id: int) -> bool:
+	return is_hidden(entity_id)
+
+
 ## Whether a wild monster on `tile` of `region` hides there.
 static func hides_at(region: Region, tile: Vector2i) -> bool:
 	var kind: String = region.terrain.get(tile, Region.GROUND)

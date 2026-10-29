@@ -41,11 +41,11 @@ from game_shared.git_files import git_files
 
 # The slices, each after every slice it names (#821).
 SLICE_ORDER: tuple[str, ...] = (
-    "emoji_grid", "menu_widgets", "realms", "camera", "music", "credits", "hiding", "movement",
+    "emoji_grid", "menu_widgets", "realms", "camera", "music", "credits", "movement",
     "entering", "paths", "loot", "board", "exits", "fog", "input_prompts", "action_buttons",
     "triggers", "texts", "species", "development", "outbox", "host_settings", "health", "players",
     "npcs", "trail",
-    "wild_monsters", "schedules", "packs", "tiles", "controls",
+    "wild_monsters", "hiding", "schedules", "packs", "tiles", "controls",
     "settings", "factions",
     "survey", "menu", "notices",
     "domination", "control_points", "totems", "enrage", "hunts", "foraging", "domination_loot",
@@ -57,7 +57,6 @@ SLICE_ORDER: tuple[str, ...] = (
 # The back-edges still waiting ("slice>later slice": the issue that drops it).
 SLICE_EXEMPT: dict[str, int] = {
     "board>profile": 1663,
-    "hiding>wild_monsters": 851,
 }  # fmt: skip
 
 THIS = "packages/game-checks/import_rules.py"

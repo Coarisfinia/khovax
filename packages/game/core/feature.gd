@@ -82,6 +82,14 @@ func followers_of(_state: GameState, _slot: int) -> Array[int]:
 	return none
 
 
+## Whether this feature keeps the entity `entity_id` out of sight (#1616), like a wild monster
+## hidden in a tile that hides: the views don't draw it and it can't be focused, while the rules
+## still treat it as there. Read through `GameState.concealed`, so the views needn't know the
+## feature. None by default.
+func conceals(_entity_id: int) -> bool:
+	return false
+
+
 ## The feature's data on `entity_id`, a follower about to leave `state` with its player (#716), for
 ## `carry_in` to restore on the entity it becomes next door: whole numbers and ids only, empty when
 ## the feature keeps nothing on it. The World never reads it.
