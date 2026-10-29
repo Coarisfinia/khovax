@@ -269,7 +269,7 @@ func _menu_character(menu: GameMenu, main: Node) -> String:
 ## they carry first, in the order dominated, the first their companion, then the fourth.
 func _menu_monsters(menu: GameMenu, main: Node) -> String:
 	var tab: CharacterTab = menu.character
-	var none: Array[String] = [DominatedMonstersList.NONE_TEXT]
+	var none: Array[String] = [DominatedMonstersList.none_text()]
 	if tab.monsters.shown != none:
 		return "the Character tab lists monsters before any is dominated: %s" % [tab.monsters.shown]
 	var gain: Gain = Gain.new()
@@ -661,7 +661,7 @@ func _menu_development(tab: CharacterTab) -> String:
 	var view: DevelopmentWebView = tab.find_children("*", "DevelopmentWebView", true, false)[0]
 	var nodes: Array = view.buttons.keys()
 	nodes.sort()
-	var picks: Array[String] = [DevelopmentWebView.TITLE, DevelopmentWebView.PICKS_TEXT % 1]
+	var picks: Array[String] = [DevelopmentWebView.title_text(), DevelopmentWebView.picks_text(1)]
 	if view.shown != picks or nodes != ["deep_1", "heavy_1", "sturdy_1", "swift_1"]:
 		return "the web doesn't show each direction's first node only: %s %s" % [view.shown, nodes]
 	var looks: String = _development_looks(view)
@@ -681,7 +681,7 @@ func _menu_development(tab: CharacterTab) -> String:
 	nodes.sort()
 	if nodes != ["deep_1", "heavy_1", "sturdy_1", "sturdy_2", "swift_1"]:
 		return "taking a node didn't reveal the one beyond it alone: %s" % [nodes]
-	if not view.buttons["sturdy_1"].text.begins_with(DevelopmentWebView.TAKEN_TEXT):
+	if not view.buttons["sturdy_1"].text.begins_with(DevelopmentWebView.taken_text()):
 		return "a taken node doesn't say so in words: %s" % view.buttons["sturdy_1"].text
 	# With no level left, pressing an open node takes nothing.
 	view.buttons["heavy_1"].pressed.emit()
@@ -689,7 +689,7 @@ func _menu_development(tab: CharacterTab) -> String:
 			or outbox.entries.size() != posted
 			or view.buttons["heavy_1"].focus_mode != Control.FOCUS_ALL):
 		return "a node was taken or sent with no level left, or can't take the focus"
-	if view.shown[1] != DevelopmentWebView.NO_PICKS_TEXT:
+	if view.shown[1] != DevelopmentWebView.no_picks_text():
 		return "the web doesn't say it takes a node at its next level: %s" % [view.shown]
 	if view.is_visible_in_tree() and not view.buttons["sturdy_1"].has_focus():
 		return "the focus didn't stay on the node just taken, for a controller"
@@ -708,7 +708,7 @@ func _knot_marks(tab: CharacterTab, waits: bool) -> String:
 		mark = part as KnotMark if part is KnotMark else mark
 	if tab.monsters.marked != wanted or (mark != null) != waits:
 		return "the monsters' rows carry the knot mark %s, not %s" % [tab.monsters.marked, wanted]
-	if mark != null and (mark.get_child(1) as Label).text != KnotMark.TEXT:
+	if mark != null and (mark.get_child(1) as Label).text != KnotMark.text():
 		return "the knot mark doesn't say so in words"
 	if mark != null:
 		# A click on the mark selects its monster, as one on its line does.
@@ -750,8 +750,8 @@ func _menu_ascension(menu: GameMenu) -> String:
 	tab.monsters.move(pup.short_id, 0)
 	tab.monsters.select(pup.short_id)
 	var details: MonsterDetails = tab.monsters.details
-	var line: String = MonsterDetails.ASCENSION_TEXT % ["Vynakiir", 43]
-	var given: String = MonsterDetails.MATERIAL_TEXT % ["arcane crystal", 0]
+	var line: String = MonsterDetails.ascension_text("Vynakiir", 43)
+	var given: String = MonsterDetails.material_text("arcane crystal", 0)
 	var told: bool = details.shown.has(line) and details.shown.has(given)
 	if not told or not details.ascend_button.disabled:
 		return "a level 1 Vynnimu's ascension isn't shown, or can be pressed: %s" % [details.shown]
@@ -767,7 +767,7 @@ func _menu_ascension(menu: GameMenu) -> String:
 		return "pressing Ascend didn't make it a Vynakiir, or kept the crystal"
 	if not _sent_ascended(profile.outbox, posted, pup.short_id):
 		return "the ascended companion didn't go to the world as a Vynakiir at once"
-	if details.notice != MonsterDetails.ASCENDED_TEXT % ["Vynnimu", "Vynakiir"]:
+	if details.notice != MonsterDetails.ascended_text("Vynnimu", "Vynakiir"):
 		return "no line says it ascended: %s" % details.notice
 	if details.ascend_button.visible or not details.shown[0].begins_with("Vynakiir, level 43"):
 		return "the details don't show the Vynakiir: %s" % [details.shown]

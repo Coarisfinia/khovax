@@ -379,7 +379,7 @@ func open_text() -> String:
 
 ## What the open button says while a knot waits (#1443), with the knot's mark in its words.
 func knot_text() -> String:
-	return tr("Menu: %s") % tr(KnotMark.TEXT)
+	return tr("Menu: %s") % KnotMark.text()
 
 
 ## The button at the top that opens the menu on touch screens, and on every device while a knot

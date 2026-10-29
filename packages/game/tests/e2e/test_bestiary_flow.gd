@@ -56,9 +56,9 @@ func _check_unseen() -> String:
 		return "the player had seen every species before the first tick"
 	var species: Species = SpeciesContent.cached().species[unseen]
 	var expected: Array[String] = [
-		BestiaryEntry.NOT_SEEN_TEXT,
-		BestiaryEntry.NOT_MET_TEXT,
-		BestiaryEntry.NOT_KNOWN_TEXT,
+		BestiaryEntry.not_seen_text(),
+		BestiaryEntry.not_met_text(),
+		BestiaryEntry.not_known_text(),
 	]
 	var problem: String = _page_problem(species, expected)
 	return "an unseen species' page: " + problem if not problem.is_empty() else ""
@@ -84,7 +84,7 @@ func _check_seen() -> String:
 		if seen and known.habitat_of(id) != [FlowSteps.BASIC]:
 			return "%s was seen in %s" % [id, known.habitat_of(id)]
 	var species: Species = SpeciesContent.cached().species[on_screen[0]]
-	var expected: Array[String] = [BestiaryEntry.NOT_MET_TEXT, BestiaryEntry.NOT_KNOWN_TEXT]
+	var expected: Array[String] = [BestiaryEntry.not_met_text(), BestiaryEntry.not_known_text()]
 	var problem: String = _page_problem(species, expected)
 	return "a seen species' page: " + problem if not problem.is_empty() else ""
 
@@ -103,12 +103,12 @@ func _check_met() -> String:
 		return "a strike on the player didn't meet %s" % species.id
 	var abilities: Dictionary[String, Ability] = AbilityContent.cached().abilities
 	var expected: Array[String] = [
-		BestiaryEntry.TYPES_HEADING + " " + ", ".join(species.types),
-		BestiaryEntry.SPECIAL_TEXT % TextTags.shown(abilities[species.special].name),
-		BestiaryEntry.PLAYER_PASSIVE_TEXT % TextTags.shown(abilities[species.player_passive].name),
-		BestiaryEntry.SELF_PASSIVE_TEXT % TextTags.shown(abilities[species.self_passive].name),
+		BestiaryEntry.types_heading() + " " + ", ".join(species.types),
+		BestiaryEntry.special_text(TextTags.shown(abilities[species.special].name)),
+		BestiaryEntry.player_passive_text(TextTags.shown(abilities[species.player_passive].name)),
+		BestiaryEntry.self_passive_text(TextTags.shown(abilities[species.self_passive].name)),
 		HABITAT,
-		BestiaryEntry.NOT_KNOWN_TEXT,
+		BestiaryEntry.not_known_text(),
 	]
 	var problem: String = _page_problem(species, expected)
 	return "a met species' page: " + problem if not problem.is_empty() else ""
@@ -133,7 +133,8 @@ func _check_habitat_link() -> String:
 		_page.close()
 		return "the habitat line linked %s, not %s" % [links, link]
 	line.select(link)
-	var turned: bool = (_page.is_open() and _page.heading.text == CodexPage.PLACES_TEXT
+	var turned: bool = (_page.is_open()
+			and _page.heading.text == CodexPage.heading_of(TextTags.PLACE)
 			and _page.title.text == Realms.name_of(place))
 	_page.close()
 	return "" if turned else "selecting %s showed %s" % [place, _page.title.text]
@@ -219,12 +220,12 @@ func _page_problem(species: Species, expected: Array[String]) -> String:
 	var gloss: String = _page.gloss.get_parsed_text()
 	var picture: SpeciesPicture = _page.beast.picture
 	_page.close()
-	var seen: bool = expected.front() != BestiaryEntry.NOT_SEEN_TEXT
+	var seen: bool = expected.front() != BestiaryEntry.not_seen_text()
 	if (picture != null) != seen:
 		return "its picture was %s, seen: %s" % ["shown" if picture != null else "missing", seen]
 	if seen and picture.model.scene_file_path != species.model:
 		return "its picture showed %s, not %s" % [picture.model.scene_file_path, species.model]
-	if (_page.heading.text != CodexPage.BESTIARY_TEXT
+	if (_page.heading.text != CodexPage.heading_of(TextTags.MONSTER)
 			or _page.title.text != species.name
 			or gloss != "%s: %s" % [species.name, species.codex_gloss()]):
 		return "it showed %s, %s, %s" % [_page.heading.text, _page.title.text, gloss]

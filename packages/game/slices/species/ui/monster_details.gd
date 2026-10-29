@@ -12,21 +12,8 @@ extends VBoxContainer
 ## The player pressed Ascend for the dominated monster `short_id`.
 signal ascend_chosen(short_id: String)
 
-const TITLE: String = "Details"
-const NONE_TEXT: String = "No monster selected"
-const UNKNOWN_TEXT: String = "Its species' stats can't be read"
-const TYPES_HEADING: String = "Types:"
-## Its progress toward the next level: what it has, what that level needs, and the level.
-const PROGRESS_TEXT: String = "Progress: %d of %d to level %d"
 ## Which line names its types, shown with their family badges.
 const TYPES_LINE: int = 2
-## Its ascension (#1235): into which species and at which level, then with which material and how
-## many of it the player holds. Two short lines, since the menu's lines trim.
-const ASCENSION_TEXT: String = "Ascends into %s at level %d"
-const MATERIAL_TEXT: String = "Given one %s: you hold %d"
-const ASCEND_TEXT: String = "Ascend"
-## Said once a monster has ascended: from which species into which.
-const ASCENDED_TEXT: String = "%s ascended into %s!"
 
 ## What the pane shows, one line each. Kept here so tests can read it.
 var shown: Array[String] = []
@@ -41,10 +28,10 @@ var _short_id: String = ""
 
 
 func _ready() -> void:
-	add_child(MenuWidgets.label(TITLE))
+	add_child(MenuWidgets.label(tr("Details")))
 	_lines = VBoxContainer.new()
 	add_child(_lines)
-	ascend_button = MenuWidgets.button(ASCEND_TEXT, func() -> void: ascend_chosen.emit(_short_id))
+	ascend_button = MenuWidgets.button(tr("Ascend"), func() -> void: ascend_chosen.emit(_short_id))
 	add_child(ascend_button)
 	_notice = MenuWidgets.label("")
 	add_child(_notice)
@@ -58,7 +45,8 @@ static func all_ability_names() -> Dictionary[String, String]:
 	var abilities: AbilityContent = AbilityContent.cached()
 	for id: String in abilities.abilities:
 		var ability: Ability = abilities.abilities[id]
-		names[id] = PathMark.tagged(TextTags.shown(ability.name), ability.path)
+		var shown_name: String = TextTags.shown(TranslationServer.tr(ability.name))
+		names[id] = PathMark.tagged(shown_name, ability.path)
 	return names
 
 
@@ -79,41 +67,58 @@ func show_monster(
 	var ascends: bool = monster != null and ascension != null
 	ascend_button.visible = ascends
 	ascend_button.disabled = not ascends or monster.level < ascension.level or holds < 1
-	var lines: Array[String] = [NONE_TEXT]
+	var lines: Array[String] = [tr("No monster selected")]
 	# A monster whose species the data lacks still shows, by its species id.
 	if monster != null and species == null:
 		lines = [
-			"%s, level %d" % [monster.species, monster.level],
+			tr("%s, level %d") % [monster.species, monster.level],
 			_progress(monster),
-			UNKNOWN_TEXT,
+			tr("Its species' stats can't be read"),
 		]
 	if monster != null and species != null:
+		var player_passive: String = species.player_passive
 		lines = [
-			"%s, level %d" % [species.name, monster.level],
+			tr("%s, level %d") % [tr(species.name), monster.level],
 			_progress(monster),
-			TYPES_HEADING + " " + ", ".join(species.types),
-			"HP: %d" % species.hp,
-			"Strength: %d" % species.strength,
-			"Speed: %d" % species.speed,
-			"Special: " + ability_names.get(species.special, species.special),
-			"Passive for you: " + ability_names.get(species.player_passive, species.player_passive),
-			"Own passive: " + ability_names.get(species.self_passive, species.self_passive),
+			_types_heading() + " " + ", ".join(species.types),
+			tr("HP: %d") % species.hp,
+			tr("Strength: %d") % species.strength,
+			tr("Speed: %d") % species.speed,
+			tr("Special: %s") % ability_names.get(species.special, species.special),
+			tr("Passive for you: %s") % ability_names.get(player_passive, player_passive),
+			tr("Own passive: %s") % ability_names.get(species.self_passive, species.self_passive),
 		]
 		# Its sight trait (#962), only for a species that has one.
 		if species.sight > 0:
-			lines.append("Sight: you see %d steps further while you carry it" % species.sight)
+			lines.append(tr("Sight: you see %d steps further while you carry it") % species.sight)
 		if ascends:
 			var given: String = ascension.material.replace("_", " ")
 			var grown: Species = SpeciesContent.cached().species.get(ascension.into)
-			var into: String = grown.name if grown != null else ascension.into
-			lines.append(ASCENSION_TEXT % [into, ascension.level])
-			lines.append(MATERIAL_TEXT % [given, holds])
+			var into: String = tr(grown.name) if grown != null else ascension.into
+			lines.append(ascension_text(into, ascension.level))
+			lines.append(material_text(given, holds))
 	if lines == shown:
 		return
 	shown = lines
 	MenuWidgets.show_lines(_lines, lines)
 	if monster != null and species != null:
 		_badge_types(species.types)
+
+
+## Its ascension (#1235): into which species, `into`, and at which `level`. With material_text, two
+## short lines, since the menu's lines trim.
+static func ascension_text(into: String, level: int) -> String:
+	return TranslationServer.tr("Ascends into %s at level %d") % [into, level]
+
+
+## Its ascension's material, `given`, and how many of it the player `holds`.
+static func material_text(given: String, holds: int) -> String:
+	return TranslationServer.tr("Given one %s: you hold %d") % [given, holds]
+
+
+## Said once a monster has ascended: from which species, `from`, into which, `into`.
+static func ascended_text(from: String, into: String) -> String:
+	return TranslationServer.tr("%s ascended into %s!") % [from, into]
 
 
 ## Says `text` below the pane, like that the monster shown just ascended, or nothing for "".
@@ -125,10 +130,16 @@ func tell_ascended(text: String) -> void:
 	_notice.visible = not text.is_empty()
 
 
-## `monster`'s progress toward its next level, in words.
-static func _progress(monster: DominatedMonster) -> String:
+## `monster`'s progress toward its next level, in words: what it has, what that level needs, and
+## the level.
+func _progress(monster: DominatedMonster) -> String:
 	var needed: int = DominatedMonster.progress_needed(monster.level)
-	return PROGRESS_TEXT % [monster.progress, needed, monster.level + 1]
+	return tr("Progress: %d of %d to level %d") % [monster.progress, needed, monster.level + 1]
+
+
+## The heading before its types.
+func _types_heading() -> String:
+	return tr("Types:")
 
 
 ## Swaps the types' line for one that shows each type after its family's badge (#627).
@@ -136,6 +147,6 @@ func _badge_types(types: Array[String]) -> void:
 	var plain: Node = _lines.get_child(TYPES_LINE)
 	_lines.remove_child(plain)
 	plain.queue_free()
-	var badged: HBoxContainer = TypeBadge.row(TYPES_HEADING, types)
+	var badged: HBoxContainer = TypeBadge.row(_types_heading(), types)
 	_lines.add_child(badged)
 	_lines.move_child(badged, TYPES_LINE)

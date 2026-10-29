@@ -65,7 +65,8 @@ static func faction_link_problem(main: Node, line: NameLinks, faction_id: String
 	var page: CodexPage = main.get_node("Hud/CodexPage") as CodexPage
 	line.select(link)
 	var faction: Faction = FactionContent.cached().factions[faction_id]
-	var opened: bool = (page.is_open() and page.heading.text == CodexPage.LEXICON_TEXT
+	var opened: bool = (page.is_open()
+			and page.heading.text == CodexPage.heading_of(TextTags.FACTION)
 			and page.title.text == TextTags.shown(faction.name))
 	page.close()
 	return "" if opened else "selecting %s showed %s" % [faction_id, page.title.text]

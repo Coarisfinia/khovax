@@ -120,7 +120,7 @@ func ascend(short_id: String) -> void:
 		var from: String = tr(known[before].name) if known.has(before) else before
 		var now: String = monster.species
 		var into: String = tr(known[now].name) if known.has(now) else now
-		monsters.details.tell_ascended(tr(MonsterDetails.ASCENDED_TEXT) % [from, into])
+		monsters.details.tell_ascended(MonsterDetails.ascended_text(from, into))
 	monsters.refresh()
 
 

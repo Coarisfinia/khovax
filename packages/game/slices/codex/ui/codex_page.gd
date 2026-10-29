@@ -15,23 +15,6 @@ extends Control
 ## dialog's line doesn't either. It eases in and out, never snaps, and its text grows with the
 ## screen. The codex book (CodexBook, #1174) opens it over the menu, which stays open under it.
 
-## The page's heading over a faction's name.
-const LEXICON_TEXT: String = "Lexicon"
-## The page's heading over a species' name.
-const BESTIARY_TEXT: String = "Bestiary"
-## The page's heading over a person's name (#1005).
-const PEOPLE_TEXT: String = "People"
-## The page's heading over a realm's name, and over a place's (#1175).
-const REALMS_TEXT: String = "Realms"
-const PLACES_TEXT: String = "Places"
-## The page's heading over a unique item's name (#1449).
-const UNIQUE_ITEMS_TEXT: String = "Unique items"
-## The standing line: neutral, or the standing with its sign and the rank the faction names it.
-const NEUTRAL_TEXT: String = "Your standing: neutral"
-const STANDING_TEXT: String = "Your standing: %+d, %s"
-## The meaning line: the name, then what it means in italics.
-const GLOSS_TEXT: String = "%s: [i]%s[/i]"
-const CLOSE_TIP: String = "Close the page (Escape, or B on a controller)"
 const FADE_SECONDS: float = GameMenu.FADE_SECONDS
 ## The text's size as a share of the screen's shorter side, and never smaller than the menu's.
 const FONT_SHARE: float = GameMenu.FONT_SHARE
@@ -81,7 +64,7 @@ func _ready() -> void:
 	var middle: CenterContainer = CenterContainer.new()
 	middle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_column = VBoxContainer.new()
-	heading = MenuWidgets.label(LEXICON_TEXT)
+	heading = MenuWidgets.label(heading_of(TextTags.FACTION))
 	title = MenuWidgets.label("")
 	gloss = RichTextLabel.new()
 	gloss.bbcode_enabled = true
@@ -100,7 +83,7 @@ func _ready() -> void:
 	row.add_child(middle)
 	close_button = MenuWidgets.button("", close)
 	close_button.icon = GameMenu.CLOSE_ICON
-	close_button.tooltip_text = CLOSE_TIP
+	close_button.tooltip_text = tr("Close the page (Escape, or B on a controller)")
 	close_button.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	row.add_child(close_button)
 	_sheet.add_child(row)
@@ -148,12 +131,37 @@ func open(kind: String, id: String) -> bool:
 	return true
 
 
+## The page's heading over the name of a thing of the kind `kind` (TextTags.CODEX_KINDS): Lexicon
+## over a faction's, Bestiary over a species', People over a person's (#1005), Realms over a realm's
+## and Places over a place's (#1175), Unique items over a unique item's (#1449).
+static func heading_of(kind: String) -> String:
+	match kind:
+		TextTags.FACTION:
+			return TranslationServer.tr("Lexicon")
+		TextTags.MONSTER:
+			return TranslationServer.tr("Bestiary")
+		TextTags.PERSON:
+			return TranslationServer.tr("People")
+		TextTags.REALM:
+			return TranslationServer.tr("Realms")
+		TextTags.PLACE:
+			return TranslationServer.tr("Places")
+		TextTags.UNIQUE_ITEM:
+			return TranslationServer.tr("Unique items")
+	return kind
+
+
+## The standing line while this machine's player is neutral with a faction.
+static func neutral_text() -> String:
+	return TranslationServer.tr("Your standing: neutral")
+
+
 ## Shows `faction`'s lexicon entry; whether there is one.
 func _show_faction(faction: Faction) -> bool:
 	if faction == null:
 		return false
-	_show_name(LEXICON_TEXT, TextTags.shown(faction.name), faction.codex_gloss)
-	entry.text = faction.codex_entry
+	_show_name(TextTags.FACTION, TextTags.shown(tr(faction.name)), tr(faction.codex_gloss))
+	entry.text = tr(faction.codex_entry)
 	standing.text = _standing_line(faction)
 	return true
 
@@ -163,7 +171,7 @@ func _show_faction(faction: Faction) -> bool:
 func _show_species(species: Species) -> bool:
 	if species == null:
 		return false
-	_show_name(BESTIARY_TEXT, species.name, species.codex_gloss())
+	_show_name(TextTags.MONSTER, tr(species.name), tr(species.codex_gloss()))
 	beast.show_species(species, BestiaryKeeper.of(_holder()))
 	return true
 
@@ -172,8 +180,8 @@ func _show_species(species: Species) -> bool:
 func _show_person(person: Person) -> bool:
 	if person == null:
 		return false
-	_show_name(PEOPLE_TEXT, TextTags.shown(person.name), person.codex_gloss)
-	entry.text = person.codex_entry
+	_show_name(TextTags.PERSON, TextTags.shown(tr(person.name)), tr(person.codex_gloss))
+	entry.text = tr(person.codex_entry)
 	return true
 
 
@@ -181,8 +189,8 @@ func _show_person(person: Person) -> bool:
 func _show_realm(realm: Realm) -> bool:
 	if realm == null:
 		return false
-	_show_name(REALMS_TEXT, Realms.name_of(realm.id), realm.codex_gloss)
-	entry.text = realm.codex_entry
+	_show_name(TextTags.REALM, Realms.name_of(realm.id), tr(realm.codex_gloss))
+	entry.text = tr(realm.codex_entry)
 	return true
 
 
@@ -198,8 +206,8 @@ func _show_place(id: String) -> bool:
 		id,
 		PackedStringArray([blueprint.codex_entry, blueprint.codex_gloss]),
 	)
-	_show_name(PLACES_TEXT, Realms.name_of(id), codex[1])
-	entry.text = codex[0]
+	_show_name(TextTags.PLACE, Realms.name_of(id), tr(codex[1]))
+	entry.text = tr(codex[0])
 	return true
 
 
@@ -207,21 +215,23 @@ func _show_place(id: String) -> bool:
 func _show_unique_item(item: GearItem) -> bool:
 	if item == null or not item.is_unique():
 		return false
-	_show_name(UNIQUE_ITEMS_TEXT, TextTags.shown(item.name), item.codex[1])
-	entry.text = item.codex[0]
+	_show_name(TextTags.UNIQUE_ITEM, TextTags.shown(tr(item.name)), tr(item.codex[1]))
+	entry.text = tr(item.codex[0])
 	return true
 
 
-## Shows the page's `kind_heading`, the thing's name `shown_name` and what it means, `meaning`;
-## only the parts of the page `kind_heading` names show below them: the bestiary's, or the entry,
-## with the standing on the lexicon's only.
-func _show_name(kind_heading: String, shown_name: String, meaning: String) -> void:
-	heading.text = kind_heading
+## Shows the heading of the page of a thing of the kind `kind`, the thing's name `shown_name` and
+## the line saying what it means, `meaning` (the name, then the meaning in italics); only the parts
+## of the page of that kind show below them: the bestiary's, or the entry, with the standing on the
+## lexicon's only.
+func _show_name(kind: String, shown_name: String, meaning: String) -> void:
+	heading.text = heading_of(kind)
 	title.text = shown_name
-	gloss.text = GLOSS_TEXT % [NameLinks.escaped(shown_name), NameLinks.escaped(meaning)]
-	var bestiary: bool = kind_heading == BESTIARY_TEXT
+	var parts: Array[String] = [NameLinks.escaped(shown_name), NameLinks.escaped(meaning)]
+	gloss.text = tr("%s: [i]%s[/i]") % parts
+	var bestiary: bool = kind == TextTags.MONSTER
 	entry.visible = not bestiary
-	standing.visible = kind_heading == LEXICON_TEXT
+	standing.visible = kind == TextTags.FACTION
 	beast.visible = bestiary
 
 
@@ -268,11 +278,13 @@ func lay_out(screen: Vector2) -> void:
 func _standing_line(faction: Faction) -> String:
 	var holder: ProfileHolder = _holder()
 	if holder == null or holder.keeper == null:
-		return NEUTRAL_TEXT
+		return neutral_text()
 	var value: int = holder.keeper.profile.standings.of(faction.id)
 	if value == 0:
-		return NEUTRAL_TEXT
-	return STANDING_TEXT % [value, TextTags.shown(faction.rank_name(value))]
+		return neutral_text()
+	# The standing with its sign, and the rank the faction names it.
+	var rank: String = TextTags.shown(tr(faction.rank_name(value)))
+	return tr("Your standing: %+d, %s") % [value, rank]
 
 
 ## Eases the page in or out; the game hears no input while it's in.

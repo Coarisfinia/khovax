@@ -169,7 +169,7 @@ static func _realm_by_controller(
 	var gloss: String = page.gloss.get_parsed_text()
 	if (not page.is_open()
 			or not driver.input.blocked
-			or page.heading.text != CodexPage.REALMS_TEXT
+			or page.heading.text != CodexPage.heading_of(TextTags.REALM)
 			or page.title.text != "Ardvaun"
 			or gloss != "Ardvaun: high land, heart land"
 			or not page.entry.text.begins_with("The high land at the heart of the world")
@@ -205,7 +205,7 @@ static func _speaker_by_controller(
 	var gloss: String = page.gloss.get_parsed_text()
 	if (not page.is_open()
 			or not driver.input.blocked
-			or page.heading.text != CodexPage.PEOPLE_TEXT
+			or page.heading.text != CodexPage.heading_of(TextTags.PERSON)
 			or page.title.text != "Teska na Amvrel"
 			or gloss != "Teska na Amvrel: Teska, sworn to the guild"
 			or not page.entry.text.begins_with("A scout of the Amvrel Velmarai")
@@ -267,11 +267,11 @@ static func _page_problem(page: CodexPage, driver: GameDriver) -> String:
 	if not page.is_open() or not driver.input.blocked:
 		return "the page didn't open, or the game still hears input"
 	var gloss: String = page.gloss.get_parsed_text()
-	if (page.heading.text != CodexPage.LEXICON_TEXT
+	if (page.heading.text != CodexPage.heading_of(TextTags.FACTION)
 			or page.title.text != "Amvrel Velmarai"
 			or gloss != "Amvrel Velmarai: the guild of those who chart"
 			or not page.entry.text.begins_with("A guild of mapmakers")
-			or page.standing.text != CodexPage.NEUTRAL_TEXT
+			or page.standing.text != CodexPage.neutral_text()
 			or not page.standing.visible):
 		return "the page showed %s, %s, %s" % [page.title.text, gloss, page.standing.text]
 	return ""
@@ -412,7 +412,7 @@ static func _bestiary_by_controller(
 	FlowInput.press_pad(screen, JOY_BUTTON_A)
 	var place: String = page.gloss.get_parsed_text()
 	if (not page.is_open()
-			or page.heading.text != CodexPage.PLACES_TEXT
+			or page.heading.text != CodexPage.heading_of(TextTags.PLACE)
 			or page.title.text != "Lumwen Hoal"
 			or place != "Lumwen Hoal: the soft clearing"
 			or not page.entry.text.begins_with("The clearing where the settlers first made camp")
@@ -428,13 +428,13 @@ static func _bestiary_by_controller(
 	if not page.is_open() or not driver.input.blocked:
 		return "A on the Ombulumo's name didn't open its page"
 	var gloss: String = page.gloss.get_parsed_text()
-	if (page.heading.text != CodexPage.BESTIARY_TEXT
+	if (page.heading.text != CodexPage.heading_of(TextTags.MONSTER)
 			or page.title.text != "Ombulumo"
 			or gloss != "Ombulumo: the low boom from the shallows"
 			or page.entry.visible
 			or page.standing.visible
 			or not page.beast.visible
-			or page.beast.shown.back() != BestiaryEntry.NOT_KNOWN_TEXT):
+			or page.beast.shown.back() != BestiaryEntry.not_known_text()):
 		return "the Ombulumo's page showed %s, %s, %s" % [page.title.text, gloss, page.beast.shown]
 	FlowInput.press_pad(screen, JOY_BUTTON_B)
 	if page.is_open():
