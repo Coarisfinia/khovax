@@ -7,10 +7,14 @@ monster may do so (props have limits of their own, never an exemption).
     uv run --locked packages/game-models/blender.py --background --factory-startup \
         --python packages/game-models/test_footprint.py
 
-It prints each model's report and `FOOTPRINT TEST: PASS` or `FAIL` (and exits 1 on a fail)."""
+It also reads a pack's model's views from a small Godot project of its own (lib/views.py, #1652):
+a script that preloads it at a scale, and a scene that instances it under a view using another
+class's constants. It prints each model's report and `FOOTPRINT TEST: PASS` or `FAIL` (and exits 1
+on a fail)."""
 
 import os
 import sys
+import tempfile
 
 import bmesh
 import bpy
@@ -22,7 +26,7 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "game-shared"))
 
 from game_shared import log  # noqa: E402
-from lib import footprint  # noqa: E402
+from lib import footprint, views  # noqa: E402
 
 # A square box `width` metres across reaches width / 2 * (cos 30° + sin 30°) / the inradius of
 # the hex: 1.10 m reaches 0.87 (inside), 2.0 m reaches 1.58 (far past it).
@@ -88,8 +92,55 @@ def build(width, clips):
     return rig, [skin]
 
 
-def main():
+# A tiny Godot project: a figure view with its constants, a chest view that preloads its model at a
+# scale and shares the figure's hidden parts, and a scene that instances the figure under the view.
+PROJECT = {
+    "figure_view.gd": (
+        'class_name FigureView\n'
+        'const IDLE: StringName = &"Idle"\n'
+        'const MOVE: StringName = &"Run"  # moving\n'
+        'const CLIPS: Array[StringName] = [IDLE, MOVE]\n'
+        'const HIDDEN_PARTS: Array[String] = [\n\t"Knife",\n\t"Bow",\n]\n'),
+    "chest_view.gd": (
+        'const MODEL: PackedScene = preload("res://assets/chest.glb")\n'
+        'const MODEL_SCALE: float = 0.5\n'
+        'func _hide() -> void:\n\tfor part: String in FigureView.HIDDEN_PARTS:\n\t\tpass\n'),
+    "main.tscn": (
+        '[ext_resource type="Script" path="res://figure_view.gd" id="1_view"]\n'
+        '[ext_resource type="PackedScene" path="res://assets/figure.glb" id="2_figure"]\n\n'
+        '[node name="Main" type="Node3D"]\n\n'
+        '[node name="Player" type="Node3D" parent="."]\nscript = ExtResource("1_view")\n\n'
+        '[node name="Model" parent="Player" instance=ExtResource("2_figure")]\n'
+        'transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)\n'),
+}
+# Per model: what its views read as (name, scale, clips, standing clip, hidden parts).
+VIEWS = {
+    "figure": [("figure_view", 2.0, ["Idle", "Run"], "Idle", ["Knife", "Bow"])],
+    "chest": [("chest_view", 0.5, [], None, ["Knife", "Bow"])],
+    "pebble": [],
+}
+
+
+def views_read():
+    """Whether lib/views.py reads the tiny project's views as `VIEWS` says."""
     passed = True
+    with tempfile.TemporaryDirectory() as game:
+        for name, text in PROJECT.items():
+            with open(os.path.join(game, name), "w", encoding="utf-8") as out:
+                out.write(text)
+        for model, expected in sorted(VIEWS.items()):
+            found = sorted(
+                (view.name, view.scale, view.clips, view.standing, view.hidden)
+                for view in views.find(game, model))
+            log.info("FOOTPRINT test views %s: %s" % (model, found))
+            if found != expected:
+                passed = False
+                log.error("FOOTPRINT test: %s's views should read %s" % (model, expected), __file__)
+    return passed
+
+
+def main():
+    passed = views_read()
     for name, (width, clips, passes) in sorted(MODELS.items()):
         rig, meshes = build(width, clips)
         lines, verdict = footprint.report(rig, meshes, footprint.limits(rig, large=False))

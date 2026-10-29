@@ -190,7 +190,11 @@ a second model could use goes into the library or a generic tool, never into one
   0.95 at rest and 1.00 in every clip, a static one by its rest pose. Nothing is let off through
   an exemption list (#1641): a model too big for its hex is shrunk in its script. A tile's
   decoration (a model a tile blueprint names) is the tile's own look, not a thing on it, and isn't
-  measured (the owner, on #1651). Its `KNOWN` list
+  measured (the owner, on #1651). A pack's model (no script here: the figure, the chest) is
+  measured as each view that puts it on the board shows it (#1652, `lib/views.py`): at the view's
+  `MODEL_SCALE`, without its `HIDDEN_PARTS`, standing in its `IDLE` clip and in its `CLIPS`,
+  against a prop's limits; so a view that shows a pack's model names these constants. An item's
+  model no view preloads (shown only in the gear panel) isn't measured. Its `KNOWN` list
   is judged like the volume check's. `test_footprint.py` tests it on boxes that fit their hex or
   are too big for it.
 - **The dimensions check (#1299):** `packages/game-models/check_dimensions.py -- <model.glb> [...]`
@@ -542,8 +546,8 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
    - **Attack:** at most 30 % past the hex (1.30), whatever the monster;
    - **every other clip:** at most 5 % past the hex (1.05), or 10 % for a boss, enraged or
      stronger monster (1.10).
-   - **a prop** (no rig, or no Walk clip: a gate, an egg): 0.95 at rest and never past the hex's
-     edge in its clips (1.00). A prop is sized against the hex and the other models, never
+   - **a prop** (no rig, or no Walk clip: a gate, an egg), and a pack's model as its view shows
+     it (#1652): 0.95 at rest and never past the hex's edge in its clips (1.00). A prop is sized against the hex and the other models, never
      against the player walking through or past it (the owner, on #1636: the gate made for the
      player to walk through was two hexes wide).
 
