@@ -1,0 +1,16 @@
+// The Kalvrakkor's special (#1685): a strike of its two tails. Its power and cooldown are
+// placeholders to tune (#960).
+{
+	"id": "kalvrakkor_kalvik_kolvak",
+	"kind": "special",
+	"name": "Kalvik-kolvak",
+	"description": "The ${MONSTER:kalvrakkor} whips both its tails across its target: the ice tail cracks, then the magma tail sears.",
+	"codex": {
+		"entry": "The sharp crack of ice, then the low hiss of magma on it. Dominators called it to send their beast's two tails across a foe, one after the other.",
+		"gloss": "crack, then hiss"
+	},
+	"power": 2500,
+	"cooldown_seconds": 10,
+	"strike_type": "tempest",
+	"path": "supremacy"
+}

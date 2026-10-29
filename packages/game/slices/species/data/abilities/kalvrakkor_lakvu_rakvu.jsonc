@@ -1,0 +1,12 @@
+// The Kalvrakkor's self passive (#1685). Its haste is a placeholder to tune (#960).
+{
+	"id": "kalvrakkor_lakvu_rakvu",
+	"kind": "self_passive",
+	"name": "Lakvu-rakvu",
+	"description": "The ${MONSTER:kalvrakkor}'s magma runs hotter the more it's hurt, and it strikes faster.",
+	"hurt_haste": 400,
+	"codex": {
+		"entry": "The bubbling of magma welling up through cracked basalt. Dominators said it of a beast that burns brighter the deeper it is cut.",
+		"gloss": "it burns as it bleeds"
+	}
+}

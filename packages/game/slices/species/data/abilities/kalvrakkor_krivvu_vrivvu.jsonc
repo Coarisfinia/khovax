@@ -1,0 +1,12 @@
+// The Kalvrakkor's player passive (#1685). Its guard is a placeholder to tune (#960).
+{
+	"id": "kalvrakkor_krivvu_vrivvu",
+	"kind": "player_passive",
+	"name": "Krivvu-vrivvu",
+	"description": "While the ${MONSTER:kalvrakkor} is out, the player takes a little less harm: frost on one flank and heat on the other keep foes back.",
+	"guard": 100,
+	"codex": {
+		"entry": "The rumble a hound keeps up as it paces around its own, hot on one side and cold on the other. Dominators said it of a guard no foe wants to brush past.",
+		"gloss": "warm side, cold side, stay back"
+	}
+}

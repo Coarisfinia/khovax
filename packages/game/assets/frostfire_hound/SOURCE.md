@@ -6,4 +6,4 @@
   then repainted, named, animated and exported as `frostfire_hound.glb` by
   `packages/game-models/frostfire_hound.py` on the shared model library `packages/game-models/lib/`
 - **License:** Unlicense, the repository's own license, see `LICENSE.md` next to this file.
-- **Used for:** the Frostfire Hound.
+- **Used for:** the Kalvrakkor, the frost-and-fire hound (#1685).
