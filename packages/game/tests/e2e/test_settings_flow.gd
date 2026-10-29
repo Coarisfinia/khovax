@@ -185,9 +185,10 @@ func _open_menu(menu: GameMenu) -> String:
 	]
 	# Every setting, whatever order their owners added their rows in (#1614): each row's submenu,
 	# and so where it shows, is checked on its own (_menu_submenus).
+	var every: Array[String] = settings.duplicate()
+	every.sort()
 	listed.sort()
-	settings.sort()
-	if listed != settings:
+	if listed != every:
 		return "the Settings tab lists %s, not every setting" % [listed]
 	# The world's settings have no Auto: the world starts at Standard (#1315, #1316).
 	var hosts: Array[String] = [
