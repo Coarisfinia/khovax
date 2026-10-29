@@ -1,2 +1,2 @@
 // The revive herb (#656, ReviveItem), which brings back a fainted carried monster.
-{ "id": "revive_herb" }
+{ "id": "revive_herb", "name": "Revive Herb" }

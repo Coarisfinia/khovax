@@ -1,4 +1,4 @@
 // The hardened arcane crystal from a Vynakiir's brow (#1252), which a mana pup needs to ascend. A
 // felled Vynakiir drops it, it lies in the ground loot and chests of Ivenwhal Wudhen, their home
 // (#1260), and finishing the pups' quest there hands one over (#1348).
-{ "id": "arcane_crystal" }
+{ "id": "arcane_crystal", "name": "Arcane Crystal" }

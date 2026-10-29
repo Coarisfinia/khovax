@@ -1,9 +1,8 @@
 class_name MaterialsList
 extends VBoxContainer
 ## The player's materials on the menu's Character tab (#295): each material in their profile with
-## how many they have, in id order. Materials have no names of their own yet (MaterialContent,
-## #774),
-## so each shows by its id in words. It only reads the profile, and keeps up with it while shown.
+## how many they have, in id order, each by its name from its data (MaterialContent, #1657). It only
+## reads the profile, and keeps up with it while shown.
 
 ## This machine's player's materials (Dictionary[String, int], by id), handed in by the profile
 ## (ProfilePanelsTie), whose slice comes after this one; none without it.
@@ -34,9 +33,10 @@ func refresh() -> void:
 		var ids: Array[String] = []
 		ids.assign(held.keys())
 		ids.sort()
+		var content: MaterialContent = MaterialContent.cached()
 		for id: String in ids:
 			var line: String = tr("{material}: {count}")
-			lines.append(line.format({ "material": id.capitalize(), "count": held[id] }))
+			lines.append(line.format({ "material": content.name_of(id), "count": held[id] }))
 	if lines.is_empty():
 		lines.append(tr("No materials yet"))
 	if lines == shown:

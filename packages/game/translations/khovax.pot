@@ -358,6 +358,11 @@ msgid "{faction}: {standing}"
 msgstr ""
 
 #: slices/factions/ui/faction_standings_panel.gd
+#: slices/factions/ui/territory_text.gd
+msgid "Unknown faction"
+msgstr ""
+
+#: slices/factions/ui/faction_standings_panel.gd
 msgid "{faction}: {standing}, {rank}"
 msgstr ""
 
@@ -393,8 +398,42 @@ msgstr ""
 msgid "Warding charm"
 msgstr ""
 
+#: slices/gear/meta/gear_content.gd
+msgid "Unknown item"
+msgstr ""
+
 #: slices/gear/meta/gear_item.gd
 msgid "{name} ({rarity})"
+msgstr ""
+
+#: slices/gear/meta/gear_item.gd
+msgctxt "gear rarity"
+msgid "Loose"
+msgstr ""
+
+#: slices/gear/meta/gear_item.gd
+msgctxt "gear rarity"
+msgid "Knotted"
+msgstr ""
+
+#: slices/gear/meta/gear_item.gd
+msgctxt "gear rarity"
+msgid "Warded"
+msgstr ""
+
+#: slices/gear/meta/gear_item.gd
+msgctxt "gear rarity"
+msgid "Sealed"
+msgstr ""
+
+#: slices/gear/meta/gear_item.gd
+msgctxt "gear rarity"
+msgid "Unbroken"
+msgstr ""
+
+#: slices/gear/meta/gear_item.gd
+msgctxt "gear rarity"
+msgid "Bound"
 msgstr ""
 
 #: slices/gear/ui/gear_panel.gd
@@ -414,7 +453,26 @@ msgid "Press a slot to change its gear."
 msgstr ""
 
 #: slices/gear/ui/gear_panel.gd
+msgctxt "gear slot"
+msgid "Ward"
+msgstr ""
+
+#: slices/gear/ui/gear_panel.gd
+msgctxt "gear slot"
+msgid "Trap"
+msgstr ""
+
+#: slices/gear/ui/gear_panel.gd
+msgctxt "gear slot"
+msgid "Throw"
+msgstr ""
+
+#: slices/gear/ui/gear_panel.gd
 msgid "empty"
+msgstr ""
+
+#: slices/gear/ui/gear_panel.gd
+msgid "Unknown gear"
 msgstr ""
 
 #: slices/input_prompts/ui/controls_tab.gd
@@ -472,6 +530,46 @@ msgstr ""
 #: slices/input_prompts/ui/controls_tab.gd
 #: slices/settings/ui/settings_tab.gd
 msgid "Back"
+msgstr ""
+
+#: slices/loot/data/materials/arcane_crystal.jsonc
+msgid "Arcane Crystal"
+msgstr ""
+
+#: slices/loot/data/materials/berry.jsonc
+msgid "Berry"
+msgstr ""
+
+#: slices/loot/data/materials/bone.jsonc
+msgid "Bone"
+msgstr ""
+
+#: slices/loot/data/materials/crystal.jsonc
+msgid "Crystal"
+msgstr ""
+
+#: slices/loot/data/materials/feather.jsonc
+msgid "Feather"
+msgstr ""
+
+#: slices/loot/data/materials/hide.jsonc
+msgid "Hide"
+msgstr ""
+
+#: slices/loot/data/materials/moss.jsonc
+msgid "Moss"
+msgstr ""
+
+#: slices/loot/data/materials/revive_herb.jsonc
+msgid "Revive Herb"
+msgstr ""
+
+#: slices/loot/data/materials/stone.jsonc
+msgid "Stone"
+msgstr ""
+
+#: slices/loot/meta/material_content.gd
+msgid "Unknown material"
 msgstr ""
 
 #: slices/loot/ui/materials_list.gd

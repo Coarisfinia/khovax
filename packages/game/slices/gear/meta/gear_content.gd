@@ -36,8 +36,13 @@ func add(file_id: String, text: String) -> String:
 
 
 ## The item `item_id` in words, as the player reads it (#773): a piece of gear by its name, its text
-## tags showing the names they stand for (#752), anything else (a material) by its id in words, as
-## the Character tab shows them.
+## tags showing the names they stand for (#752), a material by its name (MaterialContent, #1657), as
+## the Character tab shows them, and "Unknown item" for one that's neither.
 func name_of(item_id: String) -> String:
 	var item: GearItem = items.get(item_id)
-	return TextTags.shown(item.name) if item != null else item_id.capitalize()
+	if item != null:
+		return TextTags.shown(TranslationServer.tr(item.name))
+	var materials: MaterialContent = MaterialContent.cached()
+	if materials.names.has(item_id):
+		return materials.name_of(item_id)
+	return TranslationServer.tr("Unknown item")

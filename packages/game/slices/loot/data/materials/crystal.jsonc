@@ -1,2 +1,2 @@
 // A crystal of mana (#943), which dominating a mana monster gives.
-{ "id": "crystal" }
+{ "id": "crystal", "name": "Crystal" }

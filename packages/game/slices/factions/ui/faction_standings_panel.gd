@@ -6,7 +6,7 @@ extends VBoxContainer
 ## the rank the faction names it (Faction.rank_name), all in words, their text tags showing
 ## the names they stand for (#752), never in color alone (#68).
 ## Only the current rank's name, never the other ranks' (#484: they would spoil what's ahead). A
-## faction the content no longer has shows by its id in words, without a rank. Each line is a
+## faction the content no longer has shows as an unknown faction, without a rank. Each line is a
 ## NameLinks (#1447): a known faction's name is a link to its codex page, whose `name_selected` and
 ## `name_shown` the panel raises as its own. It only reads the profile, and keeps up with it while
 ## shown.
@@ -91,13 +91,14 @@ func _add_row(line: String) -> void:
 
 ## The line for the standing `standing` with the faction `id`: a text with text tags, the
 ## faction's name tagged, the standing with its sign, and the rank's name; one the content doesn't
-## know shows its id in words and the standing.
+## know (a save kept it after its file went) has no name to show, so it reads "Unknown faction" and
+## the standing (#1657).
 func line_of(id: String, standing: int) -> String:
 	var faction: Faction = _factions.get(id)
 	var signed: String = "%+d" % standing
 	if faction == null:
 		var unknown: String = tr("{faction}: {standing}")
-		return unknown.format({ "faction": id.capitalize(), "standing": signed })
+		return unknown.format({ "faction": tr("Unknown faction"), "standing": signed })
 	return tr("{faction}: {standing}, {rank}").format(
 		{
 			"faction": TextTags.tag(TextTags.FACTION, id),
