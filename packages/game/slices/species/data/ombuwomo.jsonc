@@ -1,0 +1,23 @@
+// The bud (#1738): the Ombulumo's middle form, wearing its own model, from the owner's model. It
+// ascends into an Ombulumo once it has reached its level and is given moss. Its level and stats are
+// placeholders to tune (#960).
+{
+	"id": "ombuwomo",
+	"name": "Ombuwomo",
+	"codex": {
+		"entry": "A round bud of the Ombulumo, its spotted leaves folded shut around a soft body that peeks out between the front two. It has no legs: it hops and rocks its way over the wet ground of the shallows, and sits as still as a stone when it rests. In time it ascends into an Ombulumo. Its name is a beast-call, the sound of it: the Ombulumo's round start, with a soft w in the middle, the leaves wrapped round.",
+		"gloss": "the folded boom"
+	},
+	"types": ["growth"],
+	"strike_type": "growth",
+	"hp": 95,
+	"strength": 32,
+	"speed": 45,
+	"special": "ombuwomo_wobom_wubam",
+	"player_passive": "ombuwomo_wommo_bommo",
+	"self_passive": "ombuwomo_bowmo_mowmo",
+	// A bud of the shallows, awake by night with its elders: it nibbles weed and keeps near water (#1200).
+	"behaviour": ["nocturnal", "grazer", "drinker"],
+	"model": "res://assets/ombuwomo/ombuwomo.glb",
+	"ascension": { "into": "ombulumo", "level": 30, "material": "moss" }
+}

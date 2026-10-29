@@ -1240,6 +1240,54 @@ msgstr ""
 msgid "Mulbo-lulbo"
 msgstr ""
 
+#: slices/species/data/abilities/ombuwomo_bowmo_mowmo.jsonc
+msgid "The soft rustle of leaves folding shut. Dominators said it of anything that closes up and waits for the storm to pass."
+msgstr ""
+
+#: slices/species/data/abilities/ombuwomo_bowmo_mowmo.jsonc
+msgid "fold, and wait"
+msgstr ""
+
+#: slices/species/data/abilities/ombuwomo_bowmo_mowmo.jsonc
+msgid "The ${MONSTER:ombuwomo}'s leaves fold shut over it, and part of every hit glances off them."
+msgstr ""
+
+#: slices/species/data/abilities/ombuwomo_bowmo_mowmo.jsonc
+msgid "Bowmo-mowmo"
+msgstr ""
+
+#: slices/species/data/abilities/ombuwomo_wobom_wubam.jsonc
+msgid "The creak of a bud rocking back, then the dull thump of it landing on a foe. Dominators said it of any beast with no legs that still knocks things over."
+msgstr ""
+
+#: slices/species/data/abilities/ombuwomo_wobom_wubam.jsonc
+msgid "rock back, thump"
+msgstr ""
+
+#: slices/species/data/abilities/ombuwomo_wobom_wubam.jsonc
+msgid "The ${MONSTER:ombuwomo} rocks back on its round bottom and bowls into its target, leaves first."
+msgstr ""
+
+#: slices/species/data/abilities/ombuwomo_wobom_wubam.jsonc
+msgid "Wobom-wubam"
+msgstr ""
+
+#: slices/species/data/abilities/ombuwomo_wommo_bommo.jsonc
+msgid "The hollow knock of a blow landing on a closed bud. Dominators hummed it to a small round beast that plants itself between them and harm."
+msgstr ""
+
+#: slices/species/data/abilities/ombuwomo_wommo_bommo.jsonc
+msgid "knock, and hold"
+msgstr ""
+
+#: slices/species/data/abilities/ombuwomo_wommo_bommo.jsonc
+msgid "While the ${MONSTER:ombuwomo} is out, it sits in the way of blows meant for the player, and they take a little less harm."
+msgstr ""
+
+#: slices/species/data/abilities/ombuwomo_wommo_bommo.jsonc
+msgid "Wommo-bommo"
+msgstr ""
+
 #: slices/species/data/abilities/tikazzir_kazri_tazri.jsonc
 msgid "The scrape of talons on stone as a cornered beast readies to spring. Dominators said it of anything that fights hardest once it bleeds."
 msgstr ""
@@ -1514,6 +1562,18 @@ msgstr ""
 
 #: slices/species/data/ombulumo.jsonc
 msgid "Ombulumo"
+msgstr ""
+
+#: slices/species/data/ombuwomo.jsonc
+msgid "A round bud of the Ombulumo, its spotted leaves folded shut around a soft body that peeks out between the front two. It has no legs: it hops and rocks its way over the wet ground of the shallows, and sits as still as a stone when it rests. In time it ascends into an Ombulumo. Its name is a beast-call, the sound of it: the Ombulumo's round start, with a soft w in the middle, the leaves wrapped round."
+msgstr ""
+
+#: slices/species/data/ombuwomo.jsonc
+msgid "the folded boom"
+msgstr ""
+
+#: slices/species/data/ombuwomo.jsonc
+msgid "Ombuwomo"
 msgstr ""
 
 #: slices/species/data/tikazzir.jsonc

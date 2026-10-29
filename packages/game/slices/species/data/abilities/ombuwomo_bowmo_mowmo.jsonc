@@ -1,0 +1,13 @@
+// The bud's self passive (#1738): its leaves fold shut, a guard between the Wobulumu's and the
+// Ombulumo's. Its guard is a placeholder to tune (#960).
+{
+	"id": "ombuwomo_bowmo_mowmo",
+	"kind": "self_passive",
+	"name": "Bowmo-mowmo",
+	"description": "The ${MONSTER:ombuwomo}'s leaves fold shut over it, and part of every hit glances off them.",
+	"guard": 130, // an eighth of every hit glances off its leaves
+	"codex": {
+		"entry": "The soft rustle of leaves folding shut. Dominators said it of anything that closes up and waits for the storm to pass.",
+		"gloss": "fold, and wait"
+	}
+}

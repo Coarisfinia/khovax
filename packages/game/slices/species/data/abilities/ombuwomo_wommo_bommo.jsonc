@@ -1,0 +1,14 @@
+// The bud's player passive (#1738): a small guard, a little more than its tadpole's (#1737). Its
+// guard is a placeholder to tune (#960).
+{
+	"id": "ombuwomo_wommo_bommo",
+	"kind": "player_passive",
+	"name": "Wommo-bommo",
+	"description": "While the ${MONSTER:ombuwomo} is out, it sits in the way of blows meant for the player, and they take a little less harm.",
+	"guard": 70, // seven in a hundred off every hit on the player: what is left rounds down, and a hit that lands still deals at least 1 (#702)
+	"codex": {
+		"entry": "The hollow knock of a blow landing on a closed bud. Dominators hummed it to a small round beast that plants itself between them and harm.",
+		"gloss": "knock, and hold"
+	},
+	"path": "harmony"
+}
