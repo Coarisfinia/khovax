@@ -50,8 +50,7 @@ way; add to it when something bites.
 - **The owner's login is looked up, never written down:** the repository's one human admin (the
   repository's own owner is the organisation, not a person). The lookup fails unless there is
   exactly one:
-  `OWNER=$(agent-gh api "repos/Coarisfinia/khovax/collaborators?permission=admin" --jq '[.[] | select(.type == "User")] | if length == 1 then .[0].login else error("expected one human admin") end') && export OWNER`
-  (assigned first, so a failed lookup isn't hidden behind `export`'s success).
+  `OWNER=$(agent-gh api "repos/Coarisfinia/khovax/collaborators?permission=admin" --jq '[.[] | select(.type == "User")] | if length == 1 then .[0].login else error("expected one human admin") end')`
 - **Pull requests and comments:** `agent-gh pr create --assignee "$OWNER" …`, `agent-gh pr comment …`.
 - **What the bot doesn't do:** change repository settings, or merge without the owner's approval.
   After the approval it enables auto-merge, or merges itself when auto-merge stalls (below).
@@ -228,20 +227,19 @@ background; only wait in the foreground for a result the very next step needs.
   `project-watcher` (#142); what each event asks for is in its `babysit-prs` skill
   ([`SKILL.md`](https://github.com/Flixbox/household-brain/blob/main/packages/watcher/skills/babysit-prs/SKILL.md)).
   Set it up as the owner's laptop-wide agent notes describe, with this repository's values:
-  `REPO=Coarisfinia/khovax`, `OWNER="$OWNER"` (the owner's login, whose reviews count, looked up
-  as above),
+  `REPO=Coarisfinia/khovax`,
   `WORKFLOW=ci.yml`, `GH=agent-gh`, `ACTIVITY_GH=gh`, `SELF='coarisfinia-ai-agent[bot]'` (it has
   no default), `DISMISS_STALE_BOT_REVIEWS=1` (owner, #1551: it dismisses CodeRabbit's stale
   change request itself, below), `REVIEW_BOTS=coderabbitai` (`Flixbox/household-brain#299`: it
   holds `READY_TO_MERGE` for a draft the owner approved until CodeRabbit has reviewed its head) and
   `RESOLVE_BOT_REVIEWS=coderabbitai` (owner, #1603: once CodeRabbit's change request on the head is
   settled, every thread resolved and CI green, it posts `@coderabbitai resolve` whatever the merge
-  risk, and reports `BOT_RESOLVE_ASKED`). `.claude/watcher.env` holds them all but `OWNER`, for the plugin's
+  risk, and reports `BOT_RESOLVE_ASKED`). `.claude/watcher.env` holds them all, for the plugin's
   own monitor and for
   `bun --env-file=.claude/watcher.env <watcher>/src/watch-project.ts --follow`; the environment
-  still wins. **Export `OWNER` before the watcher starts** (looked up as above): without it the
-  watcher takes the repository's owner, the organisation, and no approval counts, so nothing is
-  dismissed. On a failing CI run, read the job with
+  still wins. The watcher finds the owner, whose reviews count, itself: the organisation's one
+  human admin (`Flixbox/household-brain#296`); `OWNER` only overrides that. On a failing CI run,
+  read the job with
   `agent-gh run view <run-id> --log-failed`, reproduce it locally, fix it, and push once.
 
 ### Review and merge
@@ -305,7 +303,9 @@ background; only wait in the foreground for a result the very next step needs.
   green, yet outside the queue after 5 minutes); run the `enqueuePullRequest` mutation the event
   names, with `agent-gh`, which queues it at once. The owner's approval stays valid
   through later pushes (owner's rule), so check the comments again before enabling auto-merge after a
-  fix. CodeRabbit's doesn't: it counts only for the head commit it assessed (below).
+  fix. CodeRabbit's doesn't: it counts only for the head commit it assessed (below). **Name every
+  change pushed after the owner's approval** (owner's pick on #1632): before queueing, post a PR
+  comment listing each such change and what it does.
 - **Read the reviews themselves to see an approval** (`gh api repos/Coarisfinia/khovax/pulls/<n>/reviews`),
   never `reviewDecision` or the watcher's status line: under the ruleset `reviewDecision` stays
   empty, so an approved pull request shows as "awaiting approval" (`Flixbox/household-brain#197`).
