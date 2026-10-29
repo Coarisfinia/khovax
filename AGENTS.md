@@ -107,9 +107,9 @@ issue.
 watcher** follow the owner's machine-wide agent notes (`~/.ai/AGENTS.md`), their single source of
 truth (owner, #441); this file only adds this repository's values.
 
-**No pull requests that only change docs, as a loose rule** (owner, #1748). A change to this file
-or the README rides along with the next real pull request, and that pull request's description says
-so. A docs-only pull request is tolerated, though, not undone or closed.
+**Avoid pull requests that only change docs** (owner, a loose rule, #1748): by default a change to
+this file or the README rides along with the next real pull request, and that pull request's
+description says so. A docs-only pull request that exists anyway is never closed or undone for it.
 
 **Rules live in this file, not in an agent's memory.** When the owner states a rule for this
 repository, write it here in the next real pull request.
@@ -623,8 +623,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   - B. **Anything else** (props, scenery): use a free source whose license allows it here (below);
     if there is none, do A.
 - **A beast exists only from the owner's vibe or model** (owner's ground rule, #1686): prompt
-  suggestions, such as the brainstormed lists for A, stay suggestions until the owner picks one.
-  They're never rewritten, asked about or tracked as creatures, and a rule about "every beast"
+  suggestions, such as the brainstormed lists for A, make no beast: only the owner's vibe or model
+  does. They're never rewritten, asked about or tracked as creatures, and a rule about "every beast"
   covers only the beasts the owner gave a vibe or a model for.
 - **Every item has a 3D model** (owner, #1579, #1581): gear, unique items, anything the player
   holds, named in its data (`model`). The content flow checks the gear's; a material's is optional
