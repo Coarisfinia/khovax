@@ -14,7 +14,7 @@ var plant_tagged: String = "Plant tagged init"
 func _ready() -> void:
 	plant_lines.append("Plant member append")
 	tooltip_text = "\n".join(self.plant_lines)
-	tooltip_text += TextTags.shown(self.plant_tagged)
+	tooltip_text += self.plant_tagged.strip_edges()
 	tooltip_text += self.PLANT_TITLE
 	tooltip_text += tr(self.PLANT_TITLE)
 
