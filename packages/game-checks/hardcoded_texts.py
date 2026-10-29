@@ -579,12 +579,13 @@ class Flow:
                     self.expression(script, func, arg)
             elif name in APPENDS and owner in appended | appended_formats:
                 for arg in args[-1:]:
-                    whole = arg[0].text == "[" and matching(arg, 0) == len(arg) - 1
-                    pair = split_args(arg, 0) if whole else []
-                    if owner not in appended and len(pair) == 2:
-                        # A format's [key, value] pair: the key is its placeholder (#1755).
-                        arg = pair[1]
-                    self.expression(script, func, arg)
+                    if owner in appended:
+                        self.expression(script, func, arg)
+                    elif name == "append_array" and self.array_items(arg):
+                        for item in self.array_items(arg):
+                            self.format_item(script, func, item)
+                    else:
+                        self.format_item(script, func, arg)
             else:
                 for reached in self.resolve(script, toks, i):
                     for index in sorted(self.text_params.get(id(reached), set())):
@@ -593,6 +594,18 @@ class Flow:
                     for index in sorted(self.format_params.get(id(reached), set())):
                         if index < len(args):
                             self.format_values(script, func, args[index])
+
+    @staticmethod
+    def array_items(toks: list[Tok]) -> list[list[Tok]]:
+        """The items of an array literal that is the whole expression, or nothing."""
+        whole = bool(toks) and toks[0].text == "[" and matching(toks, 0) == len(toks) - 1
+        return split_args(toks, 0) if whole else []
+
+    def format_item(self, script: Script, func: Func, item: list[Tok]) -> None:
+        """An item put into a format's values: of a [key, value] pair only the value, since the
+        key is its placeholder (#1755)."""
+        pair = self.array_items(item)
+        self.expression(script, func, pair[1] if len(pair) == 2 else item)
 
     @staticmethod
     def depth(toks: list[Tok], at: int) -> int:
