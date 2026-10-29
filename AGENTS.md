@@ -595,7 +595,10 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   English text as the msgid. A script shows its texts through `tr()` with a literal string, a
   content field the player reads is marked `"x-translate": true` in its schema, and
   `translations/khovax.pot` is written again after a text changes (README, "Translations"); CI
-  fails when it's out of date.
+  fails when it's out of date. CI also fails on a text shown to the player that doesn't go
+  through `tr()` with a literal (`packages/game-checks/hardcoded_texts.py`, #1693): today's hits
+  wait in its known list, each with the issue that moves it over, and that list only shrinks; a
+  deliberate exception goes into its allow list with a reason.
 - **Never color alone** (owner's rule, #68): whatever the player tells apart by color (types,
   teams, states) also gets a symbol or a shape, so the game stays colorblind friendly. Every tile
   kind names its symbol in its data (#334; the schema requires it), which the Survey draws.

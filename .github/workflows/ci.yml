@@ -127,6 +127,12 @@ jobs:
         # text changed without regenerating it.
         run: uv run --locked --package khovax-game-checks ../game-checks/translations_pot.py --check
 
+      - name: "🔤 Check every text the player reads goes through tr()"
+        # A string shown in a Control without tr() and a literal is one the template misses
+        # (#1693); today's hits wait in hardcoded_texts_known.py, each with its issue, and that
+        # list only shrinks.
+        run: uv run --locked --package khovax-game-checks ../game-checks/hardcoded_texts.py
+
       - name: "🐺 Check every creature model has every creature clip"
         # The set is named once, in the model library's lib/clip_set.py, which the build reads too (#1157).
         run: uv run --locked --package khovax-game-models ../game-models/check_clip_set.py
