@@ -128,8 +128,6 @@ KNOWN: dict[tuple[str, str], int] = {
     ("slices/gear/meta/gear_slots.gd", "ward"): 1657,
     ("slices/gear/ui/gear_panel.gd", "capitalize()"): 1657,
     ("slices/loot/ui/materials_list.gd", "capitalize()"): 1657,
-    # #1677: the menu's tab titles.
-    ("slices/menu/ui/game_menu.gd", "tab titles from node names"): 1677,
 }  # fmt: skip
 
 # Deliberate exceptions, each with its reason (e.g. the name of a language, which stays in that
