@@ -714,6 +714,10 @@ msgstr ""
 msgid "Moss"
 msgstr ""
 
+#: slices/loot/data/materials/pondweed.jsonc
+msgid "Pondweed"
+msgstr ""
+
 #: slices/loot/data/materials/revive_herb.jsonc
 msgid "Revive Herb"
 msgstr ""
@@ -932,8 +936,12 @@ msgstr ""
 msgid "A crystal for a ${MONSTER:vynnimu}"
 msgstr ""
 
+#: slices/quests/data/tadpole_pondweed.jsonc
+msgid "Pondweed for a ${MONSTER:wobulumu}"
+msgstr ""
+
 #: slices/quests/data/three_ombulumo.jsonc
-msgid "Dominate three ${MONSTER:ombulumo}"
+msgid "Dominate two ${MONSTER:ombulumo}"
 msgstr ""
 
 #: slices/quests/data/tormaesk_escort.jsonc

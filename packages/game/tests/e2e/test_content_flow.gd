@@ -208,7 +208,7 @@ func _check_path_marks(abilities: Dictionary[String, Ability]) -> String:
 			or abilities["tikazzir_tizik_tazak"].path != PathMark.SUPREMACY
 			or abilities["ombulumo_bolmu_wolmu"].path != PathMark.NONE):
 		return "the path marks didn't read as written"
-	if quests["three_ombulumo"].shown_name() != "Dominate three Ombulumo (Supremacy)":
+	if quests["three_ombulumo"].shown_name() != "Dominate two Ombulumo (Supremacy)":
 		return "a quest's name doesn't show its path mark in words"
 	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"path\": %s,"
 	quest += " \"steps\": [{\"condition\": \"opened\"}]}"
@@ -590,8 +590,8 @@ func _check_quests() -> String:
 		return "the first domination isn't one domination of any species"
 	var toad: Species = toad_step.quarry.species
 	toad = toad if toad != null else Species.new()
-	if toad.id != "ombulumo" or toad.name != "Ombulumo" or toad_step.count != 3:
-		return "the toads' quest isn't three Ombulumo"
+	if toad.id != "ombulumo" or toad.name != "Ombulumo" or toad_step.count != 2:
+		return "the toads' quest isn't two Ombulumo"
 	if not _check_named_steps(content).is_empty():
 		return _check_named_steps(content)
 	if not _check_instance_steps(content).is_empty():

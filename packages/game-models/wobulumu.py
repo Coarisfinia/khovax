@@ -51,8 +51,9 @@ COLORS = {
     "dark": ((0.02, 0.03, 0.03, 1.0), 0.0),
     "glow": ((0.62, 1.0, 0.18, 1.0), 1.0),
 }
-# A round, gentle baby's eyes: a wide round pupil and a soft brow.
-EYE_SHAPE = {"pupil": (0.4, 0.5), "brow_size": 0.4}
+# A round, gentle baby's eyes: a wide round pupil and a soft brow, sized up to the generator's
+# upright oval marks (marked_eyes.fit).
+EYE_SHAPE = {"pupil": (0.4, 0.5), "brow_size": 0.4, "upright": True}
 # It butts with its snout's front.
 SNOUT = (0.0, -1.80, 0.70)
 

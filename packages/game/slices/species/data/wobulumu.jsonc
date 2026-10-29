@@ -1,6 +1,6 @@
 // The tadpole (#1737): the Ombulumo's first form, wearing its own model, from the owner's model. It
 // spawns as the Ombulumo's baby in wild bundles (#1697) and ascends into an Ombulumo once it has
-// reached its level and is given moss; the bud between them comes with #1738. Its level and stats
+// reached its level and is given pondweed; the bud between them comes with #1738. Its level and stats
 // are placeholders to tune (#960).
 {
 	"id": "wobulumu",
@@ -20,5 +20,5 @@
 	// A tadpole of the shallows, awake by night with its elders: it nibbles weed and keeps near water (#1200).
 	"behaviour": ["nocturnal", "grazer", "drinker"],
 	"model": "res://assets/wobulumu/wobulumu.glb",
-	"ascension": { "into": "ombulumo", "level": 20, "material": "moss" }
+	"ascension": { "into": "ombulumo", "level": 20, "material": "pondweed" }
 }

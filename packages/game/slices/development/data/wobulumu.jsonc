@@ -10,18 +10,23 @@
 			{ "leaning": { "speed": 60 } },
 			{ "leaning": { "speed": 80, "hp": -30 } }
 		] },
-		{ "id": "plump", "nodes": [
-			{ "leaning": { "hp": 50 } },
-			{ "leaning": { "hp": 60, "speed": -20 } },
-			{ "leaning": { "hp": 80, "strength": -30 } }
-		] },
 		{ "id": "bold", "nodes": [
 			{ "leaning": { "strength": 50 } },
 			{ "leaning": { "strength": 60, "hp": 20 } },
 			{ "leaning": { "strength": 80, "speed": -30 } },
 			{ "special": 200 }
+		] },
+		{ "id": "plump", "nodes": [
+			{ "leaning": { "hp": 50 } },
+			{ "leaning": { "hp": 60, "speed": -20 } },
+			{ "leaning": { "hp": 80, "strength": -30 } }
+		] },
+		{ "id": "deep", "nodes": [
+			{ "leaning": { "hp": 30, "strength": 30 } },
+			{ "leaning": { "hp": 40, "strength": 40, "speed": -20 } },
+			{ "leaning": { "hp": 60, "strength": 60, "speed": -40 } }
 		] }
 	],
-	"bridges": [["slippery_1", "plump_1"], ["plump_2", "bold_2"]],
-	"portals": [["slippery_3", "bold_3"]]
+	"bridges": [["slippery_2", "bold_2"], ["plump_1", "deep_1"]],
+	"portals": [["slippery_3", "plump_3"]]
 }

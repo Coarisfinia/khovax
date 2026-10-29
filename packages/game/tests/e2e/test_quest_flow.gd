@@ -283,7 +283,7 @@ func _check_beach_first(
 	if result.is_empty():
 		result = _check_listed(list, {
 			"first_domination": "Go to the beach",
-			"three_ombulumo": "Dominate an Ombulumo  0/3",
+			"three_ombulumo": "Dominate an Ombulumo  0/2",
 		})
 	if result.is_empty():
 		result = _check_card_scene(list, quests.book["first_domination"].shown_name())
@@ -437,7 +437,7 @@ func _check_quests_tab(menu: GameMenu, quests: QuestTracker, first: String) -> S
 		"enter_glade": "Now: Enter Lumwen Hoal",
 		"enter_thicket": "Now: Enter the thicket",
 		"first_domination": first,
-		"three_ombulumo": "Now: Dominate an Ombulumo  0/3",
+		"three_ombulumo": "Now: Dominate an Ombulumo  0/2",
 	}
 	var shown: Dictionary[String, String] = _quests_tab(menu).shown
 	# Laid out in its scene (#437): it scrolls only up and down.

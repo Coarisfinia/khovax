@@ -387,26 +387,32 @@ def linear(colour):
     return tuple(c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in colour) + (1.0,)
 
 
-def fit(skin, marks, mats, bone, forward=FORWARD, ridge=True, middle=0.0, **shape):
+def fit(skin, marks, mats, bone, forward=FORWARD, ridge=True, middle=0.0, upright=False,
+        **shape):
     """Our eyes (eyes.eye, with lids) on `skin` where `marks` (left, right) are: the left one's
     position and size the mean of the left mark's and the right one's mirrored across the plane
     x = `middle` (the `Marked`'s that `find` paired them across, #1735), so the two mirror each
     other exactly across it (eyes.mirrored); as wide as the marks, as high against that as
-    ALMOND allows. `ridge=False` leaves out the brow; `shape` goes on to eyes.eye (`tilt`,
-    `pupil`, `brow_size`, ...). Returns the pieces, weighted to `bone` and the lids' bones."""
+    ALMOND allows. With `upright`, a mark taller than it is wide (an upright oval, #1737) gives a
+    rounder eye, as wide as the mark's mean of width and height, since ours is never taller than
+    it is wide: as wide as the mark, it would be half the eye the generator drew (and as tall, its
+    top would show above its brow, check_brows.py). `ridge=False` leaves out the brow; `shape` goes on to
+    eyes.eye (`tilt`, `pupil`, `brow_size`, ...). Returns the pieces, weighted to `bone` and the
+    lids' bones."""
     left, right = marks
     spot = (left.middle + right.middle * (-1.0, 1.0, 1.0) + (2.0 * middle, 0.0, 0.0)) / 2.0
     width = (left.width + right.width) / 2.0
     height = (left.height + right.height) / 2.0
     almond = min(max(height / width, ALMOND[0]), ALMOND[1])
+    size = max(width, (width + height) / 2.0 if upright else width) / 2.0
     pieces = []
-    for piece in eyes.eye(skin, "Eye.L", tuple(spot), forward, width / 2.0, mats, bone, almond=almond,
+    for piece in eyes.eye(skin, "Eye.L", tuple(spot), forward, size, mats, bone, almond=almond,
                           lid=eyes.LID + "L", middle=middle, **shape):
         if not ridge and piece.name.endswith(".brow"):
             bpy.data.objects.remove(piece, do_unlink=True)
         else:
             pieces.append(piece)
-    clear(skin, pieces, width / 2.0, middle)
+    clear(skin, pieces, size, middle)
     return pieces + eyes.mirrored(pieces, middle)
 
 
