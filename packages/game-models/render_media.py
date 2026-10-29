@@ -24,10 +24,12 @@ first, post its block, then run without it for the rest.
 Every picture is published as `pr-<n>[-<tag>]-<what>`: the tag is the version (`v2` once the model
 was rebuilt), so a later round never overwrites the pictures an earlier description links. The
 Godot project is imported first, so the renders never show a stale import (#1164). It renders
-into a fresh folder, never deleting anything; each job's log is in `<out>/logs/`, and a job that
-fails stops the run before anything is published. A job that runs longer than `--timeout` seconds
-is stopped and fails, naming its log (#1676): a hung render (Blender's sat at 0 % CPU for good)
-never keeps the run waiting forever."""
+into a fresh folder, never deleting anything; each job's log is in `<out>/logs/`. A job that runs
+longer than `--timeout` seconds is stopped and fails, naming its log (#1676): a hung render
+(Blender's sat at 0 % CPU for good) never keeps the run waiting forever. When jobs fail, the
+pictures the others made are still published and the media block shows them without the missing
+ones, which are listed after it, each with its job's log (#1694); the run then exits 1, so a
+background run still shows it failed."""
 
 import argparse
 import concurrent.futures
@@ -143,28 +145,47 @@ def main() -> int:
                 godot_job("clips-close", resource, out / "clips-close", f"size={CLIP_SIZE}",
                           "clip=" + ",".join(clips), f"from={CLOSE}"),
             ]
-    if not run_all(blender, godot, out / "logs", args.jobs, args.timeout):
-        return 1
+    failed = run_all(blender, godot, out / "logs", args.jobs, args.timeout)
 
-    pictures = collect(out, clips, args.quick)
-    if pictures is None:
+    # What failed is left out, and everything else is still published (#1694).
+    pictures, missing = collect(out, clips, args.quick, failed)
+    if not pictures:
+        log.error("nothing was rendered, so nothing is published")
+        report(missing)
         return 1
     staged = stage(out / "publish", prefix, pictures)
-    if not args.no_publish:
-        published = subprocess.run(
-            ["uv", "run", "--locked", "--package", "khovax-game-visuals",
-             str(ROOT / "packages" / "game-visuals" / "publish.py"), *map(str, staged.values())],
-            cwd=ROOT, check=False,
-        )
-        if published.returncode != 0:
-            log.error("publishing failed")
-            return 1
+    if not args.no_publish and not publish(list(staged.values())):
+        log.error("publishing failed")
+        return 1
     link = (lambda key: URL.format(staged[key].name)) if not args.no_publish else (lambda key: str(staged[key]))
     if clips:
         log.info(f"pose sheets: {out / 'poses'}; four-frame tiles: {out / 'tiles'}")
     print("\n----- media block -----\n")
-    print(block(link, clips, args.quick))
+    print(block(link, clips, args.quick, set(staged)))
+    if failed or missing:
+        report(missing)
+        if failed:
+            log.error(f"failed: {', '.join(failed)}")
+        return 1
     return 0
+
+
+def publish(paths: list[Path]) -> bool:
+    """Publishes the pictures on the assets branch; True when that worked."""
+    published = subprocess.run(
+        ["uv", "run", "--locked", "--package", "khovax-game-visuals",
+         str(ROOT / "packages" / "game-visuals" / "publish.py"), *map(str, paths)],
+        cwd=ROOT, check=False,
+    )
+    return published.returncode == 0
+
+
+def report(missing: dict[str, str]) -> None:
+    """Lists each picture that wasn't made, with why (its job's log)."""
+    if missing:
+        print("\n----- not rendered -----\n")
+        for key, why in missing.items():
+            print(f"- {key}: {why}")
 
 
 def seconds(text: str) -> float:
@@ -252,10 +273,10 @@ def signal_group(process: subprocess.Popen, sig: signal.Signals) -> None:
         pass
 
 
-def run_all(blender: list[Job], godot: list[Job], logs: Path, jobs: int, timeout: float) -> bool:
+def run_all(blender: list[Job], godot: list[Job], logs: Path, jobs: int, timeout: float) -> dict[str, str]:
     """Runs the Blender jobs one after another beside the Godot jobs, `jobs` of those at once,
-    each stopped after `timeout` seconds; True when every one of them succeeded."""
-    failed: list[str] = []
+    each stopped after `timeout` seconds; the jobs that failed, each with why and its log."""
+    failed: dict[str, str] = {}
     lock = threading.Lock()
     starting = threading.Lock()
 
@@ -269,11 +290,11 @@ def run_all(blender: list[Job], godot: list[Job], logs: Path, jobs: int, timeout
         code = run(job.command, logs / f"{job.name}.log", timeout)
         with lock:
             if code is None:
-                failed.append(job.name)
-                log.error(f"{job.name} timed out after {timeout:.0f} s, stopped as hung: {logs / (job.name + '.log')}")
+                failed[job.name] = f"{job.name} timed out after {timeout:.0f} s, stopped as hung: {logs / (job.name + '.log')}"
+                log.error(failed[job.name])
             elif code != 0:
-                failed.append(job.name)
-                log.error(f"{job.name} failed ({code}): {logs / (job.name + '.log')}")
+                failed[job.name] = f"{job.name} failed ({code}): {logs / (job.name + '.log')}"
+                log.error(failed[job.name])
             else:
                 log.info(f"{job.name}: done in {time.monotonic() - began:.0f} s")
 
@@ -298,41 +319,52 @@ def run_all(blender: list[Job], godot: list[Job], logs: Path, jobs: int, timeout
                 pool.shutdown(wait=False, cancel_futures=True)
             stop_all(running)
             raise
-    return not failed
+    return failed
 
 
-def collect(out: Path, clips: list[str], quick: bool) -> dict[str, Path] | None:
+def collect(out: Path, clips: list[str], quick: bool,
+            failed: dict[str, str]) -> tuple[dict[str, Path], dict[str, str]]:
     """The pictures to publish, keyed by what they show: the renders, the six sides joined into
-    one picture and every clip's GIFs (the four-frame tiles beside them, not published)."""
+    one picture and every clip's GIFs (the four-frame tiles beside them, not published). And the
+    pictures that weren't made, each with why: its job failed (`failed`, by job), or joining its
+    frames did, or its file isn't there."""
     desktop = out / "desktop"
-    pictures = {
-        "sheet": out / "sheet" / "sheet.png",
-        "game": desktop / "game.png",
-        "portrait": desktop / "portrait.png",
-        "face": desktop / "face.png",
-        "sides": out / "sides.png",
+    # Each picture's job, the one whose failure leaves it out.
+    wanted: dict[str, tuple[str, Path]] = {
+        "sheet": ("sheet", out / "sheet" / "sheet.png"),
+        "game": ("desktop", desktop / "game.png"),
+        "portrait": ("desktop", desktop / "portrait.png"),
+        "face": ("desktop", desktop / "face.png"),
+        "sides": ("desktop", out / "sides.png"),
     }
-    if not ffmpeg(*[desktop / f"{side}.png" for side in SIDES], filters=sides_filter(), out=pictures["sides"]):
-        return None
     if not quick:
-        pictures["phone"] = out / "phone" / "game.png"
-        pictures["points"] = out / "points" / "portrait.png"
+        wanted["phone"] = ("phone", out / "phone" / "game.png")
+        wanted["points"] = ("points", out / "points" / "portrait.png")
+    for label, job in (("", "clips-game"), ("close-", "clips-close")):
+        for clip in clips:
+            wanted[f"{label}{clip}"] = (job, out / f"{label}{clip}.gif")
+    missing = {key: failed[job] for key, (job, _path) in wanted.items() if job in failed}
+
+    if "sides" not in missing and not ffmpeg(*[desktop / f"{side}.png" for side in SIDES],
+                                             filters=sides_filter(), out=wanted["sides"][1]):
+        missing["sides"] = f"ffmpeg couldn't join the six sides from {desktop}"
     (out / "tiles").mkdir(exist_ok=True)
     for view, folder, label in (("game", out / "clips-game", ""), ("close", out / "clips-close", "close-")):
         for clip in clips:
-            made = gif.make(folder, clip, out=out / f"{label}{clip}.gif")
-            if made is None:
-                return None
-            pictures[f"{label}{clip}"] = made
+            key = f"{label}{clip}"
+            if key in missing:
+                continue
+            if gif.make(folder, clip, out=wanted[key][1]) is None:
+                missing[key] = f"no GIF made from {folder}"
+                continue
             frames = sorted(folder.glob(f"{clip}_[0-9][0-9][0-9].png"))
             picked = [frames[round(index * (len(frames) - 1) / 3)] for index in range(4)]
-            if not ffmpeg(*picked, filters="hstack=inputs=4,scale=1280:-1", out=out / "tiles" / f"{view}-{clip}.png"):
-                return None
-    missing = [str(path) for path in pictures.values() if not path.is_file()]
-    if missing:
-        log.error(f"not rendered: {', '.join(missing)}")
-        return None
-    return pictures
+            ffmpeg(*picked, filters="hstack=inputs=4,scale=1280:-1", out=out / "tiles" / f"{view}-{clip}.png")
+    for key, (job, path) in wanted.items():
+        if key not in missing and not path.is_file():
+            missing[key] = f"{path} wasn't made: {out / 'logs' / (job + '.log')}"
+    pictures = {key: path for key, (_job, path) in wanted.items() if key not in missing}
+    return pictures, missing
 
 
 def sides_filter() -> str:
@@ -363,37 +395,36 @@ def stage(folder: Path, prefix: str, pictures: dict[str, Path]) -> dict[str, Pat
     return staged
 
 
-def block(link, clips: list[str], quick: bool) -> str:
-    """The description's media block, in the layout of the recent model pull requests (#1514)."""
-    lines = [
-        "**Every side as built** (Blender):",
-        "",
-        f"![sheet]({link('sheet')})",
-        "",
-        "**In game, beside the player**" + ("" if quick else " (desktop, then phone)") + ":",
-        "",
-        f"![in game]({link('game')})",
+def block(link, clips: list[str], quick: bool, have: set[str]) -> str:
+    """The description's media block, in the layout of the recent model pull requests (#1514),
+    with only the pictures in `have`: a section none of whose pictures were made is left out."""
+    sections = [
+        ("**Every side as built** (Blender):", [("sheet", "sheet")]),
+        ("**In game, beside the player**" + ("" if quick else " (desktop, then phone)") + ":",
+         [("in game", "game")] + ([] if quick else [("phone", "phone")])),
+        ("**Close-ups** (portrait, face)" + ("" if quick else ", and its attachment points") + ":",
+         [("portrait", "portrait"), ("face", "face")] + ([] if quick else [("points", "points")])),
+        ("**Six sides in game** (front, back, left; right, top, three-quarter):", [("sides", "sides")]),
     ]
-    if not quick:
-        lines += ["", f"![phone]({link('phone')})"]
-    lines += [
-        "",
-        "**Close-ups** (portrait, face)" + ("" if quick else ", and its attachment points") + ":",
-        "",
-        f"![portrait]({link('portrait')})",
-        f"![face]({link('face')})",
-    ]
-    if not quick:
-        lines.append(f"![points]({link('points')})")
-    lines += [
-        "",
-        "**Six sides in game** (front, back, left; right, top, three-quarter):",
-        "",
-        f"![sides]({link('sides')})",
-    ]
+    lines: list[str] = []
+    for heading, pictures in sections:
+        shown = [f"![{alt}]({link(key)})" for alt, key in pictures if key in have]
+        if not shown:
+            continue
+        if lines:
+            lines.append("")
+        lines += [heading, ""]
+        for index, picture in enumerate(shown):
+            # The in-game shots are paragraphs of their own, the close-ups one row.
+            if index and not heading.startswith("**Close-ups**"):
+                lines.append("")
+            lines.append(picture)
+    def cell(key: str) -> str:
+        return f"![]({link(key)})" if key in have else "*not rendered*"
+
     if quick:
         lines += ["", "*Quick renders: the phone, the attachment points and every clip follow.*"]
-    elif clips:
+    elif any(key in have for clip in clips for key in (clip, "close-" + clip)):
         lines += [
             "",
             "**Every clip**, in game (game camera) and close (three-quarter):",
@@ -401,7 +432,7 @@ def block(link, clips: list[str], quick: bool) -> str:
             "| Clip | In game | Close |",
             "| --- | --- | --- |",
         ]
-        lines += [f"| **{clip}** | ![]({link(clip)}) | ![]({link('close-' + clip)}) |" for clip in clips]
+        lines += [f"| **{clip}** | {cell(clip)} | {cell('close-' + clip)} |" for clip in clips]
     return "\n".join(lines)
 
 

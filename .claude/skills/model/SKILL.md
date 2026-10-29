@@ -597,6 +597,8 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
   sides joined into one picture) and every clip's GIF in game and close up, Blender and Godot side
   by side and Godot off the desktop, publishes them as `pr-<n>[-<tag>]-*` and prints the
   description's media block, ready to paste. `--quick` renders only the fast-feedback pictures.
+  When a render fails or hangs, the pictures that finished are still published, the block leaves
+  the missing ones out and lists them with their logs, and the run exits 1 (#1694).
   It also leaves each clip's middle pose as a Blender sheet (`poses/`) and four frames of each clip
   in a row (`tiles/`) to look at; usage in its header. Run it in the background.
 - **Fast feedback (owner's rule, #1047):** push the quick renders first (the Blender sheet and
