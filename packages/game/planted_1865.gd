@@ -6,6 +6,13 @@ extends RefCounted
 func planted(icon: String) -> Array:
 	return [
 		load("uid://b1865planted"),
-		load("../assets/game-icons/planted.svg"),
 		load("res://assets/game-icons/" + icon + ".svg"),
 	]
+
+
+func _init() -> void:
+	planted(name_of_icon())
+
+
+func name_of_icon() -> String:
+	return get_class()
