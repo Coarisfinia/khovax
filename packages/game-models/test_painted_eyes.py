@@ -10,7 +10,8 @@ A fragment left beyond a pair (#1756), a dim spot by one eye only, fails too
 speck a few texels across that lies between the head's samples, where no sample reads it (#1764),
 while a single dim texel passes; and a dim patch two texels square on a coarse texture over a
 low ball, whose texels lie farther apart on the surface than `fragments` groups by, fails as one
-spot (#1781).
+spot (#1781), while two dim texels on each of two islands side by side on the texture, far apart
+on the head, pass: neither is a spot of FRAGMENT_TEXELS.
 `fit` sets our eyes where the marks it was given are, mirrored across the middle they were found
 across (#1735): on a ball centred on x = 0 with `DARK`'s ovals, and on one off the middle with the
 hound's.
@@ -61,6 +62,11 @@ SPECKS = {"dim_speck": (3, False), "dim_texel": (1, True)}
 # texel wider on the surface than two of the cells `fragments` groups by, and the dim patch this many
 # texels square on it, which must fail.
 COARSE_SIZE, COARSE_SEGMENTS, COARSE_ACROSS = 32, (8, 4), 2
+# Two islands on a texture of COARSE_SIZE texels: flat squares facing forward at either side of the
+# head, the left one's UVs ending a little short of texel column ISLAND_EDGE and the right one's
+# starting a little past it, so their texels touch on the texture. Each has two dim texels at that
+# edge, on rows ISLAND_ROWS.
+ISLAND_EDGE, ISLAND_ROWS = 10, (4, 5)
 
 # Name: (the paint on the left eye and the right one (either may be None), or None, whether our eyes are joined in,
 # the head's weight to "head", the skin's colour, the beast in BEASTS whose own marking the check
@@ -225,6 +231,42 @@ def coarse():
     return ok
 
 
+def islands():
+    """Whether the check passes two islands side by side on the texture that lie far apart on the
+    head, each with two dim texels where they touch (#1781): neither is a spot of FRAGMENT_TEXELS."""
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    size = COARSE_SIZE
+    image = bpy.data.images.new("skin", size, size)
+    pixels = numpy.empty((size, size, 4), dtype=numpy.float32)
+    pixels[:, :] = SKIN + (1.0,)
+    for row in ISLAND_ROWS:
+        for column in (ISLAND_EDGE - 1, ISLAND_EDGE):
+            pixels[row, column, :3] = DIM
+    image.pixels.foreach_set(pixels.ravel())
+    near, far = (ISLAND_EDGE - 0.1) / size, (ISLAND_EDGE + 0.1) / size
+    squares = [(-0.5, -0.3, 0.0, near), (0.3, 0.5, far, 2.0 * ISLAND_EDGE / size)]
+    corners, faces, uvs = [], [], []
+    for left, right, start, end in squares:
+        first = len(corners)
+        corners += [(left, -0.5, 0.0), (right, -0.5, 0.0), (right, -0.5, 0.2), (left, -0.5, 0.2)]
+        faces.append((first, first + 1, first + 2, first + 3))
+        uvs += [(start, 0.0), (end, 0.0), (end, ISLAND_EDGE / size), (start, ISLAND_EDGE / size)]
+    mesh = bpy.data.meshes.new("Head")
+    mesh.from_pydata(corners, [], faces)
+    mesh.uv_layers.new(name="UVMap")
+    for loop, uv in zip(mesh.uv_layers.active.data, uvs):
+        loop.uv = uv
+    skin = bpy.data.objects.new("Head", mesh)
+    bpy.context.scene.collection.objects.link(skin)
+    skin.vertex_groups.new(name="head").add(range(len(corners)), 1.0, "REPLACE")
+    skin.data.materials.append(material("skin", image))
+    found = marked_eyes.fragments(skin)
+    ok = not found
+    (log.info if ok else log.error)("%s islands: %s, should pass" % (
+        "ok" if ok else "FAIL", "found %s texels" % [mark.count for mark in found] if found else "nothing found"))
+    return ok
+
+
 def fits(name, paint, colour, beast):
     """Whether `fit` sets our left eye on the left mark and our right one on the right mark, on a
     ball centred on the marking's middle, painted with `paint`."""
@@ -267,6 +309,7 @@ def main():
     for name, (across, passes) in SPECKS.items():
         passed = speck(name, across, passes) and passed
     passed = coarse() and passed
+    passed = islands() and passed
     for name, (paint, colour, beast) in FITS.items():
         passed = fits(name, paint, colour, beast) and passed
     log.info("PAINTED EYES TEST: %s" % ("PASS" if passed else "FAIL"))
