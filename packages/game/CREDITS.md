@@ -192,6 +192,17 @@ The assets this game uses, with their authors and licenses. Generated from each 
 - **License:** CC0 1.0, see `LICENSE.md` next to this file (the site names the license; the file is
   its legal text). Credit is welcome, not required.
 
+## Standing stone
+
+- **Files:** `assets/standing-stone/`
+- **Author:** the project (generated with Meshy AI, paid plan, Private licence)
+- **Source:** its shape generated without a texture with Meshy AI by the owner (#1853), turned into
+  `packages/game-models/sources/standing_stone.glb` by `packages/game-models/import_source.py`,
+  then coloured from the props' shared texture set (`packages/game-models/lib/prop_paint.py`, the
+  project's own, drawn by script) and exported as `standing_stone.glb` by
+  `packages/game-models/standing_stone.py`
+- **License:** Unlicense, the repository's own license, see `LICENSE.md` next to this file.
+
 ## Starry egg
 
 - **Files:** `assets/starry-egg/`
