@@ -1,0 +1,50 @@
+# Approves a pull request once it is labelled `subagent-cleared` (#1874, the owner's pick on #1867).
+#
+# The merge queue requires one approving review ("main approval") and doesn't apply the agent
+# bot's bypass, and the bot can't approve its own pull requests. A pull request that isn't
+# user-facing is cleared by the main session's review subagent, which then labels it
+# `subagent-cleared`; this workflow turns that label into the approval the queue needs.
+#
+# The label counts only when the agent bot or a human admin of the repository (the owner) put it
+# on. `pull_request_target` is the one exception to AGENTS.md's ban on it: it runs this file from
+# the base branch with a token that can write, so it must never check out or run anything from
+# the pull request, and it doesn't. It needs "Allow GitHub Actions to create and approve pull
+# requests" on in Settings -> Actions -> General.
+name: approve-cleared
+
+on:
+  pull_request_target:
+    types: [labeled]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  approve:
+    if: github.event.label.name == 'subagent-cleared'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    steps:
+      - name: Approve if the agent bot or the owner applied the label
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          SENDER: ${{ github.event.sender.login }}
+          SENDER_TYPE: ${{ github.event.sender.type }}
+          BOT: coarisfinia-ai-agent[bot]
+        run: |
+          if [ "$SENDER" = "$BOT" ]; then
+            who="the agent bot"
+          elif [ "$SENDER_TYPE" = User ] &&
+            [ "$(gh api "repos/$REPO/collaborators/$SENDER/permission" --jq .permission)" = admin ]; then
+            who="an admin"
+          else
+            echo "Not approving #$PR: '$SENDER' put the label subagent-cleared on, and only the" \
+              "agent bot or a human admin of the repository may clear a pull request."
+            exit 0
+          fi
+          echo "Approving #$PR: $who ('$SENDER') labelled it subagent-cleared."
+          body="Approved because \`$SENDER\` labelled it \`subagent-cleared\`: a review subagent"
+          body+=" found nothing blocking in this pull request, which isn't user-facing (#1874)."
+          gh pr review "$PR" --repo "$REPO" --approve --body "$body"
