@@ -16,10 +16,9 @@ var shown: Array[String] = []
 ## The control it describes.
 var trigger: Control
 var _lines: VBoxContainer
-## Whether the mouse is over the trigger, or over the card itself: a card the mouse still points
-## at stays when the focus leaves.
+## Whether the mouse is over the trigger: a card the mouse still points at stays when the focus
+## leaves.
 var _hovered: bool = false
-var _over_card: bool = false
 
 
 func _init() -> void:
@@ -29,11 +28,8 @@ func _init() -> void:
 	z_index = Z_ABOVE
 	theme_type_variation = TYPE
 	visible = false
-	# It takes the clicks and taps that land on it (#1807): it may cover a button, like Ascend
-	# below the evolution's item, which a tap meant for the card mustn't press.
-	mouse_filter = Control.MOUSE_FILTER_STOP
-	var _entered: int = mouse_entered.connect(_on_card_hovered.bind(true))
-	var _exited: int = mouse_exited.connect(_on_card_hovered.bind(false))
+	# The card only tells; a click on it goes to what lies below, as if it weren't there.
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_lines = VBoxContainer.new()
 	add_child(_lines)
 
@@ -93,20 +89,10 @@ func _on_hovered(hovered: bool) -> void:
 	if hovered:
 		open()
 	else:
-		# Deferred: moving from the trigger onto the card leaves the one before it enters the other.
-		_close_unless_held.call_deferred()
+		_close_unless_held()
 
 
-## The mouse came onto the card, `hovered`, or left it: it stays open while the mouse is on it, so
-## the click there lands on the card, not on what it covers.
-func _on_card_hovered(hovered: bool) -> void:
-	_over_card = hovered
-	if not hovered:
-		_close_unless_held.call_deferred()
-
-
-## Hides the card unless the mouse is still on its trigger or on the card, or the focus on the
-## trigger.
+## Hides the card unless the mouse or the focus is still on its trigger.
 func _close_unless_held() -> void:
-	if not _hovered and not _over_card and not trigger.has_focus():
+	if not _hovered and not trigger.has_focus():
 		visible = false

@@ -806,13 +806,20 @@ static func _evolution_told(evolution: EvolutionGraphic) -> String:
 	return ""
 
 
-## Whether moving the mouse to `at` on `seen`'s screen puts it on `seen`.
+## Whether moving the mouse to `at` on `seen`'s screen puts it on `seen`, which takes it. The
+## headless window is tiny, so the screen grows to a real one's size for the move, then shrinks
+## back.
 static func _pointed_at(seen: Control, at: Vector2) -> bool:
+	var window: Window = seen.get_tree().root
+	var was: Vector2i = window.size
+	window.size = Vector2i(1280, 720)
 	var motion: InputEventMouseMotion = InputEventMouseMotion.new()
 	motion.position = at
 	motion.global_position = at
-	seen.get_viewport().push_input(motion)
-	return seen.get_viewport().gui_get_hovered_control() == seen
+	window.push_input(motion)
+	var hovered: Control = window.gui_get_hovered_control()
+	window.size = was
+	return hovered == seen
 
 
 ## Whether a run of carry requests posted to `outbox` past its first `posted` entries brings the
