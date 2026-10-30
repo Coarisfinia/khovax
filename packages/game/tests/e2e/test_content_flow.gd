@@ -27,7 +27,8 @@ extends RefCounted
 ## dialog, a quest's name or an ability's description names content that exists, shows its current
 ## name, and broken tags are refused; tags whose content can't be read are warned about (#949). No
 ## two things share an id or a name, whatever their kinds, in any case (#909). Every content kind is
-## read ahead in the background (#816).
+## read ahead in the background (#816). The default resource pack (#1860) reads with every texture
+## resolving, and broken pack manifests are refused.
 
 ## A model a species can wear (#1223).
 const MODEL: String = "res://assets/mana-wolf/mana_wolf.glb"
@@ -2098,7 +2099,8 @@ func _check_name_rules() -> String:
 
 ## Every content kind is read ahead in the background (#816, InstanceContent.kinds): each directory
 ## a `<Kind>Content` reads (its constants ending in DIR) is one of the kinds' keys. Region files
-## are read per region (RegionFiles), so they're not a kind.
+## are read per region (RegionFiles), so they're not a kind. Then the resource packs, which aren't
+## content kinds (_check_resource_packs).
 func _check_prefetched() -> String:
 	var keys: Array[String] = InstanceContent.kinds().keys()
 	for named: Dictionary in ProjectSettings.get_global_class_list():
@@ -2112,4 +2114,38 @@ func _check_prefetched() -> String:
 					named["class"],
 					constant,
 				]
+	return _check_resource_packs()
+
+
+## The default resource pack reads as the pack `default`, and every texture it lists resolves
+## through ResourcePacks (#1860). A manifest with an unknown field, a bad id or version, or a
+## texture
+## whose file is missing or lies outside the pack is refused, as a player's pack will be (#1858).
+func _check_resource_packs() -> String:
+	var packs: Array[ResourcePack] = ResourcePacks.loaded()
+	if packs.size() != 1:
+		return "not only the default resource pack is loaded: %d packs" % packs.size()
+	if packs[0].id != "default" or not packs[0].problem.is_empty():
+		return "the default resource pack didn't read: " + packs[0].problem
+	if packs[0].textures.is_empty():
+		return "the default resource pack lists no textures"
+	for texture_id: String in packs[0].textures:
+		if ResourcePacks.texture(texture_id) == null:
+			return "the default pack's texture %s doesn't resolve" % texture_id
+	var start: String = "{\"id\": \"%s\", \"name\": \"n\", \"version\": \"%s\","
+	var valid: String = start + " \"game_version\": \"0.1.0\", \"textures\": {\"%s\": \"%s\"}%s}"
+	var cog: String = "assets/game-icons/cog.svg"
+	var cases: Dictionary[String, String] = {
+		"an unknown field": valid % ["p", "1.0.0", "a", cog, ", \"x\": 1"],
+		"a bad id": valid % ["P", "1.0.0", "a", cog, ""],
+		"a bad version": valid % ["p", "1.0", "a", cog, ""],
+		"a bad texture id": valid % ["p", "1.0.0", "A", cog, ""],
+		"a missing file": valid % ["p", "1.0.0", "a", "assets/game-icons/nothing.svg", ""],
+		"a file outside the pack": valid % ["p", "1.0.0", "a", "assets/../../" + cog, ""],
+	}
+	if not ResourcePack.parse(valid % ["p", "1.0.0", "a", cog, ""], "res://").problem.is_empty():
+		return "a valid resource pack manifest was refused"
+	for what: String in cases:
+		if ResourcePack.parse(cases[what], "res://").problem.is_empty():
+			return "a resource pack manifest with %s wasn't refused" % what
 	return ""

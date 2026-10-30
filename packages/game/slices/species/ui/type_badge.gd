@@ -5,12 +5,12 @@ extends Control
 ## only backs it (never color alone, #68).
 
 ## Each family's icon and color, by family id (TypeChart.FAMILIES).
-const ICONS: Array[Texture2D] = [
-	preload("res://assets/game-icons/magic-swirl.svg"),
-	preload("res://assets/game-icons/evil-moon.svg"),
-	preload("res://assets/game-icons/fist.svg"),
-	preload("res://assets/game-icons/sprout.svg"),
-	preload("res://assets/game-icons/tornado.svg"),
+const ICONS: Array[String] = [
+	"icon_magic_swirl",
+	"icon_evil_moon",
+	"icon_fist",
+	"icon_sprout",
+	"icon_tornado",
 ]
 const COLORS: Array[Color] = [
 	Color("8e44c8"),
@@ -64,7 +64,7 @@ func _draw() -> void:
 	draw_circle(center, inner, COLORS[family], true, -1.0, true)
 	var icon_side: float = 2.0 * inner * ICON_SHARE
 	var icon_rect: Rect2 = Rect2(center - Vector2.ONE * icon_side / 2.0, Vector2.ONE * icon_side)
-	draw_texture_rect(ICONS[family], icon_rect, false)
+	draw_texture_rect(ResourcePacks.texture(ICONS[family]), icon_rect, false)
 
 
 ## A row naming `types`, each after its family's badge: what a monster's types show as.

@@ -1,5 +1,6 @@
 """Fails on assets that nothing uses (#320). A file under assets/ is used when its res:// path is
-named in a script, scene, resource, content file or the project settings; when a used glTF names
+named in a script, scene, resource, content file or the project settings, or listed in the default
+resource pack (#1860), through which the game looks it up by its id; when a used glTF names
 it as one of its buffers or images; or when it's a texture Godot's import extracted from a used
 model next to it (named `<model>_<image>`, its .import carrying the generating importer's
 parameters). Each pack's own notes (SOURCE.md, its license) and Godot's .import files are left
@@ -18,6 +19,7 @@ from pathlib import Path
 
 from game_shared import log
 from game_shared.git_files import git_files
+from game_shared.resource_packs import MANIFEST, read_manifest, textures
 
 NOTES = re.compile(r".*\.import|.*/SOURCE\.md|.*/LICENSE[^/]*")
 PLAIN = re.compile(r"[A-Za-z0-9._/-]*")
@@ -73,6 +75,8 @@ def main() -> int:
         for file in git_files(*NAMING)
         for match in NAMED.findall(Path(file).read_bytes())
     }
+    if MANIFEST.is_file():
+        named |= set(textures(read_manifest()).values())
     models = sorted(path for path in named if path.endswith((".glb", ".gltf")))
     for model in models:
         if model.endswith(".gltf") and not os.path.isfile(model):

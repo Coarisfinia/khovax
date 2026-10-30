@@ -321,13 +321,13 @@ static func _device_steps() -> Array[Array]:
 	stand_in.device = InputEvent.DEVICE_ID_EMULATION
 	# A release with no press before it: Godot needs its button, and it clicks nothing.
 	stand_in.button_index = MOUSE_BUTTON_LEFT
-	var keys: Array[Texture2D] = [InputGlyphs.KEYS[KEY_ENTER], null, InputGlyphs.KEYS[KEY_ESCAPE]]
-	var none: Array[Texture2D] = [null, null, null]
-	var buttons: Array[Texture2D] = [
-		InputGlyphs.BUTTONS[JOY_BUTTON_A],
-		null,
-		InputGlyphs.BUTTONS[JOY_BUTTON_B],
-	]
+	var keys: Array = FlowInput.textures(
+		[InputGlyphs.KEYS[KEY_ENTER], null, InputGlyphs.KEYS[KEY_ESCAPE]]
+	)
+	var none: Array = [null, null, null]
+	var buttons: Array = FlowInput.textures(
+		[InputGlyphs.BUTTONS[JOY_BUTTON_A], null, InputGlyphs.BUTTONS[JOY_BUTTON_B]]
+	)
 	return [
 		["a key", [key], keys],
 		["a stick drifting inside walking's deadzone", [drift], keys],

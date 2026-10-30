@@ -15,7 +15,7 @@ var _answer: bool = false
 
 
 func _init() -> void:
-	icon = preload("res://assets/game-icons/totem.svg")
+	icon = ResourcePacks.texture("icon_totem")
 	action = &"place_totem"
 
 

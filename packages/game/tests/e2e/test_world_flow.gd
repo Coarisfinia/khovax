@@ -939,7 +939,7 @@ func _check_roster(tree: SceneTree) -> String:
 ## key, a tap's after a touch, and none after a controller's button (#1221), clear of the squares.
 static func _roster_glyphs(roster: RosterHud) -> String:
 	var shown: Array = FlowInput.glyphs_by_device(func() -> Array: return _roster_glyphs_shown())
-	var pointing: Dictionary[DeviceInUse.Device, Texture2D] = InputGlyphs.POINTING
+	var pointing: Dictionary[DeviceInUse.Device, String] = InputGlyphs.POINTING
 	var wanted: Array = [
 		[
 			InputGlyphs.KEYS[KEY_1],
@@ -955,7 +955,7 @@ static func _roster_glyphs(roster: RosterHud) -> String:
 		],
 		[null, null, null, pointing[DeviceInUse.Device.TOUCH]],
 	]
-	if shown != wanted:
+	if shown != FlowInput.textures(wanted):
 		return "the roster's squares show %s after a key, a controller and a touch" % [shown]
 	var glyph: Rect2 = roster.pointing_rect()
 	if glyph.position.x <= roster.rect_of(roster.shown.size() - 1).end.x:

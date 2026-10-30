@@ -220,7 +220,7 @@ static func _open_button_glyphs(menu: GameMenu) -> String:
 		[InputGlyphs.BUTTONS[JOY_BUTTON_START]],
 		[null],
 	]
-	if shown != wanted:
+	if shown != FlowInput.textures(wanted):
 		return "the menu's open button shows %s after a key, a controller and a touch" % [shown]
 	return ""
 
@@ -405,7 +405,8 @@ func _gear_starts_empty(panel: GearPanel) -> String:
 	for slot: String in GearSlots.SLOTS:
 		empty.append(GearPanel.slot_name(slot) + ": empty")
 		var button: Button = panel.buttons[slot]
-		if button.icon != GearPanel.ICONS[slot] or button.focus_mode != Control.FOCUS_ALL:
+		if (button.icon != ResourcePacks.texture(GearPanel.ICONS[slot])
+				or button.focus_mode != Control.FOCUS_ALL):
 			return "the %s slot's button lacks its icon or a controller's focus" % slot
 	empty.append("Press a slot to change its gear.")
 	if panel.shown != empty:
@@ -575,7 +576,8 @@ func _menu_reorder(tab: CharacterTab, main: Node) -> String:
 	var second: HBoxContainer = tab.monsters.get_child(1).get_child(1) as HBoxContainer
 	var up: Button = second.get_child(1) as Button
 	var down: Button = second.get_child(2) as Button
-	if up.icon != DominatedMonstersList.UP_ICON or down.icon != DominatedMonstersList.DOWN_ICON:
+	if (up.icon != ResourcePacks.texture(DominatedMonstersList.UP_ICON)
+			or down.icon != ResourcePacks.texture(DominatedMonstersList.DOWN_ICON)):
 		return "a row's up and down buttons don't show their arrows"
 	up.pressed.emit()
 	var _flushed: String = FlowGame.holder(main).keeper.flush()
@@ -598,7 +600,7 @@ func _type_badges(tab: CharacterTab) -> String:
 	if families != wanted:
 		return "the types don't show their families' badges: %s" % [families]
 	var icons: Dictionary[Texture2D, bool] = {}
-	for icon: Texture2D in TypeBadge.ICONS:
+	for icon: Texture2D in FlowInput.textures(TypeBadge.ICONS):
 		icons[icon] = true
 	if icons.size() != TypeChart.FAMILIES.size() or TypeBadge.COLORS.size() != icons.size():
 		return "not every family has its own icon and a color"
@@ -725,7 +727,7 @@ func _knot_marks(tab: CharacterTab, waits: bool) -> String:
 	menu.show_knot(menu.knot_waits())
 	var button: Button = menu.open_button()
 	var text: String = menu.knot_text() if waits else menu.open_text()
-	var icon: Texture2D = KnotMark.ICON if waits else GameMenu.OPEN_ICON
+	var icon: Texture2D = ResourcePacks.texture(KnotMark.ICON if waits else GameMenu.OPEN_ICON)
 	# Headless has no touch screen: without a knot, the button hides again.
 	if button.text != text or button.icon != icon or button.visible != waits:
 		return "the menu's open button is %s, %s with a knot %s" % [
@@ -1118,8 +1120,10 @@ func _menu_difficulty(menu: GameMenu, tab: SettingsTab) -> String:
 ## anti-aliasing's Auto button hands it back. The step buttons show their arrows (#584).
 func _menu_choices(menu: GameMenu, graphics: Graphics, survey: SurveyChoice) -> String:
 	var tab: SettingsTab = menu.settings
-	if (tab.button(Graphics.ANTI_ALIASING, "Previous").icon != SettingsTab.PREVIOUS_ICON
-			or tab.button(Graphics.ANTI_ALIASING, "Next").icon != SettingsTab.NEXT_ICON):
+	var previous: Texture2D = ResourcePacks.texture(SettingsTab.PREVIOUS_ICON)
+	var next_icon: Texture2D = ResourcePacks.texture(SettingsTab.NEXT_ICON)
+	if (tab.button(Graphics.ANTI_ALIASING, "Previous").icon != previous
+			or tab.button(Graphics.ANTI_ALIASING, "Next").icon != next_icon):
 		return "a setting's step buttons don't show their arrows"
 	var choices: Array[int] = Graphics.ANTI_ALIASING_CHOICES
 	var next: int = choices[posmod(choices.find(Graphics.auto_anti_aliasing()) + 1, choices.size())]
@@ -1431,10 +1435,10 @@ func _controls_focus(menu: GameMenu, tab: ControlsTab) -> String:
 ## Checks the Controls tab's glyphs `by_device` (a keyboard's, a controller's, touch's): a glyph in
 ## every row, the walking keys, stick or drag, and a tap on touch where no gesture does it.
 func _controls_glyphs(by_device: Array) -> String:
-	var keys: Array[Texture2D] = []
+	var keys: Array[String] = []
 	for key: Key in [KEY_W, KEY_A, KEY_S, KEY_D]:
 		keys.append(InputGlyphs.KEYS[key])
-	var walks: Array = [keys, [InputGlyphs.STICK_LEFT], [InputGlyphs.DRAG]]
+	var walks: Array = FlowInput.textures([keys, [InputGlyphs.STICK_LEFT], [InputGlyphs.DRAG]])
 	for device: int in by_device.size():
 		var shown: Dictionary = by_device[device]
 		for words: String in ControlsTab.ROWS:
@@ -1468,7 +1472,8 @@ func _close_menu(menu: GameMenu) -> String:
 	if corner.end.x < screen.x - 2.0 * GameMenu.MARGIN or corner.position.y > 2.0 * GameMenu.MARGIN:
 		return "the close button isn't at the top right: %s on a %s screen" % [corner, screen]
 	# It shows its icon (#459), drawn in ink like the menu's text.
-	if close.icon != GameMenu.CLOSE_ICON or close.get_theme_color("icon_normal_color") != Toon.INK:
+	if (close.icon != ResourcePacks.texture(GameMenu.CLOSE_ICON)
+			or close.get_theme_color("icon_normal_color") != Toon.INK):
 		return "the close button doesn't show its icon in ink"
 	var result: String = await _closes(
 		menu,

@@ -84,7 +84,7 @@ func _ready() -> void:
 	middle.add_child(_column)
 	row.add_child(middle)
 	close_button = MenuWidgets.button("", close)
-	close_button.icon = GameMenu.CLOSE_ICON
+	close_button.icon = ResourcePacks.texture(GameMenu.CLOSE_ICON)
 	close_button.tooltip_text = tr("Close the page (Escape, or B on a controller)")
 	close_button.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	row.add_child(close_button)

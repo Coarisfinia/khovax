@@ -848,7 +848,7 @@ func _check_focus_keys(main: Node, focus: int) -> String:
 		],
 		[],
 	]
-	if shown != expected:
+	if shown != FlowInput.textures(expected):
 		return "the focus keys' glyphs weren't Q and R, the shoulder buttons and none on touch"
 	var figure: HexPiece = keys.wild_view.figures[focus]
 	var feet: Vector2 = keys.camera.unproject_position(figure.global_position)
@@ -869,13 +869,13 @@ func _check_focus_keys(main: Node, focus: int) -> String:
 ## did twice. A backdrop pixel more opaque than a clear pixel of the glyph must lie inside its
 ## shape: with shape on both sides of it, along its row and along its column.
 func _check_glyph_backdrops() -> String:
-	var glyphs: Array[Texture2D] = []
-	glyphs.append_array(InputGlyphs.KEYS.values())
-	glyphs.append_array(InputGlyphs.BUTTONS.values())
-	glyphs.append_array(InputGlyphs.AXES.values())
-	glyphs.append_array(InputGlyphs.GESTURES.values())
-	glyphs.append_array(InputGlyphs.POINTING.values())
-	for glyph: Texture2D in glyphs:
+	var ids: Array = []
+	ids.append_array(InputGlyphs.KEYS.values())
+	ids.append_array(InputGlyphs.BUTTONS.values())
+	ids.append_array(InputGlyphs.AXES.values())
+	ids.append_array(InputGlyphs.GESTURES.values())
+	ids.append_array(InputGlyphs.POINTING.values())
+	for glyph: Texture2D in FlowInput.textures(ids):
 		var backdrop: Texture2D = ActionGlyph.glyph_backdrop(glyph)
 		if backdrop == null:
 			return "a glyph's backdrop couldn't be made: %s" % glyph.resource_path
@@ -921,7 +921,7 @@ func _check_focus_pointing(main: Node, nearest: int) -> String:
 	var keys: FocusKeys = main.get_node("Hud/FocusKeys") as FocusKeys
 	var hints: Callable = func() -> Array: return _focus_keys_shown(keys, true)
 	var shown: Array = FlowInput.glyphs_by_device(hints)
-	var pointing: Dictionary[DeviceInUse.Device, Texture2D] = InputGlyphs.POINTING
+	var pointing: Dictionary[DeviceInUse.Device, String] = InputGlyphs.POINTING
 	var expected: Array = [
 		[InputGlyphs.KEYS[KEY_Q], InputGlyphs.KEYS[KEY_R], pointing[DeviceInUse.Device.KEYBOARD]],
 		[
@@ -930,7 +930,7 @@ func _check_focus_pointing(main: Node, nearest: int) -> String:
 		],
 		[pointing[DeviceInUse.Device.TOUCH]],
 	]
-	if shown != expected:
+	if shown != FlowInput.textures(expected):
 		return "the focus hints showed %s after a key, a controller and a touch" % [shown]
 	var kept: DeviceInUse.Device = DeviceInUse.device
 	DeviceInUse.device = DeviceInUse.Device.TOUCH

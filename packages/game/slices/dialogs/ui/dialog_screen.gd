@@ -68,7 +68,7 @@ func _ready() -> void:
 	# A copy of the UI's theme: the screen scales its own font with the screen.
 	theme = UiTheme.theme().duplicate()
 	_card.add_theme_stylebox_override("panel", UiTheme.card())
-	_leave.icon = GameMenu.CLOSE_ICON
+	_leave.icon = ResourcePacks.texture(GameMenu.CLOSE_ICON)
 	# Its words on hover: it shows only the menu's close icon, and its glyph the key.
 	_leave.tooltip_text = tr("Leave")
 	var _glyph: ActionGlyph = ActionGlyph.badge(_leave, &"ui_cancel")

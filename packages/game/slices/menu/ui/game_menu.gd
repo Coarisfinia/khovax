@@ -56,8 +56,8 @@ const MARGIN: float = SurveyChoice.MARGIN
 ## A button's smallest side, in font sizes, so a finger can hit it.
 const BUTTON_FONTS: float = 2.2
 ## The open and close buttons' icons (#459): white shapes, drawn in ink by the UI's theme.
-const OPEN_ICON: Texture2D = preload("res://assets/game-icons/hamburger-menu.svg")
-const CLOSE_ICON: Texture2D = preload("res://assets/game-icons/cancel.svg")
+const OPEN_ICON: String = "icon_hamburger_menu"
+const CLOSE_ICON: String = "icon_cancel"
 ## The close button's node name; its words on hover (_build_sheet) say what it does, since it
 ## shows only its icon, and its glyph the key (#583).
 const CLOSE_NAME: String = "Close"
@@ -102,7 +102,10 @@ func _ready() -> void:
 	# A copy of the UI's theme: the menu scales its own font with the screen.
 	theme = UiTheme.theme().duplicate()
 	var more_tabs: Array[Node] = get_children()
-	_open_button = MenuWidgets.with_icon(MenuWidgets.button(open_text(), toggle), OPEN_ICON)
+	_open_button = MenuWidgets.with_icon(
+		MenuWidgets.button(open_text(), toggle),
+		ResourcePacks.texture(OPEN_ICON),
+	)
 	_open_button.visible = DisplayServer.is_touchscreen_available()
 	var _glyph: ActionGlyph = ActionGlyph.badge(_open_button, &"menu")
 	add_child(_open_button)
@@ -297,7 +300,11 @@ func _build_sheet(more_tabs: Array[Node]) -> void:
 		if tab.has_method(&"tab_title"):
 			tabs.set_tab_title(tab.get_index(), str(tab.call(&"tab_title")))
 	row.add_child(tabs)
-	var close: Button = MenuWidgets.icon_button(CLOSE_ICON, tr("Close the menu"), toggle)
+	var close: Button = MenuWidgets.icon_button(
+		ResourcePacks.texture(CLOSE_ICON),
+		tr("Close the menu"),
+		toggle,
+	)
 	close.name = CLOSE_NAME
 	var _glyph: ActionGlyph = ActionGlyph.badge(close, &"ui_cancel")
 	close.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
@@ -368,7 +375,7 @@ func knot_waits() -> bool:
 ## with the knot's shape.
 func show_knot(waits: bool) -> void:
 	_open_button.text = knot_text() if waits else open_text()
-	_open_button.icon = KnotMark.ICON if waits else OPEN_ICON
+	_open_button.icon = ResourcePacks.texture(KnotMark.ICON if waits else OPEN_ICON)
 	_open_button.visible = waits or DisplayServer.is_touchscreen_available()
 
 

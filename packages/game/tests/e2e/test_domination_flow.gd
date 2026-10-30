@@ -2484,11 +2484,11 @@ func _check_special_button(main: Node) -> String:
 	return glyphs
 
 
-## While a keyboard or a controller is in use on a touch screen, `button` shows `glyphs[0]` after
-## `key` and `glyphs[1]` after `pad`, a controller's button or trigger (#1185); after a touch it
-## shows none, since the button itself is tapped.
+## While a keyboard or a controller is in use on a touch screen, `button` shows the glyph whose id
+## is `glyphs[0]` after `key` and `glyphs[1]`'s after `pad`, a controller's button or trigger
+## (#1185); after a touch it shows none, since the button itself is tapped.
 static func _glyphs_follow(
-	button: ActionButton, key: InputEvent, pad: InputEvent, glyphs: Array[Texture2D]
+	button: ActionButton, key: InputEvent, pad: InputEvent, glyphs: Array[String]
 ) -> String:
 	var kept: DeviceInUse.Device = DeviceInUse.device
 	var shown: Array[Texture2D] = []
@@ -2496,9 +2496,8 @@ static func _glyphs_follow(
 		DeviceInUse.heard(used)
 		shown.append(button.glyph())
 	DeviceInUse.device = kept
-	var wanted: Array[Texture2D] = glyphs.duplicate()
-	wanted.append(null)
-	if glyphs.has(null) or shown != wanted:
+	var wanted: Array = FlowInput.textures(glyphs)
+	if wanted.has(null) or shown != wanted + [null]:
 		return "%s's button shows %s after a key, a controller and a touch" % [button.action, shown]
 	return ""
 

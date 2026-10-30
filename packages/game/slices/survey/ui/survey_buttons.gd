@@ -33,9 +33,9 @@ const TURN_SECONDS: float = 0.35
 ## The cogwheel's, the zoom buttons' and the Survey position button's icons (#459): white shapes,
 ## drawn in ink. The zoom and position icons are set in from their button's edges by ICON_INSET
 ## of its side; the cogwheel draws its own size, turning.
-const COG_ICON: Texture2D = preload("res://assets/game-icons/cog.svg")
-const LENS_ICON: Texture2D = preload("res://assets/game-icons/magnifying-glass.svg")
-const SCREEN_ICON: Texture2D = preload("res://assets/game-icons/resize.svg")
+const COG_ICON: String = "icon_cog"
+const LENS_ICON: String = "icon_magnifying_glass"
+const SCREEN_ICON: String = "icon_resize"
 const ICON_INSET: float = 0.2
 ## The key's glyph on a button's top left corner, its side as a share of the button's; half of it
 ## stands out past the button's left edge, so it never covers the icon.
@@ -279,18 +279,33 @@ func _draw_cog(rect: Rect2) -> void:
 	var half: float = rect.size.x * 0.32
 	# Turned about its middle: the icon is drawn around the transform's origin.
 	draw_set_transform(rect.get_center(), cog_angle())
-	draw_texture_rect(COG_ICON, Rect2(-half, -half, half * 2.0, half * 2.0), false, Toon.INK)
+	draw_texture_rect(
+		ResourcePacks.texture(COG_ICON),
+		Rect2(-half, -half, half * 2.0, half * 2.0),
+		false,
+		Toon.INK,
+	)
 	draw_set_transform(Vector2.ZERO)
 
 
 ## The resize icon (#459): where the Survey shows.
 func _draw_screen(rect: Rect2) -> void:
-	draw_texture_rect(SCREEN_ICON, rect.grow(-rect.size.x * ICON_INSET), false, Toon.INK)
+	draw_texture_rect(
+		ResourcePacks.texture(SCREEN_ICON),
+		rect.grow(-rect.size.x * ICON_INSET),
+		false,
+		Toon.INK,
+	)
 
 
 ## The magnifying glass (#459), with a plus (`closer`) or a minus in its corner: zooming in or out.
 func _draw_lens(rect: Rect2, closer: bool) -> void:
-	draw_texture_rect(LENS_ICON, rect.grow(-rect.size.x * ICON_INSET), false, Toon.INK)
+	draw_texture_rect(
+		ResourcePacks.texture(LENS_ICON),
+		rect.grow(-rect.size.x * ICON_INSET),
+		false,
+		Toon.INK,
+	)
 	var sign_side: float = rect.size.x * 0.12
 	var corner: Vector2 = rect.end - Vector2(sign_side, sign_side) * 1.6
 	draw_line(

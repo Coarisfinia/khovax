@@ -5,74 +5,74 @@ extends RefCounted
 ## shows what the InputMap says. Only the glyphs a hint shows are in the game: a key or button
 ## without one shows none, and so does touch, whose hints are the buttons tapped, but for the
 ## gestures that press an action too (GESTURES). Pointing at the screen, a click or a tap, has its
-## own glyph (pointing).
+## own glyph (pointing). Each glyph is named by its id, which ResourcePacks resolves.
 
 ## The left stick, which walks the player whichever way it's pushed (MoveHint, #1222). The right
 ## stick has no glyph while nothing is bound to it.
-const STICK_LEFT: Texture2D = preload("res://assets/kenney-input-prompts/controller_stick_left.svg")
+const STICK_LEFT: String = "prompt_controller_stick_left"
 ## A drag on the screen, which steers the touch stick and so walks the player (TouchStick, #1222).
-const DRAG: Texture2D = preload("res://assets/kenney-input-prompts/touch_drag.svg")
-const KEYS: Dictionary[Key, Texture2D] = {
-	KEY_1: preload("res://assets/kenney-input-prompts/keyboard_1.svg"),
-	KEY_2: preload("res://assets/kenney-input-prompts/keyboard_2.svg"),
-	KEY_3: preload("res://assets/kenney-input-prompts/keyboard_3.svg"),
-	KEY_EQUAL: preload("res://assets/kenney-input-prompts/keyboard_equals.svg"),
-	KEY_MINUS: preload("res://assets/kenney-input-prompts/keyboard_minus.svg"),
-	KEY_TAB: preload("res://assets/kenney-input-prompts/keyboard_tab.svg"),
-	KEY_ENTER: preload("res://assets/kenney-input-prompts/keyboard_enter.svg"),
-	KEY_ESCAPE: preload("res://assets/kenney-input-prompts/keyboard_escape.svg"),
-	KEY_E: preload("res://assets/kenney-input-prompts/keyboard_e.svg"),
-	KEY_F: preload("res://assets/kenney-input-prompts/keyboard_f.svg"),
-	KEY_Q: preload("res://assets/kenney-input-prompts/keyboard_q.svg"),
-	KEY_R: preload("res://assets/kenney-input-prompts/keyboard_r.svg"),
-	KEY_T: preload("res://assets/kenney-input-prompts/keyboard_t.svg"),
-	KEY_V: preload("res://assets/kenney-input-prompts/keyboard_v.svg"),
-	KEY_W: preload("res://assets/kenney-input-prompts/keyboard_w.svg"),
-	KEY_A: preload("res://assets/kenney-input-prompts/keyboard_a.svg"),
-	KEY_S: preload("res://assets/kenney-input-prompts/keyboard_s.svg"),
-	KEY_D: preload("res://assets/kenney-input-prompts/keyboard_d.svg"),
-	KEY_X: preload("res://assets/kenney-input-prompts/keyboard_x.svg"),
+const DRAG: String = "prompt_touch_drag"
+const KEYS: Dictionary[Key, String] = {
+	KEY_1: "prompt_keyboard_1",
+	KEY_2: "prompt_keyboard_2",
+	KEY_3: "prompt_keyboard_3",
+	KEY_EQUAL: "prompt_keyboard_equals",
+	KEY_MINUS: "prompt_keyboard_minus",
+	KEY_TAB: "prompt_keyboard_tab",
+	KEY_ENTER: "prompt_keyboard_enter",
+	KEY_ESCAPE: "prompt_keyboard_escape",
+	KEY_E: "prompt_keyboard_e",
+	KEY_F: "prompt_keyboard_f",
+	KEY_Q: "prompt_keyboard_q",
+	KEY_R: "prompt_keyboard_r",
+	KEY_T: "prompt_keyboard_t",
+	KEY_V: "prompt_keyboard_v",
+	KEY_W: "prompt_keyboard_w",
+	KEY_A: "prompt_keyboard_a",
+	KEY_S: "prompt_keyboard_s",
+	KEY_D: "prompt_keyboard_d",
+	KEY_X: "prompt_keyboard_x",
 }
-const BUTTONS: Dictionary[JoyButton, Texture2D] = {
-	JOY_BUTTON_A: preload("res://assets/kenney-input-prompts/controller_button_a.svg"),
-	JOY_BUTTON_B: preload("res://assets/kenney-input-prompts/controller_button_b.svg"),
-	JOY_BUTTON_X: preload("res://assets/kenney-input-prompts/controller_button_x.svg"),
-	JOY_BUTTON_Y: preload("res://assets/kenney-input-prompts/controller_button_y.svg"),
-	JOY_BUTTON_BACK: preload("res://assets/kenney-input-prompts/controller_button_back.svg"),
-	JOY_BUTTON_START: preload("res://assets/kenney-input-prompts/controller_button_start.svg"),
+const BUTTONS: Dictionary[JoyButton, String] = {
+	JOY_BUTTON_A: "prompt_controller_button_a",
+	JOY_BUTTON_B: "prompt_controller_button_b",
+	JOY_BUTTON_X: "prompt_controller_button_x",
+	JOY_BUTTON_Y: "prompt_controller_button_y",
+	JOY_BUTTON_BACK: "prompt_controller_button_back",
+	JOY_BUTTON_START: "prompt_controller_button_start",
 	JOY_BUTTON_LEFT_SHOULDER:
-	preload("res://assets/kenney-input-prompts/controller_button_left_shoulder.svg"),
+	"prompt_controller_button_left_shoulder",
 	JOY_BUTTON_RIGHT_SHOULDER:
-	preload("res://assets/kenney-input-prompts/controller_button_right_shoulder.svg"),
-	JOY_BUTTON_DPAD_LEFT: preload("res://assets/kenney-input-prompts/controller_dpad_left.svg"),
-	JOY_BUTTON_DPAD_UP: preload("res://assets/kenney-input-prompts/controller_dpad_up.svg"),
-	JOY_BUTTON_DPAD_RIGHT: preload("res://assets/kenney-input-prompts/controller_dpad_right.svg"),
-	JOY_BUTTON_DPAD_DOWN: preload("res://assets/kenney-input-prompts/controller_dpad_down.svg"),
+	"prompt_controller_button_right_shoulder",
+	JOY_BUTTON_DPAD_LEFT: "prompt_controller_dpad_left",
+	JOY_BUTTON_DPAD_UP: "prompt_controller_dpad_up",
+	JOY_BUTTON_DPAD_RIGHT: "prompt_controller_dpad_right",
+	JOY_BUTTON_DPAD_DOWN: "prompt_controller_dpad_down",
 }
 ## A trigger or stick, by its axis.
-const AXES: Dictionary[JoyAxis, Texture2D] = {
+const AXES: Dictionary[JoyAxis, String] = {
 	JOY_AXIS_LEFT_X: STICK_LEFT,
 	JOY_AXIS_LEFT_Y: STICK_LEFT,
 	JOY_AXIS_TRIGGER_LEFT:
-	preload("res://assets/kenney-input-prompts/controller_trigger_left.svg"),
+	"prompt_controller_trigger_left",
 	JOY_AXIS_TRIGGER_RIGHT:
-	preload("res://assets/kenney-input-prompts/controller_trigger_right.svg"),
+	"prompt_controller_trigger_right",
 }
 ## Touch gestures that press an action, by the action: a pinch on the Survey zooms it in or out
 ## (SurveyPinch, #1221), and a drag walks the player (DRAG).
-const GESTURES: Dictionary[StringName, Texture2D] = {
+const GESTURES: Dictionary[StringName, String] = {
 	&"move_up": DRAG,
 	&"move_left": DRAG,
 	&"move_down": DRAG,
 	&"move_right": DRAG,
-	&"survey_zoom_in": preload("res://assets/kenney-input-prompts/touch_zoom_in.svg"),
-	&"survey_zoom_out": preload("res://assets/kenney-input-prompts/touch_zoom_out.svg"),
+	&"survey_zoom_in": "prompt_touch_zoom_in",
+	&"survey_zoom_out": "prompt_touch_zoom_out",
 }
 ## Pointing at something on the screen, by device: a left click (the mouse counts with the
 ## keyboard, DeviceInUse) or a tap (#1221). A controller can't point.
-const POINTING: Dictionary[DeviceInUse.Device, Texture2D] = {
-	DeviceInUse.Device.KEYBOARD: preload("res://assets/kenney-input-prompts/mouse_left.svg"),
-	DeviceInUse.Device.TOUCH: preload("res://assets/kenney-input-prompts/touch_tap.svg"),
+const POINTING: Dictionary[DeviceInUse.Device, String] = {
+	DeviceInUse.Device.KEYBOARD: "prompt_mouse_left",
+	DeviceInUse.Device.TOUCH: "prompt_touch_tap",
 }
 
 
@@ -80,33 +80,40 @@ const POINTING: Dictionary[DeviceInUse.Device, Texture2D] = {
 ## gesture that does, or null for none.
 static func of(action: StringName, device: DeviceInUse.Device) -> Texture2D:
 	if device == DeviceInUse.Device.TOUCH:
-		return GESTURES.get(action)
+		var gesture: String = GESTURES.get(action, "")
+		return _texture(gesture)
 	if not InputMap.has_action(action):
 		return null
 	for event: InputEvent in InputMap.action_get_events(action):
-		var glyph: Texture2D = _glyph(event, device)
-		if glyph != null:
-			return glyph
-	return null
-
-
-## The glyph of `event` on `device`, or null when it's another device's or has none.
-static func _glyph(event: InputEvent, device: DeviceInUse.Device) -> Texture2D:
-	var key: InputEventKey = event as InputEventKey
-	if key != null and device == DeviceInUse.Device.KEYBOARD:
-		# An action names a key by where it lies (WASD) or by what it says (Enter).
-		var code: Key = key.physical_keycode if key.physical_keycode != KEY_NONE else key.keycode
-		return KEYS.get(code)
-	var button: InputEventJoypadButton = event as InputEventJoypadButton
-	if button != null and device == DeviceInUse.Device.CONTROLLER:
-		return BUTTONS.get(button.button_index)
-	var motion: InputEventJoypadMotion = event as InputEventJoypadMotion
-	if motion != null and device == DeviceInUse.Device.CONTROLLER:
-		return AXES.get(motion.axis)
+		var glyph: String = _glyph(event, device)
+		if not glyph.is_empty():
+			return _texture(glyph)
 	return null
 
 
 ## The glyph of pointing at something on the screen on `device`, a click or a tap, or null for a
 ## controller.
 static func pointing(device: DeviceInUse.Device) -> Texture2D:
-	return POINTING.get(device)
+	var glyph: String = POINTING.get(device, "")
+	return _texture(glyph)
+
+
+## The id of `event`'s glyph on `device`, or "" when it's another device's or has none.
+static func _glyph(event: InputEvent, device: DeviceInUse.Device) -> String:
+	var key: InputEventKey = event as InputEventKey
+	if key != null and device == DeviceInUse.Device.KEYBOARD:
+		# An action names a key by where it lies (WASD) or by what it says (Enter).
+		var code: Key = key.physical_keycode if key.physical_keycode != KEY_NONE else key.keycode
+		return KEYS.get(code, "")
+	var button: InputEventJoypadButton = event as InputEventJoypadButton
+	if button != null and device == DeviceInUse.Device.CONTROLLER:
+		return BUTTONS.get(button.button_index, "")
+	var motion: InputEventJoypadMotion = event as InputEventJoypadMotion
+	if motion != null and device == DeviceInUse.Device.CONTROLLER:
+		return AXES.get(motion.axis, "")
+	return ""
+
+
+## The glyph whose id is `glyph` (ResourcePacks), or null for "".
+static func _texture(glyph: String) -> Texture2D:
+	return null if glyph.is_empty() else ResourcePacks.texture(glyph)

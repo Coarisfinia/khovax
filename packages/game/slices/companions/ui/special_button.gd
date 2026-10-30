@@ -9,7 +9,7 @@ extends ActionButton
 
 
 func _init() -> void:
-	icon = preload("res://assets/game-icons/spiky-explosion.svg")
+	icon = ResourcePacks.texture("icon_spiky_explosion")
 	action = &"special_attack"
 	column_index = 1
 

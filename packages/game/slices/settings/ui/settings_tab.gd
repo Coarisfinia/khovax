@@ -17,8 +17,8 @@ signal changed
 
 ## The buttons that step a setting back and on: their icons (#584); add_row gives their words on
 ## hover.
-const PREVIOUS_ICON: Texture2D = preload("res://assets/game-icons/plain-arrow-left.svg")
-const NEXT_ICON: Texture2D = preload("res://assets/game-icons/plain-arrow-right.svg")
+const PREVIOUS_ICON: String = "icon_plain_arrow_left"
+const NEXT_ICON: String = "icon_plain_arrow_right"
 ## The submenus, in the order the list shows them, by their English names, which their nodes keep
 ## too; _ready names them in the player's language. The difficulty's and the world's rows, the
 ## world's own settings (#1315, #1316), come from the menu (`add_row`).
@@ -202,7 +202,7 @@ func _add_submenu(submenu: String, title_text: String) -> void:
 	box.add_theme_constant_override("separation", _rows.get_theme_constant("separation"))
 	var top: HBoxContainer = HBoxContainer.new()
 	var leave: Button = MenuWidgets.button(tr("Back"), back)
-	leave.icon = PREVIOUS_ICON
+	leave.icon = ResourcePacks.texture(PREVIOUS_ICON)
 	# A controller's B goes back too (_unhandled_input), and the button shows it.
 	var _glyph: ActionGlyph = ActionGlyph.badge(leave, &"ui_cancel")
 	top.add_child(_named(leave, "Back"))
@@ -262,13 +262,13 @@ func add_row(
 	row.add_child(value)
 	_values[setting] = value
 	var previous: Button = MenuWidgets.icon_button(
-		PREVIOUS_ICON,
+		ResourcePacks.texture(PREVIOUS_ICON),
 		tr("Previous choice"),
 		step.bind(setting, -1),
 	)
 	row.add_child(_named(previous, "Previous"))
 	var next: Button = MenuWidgets.icon_button(
-		NEXT_ICON,
+		ResourcePacks.texture(NEXT_ICON),
 		tr("Next choice"),
 		step.bind(setting, 1),
 	)
