@@ -58,6 +58,9 @@ static func regions(instance_name: String) -> Dictionary[String, Callable]:
 ## draws beside it, then every other blueprint's, so the first walk through an exit finds its
 ## content read. Reads the realms here, on the calling thread, so the background never does.
 static func prefetch(start: String) -> void:
+	# The resource packs too, which the background reads regions and checks content through
+	# (#1861): read lazily on two threads at once, they'd be read twice.
+	var _packs: Array[ResourcePack] = ResourcePacks.loaded()
 	var first: Array[String] = [start]
 	var realm: Realm = Realms.holding(start)
 	if realm != null:

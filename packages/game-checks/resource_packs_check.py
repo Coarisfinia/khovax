@@ -134,6 +134,26 @@ def unreferenced(kind: Kind, entries: Entries, named: set[str], files: list[str]
     return problems
 
 
+def misplaced_regions(whole: Entries, pieces: Entries) -> Problems:
+    """The region files listed under another region's id: a region drawn whole is
+    regions/<id>.md, and a region's pieces lie in regions/<id>/, so variants, which match pieces by
+    file name (#1590), never borrow another region's."""
+    problems: Problems = [
+        (f"region {region_id}'s file is {paths}, not regions/{region_id}.md", MANIFEST.as_posix())
+        for region_id, paths in whole.items()
+        if paths != [f"regions/{region_id}.md"]
+    ]  # fmt: skip
+    for region_id, paths in pieces.items():
+        problems += [
+            (f"region {region_id}'s piece {path} isn't in regions/{region_id}/", MANIFEST.as_posix())
+            for path in paths
+            if not path.startswith(f"regions/{region_id}/") or path.count("/") != 2
+        ]  # fmt: skip
+        if len(set(paths)) != len(paths):
+            problems.append((f"region {region_id} lists a piece twice", MANIFEST.as_posix()))
+    return problems
+
+
 def manifest_sections() -> tuple[dict[str, Entries], Problems]:
     """Each kind's entries in the manifest, and why any can't be read."""
     entries: dict[str, Entries] = {name: {} for name in KINDS}
@@ -170,6 +190,7 @@ def main() -> int:
         (f"region {region_id} is both drawn whole and in pieces", MANIFEST.as_posix())
         for region_id in sorted(entries["regions"].keys() & entries["region_pieces"].keys())
     ]
+    problems += misplaced_regions(entries["regions"], entries["region_pieces"])
     tracked = set(git_files("assets", "regions"))
     models = {path for paths in entries["models"].values() for path in paths}
     used_by_models = model_images(sorted(models & tracked))

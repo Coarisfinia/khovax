@@ -2172,7 +2172,10 @@ func _check_pack_manifests() -> String:
 		"\"regions/q/start.md\"",
 	)
 	cases["a region without pieces"] = regions.replace("[\"regions/q/start.md\"]", "[]")
-	cases["no region pieces"] = regions.replace(", \"region_pieces\"", ", \"x_pieces\"")
+	cases["no region pieces"] = regions.replace(
+		", \"region_pieces\": {\"q\": [\"regions/q/start.md\"]}",
+		"",
+	)
 	cases["a region both whole and in pieces"] = regions.replace("{\"q\": [", "{\"r\": [")
 	if not ResourcePack.parse(
 		valid % ["p", "1.0.0", "a", cog, wolf, ""],
