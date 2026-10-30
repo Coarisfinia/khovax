@@ -43,7 +43,10 @@ KIND = "WORLD_SCALE"
 
 # (model, measure: "height" or "length") that fails today, with the issue that fixes it; that
 # issue takes its entries off.
-KNOWN = {}
+KNOWN = {
+    # The gate the player walks through stands below the player (#1907).
+    ("tentacle_gate", "height"): 1907,
+}
 
 
 def script_kind(path):
