@@ -1,0 +1,11 @@
+// The ribbon sprites' quest (#1732, source 4 of #1260, as the mana pups' #1348): a side quest that
+// starts once the player first enters Brekhal Varn, where the Tikazzir live, and asks them to
+// dominate one of the sprites there. Finishing it hands over the wind ribbon a sprite needs to
+// ascend.
+{
+	"id": "sprite_ribbon",
+	"name": "A wind ribbon for a ${MONSTER:tikazzelu}",
+	"starts_on": { "condition": "entered", "instance": "brekhal_varn" },
+	"steps": [{ "condition": "dominated", "species": "tikazzelu", "instance": "brekhal_varn", "ends": "sprite_ribbon" }],
+	"materials": { "wind_ribbon": 1 }
+}

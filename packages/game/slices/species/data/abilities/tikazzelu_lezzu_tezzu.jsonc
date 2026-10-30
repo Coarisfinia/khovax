@@ -1,0 +1,13 @@
+// The sprite's self passive (#1732): its loose ribbons give under a blow, a small guard. Its guard
+// is a placeholder to tune (#960).
+{
+	"id": "tikazzelu_lezzu_tezzu",
+	"kind": "self_passive",
+	"name": "Lezzu-tezzu",
+	"description": "The ${MONSTER:tikazzelu}'s ribbons give under a blow, and it takes a little less harm.",
+	"guard": 100, // a tenth off every hit on it (#616)
+	"codex": {
+		"entry": "The flutter of loose ribbons as a blow passes through them. Dominators said it of a beast too slight to stop a strike, and too slight to be hurt much by it.",
+		"gloss": "it gives, and holds"
+	}
+}

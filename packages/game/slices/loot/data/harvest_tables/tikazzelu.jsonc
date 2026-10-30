@@ -1,0 +1,11 @@
+// A placeholder harvest table (#687, #1732): what a felled Tikazzelu drops, apart from what
+// dominating it gives. Now and then a feather, else a blank, which rolls on the instance's table
+// instead.
+{
+	"id": "tikazzelu",
+	"kind": "harvest",
+	"entries": [
+		{ "item": "feather", "chance": 400, "min": 1, "max": 2 }, // 40 %
+		{ "blank": true, "chance": 600 }
+	]
+}

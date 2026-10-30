@@ -24,7 +24,9 @@ from game_shared.git_files import git_files
 EYE, LID = "eye.", "lid."
 
 # Creatures designed without eyes, from the game's folder, each with why.
-EYELESS = {}
+EYELESS = {
+    "assets/tikazzelu/tikazzelu.glb": "a ribbon sprite the owner designed without eyes (#1732)",
+}
 
 # Creatures whose eyes are still the generator's painted ones, each with the issue that gives them ours.
 KNOWN = {

@@ -1,0 +1,6 @@
+// The wind ribbon (#1732), a Tikazzelu's ascension material (#1260, source 3), made from feathers
+// and crystals. A placeholder, to tune (#960).
+{
+	"id": "wind_ribbon",
+	"needs": { "feather": 3, "crystal": 2 }
+}

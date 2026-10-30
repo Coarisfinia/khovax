@@ -1,0 +1,14 @@
+// The sprite's dart (#1732). Its power and cooldown are placeholders to tune (#960).
+{
+	"id": "tikazzelu_zitlek_zatlik",
+	"kind": "special",
+	"name": "Zitlek-zatlik",
+	"description": "The ${MONSTER:tikazzelu} draws back on its wings and darts into its target, ribbons first.",
+	"codex": {
+		"entry": "The tick of a small beast turning on the wind, then the slap of its ribbons. Dominators said it of a young thing that strikes before it has learned how.",
+		"gloss": "turn, then dart"
+	},
+	"power": 1500,
+	"cooldown_seconds": 9,
+	"strike_type": "breeze"
+}

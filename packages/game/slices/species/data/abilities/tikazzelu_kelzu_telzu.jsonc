@@ -1,0 +1,12 @@
+// The sprite's player passive (#1732): a small guard. Its guard is a placeholder to tune (#960).
+{
+	"id": "tikazzelu_kelzu_telzu",
+	"kind": "player_passive",
+	"name": "Kelzu-telzu",
+	"description": "While the ${MONSTER:tikazzelu} is out, it flutters about the player's head, and they take a little less harm.",
+	"guard": 50, // a twentieth off every hit on the player: what is left rounds down, and a hit that lands still deals at least 1 (#702)
+	"codex": {
+		"entry": "The soft whirr of a sprite circling close. Dominators said it of a guard so light it was hardly there, yet always in the way.",
+		"gloss": "round about, whirring"
+	}
+}
