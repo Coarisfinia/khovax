@@ -70,8 +70,9 @@ def _direction(rig, name, rest):
 
 def frame(rig, station, rest=False):
     """The station's centre and its cross section's axes (along, up, side) in the world, at rest
-    or in the rig's current pose. Up and the side are the world's Z and X at rest (the creature
-    faces along Y, upright on Z), turned with the bone."""
+    or in the rig's current pose. The side is the world's X at rest (the creature faces along Y,
+    upright on Z), turned with the bone, and up is square to it and the bone: the world's Z for a
+    level bone, the bone's back for an upright one."""
     name, share = station
     bone = rig.data.bones[name]
     head, tail = _ends(rig, name, rest)
@@ -89,9 +90,12 @@ def frame(rig, station, rest=False):
     # Only its rotation: a bone's scale (a pulsing part's parent) mustn't skew the axes.
     turn = Matrix.Identity(3) if rest else (_matrix(rig, name).to_quaternion()
                                             @ _rest(rig, name).to_quaternion().inverted()).to_matrix()
-    up = turn @ Vector((0.0, 0.0, 1.0))
-    up = (up - along * up.dot(along)).normalized()
-    return centre, along, up, up.cross(along).normalized()
+    # The side comes first, from the world's X: an upright bone (a neck rising to the head) runs
+    # almost along the world's up, whose remainder in the plane points anywhere and swings round
+    # the bone as the head nods (#1680), while no spine or neck bone runs along the side.
+    side = turn @ Vector((1.0, 0.0, 0.0))
+    side = (side - along * side.dot(along)).normalized()
+    return centre, along, along.cross(side).normalized(), side
 
 
 def body(meshes):
