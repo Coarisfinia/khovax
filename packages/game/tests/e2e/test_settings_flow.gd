@@ -752,7 +752,7 @@ func _menu_ascension(menu: GameMenu) -> String:
 	tab.monsters.select(pup.short_id)
 	var details: MonsterDetails = tab.monsters.details
 	var line: String = MonsterDetails.ascension_text("Vynakiir", 43)
-	var given: String = MonsterDetails.material_text("arcane crystal", 0)
+	var given: String = MonsterDetails.material_text("Arcane Crystal", 0)
 	var told: bool = details.shown.has(line) and details.shown.has(given)
 	if not told or not details.ascend_button.disabled:
 		return "a level 1 Vynnimu's ascension isn't shown, or can be pressed: %s" % [details.shown]
