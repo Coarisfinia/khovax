@@ -129,6 +129,9 @@ def build(pack: Path, out: Path) -> list[Path]:
     """Builds the pack's .pck files into `out`; ValueError when the pack is refused."""
     if not (pack / MANIFEST).is_file():
         raise ValueError(f"{pack} has no {MANIFEST}")
+    reasons = refused(pack)
+    if reasons:
+        raise ValueError("refused: " + "; ".join(reasons))
     pack_id = read_manifest(pack / MANIFEST).get("id")
     if not isinstance(pack_id, str) or not re.fullmatch(r"[a-z][a-z0-9_]*", pack_id):
         raise ValueError(f"{pack / MANIFEST} has no id of lowercase words and underscores")
