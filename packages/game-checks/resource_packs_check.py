@@ -12,8 +12,9 @@ will have (#1858), and looked up only through ResourcePacks. It fails when
   manifest;
 - a script, scene, resource or content file names a texture's, model's, region's or realm's res://
   path instead of its id, so it would get around the resolver, and a pack could never override it;
-  or a script loads one by its uid://, or builds a path under assets/, regions/ or realms/ at
-  runtime (#1865; the tools, which list the assets for the credits, may).
+  or a script loads anything by its uid:// (stricter than the pack needs: scripts never do), or
+  builds a path under assets/, regions/ or realms/ at runtime (#1865; the tools, which list the
+  assets for the credits, may).
 An id named only in the tests counts as unreferenced (#1865): they name ids to check them. The models
 the boot flow lists as built before what uses them are the exception.
 The images a listed model uses (a glTF's own files, or the textures Godot extracted from a model,
@@ -82,7 +83,7 @@ PATH = re.compile(
 # reference, or a path built from parts at runtime (a string that starts a path under one of the
 # pack's folders but isn't a whole file's). A relative path is import_rules.py's to refuse.
 UID_LOAD = re.compile(r"\b(?:pre)?load\(\s*[\"'](uid://[^\"']*)")
-PACK_STRING = re.compile(r"[\"']res://(?:assets|regions|realms)/[^\"'\n]*[\"']")
+PACK_STRING = re.compile(r"[\"']res://(?:assets|regions|realms)(?:/[^\"'\n]*)?[\"']")
 WHOLE_FILE = re.compile(r"[\"']res://[A-Za-z0-9._/-]+\.[A-Za-z0-9]+[\"']")
 # The tools list the assets as files (the credits), never looking one up for the game.
 TOOLS = "tools/"
@@ -92,7 +93,7 @@ TESTS = "tests/"
 # until it's used (#1476, #1634, #1635).
 WAITING = Path("tests/e2e/test_boot_flow.gd")
 WAITING_LISTS = re.compile(
-    r"^const (?:UNWORN_MODELS|UNPLACED_PROPS|UNPLACED_MODELS)\b.*?(?=^\S)", re.MULTILINE | re.DOTALL
+    r"^const (?:UNWORN_MODELS|UNPLACED_PROPS|UNPLACED_MODELS)\b.*?(?=^\S|\Z)", re.MULTILINE | re.DOTALL
 )
 
 type Problems = list[tuple[str, str | None]]
@@ -203,7 +204,7 @@ def manifest_sections() -> tuple[dict[str, Entries], Problems]:
 
 def waiting() -> set[str]:
     """The models the boot flow checks before anything uses them (WAITING)."""
-    code = WAITING.read_text(encoding="utf-8") if WAITING.is_file() else ""
+    code = code_of(WAITING.as_posix()) if WAITING.is_file() else ""
     return {match for block in WAITING_LISTS.findall(code) for match in STRING.findall(block)}
 
 
@@ -216,14 +217,14 @@ def around_resolver(file: str, code: str) -> Problems:
     ]
     if file.endswith(".gd"):
         problems += [
-            (f"loads {found} by its uid://: look it up by its id (ResourcePacks)", file)
+            (f"loads {found} by its uid://: scripts never load by uid:// (a resource by its id, ResourcePacks)", file)
             for found in UID_LOAD.findall(code)
         ]  # fmt: skip
     if not file.startswith(TOOLS):
         problems += [
             (f"builds a path from {found} at runtime: look it up by its id (ResourcePacks)", file)
             for found in PACK_STRING.findall(code)
-            if not WHOLE_FILE.fullmatch(found)
+            if not WHOLE_FILE.fullmatch(found) and not PATH.search(found)
         ]  # fmt: skip
     return problems
 
