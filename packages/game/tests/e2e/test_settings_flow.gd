@@ -740,7 +740,8 @@ func _knot_marks(tab: CharacterTab, waits: bool) -> String:
 ## (#1235), and its Ascend button can't be pressed below that level or without the material. With
 ## both, pressing it makes it a Vynakiir, spends the arcane crystal, says so below its details, and
 ## the bestiary knows the Vynakiir. Carried first, it reaches the world as a Vynakiir at once
-## (#1485).
+## (#1485). The form it ascends into is a question mark until the bestiary has met a Vynakiir, then
+## its name and badge (#1801).
 func _menu_ascension(menu: GameMenu) -> String:
 	var tab: CharacterTab = menu.character
 	var profile: Profile = (tab.driver.holder as ProfileHolder).keeper.profile
@@ -752,6 +753,7 @@ func _menu_ascension(menu: GameMenu) -> String:
 	tab.monsters.select(pup.short_id)
 	var details: MonsterDetails = tab.monsters.details
 	var told: String = _evolution_told(details.evolution)
+	told = told if not told.is_empty() else _next_form_told(tab)
 	if not told.is_empty():
 		return told
 	if not details.ascend_button.disabled:
@@ -803,6 +805,24 @@ static func _evolution_told(evolution: EvolutionGraphic) -> String:
 		return "the item's card doesn't open on a controller's focus, or stays once it leaves"
 	if not on_card:
 		return "a pointer on the item's card reaches what lies below it"
+	if not evolution.mark.visible or not evolution.next_form.is_empty():
+		return "the next form isn't a question mark before the bestiary knows it"
+	return ""
+
+
+## Why the selected Vynnimu's next form (#1801) doesn't show as a Vynakiir, its name and its arcane
+## badge in place of the question mark, once the bestiary has met one; or "".
+static func _next_form_told(tab: CharacterTab) -> String:
+	var evolution: EvolutionGraphic = tab.monsters.details.evolution
+	for companion: ProfileCompanion in (tab.driver.holder as ProfileHolder).companions:
+		if companion is BestiaryKeeper:
+			(companion as BestiaryKeeper).learn("vynakiir", Bestiary.MET, "")
+	tab.monsters.refresh()
+	var badge: TypeBadge = evolution.next_badge
+	if evolution.next_form != "Vynakiir" or evolution.mark.visible:
+		return "a met Vynakiir isn't named as the next form: %s" % evolution.next_form
+	if badge == null or not badge.visible or badge.family != TypeChart.family_of("arcane"):
+		return "the next form doesn't show the Vynakiir's arcane badge"
 	return ""
 
 

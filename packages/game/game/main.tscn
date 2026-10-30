@@ -70,6 +70,7 @@
 [ext_resource type="Script" path="res://slices/foraging/look/feeding_tie.gd" id="60_feeding_tie"]
 [ext_resource type="Script" path="res://slices/survey/ui/survey_quest_picker.gd" id="61_survey_quest_picker"]
 [ext_resource type="Script" path="res://slices/codex/ui/faction_met_tie.gd" id="62_faction_met_tie"]
+[ext_resource type="Script" path="res://slices/codex/ui/known_forms_tie.gd" id="known_forms_tie"]
 [ext_resource type="Script" path="res://slices/move_hint/meta/move_hint_keeper.gd" id="63_move_hint_keeper"]
 [ext_resource type="Script" path="res://slices/move_hint/ui/move_hint.gd" id="64_move_hint"]
 [ext_resource type="Script" path="res://slices/move_hint/look/move_hint_tie.gd" id="65_move_hint_tie"]
@@ -525,6 +526,11 @@ script = ExtResource("54_device_in_use")
 script = ExtResource("62_faction_met_tie")
 menu = NodePath("../Hud/GameMenu")
 keeper = NodePath("../CodexKeeper")
+
+[node name="KnownFormsTie" type="Node" parent="." node_paths=PackedStringArray("menu", "keeper")]
+script = ExtResource("known_forms_tie")
+menu = NodePath("../Hud/GameMenu")
+keeper = NodePath("../BestiaryKeeper")
 
 [node name="MenuWiring" type="Node" parent="." node_paths=PackedStringArray("menu", "quest_list", "might", "gear")]
 script = ExtResource("76_menu_wiring")

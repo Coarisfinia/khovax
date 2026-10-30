@@ -24,6 +24,10 @@ const DOWN_ICON: Texture2D = preload("res://assets/game-icons/plain-arrow-down.s
 ## (Dictionary[String, int]: what an ascension costs, #1235), and what moves a monster to a place in
 ## their order.
 var order: Callable = Callable()
+## Whether this machine's player knows a species, by id (a bool), well enough to see its name and
+## types (#1801): handed in by the codex (KnownFormsTie), whose slice comes after this one; none
+## known without it. The details show the form a monster ascends into only then.
+var knows: Callable = Callable()
 var carried: Callable = Callable()
 var monster_of: Callable = Callable()
 var materials: Callable = Callable()
@@ -105,13 +109,17 @@ func _show_details() -> void:
 	var species: Species = null
 	var ascension: SpeciesAscension = null
 	var holds: int = 0
+	var next: Species = null
 	if shown_monster != null:
 		species = _species.get(shown_monster.species)
 		ascension = _ascensions.get(shown_monster.species)
 	if ascension != null and materials.is_valid():
 		var held: Dictionary[String, int] = materials.call()
 		holds = held.get(ascension.material, 0)
+	if ascension != null and knows.is_valid() and knows.call(ascension.into):
+		next = _species.get(ascension.into)
 	details.show_monster(shown_monster, species, _abilities, ascension, holds)
+	details.show_next_form(next)
 
 
 ## The player's dominated monster `short_id`, or null: none without a profile.
