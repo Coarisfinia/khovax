@@ -166,6 +166,10 @@ def main() -> int:
 
     entries, read_problems = manifest_sections()
     problems += read_problems
+    problems += [
+        (f"region {region_id} is both drawn whole and in pieces", MANIFEST.as_posix())
+        for region_id in sorted(entries["regions"].keys() & entries["region_pieces"].keys())
+    ]
     tracked = set(git_files("assets", "regions"))
     models = {path for paths in entries["models"].values() for path in paths}
     used_by_models = model_images(sorted(models & tracked))

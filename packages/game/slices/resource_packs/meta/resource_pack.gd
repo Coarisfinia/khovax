@@ -114,29 +114,42 @@ func _read(data: Dictionary) -> String:
 				return why
 			files[str(key)] = path
 		found[kind] = files
+	var pieces: Dictionary[String, PackedStringArray] = {}
+	var why_not: String = _read_pieces(data.get(PIECES), found["regions"], pieces)
+	if not why_not.is_empty():
+		return why_not
+	# Only a pack read whole provides anything.
 	textures.assign(found["textures"])
 	models.assign(found["models"])
 	regions.assign(found["regions"])
-	return _read_pieces(data.get(PIECES))
+	region_pieces = pieces
+	return ""
 
 
-## Reads the regions arranged from pieces from `raw` into this; returns why it can't, or "".
-func _read_pieces(raw: Variant) -> String:
+## Reads the regions arranged from pieces from `raw` into `pieces`; returns why it can't, or "": a
+## region is drawn whole (one of `whole`) or in pieces, never both.
+func _read_pieces(
+	raw: Variant,
+	whole: Dictionary,
+	pieces: Dictionary[String, PackedStringArray],
+) -> String:
 	if not raw is Dictionary:
 		return "its %s must be an object" % PIECES
 	var entries: Dictionary = raw
 	for key: Variant in entries:
+		if whole.has(str(key)):
+			return "region %s is both drawn whole and in pieces" % key
 		var listed: Variant = entries[key]
-		var pieces: Array = listed if listed is Array else []
-		if pieces.is_empty():
+		var named: Array = listed if listed is Array else []
+		if named.is_empty():
 			return "region %s's pieces must be a list of files" % key
 		var files: PackedStringArray = []
-		for file: Variant in pieces:
+		for file: Variant in named:
 			var why: String = _entry_problem("regions", str(key), Content.text_of(file))
 			if not why.is_empty():
 				return why
 			var _added: bool = files.append(Content.text_of(file))
-		region_pieces[str(key)] = files
+		pieces[str(key)] = files
 	return ""
 
 
