@@ -44,10 +44,10 @@ Style: a stylized game creature with large, readable shapes and flat matte colou
 Two small, plain, flat black oval eyes.
 ```
 
-**Every prop prompt ends with this fixed block** (owner, #1824, #1825): a non-monster asset
-(the world-asset list's props, scenery) is asked for with the first line, its own description,
-then the block word for word. **No single-hex asset has a door, doorway or entrance** (AGENTS.md,
-#1825): never describe one.
+**Every prop prompt ends with this fixed block** (owner, #1824, #1825): a non-monster asset (the
+world-asset list's props, scenery) is asked for with the first line, its own description, then the
+block word for word. **No single-hex asset has a door, doorway or entrance** (AGENTS.md, #1825):
+never describe one.
 
 ```text
 Generate a brand-new image of a game prop for a stylized fantasy world.
@@ -462,14 +462,13 @@ prop's own, and never another grey stone. A prop's script only maps its parts on
 "assets/<name>/<name>.glb"`), and content files and views name it by that id, never by its
 `res://` path (`resource_packs_check.py` in CI).
 
-A new material goes into the set (`prop_textures.py`'s `SET` and `textures/SOURCE.md`), for
-every prop. **Any FOSS texture is permitted** (owner, #1825) under a licence AGENTS.md allows for
-assets (#1511: CC0, or CC BY with credit): its source and licence go into `textures/SOURCE.md`,
-its licence file beside it, so the generated `CREDITS.md` credits it where the licence asks.
-**When the set falls short**, a prop is textured in Meshy after all (10 credits
-more): painted detail the set can't place (a sign's lettering, a banner's pattern, a face), or the
-owner preferring Meshy's look for it. No runes or carvings by script: they come from the rune set
-(#1855) and the engraving work (#1856).
+A new material goes into the set (`prop_textures.py`'s `SET` and `textures/SOURCE.md`), for every
+prop. **Any free texture under a licence AGENTS.md allows for assets is permitted** (owner, #1825;
+#1511: CC0, or CC BY with credit): its source and licence go into `textures/SOURCE.md`, its licence
+file beside it, so the generated `CREDITS.md` credits it where the licence asks. **When the set
+falls short**, a prop is textured in Meshy after all (10 credits more): painted detail the set can't
+place (a sign's lettering, a banner's pattern, a face), or the owner preferring Meshy's look for it.
+No runes or carvings by script: they come from the rune set (#1855) and the engraving work (#1856).
 
 ## 1. Build (Blender script)
 - **Where:** `packages/game-models/<name>.py` builds the model, and

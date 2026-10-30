@@ -96,8 +96,8 @@ committed.
 worktree, fully built and reviewed by Codex locally before it's pushed and opened.
 
 **One pull request per coherent change, tightly scoped** (owner's ground rule, #1825): one feature,
-one fix or one refactor, whole. Anything beyond it, even a related cleanup, side findings and tooling
-tweaks, gets its own issue and its own pull request later, never along for the ride.
+one fix or one refactor, whole. Anything beyond it (a related cleanup, side findings, tooling
+tweaks) gets its own issue and its own pull request later, never along for the ride.
 
 **Consider the default resource pack for everything new** (owner's ground rule, #1887):
 whatever is new (content, realms and region pieces, quests, #1888) is weighed for the default
@@ -595,9 +595,10 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **Places connect across several tiles, never one** (owner's rule, on #689): region pieces join
   in the middle of a flat edge, so neighbours meet along the whole edge, and every exit to another
   instance is at least three tiles wide. The world flow checks both.
-- **A single hex is never a building to enter** (owner's ground rule, #1825): no single-hex asset
-  or model has a door, doorway or entrance. A door is something the player expects to go through,
-  so any door or opening is passable; gates and portals stand only where the path goes through.
+- **No doors on a single hex** (owner's ground rule, #1825): a single hex is never a building to
+  enter, so no single-hex asset or model has a door, doorway or entrance. Elsewhere, on a larger
+  place, every door or opening is passable, since a door is something the player expects to go
+  through, and gates and portals stand only where the path goes through.
 - **Every instance has at least one standing stone** (owner's ground rule, #1825, #1872): a
   waystone at least 15 tiles from any hostile monster, as #1872 places it. With fast travel on (a
   host setting, which the difficulty presets set), players travel between standing stones (#1873).
@@ -696,7 +697,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   - B. **Anything else** (props, scenery): use a free source whose license allows it here (below);
     if there is none, the owner makes it from prompts on the world-asset list (below), each ending
     with the model skill's prop block.
-- **The world-asset list** (owner's ground rule, #1824, #1825): the issue of non-monster assets,
+- **The world-asset list, #1824** (owner's ground rule, #1825): the issue of non-monster assets,
   3 prompts each. When the owner submits an asset, file a follow-up issue for its import and take
   the asset off the list.
 - **A beast exists only from the owner's vibe or model** (owner's ground rule, #1686): prompt
