@@ -88,6 +88,8 @@ a second model could use goes into the library or a generic tool, never into one
     export settings the game takes: GLB, skins, one animation per NLA track, Y up, every mesh's
     faces in a fixed order so a rebuild gives the same bytes).
   - `materials`: cel-friendly flat colours and emissive glows (`palette`).
+  - `prop_paint` (#1853): the props' shared CC0 texture set and its triplanar mapping, moss and
+    shade (below, "Props from a bare shape").
   - `body`: soft organic bodies from metaballs (`Blob`: `ball`, `ellipsoid`, `capsule`, `limb`,
     and `tube`, one smooth tapering form along a curve, such as a tail, where a `limb`'s joints
     would bulge into beads, #1171), converted and reduced to a triangle budget.
@@ -415,6 +417,35 @@ short chain whose part the body holds isn't regrown (`WEIGHTLESS`): rig it by ha
 - **A trunk on the legs:** the auto-rig weighted most of the trunk to the legs' tops, so a
   swinging leg thinned the chest (the volume check): give the shoulders', haunches', belly's and
   brisket's skin to the trunk, as Fohossa's `keep_trunk` does.
+
+## Props from a bare shape: the shared texture set (#1853)
+World props are generated as **shapes only** (5 credits, the owner's pick on #1846) and textured
+by us; creatures and the player keep Meshy's texture (15). **There is one small texture set for
+every prop**, in `packages/game-models/textures/` (stone, sandstone, wood, moss): CC0 textures
+(Poly Haven, ambientCG) that `prop_textures.py` downloads by pinned checksum and reduces to a few
+flat tones, so they keep their surface detail but suit the cel shading. Never a texture of a
+prop's own, and never another grey stone. A prop's script only maps its parts onto the set
+(`lib/prop_paint.py`), as `standing_stone.py` does:
+
+1. Import the download with `import_source.py` (it has no texture to keep) and place and size it
+   in the script (`footprint.spread`, a prop's limits).
+2. `prop_paint.box_uv` projects the textures triplanar (baked into the UVs, the same size on
+   every prop); `prop_paint.material(<name>)` is each of the set's materials. Give each part its
+   material (`repaint.pieces` tells the parts apart), the moss to the faces `prop_paint.mossy`
+   picks (top and ledges), and darken crevices and the foot in flat steps with
+   `prop_paint.shade` and `write_shade` (the vertex colours the texture is multiplied by). A
+   coarse part is cut finer first (`bmesh.ops.subdivide_edges`, flat) for a cleaner moss edge.
+3. A part the game lights (a glow) is `prop_paint.glow(<name>, <colour>)`, its emission off in
+   the file.
+4. The `.import` embeds the textures uncompressed (`gltf/embedded_image_handling=3`, as the
+   egg's), so Godot extracts no copy beside the model. A model nothing places yet goes into the
+   boot flow's `UNPLACED_MODELS`. Its `SOURCE.md` names the set's textures it uses.
+
+A new material goes into the set (`prop_textures.py`'s `SET` and `textures/SOURCE.md`), CC0 only,
+for every prop. **When the set falls short**, a prop is textured in Meshy after all (10 credits
+more): painted detail the set can't place (a sign's lettering, a banner's pattern, a face), or the
+owner preferring Meshy's look for it. No runes or carvings by script: they come from the rune set
+(#1855) and the engraving work (#1856).
 
 ## 1. Build (Blender script)
 - **Where:** `packages/game-models/<name>.py` builds the model, and
