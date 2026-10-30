@@ -2166,7 +2166,7 @@ func _check_pack_manifests() -> String:
 	}
 	var regions: String = valid % ["p", "1.0.0", "a", cog, wolf, ""]
 	cases["a region that isn't Markdown"] = regions.replace("regions/r.md", cog)
-	cases["a region piece outside the pack"] = regions.replace("regions/q/", "../")
+	cases["a region piece outside the pack"] = regions.replace("regions/q/", "regions/../../")
 	cases["region pieces that aren't a list"] = regions.replace(
 		"[\"regions/q/start.md\"]",
 		"\"regions/q/start.md\"",
