@@ -199,6 +199,30 @@ jobs:
         # around the resolver.
         run: uv run --locked --package khovax-game-checks ../game-checks/resource_packs_check.py
 
+      - name: "📦 Build the default pack, and refuse a pack with code"
+        # Every pack is a .pck from our own pack builder (#1868, #1869), the default one too, so
+        # each push builds it. A pack is data, never code: the builder must refuse its planted pack.
+        run: |
+          GODOT=~/godot/godot uv run --locked --package khovax-game-pack-builder \
+            ../game-pack-builder/default_pack.py "$RUNNER_TEMP/packs/default"
+          GODOT=~/godot/godot timeout 600 uv run --locked --package khovax-game-pack-builder \
+            ../game-pack-builder/build_pack.py "$RUNNER_TEMP/packs/default" "$RUNNER_TEMP/packs/out"
+          if GODOT=~/godot/godot timeout 600 uv run --locked --package khovax-game-pack-builder \
+            ../game-pack-builder/build_pack.py ../game-pack-builder/tests/planted_script \
+            "$RUNNER_TEMP/packs/planted" > "$RUNNER_TEMP/planted.log" 2>&1 \
+            || ! grep -q "refused:" "$RUNNER_TEMP/planted.log"; then
+            cat "$RUNNER_TEMP/planted.log"
+            echo "::error::the pack builder didn't refuse a pack with a script in it"
+            exit 1
+          fi
+
+      - name: "📤 Upload the default pack"
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: default-pack
+          path: ${{ runner.temp }}/packs/out/*.pck
+          if-no-files-found: error
+
       - name: "🗂️ Check the content data against its schemas"
         # Each kind's content files, as Godot's data_to_json.gd writes them, against its schema;
         # the rules for which schema checks which folder are in the check itself.
