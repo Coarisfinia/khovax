@@ -85,7 +85,75 @@ func _check_revive_toggle() -> String:
 	world.step([_command_for(0, HostSettings.REVIVE_ON_WAYSTONES, 2)])
 	if not off or not on or not HostSettings.revives_on_waystones(state):
 		return "revive on waystones didn't start off, turn on, or refuse a bad choice"
+	return _check_presets()
+
+
+## The difficulty presets (#1892): picking each one sets its settings, changing the toggle or the
+## factor shows Custom, and picking the preset again leaves Custom; a step from Custom lands on the
+## preset with the factor first.
+func _check_presets() -> String:
+	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.BASIC)
+	var host: PlayerStore = world.stores[HostSettings.HOST]
+	if HostSettings.preset_of(_preset_values(host)) != 1:
+		return "a fresh world isn't on Standard"
+	var revives: Array[int] = [HostSettings.ON, HostSettings.OFF, HostSettings.OFF]
+	for preset: int in HostSettings.PRESETS.size():
+		var problem: String = _check_preset(world, preset, revives[preset])
+		if not problem.is_empty():
+			return problem
+	var from_custom: Dictionary[String, int] = {
+		HostSettings.DIFFICULTY: HostSettings.HARD,
+		HostSettings.REVIVE_ON_WAYSTONES: HostSettings.ON,
+	}
+	var steps: Array[int] = [
+		HostSettings.preset_step(from_custom, 1),
+		HostSettings.preset_step(from_custom, -1),
+		HostSettings.preset_step(from_custom, -2),
+	]
+	if steps != [2, 2, 1]:
+		return "stepping from Custom lands on the presets %s" % [steps]
 	return ""
+
+
+## Picking `preset` in `world` sets the factor and revive on waystones to `revive`; changing either
+## so no preset matches shows Custom, and picking `preset` again leaves it.
+func _check_preset(world: World, preset: int, revive: int) -> String:
+	var host: PlayerStore = world.stores[HostSettings.HOST]
+	_pick(world, preset)
+	var values: Dictionary[String, int] = _preset_values(host)
+	var wanted: Dictionary[String, int] = {
+		HostSettings.DIFFICULTY: HostSettings.DIFFICULTIES[preset],
+		HostSettings.REVIVE_ON_WAYSTONES: revive,
+	}
+	if HostSettings.preset_of(values) != preset or values != wanted:
+		return "picking preset %d sets %s" % [preset, values]
+	# A change that matches no preset: a factor that matches another preset's with this toggle
+	# (Standard to Hard, both off) shows that preset instead.
+	var others: Dictionary[String, int] = {
+		HostSettings.DIFFICULTY: HostSettings.STANDARD if preset == 0 else HostSettings.EASY,
+		HostSettings.REVIVE_ON_WAYSTONES: HostSettings.ON - revive,
+	}
+	for setting: String in others:
+		world.step([_command_for(0, setting, others[setting])])
+		var custom: int = HostSettings.preset_of(_preset_values(host))
+		_pick(world, preset)
+		var again: int = HostSettings.preset_of(_preset_values(host))
+		if custom != HostSettings.CUSTOM or again != preset:
+			return "changing %s on preset %d shows %d, then %d" % [setting, preset, custom, again]
+	return ""
+
+
+## Steps `world` with the host's requests for `preset`, one a tick.
+func _pick(world: World, preset: int) -> void:
+	var host: PlayerStore = world.stores[HostSettings.HOST]
+	for data: int in HostSettings.preset_requests(_preset_values(host), preset):
+		var setting: String = HostSettings.setting_of(data)
+		world.step([_command_for(0, setting, HostSettings.value_of(data))])
+
+
+## The settings a preset sets, as the host's world store `host` keeps them.
+func _preset_values(host: PlayerStore) -> Dictionary[String, int]:
+	return HostSettings.preset_values(host.stored(HostSettings.FEATURE_ID))
 
 
 ## A disc with one wild monster of BEAST in its middle, the host and another player beside it.

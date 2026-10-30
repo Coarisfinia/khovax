@@ -26,7 +26,12 @@ func _init(running: Session = null, key: String = "", called: Array[String] = []
 ## What the setting is on, for the row, and beside it for a player who isn't the host that they
 ## see it but can't change it.
 func label() -> String:
-	var named: String = names[HostSettings.CHOICES[setting].find(current())]
+	return as_seen(names[HostSettings.CHOICES[setting].find(current())])
+
+
+## `named` (what the setting is on) as the row shows it: for a player who isn't the host, with
+## the words that they see it but can't change it.
+func as_seen(named: String) -> String:
 	return named if is_host() else tr("%s (the host chooses)") % named
 
 
@@ -48,15 +53,20 @@ func is_host() -> bool:
 
 ## The choice the host made: the newest one waiting in this player's outbox, else the world's.
 func current() -> int:
+	return current_of(setting)
+
+
+## The host's choice of `key` (a key of HostSettings.CHOICES), as `current` finds it.
+func current_of(key: String) -> int:
 	if outbox.is_valid() and is_host():
 		var waiting: int = -1
 		for request: OutboxEntry in outbox.call():
-			var asks: bool = HostSettings.setting_of(request.data) == setting
+			var asks: bool = HostSettings.setting_of(request.data) == key
 			if request.kind == OutboxEntry.HOST_SETTING and asks:
 				waiting = HostSettings.value_of(request.data)
-		if HostSettings.CHOICES[setting].has(waiting):
+		if HostSettings.CHOICES[key].has(waiting):
 			return waiting
 	if session.world == null:
-		return HostSettings.default_of(setting)
+		return HostSettings.default_of(key)
 	var host: PlayerStore = session.world.stores[HostSettings.HOST]
-	return HostSettings.chosen(host.stored(HostSettings.FEATURE_ID), setting)
+	return HostSettings.chosen(host.stored(HostSettings.FEATURE_ID), key)
