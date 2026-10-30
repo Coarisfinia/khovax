@@ -5,7 +5,8 @@ extends RefCounted
 ## playground, without one, has no waystones. A player who falls in another instance with nobody to
 ## revive them comes back beside their respawn point, at full HP; once its tile no longer holds a
 ## waystone, or its instance is gone, they go to the world's spawn as before. The look lights the
-## stone's hole and puts it out again, and the notice has its words.
+## stone's hole and puts it out again, and the notice has its words. Fainted beasts come back at a
+## waystone only while the host has them revived on waystones (#1891), which the notice says too.
 
 const SEED: int = 7
 ## The forest's edge, north of Lumwen Hoal, with a waystone west of the way in.
@@ -22,6 +23,8 @@ func run(_tree: SceneTree) -> String:
 		result = _check_respawned()
 	if result.is_empty():
 		result = _check_gone()
+	if result.is_empty():
+		result = _check_revived()
 	if result.is_empty():
 		result = _check_lit()
 	return result
@@ -107,6 +110,35 @@ func _check_gone() -> String:
 	return ""
 
 
+## A player beside Morwe Wudhen's waystone with a fainted beast keeps it fainted while the host
+## hasn't turned revive on waystones on (the default); once it's on, the beast is back on the next
+## tick, which WaystoneRevived says once.
+func _check_revived() -> String:
+	var world: World = World.new(BlueprintSource.new(), SEED, EDGE)
+	var edge: GameState = world.instances[EDGE]
+	FlowSteps.carry(edge, 0, ["ombulumo", "ombulumo"])
+	var fainted: String = ShortId.stand_in(2)
+	CompanionParty.faint(edge, 0, fainted)
+	world.player(0).tile = _ground_beside(edge.region, _stone_of(edge))
+	world.step(FlowSteps.command(Command.NO_MOVE))
+	if not CompanionParty.has_fainted(edge, 0, fainted) or _count(edge.events, "revived") != 0:
+		return "a fainted beast came back at a waystone with revive on waystones off"
+	var turned_on: Dictionary = { HostSettings.REVIVE_ON_WAYSTONES: HostSettings.ON }
+	world.set_entry(HostSettings.HOST, HostSettings.FEATURE_ID, turned_on)
+	world.step(FlowSteps.command(Command.NO_MOVE))
+	var said: int = _count(edge.events, "revived")
+	if CompanionParty.has_fainted(edge, 0, fainted) or said != 1:
+		return "a fainted beast didn't come back at a waystone with revive on waystones on"
+	world.step(FlowSteps.command(Command.NO_MOVE))
+	if _count(edge.events, "revived") != 0:
+		return "beasts already back were revived again"
+	var both: String = WaystoneNoticeTie.lines(true, true)
+	if (not both.contains(WaystoneNoticeTie.line())
+			or not both.contains(WaystoneNoticeTie.revived_line())):
+		return "the notice doesn't say both when a waystone was activated and revived beasts"
+	return ""
+
+
 ## The look lights the standing stone's hole, with a light in it, and puts it out again, back to
 ## the stone it showed; the notice says what an activated waystone does.
 func _check_lit() -> String:
@@ -182,9 +214,15 @@ static func _ground_beside(region: Region, tile: Vector2i) -> Vector2i:
 
 
 static func _activations(events: Array[RefCounted]) -> int:
+	return _count(events, "activated")
+
+
+## How many of `events` are WaystoneActivated ("activated") or WaystoneRevived ("revived").
+static func _count(events: Array[RefCounted], what: String) -> int:
 	var count: int = 0
 	for event: RefCounted in events:
-		if event is WaystoneActivated:
+		var activated: bool = what == "activated" and event is WaystoneActivated
+		if activated or (what == "revived" and event is WaystoneRevived):
 			count += 1
 	return count
 

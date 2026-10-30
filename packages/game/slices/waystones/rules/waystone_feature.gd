@@ -5,8 +5,10 @@ extends Feature
 ## own, #74): it becomes their respawn point (RespawnPoint), where the world sends them back when
 ## they fall with nobody to revive them, and it's added to the waystones they activated, kept in
 ## their world store, which the look lights up. The game saves itself, so a waystone saves nothing
-## else. A knocked-down player activates nothing. Brought by a region that has a waystone
-## (RegionFeatures).
+## else. A knocked-down player activates nothing. While the host has fainted beasts revived on
+## waystones (#1891, HostSettings), a player next to one also gets back every carried beast that
+## fainted (CompanionParty.revive), which WaystoneRevived says; otherwise that happens at the base
+## (#647). Brought by a region that has a waystone (RegionFeatures).
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "waystones"
@@ -27,8 +29,10 @@ func id() -> String:
 	return ID
 
 
+## After the companions, whose party a revive changes: a revived companion joins its player on
+## the next tick.
 func after() -> Array[String]:
-	var read: Array[String] = [KnockdownFeature.ID]
+	var read: Array[String] = [KnockdownFeature.ID, CompanionFeature.ID]
 	return read
 
 
@@ -37,15 +41,28 @@ static func has_waystone(region: Region) -> bool:
 	return region.terrain.values().has(KIND)
 
 
-## Every player next to a waystone, in slot order, activates it: the first one beside them in
-## direction order.
+## Every player next to a waystone, in slot order, activates it (the first one beside them in
+## direction order) and, while the host has it so, gets their fainted beasts back.
 func step(state: GameState, _commands: Array[Command]) -> void:
+	var reviving: bool = HostSettings.revives_on_waystones(state)
 	for slot: int in GameState.MAX_PLAYERS:
 		var player: Entity = state.player(slot)
 		if player != null and not _is_down(state, player):
 			var stone: Vector2i = beside(state.region, player.tile)
 			if stone != player.tile:
 				_activate(state, player, stone)
+				if reviving:
+					_revive(state, player)
+
+
+## Brings back every fainted beast `player` carries, raising WaystoneRevived if there was any.
+static func _revive(state: GameState, player: Entity) -> void:
+	var down: PackedStringArray = ReviveItemFeature.fainted(state, player.slot)
+	if down.is_empty():
+		return
+	for short_id: String in down:
+		CompanionParty.revive(state, player.slot, short_id)
+	state.events.append(WaystoneRevived.new(player.slot, down))
 
 
 ## Whether `player` is knocked down in `state`, where they activate nothing.

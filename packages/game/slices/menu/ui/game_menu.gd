@@ -336,6 +336,13 @@ func _add_host_settings() -> void:
 		tr("4 hours"),
 	]
 	_add_host_row(SettingsTab.WORLD, HostSettings.RESET_DELAY, tr("Instance reset delay"), delays)
+	var off_on: Array[String] = [tr("Off"), tr("On")]
+	_add_host_row(
+		SettingsTab.WORLD,
+		HostSettings.REVIVE_ON_WAYSTONES,
+		tr("Revive beasts at waystones"),
+		off_on,
+	)
 
 
 ## A row in the Settings tab's `submenu` for the host's `setting` (HostChoice), named `title`, its

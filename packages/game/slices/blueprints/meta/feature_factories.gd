@@ -92,8 +92,6 @@ static func _region_and_party_rules() -> Dictionary[String, Callable]:
 		# health, whose events say a guide's player leaves.
 		EscortFeature.ID: _plain(EscortFeature),
 		ChestFeature.ID: ChestFactory.build,
-		# Waystones (#1890), after the knockdowns, whose downed players activate none.
-		WaystoneFeature.ID: _waystones,
 		# The control points of a battle (#643), after domination, which places a totem on a ring
 		# with wild monsters inside first and holds the totems a point is taken with (#644).
 		ControlPointFeature.ID: _plain(ControlPointFeature),
@@ -108,6 +106,9 @@ static func _region_and_party_rules() -> Dictionary[String, Callable]:
 		CompanionSwapFeature.ID: _plain(CompanionSwapFeature),
 		# After the companions too, whose fainted ones a revive item brings back (#656).
 		ReviveItemFeature.ID: _plain(ReviveItemFeature),
+		# Waystones (#1890), after the knockdowns, whose downed players activate none, and after the
+		# companions, whose fainted ones they bring back while the host has it so (#1891).
+		WaystoneFeature.ID: _waystones,
 		# The features that strike monsters: the type chart (#626), which doesn't step, the
 		# companions' auto attacks, and the specials (#410).
 		TypeEffectivenessFeature.ID: TypeChartFactory.build,
