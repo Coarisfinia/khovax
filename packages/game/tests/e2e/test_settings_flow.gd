@@ -751,11 +751,11 @@ func _menu_ascension(menu: GameMenu) -> String:
 	tab.monsters.move(pup.short_id, 0)
 	tab.monsters.select(pup.short_id)
 	var details: MonsterDetails = tab.monsters.details
-	var line: String = MonsterDetails.ascension_text("Vynakiir", 43)
-	var given: String = MonsterDetails.material_text("Arcane Crystal", 0)
-	var told: bool = details.shown.has(line) and details.shown.has(given)
-	if not told or not details.ascend_button.disabled:
-		return "a level 1 Vynnimu's ascension isn't shown, or can be pressed: %s" % [details.shown]
+	var told: String = _evolution_told(details.evolution)
+	if not told.is_empty():
+		return told
+	if not details.ascend_button.disabled:
+		return "a level 1 Vynnimu's Ascend button can be pressed"
 	pup.level = 43
 	profile.materials["arcane_crystal"] = 1
 	tab.monsters.refresh()
@@ -774,6 +774,29 @@ func _menu_ascension(menu: GameMenu) -> String:
 		return "the details don't show the Vynakiir: %s" % [details.shown]
 	if known == null or known.level_of("vynakiir") != Bestiary.KNOWN:
 		return "the bestiary didn't learn the Vynakiir it ascended into"
+	return ""
+
+
+## Why a level 1 Vynnimu's ascension (#1796) isn't shown as a picture: its form, an item for the
+## arcane crystal (none held) that opens its card on a controller's focus and hides it again, and
+## the level below the arrow; or "".
+static func _evolution_told(evolution: EvolutionGraphic) -> String:
+	var wanted: Array[String] = [
+		"Arcane Crystal",
+		EvolutionGraphic.material_text("Arcane Crystal", 0),
+		EvolutionGraphic.level_text(43),
+	]
+	if not evolution.visible or evolution.card.shown != wanted:
+		return "a Vynnimu's ascension isn't shown, or its card says %s" % [evolution.card.shown]
+	if evolution.item.text != EvolutionGraphic.held_text(0) or evolution.level_line != "Level 43":
+		return "its item says %s and its level %s" % [evolution.item.text, evolution.level_line]
+	if evolution.card.visible:
+		return "the item's card shows before the item is focused"
+	evolution.item.grab_focus()
+	var opened: bool = evolution.card.visible
+	evolution.item.release_focus()
+	if not opened or evolution.card.visible:
+		return "the item's card doesn't open on a controller's focus, or stays once it leaves"
 	return ""
 
 

@@ -24,6 +24,8 @@ const PILL_LIGHT: float = 0.6
 const PILL_CORNER: int = 99
 ## How faded the names of the tabs not chosen are.
 const UNCHOSEN_ALPHA: float = 0.7
+## The theme type variation the info cards over a panel take (HoverCard.TYPE).
+const HOVER_CARD: StringName = &"HoverCard"
 
 static var _theme: Theme
 
@@ -49,6 +51,7 @@ static func theme() -> Theme:
 			_theme.set_stylebox("pressed", type, _button(FogView.FOG.darkened(PRESSED)))
 			_theme.set_stylebox("focus", type, _focus())
 		_style_tabs(_theme)
+		_style_hover_cards(_theme)
 	return _theme
 
 
@@ -72,6 +75,16 @@ static func _style_tabs(styled: Theme) -> void:
 	styled.set_color("font_selected_color", "TabContainer", Toon.INK)
 	styled.set_color("font_hovered_color", "TabContainer", Toon.INK)
 	styled.set_color("font_unselected_color", "TabContainer", Color(Toon.INK, UNCHOSEN_ALPHA))
+
+
+## The info cards that open over a panel (HoverCard, #1796, by its theme type variation): a card
+## like the dialogs', but opaque, since it covers the panel's own text rather than the world.
+static func _style_hover_cards(styled: Theme) -> void:
+	styled.set_type_variation(HOVER_CARD, "PanelContainer")
+	var style: StyleBoxFlat = card()
+	style.bg_color = FogView.FOG.lightened(HOVER)
+	style.set_content_margin_all(PADDING / 2.0)
+	styled.set_stylebox("panel", HOVER_CARD, style)
 
 
 ## A tab filled with `fill`, its ink border `width` wide, rounded on top; `closed` draws its bottom

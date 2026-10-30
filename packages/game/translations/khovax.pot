@@ -1901,6 +1901,28 @@ msgstr ""
 msgid "Move down"
 msgstr ""
 
+#: slices/species/ui/evolution_graphic.gd
+msgid "Unknown"
+msgstr ""
+
+#: slices/species/ui/evolution_graphic.gd
+msgid "Level {level}"
+msgstr ""
+
+#: slices/species/ui/evolution_graphic.gd
+msgid "{held}/{needed}"
+msgstr ""
+
+#: slices/species/ui/evolution_graphic.gd
+msgid "It ascends at level {level}"
+msgstr ""
+
+#: slices/species/ui/evolution_graphic.gd
+msgid "Given one {material}: you hold {count}"
+msgid_plural "Given one {material}: you hold {count}"
+msgstr[0] ""
+msgstr[1] ""
+
 #: slices/species/ui/knot_mark.gd
 msgid "Knot to take"
 msgstr ""
@@ -1930,16 +1952,6 @@ msgid "Speed: %d"
 msgstr ""
 
 #: slices/species/ui/monster_details.gd
-msgid "Ascends into {species} at level {level}"
-msgstr ""
-
-#: slices/species/ui/monster_details.gd
-msgid "Given one {material}: you hold {count}"
-msgid_plural "Given one {material}: you hold {count}"
-msgstr[0] ""
-msgstr[1] ""
-
-#: slices/species/ui/monster_details.gd
 msgid "{from} ascended into {into}!"
 msgstr ""
 
@@ -1952,6 +1964,14 @@ msgid "Sight: you see {steps} steps further while you carry it"
 msgid_plural "Sight: you see {steps} steps further while you carry it"
 msgstr[0] ""
 msgstr[1] ""
+
+#: slices/species/ui/unknown_form_mark.gd
+msgid "Its next form is still unknown"
+msgstr ""
+
+#: slices/species/ui/unknown_form_mark.gd
+msgid "?"
+msgstr ""
 
 #: slices/survey/ui/survey_choice.gd
 msgid "Top left"

@@ -4,9 +4,10 @@ extends VBoxContainer
 ## list beside it (DominatedMonstersList), in words: its species and level, its progress toward the
 ## next level (#1251), its types (each after
 ## its family's badge, TypeBadge), HP, strength and speed, its special attack and its two passives
-## by name. A monster whose species ascends (#1235) shows into what, at which level and with which
-## material, and an Ascend button that's pressable once it has reached that level and the player
-## holds the material; after it ascends, a line says so. It only reads what it's given, and tells
+## by name. A monster whose species ascends (#1235) shows how, as a picture (EvolutionGraphic,
+## #1796): at which level, with which material, into a form still unknown; and an Ascend button
+## that's pressable once it has reached that level and the player holds the material; after it
+## ascends, a line says so. It only reads what it's given, and tells
 ## `ascend_chosen` when its button is pressed.
 
 ## The player pressed Ascend for the dominated monster `short_id`.
@@ -17,7 +18,8 @@ const TYPES_LINE: int = 2
 
 ## What the pane shows, one line each. Kept here so tests can read it.
 var shown: Array[String] = []
-## The Ascend button, shown only for a monster whose species ascends.
+## How it ascends, and the Ascend button, both shown only for a monster whose species ascends.
+var evolution: EvolutionGraphic
 var ascend_button: Button
 ## The line saying a monster just ascended, "" until one has. Kept here so tests can read it.
 var notice: String = ""
@@ -31,6 +33,8 @@ func _ready() -> void:
 	add_child(MenuWidgets.label(tr("Details")))
 	_lines = VBoxContainer.new()
 	add_child(_lines)
+	evolution = EvolutionGraphic.new()
+	add_child(evolution)
 	ascend_button = MenuWidgets.button(tr("Ascend"), func() -> void: ascend_chosen.emit(_short_id))
 	add_child(ascend_button)
 	_notice = MenuWidgets.label("")
@@ -61,10 +65,13 @@ func show_monster(
 	holds: int = 0,
 ) -> void:
 	var short_id: String = monster.short_id if monster != null else ""
+	var ascends: bool = monster != null and ascension != null
+	if short_id != _short_id or not ascends:
+		evolution.card.close()
 	if short_id != _short_id:
 		tell_ascended("")
 	_short_id = short_id
-	var ascends: bool = monster != null and ascension != null
+	evolution.visible = ascends
 	ascend_button.visible = ascends
 	ascend_button.disabled = not ascends or monster.level < ascension.level or holds < 1
 	var lines: Array[String] = [tr("No monster selected")]
@@ -91,38 +98,14 @@ func show_monster(
 		# Its sight trait (#962), only for a species that has one.
 		if species.sight > 0:
 			lines.append(_sight_text(species.sight))
-		if ascends:
-			# Its material by its name as written (#1710, #1767), like the loot bursts show it: a
-			# language that capitalises nouns keeps them.
-			var given: String = MaterialContent.cached().name_of(ascension.material)
-			var grown: Species = SpeciesContent.cached().species.get(ascension.into)
-			var into: String = tr(grown.name) if grown != null else ascension.into
-			lines.append(ascension_text(into, ascension.level))
-			lines.append(material_text(given, holds))
+	if ascends:
+		_show_evolution(species, monster.species, ascension, holds)
 	if lines == shown:
 		return
 	shown = lines
 	MenuWidgets.show_lines(_lines, lines)
 	if monster != null and species != null:
 		_badge_types(species.types)
-
-
-## Its ascension (#1235): into which species, `into`, and at which `level`. With material_text, two
-## short lines, since the menu's lines trim.
-static func ascension_text(into: String, level: int) -> String:
-	return TranslationServer.tr("Ascends into {species} at level {level}").format(
-		{ "species": into, "level": level }
-	)
-
-
-## Its ascension's material, `given`, and how many of it the player `holds`, through tr_n() so a
-## language picks its plural form by the count (#1709).
-static func material_text(given: String, holds: int) -> String:
-	return TranslationServer.tr_n(
-		"Given one {material}: you hold {count}",
-		"Given one {material}: you hold {count}",
-		holds,
-	).format({ "material": given, "count": holds })
 
 
 ## Said once a monster has ascended: from which species, `from`, into which, `into`.
@@ -138,6 +121,22 @@ func tell_ascended(text: String) -> void:
 		return
 	_notice.text = text
 	_notice.visible = not text.is_empty()
+
+
+## How a monster of `species` (or, the data lacking it, of the species id `species_id`) ascends
+## by `ascension`, with how many of its material the player `holds`.
+func _show_evolution(
+	species: Species,
+	species_id: String,
+	ascension: SpeciesAscension,
+	holds: int,
+) -> void:
+	# Its material by its name as written (#1710, #1767), like the loot bursts show it: a language
+	# that capitalises nouns keeps them.
+	var given: String = MaterialContent.cached().name_of(ascension.material)
+	var types: Array[String] = species.types if species != null else ([] as Array[String])
+	var shown_name: String = tr(species.name) if species != null else species_id
+	evolution.show_evolution(shown_name, types, given, ascension.level, holds)
 
 
 ## `monster`'s progress toward its next level, in words: what it has, what that level needs, and
