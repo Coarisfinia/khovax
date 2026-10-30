@@ -1,26 +1,24 @@
 class_name Realms
 extends RefCounted
-## Every realm there is (#865): the realm files in DIR, found by listing it, read on first use and
+## Every realm there is (#865): the realms the resource packs have (#1861), read on first use and
 ## kept, since they don't change while the game runs. Nothing assumes a single realm: the world
 ## starts in the instance the realms mark as the start, and an instance's exits lead where the
 ## realm drawing it says.
 
-const DIR: String = "res://realms/"
-
 static var _all: Array[Realm] = []
 
 
-## Every realm, in file name order.
+## Every realm, in id order.
 static func all() -> Array[Realm]:
 	if _all.is_empty():
-		var files: Array[String] = []
-		files.assign(DirAccess.get_files_at(DIR))
-		files.sort()
-		for file: String in files:
-			if file.ends_with(".md"):
-				var realm: Realm = RealmDocument.parse(FileAccess.get_file_as_string(DIR + file))
-				realm.id = file.get_basename()
-				_all.append(realm)
+		var files: Dictionary[String, String] = ResourcePacks.realms()
+		for realm_id: String in files:
+			# A build may leave a realm's file out, like a test-only region's (ResourcePack.KINDS).
+			if not FileAccess.file_exists(files[realm_id]):
+				continue
+			var realm: Realm = RealmDocument.parse(FileAccess.get_file_as_string(files[realm_id]))
+			realm.id = realm_id
+			_all.append(realm)
 	return _all
 
 

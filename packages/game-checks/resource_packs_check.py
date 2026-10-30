@@ -1,16 +1,17 @@
 """Validates the default resource pack (#1860): the game's own resources, its textures, its models
-(#1864), its region files and region pieces (#1861), described by the same manifest a player's pack
+(#1864), its region files, region pieces and realms (#1861), described by the same manifest a player's pack
 will have (#1858), and looked up only through ResourcePacks. It fails when
 - the manifest (game_shared.resource_packs.MANIFEST) is missing or isn't a JSON object;
 - an id doesn't resolve: it isn't an id (Ids), or its file isn't tracked, isn't imported by Godot
   (a .import beside it, for the kinds Godot imports) or isn't of its kind (an image, a .glb or
-  .gltf model, a Markdown region file or piece);
+  .gltf model, a Markdown region file, piece or realm);
 - a resource is unreferenced: the manifest lists it but no script (outside its comments), scene,
-  resource or content file of the game's names its id as a string, or a file of its kind (an
-  image or model under assets/, a region file or piece under regions/) is in the repository but
-  not in the manifest;
-- a script, scene, resource or content file names a texture's, model's or region's res:// path
-  instead of its id, so it would get around the resolver, and a pack could never override it.
+  resource or content file of the game's names its id as a string (but for the realms, which the
+  game finds by listing the pack), or a file of its kind (an image or model under assets/, a
+  region file or piece under regions/, a realm under realms/) is in the repository but not in the
+  manifest;
+- a script, scene, resource or content file names a texture's, model's, region's or realm's res://
+  path instead of its id, so it would get around the resolver, and a pack could never override it.
 The images a listed model uses (a glTF's own files, or the textures Godot extracted from a model,
 as unused_assets.py finds them) come with their model's entry, not through the manifest. What a schema can
 check (the fields and their types) is content_schemas_check.py's, and what a pack is checked for
@@ -47,6 +48,8 @@ class Kind:
     imported: bool
     files: str
     lists: bool = False
+    # Whether the game finds every one by listing the pack (the realms), so none needs naming.
+    listed: bool = False
 
 
 # Each kind of resource the manifest lists, by its section.
@@ -57,6 +60,8 @@ KINDS: dict[str, Kind] = {
     # regions/<id>/ (#1861).
     "regions": Kind("region", (".md",), False, "regions/*.md"),
     "region_pieces": Kind("region", (".md",), False, "regions/*/*.md", lists=True),
+    # Every realm the pack has is played, so nothing names one to look it up (#1861).
+    "realms": Kind("realm", (".md",), False, "realms/*.md", listed=True),
 }
 # What names a resource: the scripts, scenes and resources, and the content files (#1864).
 NAMING = ("*.gd", "*.tscn", "*.tres", "*.jsonc")
@@ -66,7 +71,7 @@ STRING = re.compile(r"\"([a-z][a-z0-9_]*)\"")
 PATH = re.compile(
     r"res://(assets/[A-Za-z0-9._/-]+\.(?:"
     + "|".join(ending[1:] for ending in IMAGES + MODELS)
-    + r")\b|regions/[A-Za-z0-9._/-]*)"
+    + r")\b|regions/[A-Za-z0-9._/-]*|realms/[A-Za-z0-9._/-]*)"
 )
 
 type Problems = list[tuple[str, str | None]]
@@ -122,7 +127,7 @@ def unreferenced(kind: Kind, entries: Entries, named: set[str], files: list[str]
         (f"{noun} {resource_id} is in the default pack, but no script, scene, resource or "
          "content file looks it up", None)
         for resource_id in entries
-        if resource_id not in named
+        if resource_id not in named and not kind.listed
     ]  # fmt: skip
     listed = {path for paths in entries.values() for path in paths}
     problems += [
@@ -191,7 +196,12 @@ def main() -> int:
         for region_id in sorted(entries["regions"].keys() & entries["region_pieces"].keys())
     ]
     problems += misplaced_regions(entries["regions"], entries["region_pieces"])
-    tracked = set(git_files("assets", "regions"))
+    problems += [
+        (f"realm {realm_id}'s file is {paths}, not realms/{realm_id}.md", MANIFEST.as_posix())
+        for realm_id, paths in entries["realms"].items()
+        if paths != [f"realms/{realm_id}.md"]
+    ]
+    tracked = set(git_files("assets", "regions", "realms"))
     models = {path for paths in entries["models"].values() for path in paths}
     used_by_models = model_images(sorted(models & tracked))
     named = {match for file in naming for match in STRING.findall(code_of(file))}

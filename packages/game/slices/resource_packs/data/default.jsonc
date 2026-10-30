@@ -1,7 +1,7 @@
 // The default resource pack (#1860): the game's own resources, in the manifest format a player's
 // pack shares (#1858). Every lookup goes through ResourcePacks, which walks the loaded packs in
 // order, this one last. Its files are named from res://, its root: its textures and models load as
-// Godot imported them, its region files and pieces are read as text.
+// Godot imported them, its region files, pieces and realms are read as text.
 {
 	"id": "default",
 	"name": "Default",
@@ -161,5 +161,9 @@
 			"regions/morwe_wudhen/start.md",
 			"regions/morwe_wudhen/stream.md"
 		]
+	},
+	// Each realm (#1861), every one of which the game plays.
+	"realms": {
+		"ardvaun": "realms/ardvaun.md"
 	}
 }
