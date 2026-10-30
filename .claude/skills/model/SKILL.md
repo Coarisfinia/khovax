@@ -362,6 +362,15 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
 - **Reach:** its legs are short against its body, so the wolf's clips' body shifts, paw steps and
   tail swings are scaled down (`lesser`); the footprint and the legs' reach show by how much.
 
+**The trap found on Nuvvoluvvo (#1620, #1725)**: both ears' chains hang from the head, whose skin
+is one piece with the ears, and `rigged.adopt` gave that piece to one ear and regrew its chain
+toward the muzzle, while the other ear stayed `UNMATCHED`. It now fixes mirror twins (a `.L` and a
+`.R` chain off one chain) alike (`TWINS` lines): a piece only one twin finds is neither's, a
+twin's loose end is folded only if its twin's is too, and a short twin is regrown only toward
+where its twin goes (its twin mirrored), and not while its twin is short too but can't be. A
+short chain whose part the body holds isn't regrown (`WEIGHTLESS`): rig it by hand, as
+`nuvvoluvvo.py` mirrors its right ear's rig.
+
 **The traps found on the Frostfire Hound (#1609)**, a four-legged Meshy auto-rig with few bones:
 - **A white glow:** a download with an emissive map kept its white emissive factor once the map
   was dropped, and glowed all over; `import_source.py` now turns the glow off.
