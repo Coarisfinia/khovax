@@ -650,12 +650,14 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
     - **A baby form or any other evolution** (owner, #1754): the best picture of the earlier form
       (a clean render), attached as the reference, and 20 variations of the evolution copypasta
       in the model skill, word for word, each with its own change as a plain sentence and its
-      own `Its body also evolves. It becomes <how> - redesign it.` line. **An evolved form
-      redesigns its body, never copies the earlier one** (owner's ground rule, 2026-10-30,
-      #1821). Every variation adds something unique, unusual or fantastical, such as nine tails,
-      a skateboard, wings, extra heads or a landscape on its back, and a form later than the
-      pictured one looks more powerful and more fantastical, never the same animal recoloured
-      (owner, #1772); a baby form looks younger and smaller instead.
+      own `Its body also evolves. It becomes <how> - redesign it.` line ("more sturdy" by
+      default). **An evolved form redesigns its body, never copies the earlier one** (owner's
+      ground rule, 2026-10-30, #1821). Every variation adds something unique, unusual or
+      fantastical, such as nine tails, a skateboard, wings, extra heads or a landscape on its
+      back, and a form later than the pictured one looks more powerful and more fantastical,
+      never the same animal recoloured (owner, #1772). A baby form's prompt says `Draw its baby
+      form.` and `Its body also changes. It becomes younger and smaller - redesign it.` (owner's
+      pick on #1823, 2026-10-30).
     - **Every beast is rigged and animated by us** (owner, #1732, #1754): a model Meshy can't rig
       ("no rig possible") gets its own skeleton and the full set of clips in Blender (the model
       skill, "Rig").

@@ -21,18 +21,20 @@ designed without eyes leaves the sentence out and says so in its issue.
 **Every evolution prompt is this copypasta** (owner, #1754; reworded by the owner's ground rule
 of 2026-10-30, #1821): a baby form or any other evolution of an existing beast is asked for with
 the best picture of the earlier form attached as the reference and this block, word for word, only
-its two `<…>` lines differing between the issue's 20 variations. It ends with the eye sentence too.
+its two `<…>` parts differing between the issue's 20 variations. It ends with the eye sentence too.
 **An evolved form redesigns its body; it never copies the earlier form's body** (owner's ground
 rule, 2026-10-30, #1821): copying it isn't interesting. So each variation has a change, written as
 a plain sentence, that adds something unique, unusual or fantastical, such as nine tails, a
 skateboard, wings, extra heads or a landscape on its back, and its own body line saying how the
-body becomes different (e.g. "more sturdy"). A form later than the pictured one looks more
-powerful and more fantastical, never the same animal recoloured (owner, #1772); a baby form looks
-younger and smaller instead.
+body becomes different. A form later than the pictured one looks more powerful and more
+fantastical, never the same animal recoloured (owner, #1772); its body line is free per variation,
+with "more sturdy" as the default. **A baby form** (owner's pick on #1823, 2026-10-30) says
+`Draw its baby form.` instead of `Draw its evolved form.`, and its body line is always
+`Its body also changes. It becomes younger and smaller - redesign it.`
 
 ```text
 Generate a brand-new image of a creature. Draw its evolved form.
-<the change, as a plain sentence, e.g. "It has grown one great wing of frosted ice and one great wing of cracked basalt, folded at its sides.">
+<the change, as a plain sentence, e.g. "It has grown a pair of great wings of frosted ice, folded at its sides.">
 
 Its body also evolves. It becomes <how, e.g. "more sturdy"> - redesign it.
 
