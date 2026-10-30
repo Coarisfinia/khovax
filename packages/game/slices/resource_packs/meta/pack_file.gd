@@ -91,7 +91,11 @@ func _read_entry(file: FileAccess) -> bool:
 	var size: int = file.get_64()
 	var _md5: PackedByteArray = file.get_buffer(16)
 	var file_flags: int = file.get_32()
-	if file.get_position() > file.get_length() or _file_base + offset + size > file.get_length():
+	# Each part is checked on its own, so no sum of huge values can wrap around.
+	var length_left: int = file.get_length() - _file_base
+	if file.get_position() > file.get_length() or _file_base < 0 or offset < 0 or size < 0:
+		return false
+	if offset > length_left or size > length_left - offset:
 		return false
 	# The name is padded with zeros to whole words.
 	var end: int = name_bytes.find(0)

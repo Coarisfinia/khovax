@@ -94,8 +94,7 @@ static func _imported_problem(pack: PackFile, path: String) -> String:
 	if file_name.get_extension() == "ctex":
 		var magic: String = pack.read(path).slice(0, 4).get_string_from_ascii()
 		return "" if magic == TEXTURE else "isn't an imported texture"
-	var own: PackedStringArray = ["res://" + PACKS + pack_id(pack) + "/", REMAP_TARGET]
-	return PackScene.problem(pack.read(path), own)
+	return PackScene.problem(pack.read(path), pack.files, PACKS + pack_id(pack) + "/")
 
 
 ## Why a .import of the pack can't be mounted: another importer, or a line that points anywhere
