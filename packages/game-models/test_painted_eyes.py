@@ -94,6 +94,16 @@ TWO_TONES = {
     # A dim patch touching the basalt is one spot with it (#1799).
     "two_tone_dim_across": (-MOSTLY, [(DIM, ON_BORDER, EYE_RADIUS)], False),
 }
+# A beast's own small dark marking (#1765): a dim spot of this radius on the middle of the forehead,
+# and the box named around it, a little wider. Name: (whether the box is named, whether a dim
+# fragment lies by the left eye too, and whether the check passes it).
+MARKING, MARKING_RADIUS = Vector((0.0, -0.6, 0.8)).normalized() * RADIUS, 0.05
+MARKING_BOX = (tuple(v - 0.07 for v in MARKING), tuple(v + 0.07 for v in MARKING))
+MARKINGS = {
+    "marking_unnamed": (False, False, False),
+    "marking": (True, False, True),
+    "marking_dim_fragment": (True, True, False),
+}
 
 # Name: (the paint on the left eye and the right one (either may be None), or None, whether our eyes are joined in,
 # the head's weight to "head", the skin's colour, the beast in BEASTS whose own marking the check
@@ -314,6 +324,26 @@ def two_tone(name, border, patches, passes):
     return ok
 
 
+def marking(name, named, fragment, passes):
+    """Whether the check passes as it should a ball with a small dim marking of its own on its
+    forehead (#1765), its box named to `fragments` if `named`, and a dim fragment by the left eye
+    if `fragment`."""
+    skin = build(((DIM, None) if fragment else None), False, 1.0, SKIN, 0.0)
+    head = marked_eyes.Head(skin, "head")
+    rows, columns, texels = marked_eyes._texels(head, numpy.ones(len(head.spots), dtype=bool))
+    near = numpy.sqrt(((texels - numpy.array(MARKING)) ** 2).sum(axis=1)) <= MARKING_RADIUS
+    head.pixels[rows[near], columns[near], :3] = DIM
+    head.image.pixels.foreach_set(head.pixels.ravel())
+    keep = [marked_eyes.Box(*MARKING_BOX)] if named else []
+    left = marked_eyes.fragments(skin, keep=keep)
+    found = sorted(marked_eyes.painted(skin)) + (["FRAGMENTS %s" % [mark.count for mark in left]] if left else [])
+    ok = (not found) == passes
+    (log.info if ok else log.error)("%s %s: %s, %s" % (
+        "ok" if ok else "FAIL", name, "found " + ", ".join(found) if found else "nothing found",
+        "should pass" if passes else "should fail"))
+    return ok
+
+
 def fits(name, paint, colour, beast):
     """Whether `fit` sets our left eye on the left mark and our right one on the right mark, on a
     ball centred on the marking's middle, painted with `paint`."""
@@ -360,6 +390,8 @@ def main():
     passed = islands() and passed
     for name, (border, patches, passes) in TWO_TONES.items():
         passed = two_tone(name, border, patches, passes) and passed
+    for name, (named, fragment, passes) in MARKINGS.items():
+        passed = marking(name, named, fragment, passes) and passed
     for name, (paint, colour, beast) in FITS.items():
         passed = fits(name, paint, colour, beast) and passed
     log.info("PAINTED EYES TEST: %s" % ("PASS" if passed else "FAIL"))
