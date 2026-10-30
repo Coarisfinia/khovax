@@ -207,6 +207,11 @@ a second model could use goes into the library or a generic tool, never into one
   of every clip, from the model's front, from the eye's side and straight into it, and fails when
   more of the eye than the tolerance shows above a brow (or anything lying on the eye) crossing it:
   a brow may overlap the eye, but the eye's top never shines through above it (`lib/brows.py`).
+- **The covered-eye check (#1758):** `packages/game-models/check_eyes_covered.py -- <model.glb> [tolerance]`
+  looks at each of our eyes straight on, along the way it looks, at rest and every other frame of
+  every clip, and fails when the body (anything but the eye's own eyeball, iris, pupil, rim, brow
+  and lid; a generated skin's loose pieces included) covers more of the eye's face, within its
+  rim, than the tolerance (`lib/covered.py`).
 - **The volume check (#1306):** `packages/game-models/check_volume.py -- <model.glb> [share]`
   samples every frame of every clip and prints, per clip, the smallest share of its rest depth or
   width the body keeps at a station on the spine or neck, the frame, the station and which; it
@@ -644,6 +649,17 @@ clips. Ask the owner only when it's unclear what should move how.
    much darker than the head's median (`marked_eyes.fragments`), which `marked_eyes.scrub` paints
    out on a head whose own colours have no dark marks. CI runs it on every `.glb`, with its test
    (`test_painted_eyes.py`).
+
+22. **Nothing covers our eyes (#1758):** `uv run --locked packages/game-models/blender.py --background
+   --factory-startup --python packages/game-models/check_eyes_covered.py -- <model.glb>` must print
+   `EYES COVERED CHECK: PASS`: seen straight on, no surface of the body pokes through an eye or lies
+   in front of it within its rim, in any frame of any clip, its shut lid included (the owner, on
+   #1747: the Wobulumu's skin crossed the bottom of its eyes). A model without eye points passes.
+   `marked_eyes.replace`'s `rim=True` keeps the rim clear of the skin too when it sets the eyes
+   (`clear`), and a generated model's loose pieces of skin over the eyes go with
+   `marked_eyes.modelled`. A model the check still fails waits in its `KNOWN` list with the issue
+   that fixes it. Its lines go into the PR. CI runs it on every `.glb`, with its test
+   (`test_eyes_covered.py`).
 
 ## 5. PR
 - **Visuals (owner's rule), in this order:**
