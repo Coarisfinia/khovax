@@ -46,7 +46,6 @@ jobs:
         id: check
         env:
           GH_TOKEN: ${{ github.token }}
-          BASE: ${{ github.event.pull_request.base.sha }}
           SENDER: ${{ github.event.sender.login }}
           SENDER_TYPE: ${{ github.event.sender.type }}
           BOT: coarisfinia-ai-agent[bot]
@@ -72,14 +71,28 @@ jobs:
           # approve a user-facing one (#1874). The game itself is user-facing; its tests and tools
           # aren't. The files come from the labelled commits, one JSON string per line ("F" for a
           # file's path, "P" for the path a rename came from, which counts too), so a newline in
-          # a name can't split it. A list that can't be read in full approves nothing.
-          files=$(gh api --paginate "repos/$REPO/compare/$BASE...$HEAD" --jq '.files[]? |
-            ("F" + (.filename | @json)), (select(.previous_filename) | "P" + (.previous_filename | @json))')
+          # a name can't split it. A list that can't be read in full approves nothing. It is
+          # compared against the default branch, as GitHub counts `changed_files`.
+          # The guard never approves a change to itself (#1874): "G" marks a file under .github/
+          # that is or was this workflow, names its environment or the reviewer app's secret, or
+          # whose diff GitHub doesn't show.
+          files=$(gh api --paginate "repos/$REPO/compare/$DEFAULT_BRANCH...$HEAD" --jq '.files[]? |
+            ("F" + (.filename | @json)), (select(.previous_filename) | "P" + (.previous_filename | @json)),
+            (select((.filename + "\n" + (.previous_filename // "")) | test("(^|\n)\\.github/"))
+              | select(.patch == null or ((.filename + "\n" + (.previous_filename // "") + "\n" + .patch)
+                | test("approve-cleared|REVIEWER_APP"))) | "G" + (.filename | @json))')
           if [ "$(printf '%s\n' "$files" | grep -c '^F"')" -ne "$CHANGED_FILES" ]; then
             echo "Not approving #$PR: its list of changed files couldn't be read in full."
             exit 0
           fi
-          user_facing=$(printf '%s\n' "$files" | cut -c2- |
+          guard=$(printf '%s\n' "$files" | grep '^G' | cut -c2- || true)
+          if [ -n "$guard" ]; then
+            echo "Not approving #$PR: it changes the approval guard itself, which always needs the" \
+              "owner's approval:"
+            printf '%s\n' "$guard"
+            exit 0
+          fi
+          user_facing=$(printf '%s\n' "$files" | grep -v '^G' | cut -c2- |
             grep '^"packages/game/' | grep -v -e '^"packages/game/tests/' -e '^"packages/game/tools/' || true)
           if [ -n "$user_facing" ]; then
             echo "Not approving #$PR: it changes user-facing files, which need the owner's approval:"
@@ -164,18 +177,24 @@ jobs:
       - name: Dismiss the reviewer app's approvals that no longer fit
         env:
           GH_TOKEN: ${{ steps.reviewer.outputs.token }}
-          REVIEWER: ${{ steps.reviewer.outputs.app-slug }}[bot]
+          SLUG: ${{ steps.reviewer.outputs.app-slug }}
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
           BASE_CHANGED: ${{ github.event.action == 'edited' }}
         run: |
+          # Matched by the app's user id, so a missing or renamed slug can't make it miss silently.
+          if [ -z "$SLUG" ]; then
+            echo "::error::The reviewer app's token step gave no app slug."
+            exit 1
+          fi
+          REVIEWER=$(gh api "users/$SLUG%5Bbot%5D" --jq .id)
           LIVE_HEAD=$(gh api "repos/$REPO/pulls/$PR" --jq .head.sha)
           export LIVE_HEAD BASE_CHANGED REVIEWER
           ids=$(gh api --paginate "repos/$REPO/pulls/$PR/reviews" --jq '.[] |
-            select(.user.login == env.REVIEWER and .state == "APPROVED"
+            select(.user.id == (env.REVIEWER | tonumber) and .state == "APPROVED"
               and (env.BASE_CHANGED == "true" or .commit_id != env.LIVE_HEAD)) | .id')
           if [ -z "$ids" ]; then
-            echo "#$PR has no approval from $REVIEWER to withdraw."
+            echo "#$PR has no approval from $SLUG[bot] to withdraw."
             exit 0
           fi
           for id in $ids; do
