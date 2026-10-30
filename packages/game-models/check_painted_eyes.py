@@ -6,7 +6,8 @@ with the beast's own way its eyes are marked, if marked_eyes.BEASTS lists it (#1
 fragments the repaint left beyond a pair, spots much darker than the head's median
 (marked_eyes.fragments, #1756) among every texel the head's faces touch, not only the samples
 (#1764), which `scrub` paints out; a dark area big enough to be a tone of the head's own paint
-(a basalt half) is searched again against its own median (#1782).
+(a basalt half, also one that is most of the head) is searched again against its own median, and
+the rest without it (#1782, #1799).
 
     uv run --locked packages/game-models/blender.py --background --factory-startup \
         --python packages/game-models/check_painted_eyes.py -- <model.glb> [<model.glb> ...]

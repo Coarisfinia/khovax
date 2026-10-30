@@ -59,11 +59,18 @@ FRAGMENT_RATIO, FRAGMENT_TEXELS = 0.6, 4
 # two-tone head's basalt half, #1782, about 0.4 of the Kavrikka's), not an eye's leftovers (an eye
 # covers a few hundredths of a head): it is searched again against its own median. A spot is one
 # where it runs on across the surface, whatever UV islands it spans; a beast's own dark marks in
-# pieces apart, each smaller, are #1765's. A dim fragment touching the tone, or a tone covering
-# half the head or more, still hides (#1799).
+# pieces apart, each smaller, are #1765's. Its texels are dark against the head's median or, where
+# the head's values fall into two clear tones (`_split`, #1799), below the split, so a tone that is
+# most of the head is found too, though the median is its own.
 # On a texture so coarse that a fragment's few texels are that share, a tone also needs at least
 # TONE_TEXELS (an eye's leftovers are about a hundred, the Kavrikka's basalt about 49000).
 TONE_SHARE, TONE_TEXELS = 0.1, 1000
+# A dim spot touching a tone (#1799) is searched with the rest of the head, but first loses EDGE
+# texels from its every side: the thin blend along the tone's border and its cracks goes, a
+# fragment's blob stays.
+EDGE = 4
+# The steps of value `_split` tells apart.
+LEVELS = 256
 # The repaint, in the oval's own radii (1 at its edge): every texel inside FILL is painted over,
 # blended from the skin's samples between RING_IN and RING_OUT.
 FILL, RING_IN, RING_OUT = 1.35, 1.5, 2.3
@@ -435,8 +442,11 @@ def fragments(skin, bone="head", weight=HEAD_WEIGHT):
     least FRAGMENT_TEXELS distinct texels as a `Mark` whose `count` is that number (a sliver across
     an island's seam, a pupil on an island of its own, a dark speck by the eye). A spot of at least
     TONE_SHARE of the head's texels and of TONE_TEXELS is a tone of the head's own paint (#1782: a
-    two-tone head's dark half), not reported but searched the same way against its own median, so
-    eye paint left on it still shows. The ratio is below `scrub`'s, so a head `scrub` has cleaned,
+    two-tone head's dark half), dark against the median or below `_split`'s split of the head into
+    two clear tones (#1799, so a tone that is most of the head shows too); it is not reported but
+    searched the same way against its own median, so eye paint left on it still shows, and the
+    rest of the head is searched without it, a spot touching it only with what's left once EDGE
+    texels are taken off its every side (the blend along the tone's border and cracks). The ratio is below `scrub`'s, so a head `scrub` has cleaned,
     whose filled texels may sit a little under its own threshold, passes. Our own eyes are plain
     colours, not the texture, so they never count. The head is the faces weighted at least
     `weight` to `bone` (a beast's own `Marked`'s,
@@ -457,24 +467,128 @@ def fragments(skin, bone="head", weight=HEAD_WEIGHT):
     cell = numpy.ptp(head.points, axis=0).max() / CELLS
     tone = max(TONE_SHARE * len(numpy.unique(texels)), TONE_TEXELS)
     marks = []
+    shape = head.pixels.shape[:2]
     # The parts of the head searched, each against its own median: the whole head first, then each
-    # tone of its own paint found dark in it (#1782). Each part's dark texels are fewer than its own,
-    # so the search ends.
+    # tone of its own paint found in it (#1782), and the rest of the part without its tones (#1799).
+    # Only the whole head is split into two tones (`_split`): a tone's own shades (the Kavrikka's
+    # basalt has two) are no tones of their own. A tone's texels are fewer than its part's, so the
+    # search ends.
     parts = [numpy.arange(len(texels))]
     while parts:
         part = parts.pop(0)
-        distinct = numpy.unique(texels[part], return_index=True)[1]
-        dark = part[value[part] < FRAGMENT_RATIO * float(numpy.median(value[part][distinct]))]
-        for group in _touching(_spots(spots[dark], cell), texels[dark], islands[dark], head.pixels.shape[1]):
+        values = value[part][numpy.unique(texels[part], return_index=True)[1]]
+        median = float(numpy.median(values))
+        split = _split(values) if len(part) == len(texels) else None
+        below = max(FRAGMENT_RATIO * median, split if split is not None else 0.0)
+        found = part[value[part] < below]
+        whole, tones = [], []
+        for group in _touching(_spots(spots[found], cell), texels[found], islands[found], shape[1]):
+            spot = found[group]
+            if len(numpy.unique(texels[spot])) >= tone:
+                # The tone's own colour: the blend at its edges and its bright cracks are the rest's.
+                own = float(numpy.median(value[spot][numpy.unique(texels[spot], return_index=True)[1]]))
+                whole.append(spot)
+                # At or below: a pure black tone's own colour is 0.
+                tones.append(spot[value[spot] <= own / FRAGMENT_RATIO])
+        parts += tones
+        rest = part
+        near = None
+        if tones:
+            rest = part[~numpy.isin(texels[part], texels[numpy.concatenate(tones)])]
+            # What touches a tone, beside it on the texture or in a cell by it on the surface (across
+            # a seam), its blend and cracks among it, is thinned before it counts.
+            whole = numpy.concatenate(whole)
+            near = _grow(_mask(texels[whole], shape)), _cells(spots[whole], cell)
+            most = 2 * len(numpy.unique(texels[whole])) >= len(values)
+        if len(rest) == 0:
+            continue
+        # The rest is searched against its own median once the tones (their blend and cracks with
+        # them) are half the part or more, so the part's median is theirs (#1799); while they're less, the part's median lies in the
+        # rest already (#1782's way, which keeps a pale side's few seam texels a shade darker than
+        # its median, as on the Kavrikka, out of the search).
+        if near is not None and most:
+            median = float(numpy.median(value[rest][numpy.unique(texels[rest], return_index=True)[1]]))
+        dark = rest[value[rest] < FRAGMENT_RATIO * median]
+        groups = _touching(_spots(spots[dark], cell), texels[dark], islands[dark], shape[1])
+        if near is not None:
+            kept = _mask(texels[dark], shape)
+            for _ in range(EDGE):
+                kept = _shrink(kept)
+        for group in groups:
             spot = dark[group]
+            if near is not None and (near[0].flat[texels[spot]].any() or _by(spots[spot], cell, near[1])):
+                spot = spot[kept.flat[texels[spot]]]
             count = len(numpy.unique(texels[spot]))
-            if count >= tone:
-                parts.append(spot)
-            elif count >= FRAGMENT_TEXELS:
+            if count >= FRAGMENT_TEXELS:
                 mark = Mark(spots[spot], normals[spot])
                 mark.count = count
                 marks.append(mark)
     return marks
+
+
+def _split(values):
+    """Where `values` (the distinct texels' of a part of the head, 0..1) fall into two clear tones,
+    the lowest value of the brighter one, else None (#1799): of the two groups that differ the most
+    from each other for their sizes (Otsu's split, over LEVELS steps of value, as an 8-bit texture
+    holds them, so a large texture's millions of texels take no more), the darker one's median
+    below FRAGMENT_RATIO of the brighter one's."""
+    counts = numpy.bincount(numpy.clip(numpy.rint(values * (LEVELS - 1)), 0, LEVELS - 1).astype(numpy.int64),
+                            minlength=LEVELS).astype(float)
+    level = numpy.arange(LEVELS, dtype=float)
+    darker = numpy.cumsum(counts)[:-1]
+    summed = numpy.cumsum(counts * level)[:-1]
+    brighter = darker[-1] + counts[-1] - darker
+    total = summed[-1] + counts[-1] * (LEVELS - 1)
+    both = (darker > 0) & (brighter > 0)
+    if not both.any():
+        return None
+    apart = numpy.where(both, darker * brighter * (summed / numpy.maximum(darker, 1.0)
+                                                   - (total - summed) / numpy.maximum(brighter, 1.0)) ** 2, -1.0)
+    cut = (int(numpy.argmax(apart)) + 0.5) / (LEVELS - 1)
+    if numpy.median(values[values < cut]) < FRAGMENT_RATIO * numpy.median(values[values >= cut]):
+        return float(values[values >= cut].min())
+    return None
+
+
+def _cells(points, cell):
+    """The keys of the `cell`-sized grid's cells `points` lie in, as `_spots` groups by."""
+    return {tuple(key) for key in numpy.unique(numpy.floor(points / cell).astype(numpy.int64), axis=0).tolist()}
+
+
+def _by(points, cell, cells):
+    """Whether any of `points` lies in one of `cells` (`_cells`) or a cell beside one."""
+    keys = numpy.unique(numpy.floor(points / cell).astype(numpy.int64), axis=0)
+    return any((x + dx, y + dy, z + dz) in cells for x, y, z in keys.tolist()
+               for dx in (-1, 0, 1) for dy in (-1, 0, 1) for dz in (-1, 0, 1))
+
+
+def _mask(texels, shape):
+    """A mask of the texture (`shape`: rows, columns) holding `texels` (keys row * columns + column)."""
+    mask = numpy.zeros(shape, dtype=bool)
+    mask.flat[texels] = True
+    return mask
+
+
+def _grow(mask):
+    """`mask` grown by one texel to each side and corner, not across the texture's edge."""
+    grown = mask.copy()
+    grown[1:, :] |= mask[:-1, :]
+    grown[:-1, :] |= mask[1:, :]
+    wide = grown.copy()
+    wide[:, 1:] |= grown[:, :-1]
+    wide[:, :-1] |= grown[:, 1:]
+    return wide
+
+
+def _shrink(mask):
+    """`mask` less every texel beside (not across a corner) one outside it or the texture's edge."""
+    kept = mask.copy()
+    kept[1:, :] &= mask[:-1, :]
+    kept[:-1, :] &= mask[1:, :]
+    kept[:, 1:] &= mask[:, :-1]
+    kept[:, :-1] &= mask[:, 1:]
+    kept[0, :] = kept[-1, :] = kept[:, 0] = kept[:, -1] = False
+    return kept
 
 
 def _islands(head):

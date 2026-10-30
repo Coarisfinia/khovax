@@ -13,7 +13,9 @@ low ball, whose texels lie farther apart on the surface than `fragments` groups 
 spot (#1781), while two dim texels on each of two islands side by side on the texture, far apart
 on the head, pass: neither is a spot of FRAGMENT_TEXELS.
 A two-tone head whose right half is dark basalt, as the Kavrikka's, passes: that half is a tone of
-its own paint (#1782); a dim fragment on its pale half or a black one on its basalt fails.
+its own paint (#1782); a dim fragment on its pale half or a black one on its basalt fails, and so
+does a dim fragment on the pale side of a head mostly basalt, or a dim patch across the border
+between its tones (#1799).
 `fit` sets our eyes where the marks it was given are, mirrored across the middle they were found
 across (#1735): on a ball centred on x = 0 with `DARK`'s ovals, and on one off the middle with the
 hound's.
@@ -72,14 +74,25 @@ TINY_SIZE = 6
 # starting a little past it, so their texels touch on the texture. Each has two dim texels at that
 # edge, on rows ISLAND_ROWS.
 ISLAND_EDGE, ISLAND_ROWS = 10, (4, 5)
-# A two-tone head (#1782), as lib/frostfire.py paints the Kavrikka: its right half (-X) dark basalt.
+# A two-tone head (#1782), as lib/frostfire.py paints the Kavrikka: dark basalt right of a border
+# (-X), the right half of it at x = 0, most of it at x = MOSTLY or a little less than half at
+# x = -MOSTLY (#1799).
 BASALT = (0.17, 0.11, 0.10)
-# Name: (what is painted by the left eye and by the right one (on the basalt), each None or a
-# colour, and whether the check passes it).
+MOSTLY = 0.05
+# Where the patches go: by the left eye, by the right one (on the basalt), and on the border at x =
+# 0, level with the eyes.
+RIGHT_EYE, ON_BORDER = Vector((-EYE.x, EYE.y, EYE.z)), Vector((-MOSTLY, EYE.y, EYE.z)).normalized() * RADIUS
+# Name: (the border's x, the patches painted on it, each (its colour, its middle, its radius), and
+# whether the check passes it).
 TWO_TONES = {
-    "two_tone": (None, None, True),
-    "two_tone_dim_fragment": (DIM, None, False),
-    "two_tone_black_fragment": (None, BLACK, False),
+    "two_tone": (0.0, [], True),
+    "two_tone_dim_fragment": (0.0, [(DIM, EYE, EYE_RADIUS / 2.0)], False),
+    "two_tone_black_fragment": (0.0, [(BLACK, RIGHT_EYE, EYE_RADIUS / 2.0)], False),
+    # The basalt is most of the head, so the head's median is the basalt's (#1799).
+    "mostly_basalt": (MOSTLY, [], True),
+    "mostly_basalt_dim_fragment": (MOSTLY, [(DIM, EYE, EYE_RADIUS / 2.0)], False),
+    # A dim patch touching the basalt is one spot with it (#1799).
+    "two_tone_dim_across": (-MOSTLY, [(DIM, ON_BORDER, EYE_RADIUS)], False),
 }
 
 # Name: (the paint on the left eye and the right one (either may be None), or None, whether our eyes are joined in,
@@ -282,18 +295,16 @@ def islands():
     return ok
 
 
-def two_tone(name, left, right, passes):
-    """Whether the check passes as it should a ball whose right half is basalt, a tone of its own
-    paint (#1782), with `left` painted by the left eye and `right` by the right one, each over half
-    the eye's reach, if not None."""
+def two_tone(name, border, patches, passes):
+    """Whether the check passes as it should a ball that is basalt right of x = `border`, a tone of
+    its own paint (#1782), with each of `patches` (colour, middle, radius) painted over it."""
     skin = build(None, False, 1.0, SKIN, 0.0)
     head = marked_eyes.Head(skin, "head")
     rows, columns, texels = marked_eyes._texels(head, numpy.ones(len(head.spots), dtype=bool))
-    head.pixels[rows[texels[:, 0] < 0.0], columns[texels[:, 0] < 0.0], :3] = BASALT
-    for colour, eye in ((left, EYE), (right, Vector((-EYE.x, EYE.y, EYE.z)))):
-        if colour is not None:
-            near = numpy.sqrt(((texels - numpy.array(eye)) ** 2).sum(axis=1)) <= EYE_RADIUS / 2.0
-            head.pixels[rows[near], columns[near], :3] = colour
+    head.pixels[rows[texels[:, 0] < border], columns[texels[:, 0] < border], :3] = BASALT
+    for colour, middle, radius in patches:
+        near = numpy.sqrt(((texels - numpy.array(middle)) ** 2).sum(axis=1)) <= radius
+        head.pixels[rows[near], columns[near], :3] = colour
     head.image.pixels.foreach_set(head.pixels.ravel())
     found = sorted(marked_eyes.painted(skin)) + (["FRAGMENTS"] if marked_eyes.fragments(skin) else [])
     ok = (not found) == passes
@@ -347,8 +358,8 @@ def main():
     passed = coarse("coarse_patch", COARSE_SIZE) and passed
     passed = coarse("tiny_patch", TINY_SIZE) and passed
     passed = islands() and passed
-    for name, (left, right, passes) in TWO_TONES.items():
-        passed = two_tone(name, left, right, passes) and passed
+    for name, (border, patches, passes) in TWO_TONES.items():
+        passed = two_tone(name, border, patches, passes) and passed
     for name, (paint, colour, beast) in FITS.items():
         passed = fits(name, paint, colour, beast) and passed
     log.info("PAINTED EYES TEST: %s" % ("PASS" if passed else "FAIL"))
