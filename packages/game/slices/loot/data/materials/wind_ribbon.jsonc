@@ -1,0 +1,5 @@
+// The ribbon of wind a Tikazzelu needs to ascend into a Tikazzir (#1732), the stiff thread its
+// elder's wings are woven from. It lies in the ground loot and chests of Brekhal Varn, where the
+// Tikazzir live (#1260), finishing the sprites' quest there hands one over (#1348), and it can be
+// made from feathers and crystals (#1349).
+{ "id": "wind_ribbon", "name": "Wind Ribbon" }

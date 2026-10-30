@@ -789,6 +789,10 @@ msgstr ""
 msgid "Stone"
 msgstr ""
 
+#: slices/loot/data/materials/wind_ribbon.jsonc
+msgid "Wind Ribbon"
+msgstr ""
+
 #: slices/loot/meta/material_content.gd
 msgid "Unknown material"
 msgstr ""
@@ -1042,6 +1046,10 @@ msgstr ""
 
 #: slices/quests/data/pup_rime.jsonc
 msgid "A rime shard for a ${MONSTER:kavrikka}"
+msgstr ""
+
+#: slices/quests/data/sprite_ribbon.jsonc
+msgid "A wind ribbon for a ${MONSTER:tikazzelu}"
 msgstr ""
 
 #: slices/quests/data/tadpole_pondweed.jsonc
@@ -1520,6 +1528,54 @@ msgstr ""
 msgid "Wommo-bommo"
 msgstr ""
 
+#: slices/species/data/abilities/tikazzelu_kelzu_telzu.jsonc
+msgid "The soft whirr of a sprite circling close. Dominators said it of a guard so light it was hardly there, yet always in the way."
+msgstr ""
+
+#: slices/species/data/abilities/tikazzelu_kelzu_telzu.jsonc
+msgid "round about, whirring"
+msgstr ""
+
+#: slices/species/data/abilities/tikazzelu_kelzu_telzu.jsonc
+msgid "While the ${MONSTER:tikazzelu} is out, it flutters about the player's head, and they take a little less harm."
+msgstr ""
+
+#: slices/species/data/abilities/tikazzelu_kelzu_telzu.jsonc
+msgid "Kelzu-telzu"
+msgstr ""
+
+#: slices/species/data/abilities/tikazzelu_lezzu_tezzu.jsonc
+msgid "The flutter of loose ribbons as a blow passes through them. Dominators said it of a beast too slight to stop a strike, and too slight to be hurt much by it."
+msgstr ""
+
+#: slices/species/data/abilities/tikazzelu_lezzu_tezzu.jsonc
+msgid "it gives, and holds"
+msgstr ""
+
+#: slices/species/data/abilities/tikazzelu_lezzu_tezzu.jsonc
+msgid "The ${MONSTER:tikazzelu}'s ribbons give under a blow, and it takes a little less harm."
+msgstr ""
+
+#: slices/species/data/abilities/tikazzelu_lezzu_tezzu.jsonc
+msgid "Lezzu-tezzu"
+msgstr ""
+
+#: slices/species/data/abilities/tikazzelu_zitlek_zatlik.jsonc
+msgid "The tick of a small beast turning on the wind, then the slap of its ribbons. Dominators said it of a young thing that strikes before it has learned how."
+msgstr ""
+
+#: slices/species/data/abilities/tikazzelu_zitlek_zatlik.jsonc
+msgid "turn, then dart"
+msgstr ""
+
+#: slices/species/data/abilities/tikazzelu_zitlek_zatlik.jsonc
+msgid "The ${MONSTER:tikazzelu} draws back on its wings and darts into its target, ribbons first."
+msgstr ""
+
+#: slices/species/data/abilities/tikazzelu_zitlek_zatlik.jsonc
+msgid "Zitlek-zatlik"
+msgstr ""
+
 #: slices/species/data/abilities/tikazzir_kazri_tazri.jsonc
 msgid "The scrape of talons on stone as a cornered beast readies to spring. Dominators said it of anything that fights hardest once it bleeds."
 msgstr ""
@@ -1818,6 +1874,18 @@ msgstr ""
 
 #: slices/species/data/ombuwomo.jsonc
 msgid "Ombuwomo"
+msgstr ""
+
+#: slices/species/data/tikazzelu.jsonc
+msgid "A ball of pale ribbons wound round and round a faint violet glow, two stiff loops on its top for wings and two thin legs beneath. It flutters low after its elders through the reeds and ruins, more drifting than flying, and in time it ascends into a Tikazzir. Its name is a beast-call: its elder's clicks and buzz, then a soft trill as light as a ribbon in the wind."
+msgstr ""
+
+#: slices/species/data/tikazzelu.jsonc
+msgid "the click that flutters"
+msgstr ""
+
+#: slices/species/data/tikazzelu.jsonc
+msgid "Tikazzelu"
 msgstr ""
 
 #: slices/species/data/tikazzir.jsonc

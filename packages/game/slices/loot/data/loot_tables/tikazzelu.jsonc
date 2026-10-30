@@ -1,0 +1,11 @@
+// A placeholder species table, to tune (#960): what dominating a Tikazzelu gives (#943, #1732), now
+// and then a crystal of the mana glowing at its centre, else a blank, which rolls on the instance's
+// table instead.
+{
+	"id": "tikazzelu",
+	"kind": "species",
+	"entries": [
+		{ "item": "crystal", "chance": 500, "min": 1, "max": 1 }, // 50 %
+		{ "blank": true, "chance": 500 }
+	]
+}

@@ -1,0 +1,25 @@
+// The ribbon sprite (#1732, named on it): the Tikazzir's first form, wearing its own model, from
+// the owner's model. It spawns as the Tikazzir's baby in wild bundles (#1697) and ascends into a
+// Tikazzir once it has reached its level and is given a wind ribbon. Breeze and Mana like its
+// elder. Its level and stats are placeholders to tune (#960).
+{
+	"id": "tikazzelu",
+	"name": "Tikazzelu",
+	"codex": {
+		"entry": "A ball of pale ribbons wound round and round a faint violet glow, two stiff loops on its top for wings and two thin legs beneath. It flutters low after its elders through the reeds and ruins, more drifting than flying, and in time it ascends into a Tikazzir. Its name is a beast-call: its elder's clicks and buzz, then a soft trill as light as a ribbon in the wind.",
+		"gloss": "the click that flutters"
+	},
+	"types": ["breeze", "mana"],
+	"strike_type": "breeze",
+	"hp": 45,
+	"strength": 40,
+	"speed": 80,
+	"special": "tikazzelu_zitlek_zatlik",
+	"player_passive": "tikazzelu_kelzu_telzu",
+	"self_passive": "tikazzelu_lezzu_tezzu",
+	// A sprite of its elder's flock: it keeps to its own kind by day and sleeps lightly like them,
+	// but it's too small to hunt, and flutters down to sip at the water instead (#1200, #1230).
+	"behaviour": ["diurnal", "drinker", "pack_species", "light_sleeper"],
+	"model": "res://assets/tikazzelu/tikazzelu.glb",
+	"ascension": { "into": "tikazzir", "level": 20, "material": "wind_ribbon" }
+}

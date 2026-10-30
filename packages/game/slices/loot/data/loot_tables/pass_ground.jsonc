@@ -1,14 +1,16 @@
 // A placeholder instance table, to tune (#960), for Brekhal Varn, the home of the Kalvrakkor: what a
 // blank rolled there gives, and its loot on the ground (#203). Like the wild ground's, but now and
-// then the rime shard a Kavrikka needs to ascend (#1733), since its habitat holds it (#1260).
+// then the rime shard a Kavrikka needs to ascend (#1733), since its habitat holds it (#1260), and
+// the wind ribbon a Tikazzelu needs, since the Tikazzir live here too (#1732).
 {
 	"id": "pass_ground",
 	"kind": "instance",
 	"entries": [
-		{ "item": "moss", "chance": 450, "min": 1, "max": 2 },
+		{ "item": "moss", "chance": 400, "min": 1, "max": 2 },
 		{ "item": "berry", "chance": 300, "min": 1, "max": 2 },
 		{ "item": "bone", "chance": 100, "min": 1, "max": 1 },
 		{ "item": "revive_herb", "chance": 100, "min": 1, "max": 1 },
-		{ "item": "rime_shard", "chance": 50, "min": 1, "max": 1 } // 5 %
+		{ "item": "rime_shard", "chance": 50, "min": 1, "max": 1 }, // 5 %
+		{ "item": "wind_ribbon", "chance": 50, "min": 1, "max": 1 } // 5 %
 	]
 }
