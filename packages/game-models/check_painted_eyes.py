@@ -7,7 +7,8 @@ fragments the repaint left beyond a pair, spots much darker than the head's medi
 (marked_eyes.fragments, #1756) among every texel the head's faces touch, not only the samples
 (#1764), which `scrub` paints out; a dark area big enough to be a tone of the head's own paint
 (a basalt half, also one that is most of the head) is searched again against its own median, and
-the rest without it (#1782, #1799).
+the rest without it (#1782, #1799); a beast's own small dark markings, which marked_eyes.MARKINGS
+boxes in, are left out (#1765).
 
     uv run --locked packages/game-models/blender.py --background --factory-startup \
         --python packages/game-models/check_painted_eyes.py -- <model.glb> [<model.glb> ...]
@@ -59,7 +60,8 @@ def found(objects, path):
                 skin.name, kind, tuple(round(float(v), 3) for v in marks[0].middle),
                 tuple(round(float(v), 3) for v in marks[1].middle), marks[0].width, marks[1].width))
         weight = own.weight if own is not None else marked_eyes.HEAD_WEIGHT
-        left = sorted(marked_eyes.fragments(skin, weight=weight), key=lambda mark: -mark.count)
+        left = sorted(marked_eyes.fragments(skin, weight=weight, keep=marked_eyes.MARKINGS.get(path, ())),
+                      key=lambda mark: -mark.count)
         if left:
             lines.append("%s: %d dark fragments, the largest at %s" % (skin.name, len(left), ", ".join(
                 "%s (%d texels)" % (tuple(round(float(v), 3) for v in mark.middle), mark.count)
