@@ -192,10 +192,13 @@ def contour(mesh, values, level):
     vertices (a cut's own at `level`)."""
     work = bmesh.new()
     work.from_mesh(mesh)
+    # Triangles only, so a face has at most two crossings and its cut is one straight line.
+    bmesh.ops.triangulate(work, faces=[face for face in work.faces if len(face.verts) > 3])
     layer = work.verts.layers.float.new("value")
     work.verts.ensure_lookup_table()
     for vert, value in zip(work.verts, values):
-        vert[layer] = float(value)
+        # A vertex right on the level counts as just above it, so every crossing is a sign change.
+        vert[layer] = float(value) if value != level else level + 1e-6
     cut = set()
     for edge in sorted(work.edges, key=lambda item: tuple(sorted(vert.index for vert in item.verts))):
         first, second = edge.verts
