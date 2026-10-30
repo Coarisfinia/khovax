@@ -13,7 +13,8 @@ low ball, whose texels lie farther apart on the surface than `fragments` groups 
 spot (#1781), while two dim texels on each of two islands side by side on the texture, far apart
 on the head, pass: neither is a spot of FRAGMENT_TEXELS.
 A two-tone head whose right half is dark basalt, as the Kavrikka's, passes: that half is a tone of
-its own paint (#1782); a dim fragment on its pale half or a black one on its basalt fails.
+its own paint (#1782); a dim fragment on its pale half, even one touching the basalt, or a black
+one on its basalt fails.
 `fit` sets our eyes where the marks it was given are, mirrored across the middle they were found
 across (#1735): on a ball centred on x = 0 with `DARK`'s ovals, and on one off the middle with the
 hound's.
@@ -71,12 +72,17 @@ COARSE_SIZE, COARSE_SEGMENTS, COARSE_ACROSS = 32, (8, 4), 2
 ISLAND_EDGE, ISLAND_ROWS = 10, (4, 5)
 # A two-tone head (#1782), as lib/frostfire.py paints the Kavrikka: its right half (-X) dark basalt.
 BASALT = (0.17, 0.11, 0.10)
-# Name: (what is painted by the left eye and by the right one (on the basalt), each None or a
-# colour, and whether the check passes it).
+# Where a fragment beside the border sits: on the pale half, just left of the middle (+X), at the
+# eyes' height.
+BORDER = Vector((0.05, -1.0, 0.3)).normalized() * RADIUS
+# Name: (the fragments painted, each a colour and the spot it is laid around, and whether the check
+# passes it).
 TWO_TONES = {
-    "two_tone": (None, None, True),
-    "two_tone_dim_fragment": (DIM, None, False),
-    "two_tone_black_fragment": (None, BLACK, False),
+    "two_tone": ((), True),
+    "two_tone_dim_fragment": (((DIM, EYE),), False),
+    "two_tone_black_fragment": (((BLACK, Vector((-EYE.x, EYE.y, EYE.z))),), False),
+    # Touching the basalt, it is one spot with it: it must not be taken in as the basalt's.
+    "two_tone_dim_by_basalt": (((DIM, BORDER),), False),
 }
 
 # Name: (the paint on the left eye and the right one (either may be None), or None, whether our eyes are joined in,
@@ -278,18 +284,17 @@ def islands():
     return ok
 
 
-def two_tone(name, left, right, passes):
+def two_tone(name, paints, passes):
     """Whether the check passes as it should a ball whose right half is basalt, a tone of its own
-    paint (#1782), with `left` painted by the left eye and `right` by the right one, each over half
-    the eye's reach, if not None."""
+    paint (#1782), with each of `paints` (a colour and a spot) laid over the pale skin and the basalt
+    within half the eye's reach of its spot."""
     skin = build(None, False, 1.0, SKIN, 0.0)
     head = marked_eyes.Head(skin, "head")
     rows, columns, texels = marked_eyes._texels(head, numpy.ones(len(head.spots), dtype=bool))
     head.pixels[rows[texels[:, 0] < 0.0], columns[texels[:, 0] < 0.0], :3] = BASALT
-    for colour, eye in ((left, EYE), (right, Vector((-EYE.x, EYE.y, EYE.z)))):
-        if colour is not None:
-            near = numpy.sqrt(((texels - numpy.array(eye)) ** 2).sum(axis=1)) <= EYE_RADIUS / 2.0
-            head.pixels[rows[near], columns[near], :3] = colour
+    for colour, spot in paints:
+        near = numpy.sqrt(((texels - numpy.array(spot)) ** 2).sum(axis=1)) <= EYE_RADIUS / 2.0
+        head.pixels[rows[near], columns[near], :3] = colour
     head.image.pixels.foreach_set(head.pixels.ravel())
     found = sorted(marked_eyes.painted(skin)) + (["FRAGMENTS"] if marked_eyes.fragments(skin) else [])
     ok = (not found) == passes
@@ -342,8 +347,8 @@ def main():
         passed = speck(name, across, passes) and passed
     passed = coarse() and passed
     passed = islands() and passed
-    for name, (left, right, passes) in TWO_TONES.items():
-        passed = two_tone(name, left, right, passes) and passed
+    for name, (paints, passes) in TWO_TONES.items():
+        passed = two_tone(name, paints, passes) and passed
     for name, (paint, colour, beast) in FITS.items():
         passed = fits(name, paint, colour, beast) and passed
     log.info("PAINTED EYES TEST: %s" % ("PASS" if passed else "FAIL"))
