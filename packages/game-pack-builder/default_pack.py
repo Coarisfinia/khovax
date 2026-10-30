@@ -65,6 +65,8 @@ def gather(out: Path) -> None:
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(path, target)
         imported = Path(f"{path}.import")
+        if imported.is_symlink():
+            raise ValueError(f"{imported} isn't a plain file in the game")
         if imported.is_file():
             Path(f"{target}.import").write_text(
                 import_settings(imported.read_text(encoding="utf-8")), encoding="utf-8"
