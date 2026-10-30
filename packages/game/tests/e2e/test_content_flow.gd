@@ -2150,6 +2150,20 @@ func _check_resource_packs() -> String:
 	listed.sort()
 	if realms.keys() != listed or not realms.values().all(FileAccess.file_exists):
 		return "the default pack's realms don't resolve: %s" % realms
+	return _check_pack_misses()
+
+
+## A texture or model no pack gives is warned about once per id, and the miss is kept, so a view
+## that asks for it every frame neither loads it again nor floods the log (#1866).
+func _check_pack_misses() -> String:
+	var tree: SceneTree = Engine.get_main_loop() as SceneTree
+	tree.call("expect_warning", "no_such_texture")
+	tree.call("expect_warning", "no_such_model")
+	for _frame: int in 2:
+		if ResourcePacks.texture("no_such_texture") != null:
+			return "a texture no pack has was found"
+		if ResourcePacks.model("no_such_model") != null:
+			return "a model no pack has was found"
 	return _check_pack_manifests()
 
 
