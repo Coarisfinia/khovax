@@ -1,6 +1,6 @@
 # Morwe Wudhen: edge
 
-Morwe Wudhen's start piece (#689): where the trees begin, north of Lumwen Hoal. Its south edge leads back to Lumwen Hoal across three tiles, its west edge on to Dhorvone Stolm across three more, and it joins the rest of Morwe Wudhen to the north across a whole edge. Players 1 to 4 begin by the way in. Trees and boulders stand where harvesting (#675) can take them later, a wild monster waits in the open and another hides in the trees.
+Morwe Wudhen's start piece (#689): where the trees begin, north of Lumwen Hoal. Its south edge leads back to Lumwen Hoal across three tiles, its west edge on to Dhorvone Stolm across three more, and it joins the rest of Morwe Wudhen to the north across a whole edge. Players 1 to 4 begin by the way in. Trees and boulders stand where harvesting (#675) can take them later, a wild monster waits in the open and another hides in the trees. A waystone stands west of the way in, where a player who comes next to it comes back when they fall (#1890).
 
 ## Tiles
 
@@ -12,7 +12,7 @@ Morwe Wudhen's start piece (#689): where the trees begin, north of Lumwen Hoal. 
  🌀🟫🟫🟫🪨🟫🌲🌲🌲🌲
 🌀🟫🌳🟫🟫🟫🟫🪵🦉🌲🟫
  🟫🌳🟫🟫🟫🟫🌲🌲🟫🌲
-  🟫🟫🟫🟢🟫🟡🌲🌲🌲
+  🟫🪦🟫🟢🟫🟡🌲🌲🌲
    🟫🟫🟫🔴🔵🌲🌲🌲
     🟫🟫🟫🟫🟫🟫🟫
      🟫🟫🚪🚪🚪🟫
@@ -34,3 +34,4 @@ Morwe Wudhen's start piece (#689): where the trees begin, north of Lumwen Hoal. 
 - `🪵`: stump
 - `🪨`: boulder
 - `🦉`: a wild monster hiding in forest
+- `🪦`: waystone

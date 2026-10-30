@@ -83,6 +83,8 @@
 [ext_resource type="Script" path="res://game/menu_wiring.gd" id="76_menu_wiring"]
 [ext_resource type="Script" path="res://slices/might/ui/might_panel.gd" id="74_might_panel"]
 [ext_resource type="Script" path="res://slices/gear/ui/gear_panel.gd" id="75_gear_panel"]
+[ext_resource type="Script" path="res://slices/waystones/look/waystone_glow.gd" id="90_waystone_glow"]
+[ext_resource type="Script" path="res://slices/waystones/ui/waystone_notice_tie.gd" id="91_waystone_notice"]
 
 [sub_resource type="Environment" id="Environment_daylight"]
 ambient_light_source = 2
@@ -259,6 +261,12 @@ input = NodePath("../../LocalInput")
 script = ExtResource("15_chests")
 driver = NodePath("../../Driver")
 input = NodePath("../../LocalInput")
+
+[node name="WaystoneGlow" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver", "input", "decorations")]
+script = ExtResource("90_waystone_glow")
+driver = NodePath("../../Driver")
+input = NodePath("../../LocalInput")
+decorations = NodePath("../TileDecorations")
 
 [node name="NpcView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver") unique_id=557557557]
 script = ExtResource("44_npcs")
@@ -551,6 +559,12 @@ gear = NodePath("../MenuWiring/Gear")
 
 [node name="GuideNoticeTie" type="Node" parent="." node_paths=PackedStringArray("driver", "input", "notice")]
 script = ExtResource("70_guide_notice_tie")
+driver = NodePath("../Driver")
+input = NodePath("../LocalInput")
+notice = NodePath("../Hud/NoticeScreen")
+
+[node name="WaystoneNoticeTie" type="Node" parent="." node_paths=PackedStringArray("driver", "input", "notice")]
+script = ExtResource("91_waystone_notice")
 driver = NodePath("../Driver")
 input = NodePath("../LocalInput")
 notice = NodePath("../Hud/NoticeScreen")

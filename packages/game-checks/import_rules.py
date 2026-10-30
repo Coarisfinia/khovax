@@ -51,7 +51,7 @@ SLICE_ORDER: tuple[str, ...] = (
     "domination", "control_points", "totems", "enrage", "hunts", "foraging", "domination_loot",
     "companions", "wild_attacks", "gear", "chests",
     "damage_numbers", "harvest", "dialogs",
-    "profile", "quests", "revive_items", "crafting", "blueprints", "might", "codex",
+    "profile", "quests", "revive_items", "waystones", "crafting", "blueprints", "might", "codex",
     "move_hint", "text_names",
 )  # fmt: skip
 # The back-edges still waiting ("slice>later slice": the issue that drops it).

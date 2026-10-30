@@ -1,0 +1,11 @@
+// Waystone: a standing stone with a round hole through it, on the ground (#1854, #1890). Nobody walks
+// it, but sight passes over it. A player who comes next to it activates it: it becomes where they
+// come back to when they fall (WaystoneFeature), and its hole glows for them.
+{
+	"id": "waystone",
+	"color": "#5c8c52",
+	"symbol": "W", // tells it apart without its color (#68)
+	"model": "model_standing_stone",
+	"scale": 125, // in hundredths: the stone is sized to fill its hex, which the decorations shrink
+	"traits": { "walkable": false }
+}

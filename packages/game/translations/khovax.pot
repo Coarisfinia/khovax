@@ -2091,3 +2091,11 @@ msgstr ""
 #: slices/survey/ui/survey_tab.tscn
 msgid "Zoom in"
 msgstr ""
+
+#: slices/waystones/ui/waystone_notice_tie.gd
+msgid "Waystone activated"
+msgstr ""
+
+#: slices/waystones/ui/waystone_notice_tie.gd
+msgid "You'll return here when you fall."
+msgstr ""
