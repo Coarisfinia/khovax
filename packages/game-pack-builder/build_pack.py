@@ -40,9 +40,17 @@ PRESETS = ("desktop", "mobile")
 # What a pack may hold: images, models (a glTF's buffers too), text, and Godot's .import files.
 ALLOWED = (".png", ".jpg", ".jpeg", ".webp", ".svg", ".glb", ".gltf", ".bin", ".md", ".jsonc")
 IMPORT = ".import"
-IMPORTERS = ('importer="texture"', 'importer="scene"')
+# The importers a .import may name, each with the type it imports as and the files it imports.
+IMPORTERS = {
+    "texture": ("CompressedTexture2D", (".png", ".jpg", ".jpeg", ".webp", ".svg")),
+    "scene": ("PackedScene", (".glb", ".gltf")),
+}
 # A setting that names a script, unless it names none.
 SCRIPT_SETTING = re.compile(r"^[^=\n]*script[^=\n]*=(?!null$|\"\"$).*$", re.MULTILINE | re.IGNORECASE)
+# A .import names no file at all: no res://, uid:// or other scheme, so no setting saves to or
+# loads from a path.
+SCHEME = re.compile(r"[a-z]+://", re.IGNORECASE)
+REMAP_SETTING = re.compile(r'^(importer|type)="([^"\n]*)"$')
 # How long Godot may take to import or export a pack, in seconds.
 TIMEOUT = 900
 
@@ -50,6 +58,8 @@ TIMEOUT = 900
 def refused(pack: Path) -> list[str]:
     """Why the pack can't be built, one reason per file: a file off the allow-list, a link, or a
     .import file naming a script or another importer. Empty when it's all data."""
+    if pack.is_symlink():
+        return [f"{pack} is a link"]
     reasons = []
     for path in sorted(pack.rglob("*")):
         name = path.relative_to(pack).as_posix()
@@ -57,15 +67,44 @@ def refused(pack: Path) -> list[str]:
             reasons.append(f"{name} is a link")
         elif path.is_dir():
             continue
+        elif not path.is_file():
+            reasons.append(f"{name} isn't a plain file")
         elif name.endswith(IMPORT):
-            settings = path.read_text(encoding="utf-8", errors="replace")
-            if not any(importer in settings for importer in IMPORTERS):
-                reasons.append(f"{name} imports with neither the texture nor the scene importer")
-            for setting in SCRIPT_SETTING.findall(settings):
-                reasons.append(f"{name} names a script: {setting}")
+            reasons += [f"{name} {problem}" for problem in import_problems(path)]
         elif not name.endswith(ALLOWED):
             reasons.append(f"{name} isn't one of {', '.join(ALLOWED)} (a pack is data, never code)")
     return reasons
+
+
+def import_problems(path: Path) -> list[str]:
+    """Why a .import file can't come with a pack: its [remap] doesn't name exactly one importer
+    of IMPORTERS, with its type, for a file of its kind beside it; or a setting names a script or
+    a path."""
+    settings = path.read_text(encoding="utf-8", errors="replace")
+    remap: dict[str, list[str]] = {"importer": [], "type": []}
+    section = ""
+    for line in settings.split("\n"):
+        if line.startswith("["):
+            section = line.strip()
+        elif section == "[remap]" and (found := REMAP_SETTING.match(line)):
+            remap[found[1]].append(found[2])
+        elif section == "[remap]" and line.split("=")[0].strip() in remap:
+            remap[line.split("=")[0].strip()].append(line)
+    problems = []
+    importer = remap["importer"][0] if len(remap["importer"]) == 1 else None
+    if importer not in IMPORTERS:
+        problems.append(f"doesn't name exactly one importer of {', '.join(IMPORTERS)}")
+    else:
+        kind, sources = IMPORTERS[importer]
+        source = path.with_name(path.name.removesuffix(IMPORT))
+        if remap["type"] != [kind]:
+            problems.append(f"imports as {remap['type']}, not {kind}")
+        if not source.name.endswith(sources) or not source.is_file() or source.is_symlink():
+            problems.append(f"imports no {'/'.join(sources)} file beside it")
+    problems += [f"names a script: {setting}" for setting in SCRIPT_SETTING.findall(settings)]
+    if SCHEME.search(settings):
+        problems.append("names a path (a pack's settings name no file)")
+    return problems
 
 
 def pinned() -> tuple[str, str]:
@@ -114,12 +153,15 @@ def is_version(editor: str, version: str) -> bool:
 def run(editor: str, project: Path, *arguments: str) -> None:
     """Runs Godot headless on the project; RuntimeError with its output when it fails or reports
     an error."""
-    done = subprocess.run(
-        [editor, "--headless", "--path", str(project), *arguments],
-        capture_output=True,
-        text=True,
-        timeout=TIMEOUT,
-    )
+    try:
+        done = subprocess.run(
+            [editor, "--headless", "--path", str(project), *arguments],
+            capture_output=True,
+            text=True,
+            timeout=TIMEOUT,
+        )
+    except subprocess.TimeoutExpired as late:
+        raise RuntimeError(f"godot {' '.join(arguments)} took over {TIMEOUT} s:\n{late.output}") from late
     output = done.stdout + done.stderr
     if done.returncode != 0 or re.search(r"^(SCRIPT )?ERROR:", output, re.MULTILINE):
         raise RuntimeError(f"godot {' '.join(arguments)} failed:\n{output}")

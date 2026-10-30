@@ -55,7 +55,13 @@ def gather(out: Path) -> None:
     out.mkdir(parents=True)
     shutil.copyfile(MANIFEST, out / "pack.jsonc")
     for path in listed(manifest):
-        target = out / path
+        source = Path(path)
+        # Only the game's own plain files, each to its own place in the pack.
+        if source.is_symlink() or not source.resolve().is_relative_to(GAME) or not source.is_file():
+            raise ValueError(f"{path} isn't a plain file in the game")
+        target = (out / path).resolve()
+        if not target.is_relative_to(out):
+            raise ValueError(f"{path} lies outside the pack")
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(path, target)
         imported = Path(f"{path}.import")
