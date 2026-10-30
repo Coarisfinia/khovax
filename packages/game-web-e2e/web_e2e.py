@@ -25,7 +25,7 @@ import time
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from playwright.async_api import CDPSession, Download, Page, async_playwright
+from playwright.async_api import CDPSession, Download, async_playwright
 
 RESULT = re.compile(r"^KHOVAX_E2E: (PASS -?[0-9]+|FAIL .*)$")
 TIMEOUT_S = 180
@@ -197,7 +197,7 @@ async def quietly(cdp: CDPSession, expression: str) -> object:
     return answer["result"].get("value")
 
 
-async def heartbeat(page: Page, run: Run) -> None:
+async def heartbeat(cdp: CDPSession, run: Run) -> None:
     """Asks the page every HEARTBEAT_S whether it still answers, and stops the run once it missed
     MISSES answers in a row."""
     missed = 0
@@ -206,7 +206,7 @@ async def heartbeat(page: Page, run: Run) -> None:
         beat += HEARTBEAT_S
         await asyncio.sleep(max(0.0, beat - time.monotonic()))
         try:
-            await asyncio.wait_for(page.evaluate("() => true"), ANSWER_S)
+            await asyncio.wait_for(quietly(cdp, "true"), ANSWER_S)
             missed = 0
         except Exception:
             missed += 1
@@ -260,7 +260,7 @@ async def drive(root: Path, chrome: str, gl: str, run: Run, url: str) -> None:
             )
             page = await context.new_page()
             cdp = await context.new_cdp_session(page)
-            renderer = await page.evaluate(RENDERER_JS)
+            renderer = str(await quietly(cdp, f"({RENDERER_JS})()"))
             print(f"CHROME_GL {gl}: WebGL 2 renderer {renderer}")
             if GL[gl]["expect"] not in renderer:
                 raise RuntimeError(f"CHROME_GL {gl} asked for {GL[gl]['expect']}, but got {renderer}")
@@ -283,7 +283,7 @@ async def drive(root: Path, chrome: str, gl: str, run: Run, url: str) -> None:
 
             loading = asyncio.ensure_future(load())
             await first(loading, run.stopped)
-            beating = asyncio.ensure_future(heartbeat(page, run))
+            beating = asyncio.ensure_future(heartbeat(cdp, run))
             await first(run.reported, run.stopped, timeout=TIMEOUT_S)
             reported = run.reported.done() and not run.stop_reason
             if reported and run.reported.result().startswith("KHOVAX_E2E: PASS "):
