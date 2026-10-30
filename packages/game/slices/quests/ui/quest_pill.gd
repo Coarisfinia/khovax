@@ -19,6 +19,9 @@ const FONT_SCALE: float = 0.85
 const ARROW_HEIGHT: float = 0.6
 const ARROW_WIDTH: float = 0.7
 
+## What names an instance no realm draws, for `place_tagged`; handed in by game/ (#1788).
+static var _place_namer: Callable = Callable()
+
 ## The instance it shows, by blueprint name, or "" while it's hidden. Kept so tests can read it.
 var instance_id: String = ""
 ## Whether this machine's player is in that instance.
@@ -91,11 +94,21 @@ func _draw_arrow() -> void:
 
 ## The instance `id` as a text with text tags: a place's tag where a realm draws it, which has a
 ## codex page (TextTags.PLACE, #1175) and shows its player-facing name (#909, #975, #1710), a
-## proper noun needing no article ("Lumwen Hoal"); else "Unknown place": only the tests load an
-## instance no realm draws, and the blueprints, which name it, come after the quests (#1710). Here,
-## not in QuestListView, whose card scene holds this pill: the pill naming the list would load in a
-## cycle.
+## proper noun needing no article ("Lumwen Hoal"); else its name in plain words, as the bestiary
+## shows it (#1788): only the tests load an instance no realm draws. The blueprints, which name it,
+## come after the quests in the slices' order, so the quests never name them: game/ hands the
+## namer in (`name_places_with`), and without one it's "Unknown place". Here, not in QuestListView,
+## whose card scene holds this pill: the pill naming the list would load in a cycle.
 static func place_tagged(id: String) -> String:
-	if Realms.holding(id) == null:
+	if Realms.holding(id) != null:
+		return TextTags.tag(TextTags.PLACE, id)
+	if not _place_namer.is_valid():
 		return TranslationServer.tr("Unknown place")
-	return TextTags.tag(TextTags.PLACE, id)
+	var named: String = _place_namer.call(id)
+	return named
+
+
+## Makes `place_tagged` name an instance no realm draws with `namer`, which takes its id and returns
+## its translated name (InstanceBlueprints.name_of), handed in once at start (#1788).
+static func name_places_with(namer: Callable) -> void:
+	_place_namer = namer
