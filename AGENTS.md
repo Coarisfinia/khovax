@@ -52,8 +52,9 @@ way; add to it when something bites.
   exactly one:
   `OWNER=$(agent-gh api "repos/Coarisfinia/khovax/collaborators?permission=admin" --jq '[.[] | select(.type == "User")] | if length == 1 then .[0].login else error("expected one human admin") end')`
 - **Pull requests and comments:** `agent-gh pr create --assignee "$OWNER" …`, `agent-gh pr comment …`.
-- **What the bot doesn't do:** change repository settings, or merge without the owner's approval.
-  After the approval it enables auto-merge, or merges itself when auto-merge stalls (below).
+- **What the bot doesn't do:** change repository settings, or merge a user-facing pull request
+  without the owner's approval. It queues one the owner approved, or a pull request that isn't
+  user-facing once it is reviewed (below), or merges itself when auto-merge stalls (below).
   Settings changes the owner asks for are made with the owner's `gh` login.
 - **In Git Bash, `gh api` takes endpoints without a leading slash** (`installation/repositories`):
   the shell rewrites `/path` into a Windows file path.
@@ -232,7 +233,8 @@ background; only wait in the foreground for a result the very next step needs.
   `WORKFLOW=ci.yml`, `GH=agent-gh`, `ACTIVITY_GH=gh`, `SELF='coarisfinia-ai-agent[bot]'` (it has
   no default), `DISMISS_STALE_BOT_REVIEWS=1` (owner, #1551: it dismisses CodeRabbit's stale
   change request itself, below), `REVIEW_BOTS=coderabbitai` (`Flixbox/household-brain#299`: it
-  holds `READY_TO_MERGE` for a draft the owner approved until CodeRabbit has reviewed its head),
+  holds `READY_TO_MERGE` for a draft the owner approved until CodeRabbit has reviewed its head;
+  `Flixbox/household-brain#324` makes it wait only for a review that was asked for),
   `READY_APPROVED_DRAFTS=1` (owner, #1667: it marks a draft ready once the owner approves its head,
   below) and `RESOLVE_BOT_REVIEWS=coderabbitai` (owner, #1603: once CodeRabbit's change request on the head is
   settled, every thread resolved and CI green, it posts `@coderabbitai resolve` whatever the merge
@@ -267,10 +269,10 @@ background; only wait in the foreground for a result the very next step needs.
   --draft …` and stays a draft until the owner approves. Once the owner approves its head, the
   watcher marks it ready itself and reports `DRAFT_READIED` (`Flixbox/household-brain#301`,
   `Flixbox/household-brain#316`); only on `APPROVED_DRAFT` (an older head approved, or marking it
-  ready failed) run `agent-gh pr ready <n>` yourself. Queue it once CodeRabbit has reviewed the
-  head (the watcher holds `READY_TO_MERGE` until then, `REVIEW_BOTS` above). Every other pull request is not a draft: CodeRabbit reviews it, and its
-  "Merge low-risk changes" rule may merge it (wanted), except a model pull request or one that
-  changes the merge rules, which still wait for the owner's approval (below).
+  ready failed) run `agent-gh pr ready <n>` yourself, then queue it (below). Until
+  `Flixbox/household-brain#324` is live, the watcher's `REVIEW_BOTS` hold never reports
+  `READY_TO_MERGE` for such a draft without a CodeRabbit review: don't wait for that event, queue
+  it once it may be queued. Every other pull request is not a draft.
 - **Reply in a review thread through GraphQL, not REST** (#1573): the bot's REST calls (the
   `pulls/<n>/comments/<id>/replies` endpoint, review reads) got HTTP 403 "API rate limit exceeded
   for installation" in bursts while `rate_limit` still showed much of the hourly quota left: many
@@ -295,22 +297,41 @@ background; only wait in the foreground for a result the very next step needs.
   shows it; without it, until `x-ratelimit-reset` when `x-ratelimit-remaining` is 0, else a minute)
   and retry once; never retry in a loop.
 - **Every merge goes through the merge queue** (owner's rule): never merge around it.
-- **Merging:** once the owner has **approved** and the PR is well reviewed, read the PR for
-  unanswered comments (an approval and a comment often arrive together), then enable auto-merge:
+- **When a pull request may be queued** (owner's ground rule, #1783): Codex's findings are
+  handled, CI is green and every review thread is settled, and then:
+  - **user-facing** (gameplay, content, UI, models, #1381): only once the owner has **approved** it;
+  - **not user-facing** (tooling, CI, docs, refactors, agent rules): once a review subagent finds
+    nothing blocking, named on the pull request. No approval is needed: the bot is on the bypass
+    list of the "main approval" ruleset and uses it for this only.
+
+  **CodeRabbit reviews at most once per pull request** (owner's ground rule, #1783): its automatic
+  reviews are off (`.coderabbit.yml`), and its approval is no part of the rule above. Only for a
+  complex pull request, and only after the review subagent's review, the main session may ask for
+  one CodeRabbit review, through the watcher (`Flixbox/household-brain#324`); its points are
+  settled before queueing. Agents never ask it themselves. A CodeRabbit change request left on
+  an older commit after its threads are settled still blocks the merge, and without the owner's
+  approval the watcher doesn't dismiss it yet (`Flixbox/household-brain#327`): report it to the
+  main session, which dismisses it.
+- **Merging:** once the pull request may be queued (above), read it for unanswered comments (an
+  approval and a comment often arrive together), then enable auto-merge:
   `agent-gh pr merge <n> --auto --squash`. It joins the merge queue, which tests it on top of the
-  pull requests queued before it and merges it once the required checks are green. Without
-  the owner's approval (or CodeRabbit's low-risk approval, which counts as it, below), never
-  enable auto-merge. **If it doesn't merge** although the PR is
-  approved, CI is green and it shows as clean and mergeable (GitHub's auto-merge sometimes stalls),
-  merge it yourself: `agent-gh pr merge <n> --squash` (owner, #99). The watcher reports such a
-  pull request as `NOT_QUEUED` (`Flixbox/household-brain#311`: auto-merge on, approved, clean and
-  green, yet outside the queue after 5 minutes); run the `enqueuePullRequest` mutation the event
-  names, with `agent-gh`, which queues it at once. The owner's approval stays valid
+  pull requests queued before it and merges it once the required checks are green. Otherwise
+  never enable auto-merge. **If it doesn't merge** although it may be queued (above), CI is green
+  and it shows as clean and mergeable (GitHub's auto-merge sometimes stalls), merge it yourself:
+  `agent-gh pr merge <n> --squash` (owner, #99). The watcher reports an approved one as
+  `NOT_QUEUED` (`Flixbox/household-brain#311`: auto-merge on, approved, clean and green, yet
+  outside the queue after 5 minutes); run the `enqueuePullRequest` mutation the event names, with
+  `agent-gh`, which queues it at once. A pull request that isn't user-facing has no approval for
+  the watcher to see, so check it yourself a few minutes after enabling auto-merge
+  (GraphQL `pullRequest(number:<n>){mergeQueueEntry{position}}` is null while it is still open)
+  and enqueue it the same way. The owner's approval stays valid
   through later pushes (owner's rule), so check the comments again before enabling auto-merge after a
-  fix. CodeRabbit's doesn't: it counts only for the head commit it assessed (below). **Name every
+  fix. **Name every
   change pushed after the owner's approval** (owner's pick on #1632): before enabling auto-merge (or
   enqueueing), post a PR comment listing each such change and what it does.
-- **Read the reviews themselves to see an approval** (`gh api repos/Coarisfinia/khovax/pulls/<n>/reviews`),
+- **Read the reviews themselves to see the owner's approval** of a user-facing pull request
+  (a pull request that isn't user-facing goes by the review subagent's result named on it instead)
+  (`gh api repos/Coarisfinia/khovax/pulls/<n>/reviews`),
   never `reviewDecision` or the watcher's status line: under the ruleset `reviewDecision` stays
   empty, so an approved pull request shows as "awaiting approval" (`Flixbox/household-brain#197`).
   An approval often arrives together with review comments, and the watcher reports only those.
@@ -751,8 +772,10 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 
 ### Repository and accounts
 
-- **`main` is protected by the ruleset "protect main"**, with no bypass: pull requests only, one
-  approval (later pushes don't dismiss it), review threads resolved, the `headless` and `apk-e2e`
+- **`main` is protected by two rulesets** (#1783). **"main approval"** requires one approval
+  (later pushes don't dismiss it), with the agent bot on its bypass list for pull requests only
+  (the rule for pull requests that aren't user-facing, above). **"protect main"**, with no bypass,
+  requires no approval itself but pull requests only, review threads resolved, the `headless` and `apk-e2e`
   checks from GitHub Actions green (`models`, the Blender model checks in their own job, #1357, joins
   them once the owner adds it to the ruleset), merged through the merge queue (#329; CI runs on its
   `merge_group` events), squash merges only, no force-push or deletion. The required checks are named after the CI jobs: renaming a job means
@@ -797,46 +820,13 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   `@coderabbitai` commands yourself: the watcher posts `@coderabbitai resolve` when it is due
   (`RESOLVE_BOT_REVIEWS`, above). `resolve-review-thread` lives in `~/.local/bin` on the owner's machine,
   not in the repository.
-- **CodeRabbit's low-risk approval counts as the owner's approval for merging** (owner's rule,
-  #1363): CodeRabbit approves (its automatic approvals, at most `max_merge_risk: low`) and that
-  approval fills the "protect main" ruleset's required review. An agent may queue on it only when
-  all of these hold, read from CodeRabbit's newest summary comment (its issue comment on the pull
-  request that carries the risk) and its reviews:
-  - CodeRabbit's latest review is **APPROVED** (not CHANGES_REQUESTED or a comment);
-  - its **Merge Risk** is **Minimal** or **Low**;
-  - where it gives a **Security architecture risk**, that is Minimal or Low too;
-  - the assessment covers the pull request's **head commit**: `coveredCommitId` in its
-    `final_review_risk_coverage` marker equals `headRefOid`. A new push needs a new assessment,
-    even though CodeRabbit's APPROVED review stays on the pull request;
-  - the owner hasn't asked for changes or left a comment still unanswered: the owner's comments
-    and change requests always win.
-
-  Anything higher, no assessment of the head commit, or conflicting ones, needs the owner's own
-  approval. So does every pull request that changes this rule or the merge rules around it in this
-  file, `.coderabbit.yml`, or CodeRabbit's settings (the organization's YAML or its Triage rules).
-  **Model pull requests always wait for the owner** (owner, #1381), however low CodeRabbit rates
-  them: any that changes a model the model skill builds, meaning a `.glb`, its rig, its clips, its
-  textures, a model's script, the shared library in `packages/game-models/` or the model skill.
-  CodeRabbit can't judge how a model looks or moves: the pup's sleep pose was queued on its approval and was wrong
-  (#1376).
-  This prints the newest assessment's merge risk, security risk (`none` when not given) and
-  assessed commit, then the head commit and CodeRabbit's latest review:
-
-  ```sh
-  agent-gh api "repos/Coarisfinia/khovax/issues/<n>/comments?per_page=100" --paginate | jq -rs 'add
-    | [.[] | select(.user.login == "coderabbitai[bot]" and (.body | contains("final_review_risk_coverage")))]
-    | sort_by(.updated_at) | last | (.body // error("no CodeRabbit risk assessment: the owner approves"))
-    | [(capture("final_review_risk_label\\s*\\*\\*Merge Risk:\\*\\* \\*\\*\\S+ (?<r>[A-Za-z]+)\\*\\*").r),
-       ((capture("architecture_review_label[^>]*Security architecture risk:\\*\\* \\*\\*\\S+ (?<s>[A-Za-z]+)\\*\\*").s) // "none"),
-       (capture("final_review_risk_coverage:(?<c>\\{[^}]*\\})").c | fromjson | .coveredCommitId)] | join(" ")'
-  agent-gh pr view <n> --json headRefOid --jq .headRefOid
-  agent-gh api "repos/Coarisfinia/khovax/pulls/<n>/reviews?per_page=100" --paginate | jq -rs 'add
-    | [.[] | select(.user.login == "coderabbitai[bot]")] | last | "\(.state) \(.commit_id)"'
-  ```
-
-  CodeRabbit's Triage rule "Merge low-risk changes" (in its app, not `.coderabbit.yml`) may queue
-  such a pull request itself, as it did with #1346: check that a queued pull request meets the
-  rule above, and take it off the queue (`agent-gh pr merge <n> --disable-auto`) if it doesn't.
+- **CodeRabbit's approval no longer counts for merging** (owner's ground rule, #1783, replacing
+  #1363's low-risk rule): queueing follows "When a pull request may be queued" above, whatever
+  CodeRabbit rates a pull request. Its Triage rule "Merge low-risk changes" (in its app, not
+  `.coderabbit.yml`) is paused; if it ever queues a pull request on its own, take it off the queue
+  unless that pull request meets the queue rule above: `agent-gh pr merge <n> --disable-auto`,
+  and, when it already has a queue entry, the GraphQL `dequeuePullRequest(input:{id:<PR node
+  id>})` mutation, which removes it.
 
 ### Toolchain
 

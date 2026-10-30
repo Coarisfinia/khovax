@@ -1,6 +1,9 @@
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
 reviews:
   profile: assertive
+  # CodeRabbit reviews only when asked, at most once per pull request (owner, #1783, #1792).
+  auto_review:
+    enabled: false
   review_details: true
   fail_commit_status: true
   auto_apply_labels: true
