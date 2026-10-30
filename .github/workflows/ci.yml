@@ -997,6 +997,13 @@ jobs:
       - name: "📦 Install the runner's dependencies (locked)"
         run: uv sync --locked --package khovax-game-web-e2e
 
+      - name: "🧪 Test that the runner's page checks fail closed"
+        # The page and the download stood in for (#1819): a script that throws on the page, user
+        # activation that isn't exactly false, and an error log download that fails or never
+        # finishes each fail the run.
+        timeout-minutes: 2
+        run: uv run --locked --package khovax-game-web-e2e packages/game-web-e2e/test_web_e2e.py
+
       - name: "📦 Install Mesa's software renderer"
         # WebGL 2 comes from Mesa's llvmpipe (#252): on Chrome's own SwiftShader the page sometimes
         # froze for good. From the named runner image's signed Ubuntu archive, so its version
