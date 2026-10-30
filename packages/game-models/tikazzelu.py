@@ -33,8 +33,9 @@ from lib.materials import palette  # noqa: E402
 
 SOURCE = os.path.join(HERE, "sources", "tikazzelu.glb")
 FPS = 30
-# A baby, smaller than the Tikazzir it grows into, well inside its hex.
-SCALE = 0.8
+# A baby, smaller than the Tikazzir it grows into, well inside its hex, yet big enough to read
+# beside the player.
+SCALE = 1.0
 # Raises the source onto its feet: the download's origin is at its middle.
 LIFT = 0.476
 
@@ -59,7 +60,7 @@ WINGS, LEGS = len(BODY.wing) - 1, len(BODY.leg) - 1
 # The violet shine at its centre: a small glowing core inside the ribbon cage, clear of every
 # ribbon, a soft glow rather than a light (the owner, on #1732).
 CORE, CORE_RADIUS = placed((0.0, -0.02, 0.07)), 0.065
-COLORS = {"core": ((0.5, 0.22, 1.0, 1.0), 1.0)}
+COLORS = {"core": ((0.38, 0.15, 1.0, 1.0), 1.0)}
 # It strikes with its ball's front.
 STRIKE = placed((0.0, -0.24, 0.07))
 
