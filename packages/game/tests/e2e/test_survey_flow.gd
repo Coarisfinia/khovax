@@ -808,7 +808,7 @@ static func _survey_button_glyphs() -> String:
 		InputGlyphs.GESTURES[&"survey_zoom_in"],
 		InputGlyphs.GESTURES[&"survey_zoom_out"],
 	]
-	if shown[0] != keys or shown[2] != pinches:
+	if shown[0] != FlowInput.textures(keys) or shown[2] != FlowInput.textures(pinches):
 		return "the Survey's buttons show %s after a key and %s after a touch" % [
 			shown[0],
 			shown[2],
@@ -1057,7 +1057,7 @@ static func _survey_tab_glyphs(tab: SurveyTab) -> String:
 		],
 		[InputGlyphs.GESTURES[&"survey_zoom_out"], InputGlyphs.GESTURES[&"survey_zoom_in"], null],
 	]
-	if shown != wanted:
+	if shown != FlowInput.textures(wanted):
 		return "the Survey tab's buttons show %s after a key, a controller and a touch" % [shown]
 	for button: Button in buttons:
 		var badge: ActionGlyph = FlowInput.badge_of(button)

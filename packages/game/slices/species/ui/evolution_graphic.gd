@@ -11,7 +11,7 @@ extends HBoxContainer
 ## the evolution needs. MonsterDetails shows it for a monster whose species ascends (#1235).
 
 ## The item's icon: materials have no icons of their own yet, so a bag stands for any.
-const ITEM_ICON: Texture2D = preload("res://assets/game-icons/swap-bag.svg")
+const ITEM_ICON: String = "icon_swap_bag"
 ## Both forms' sides, and the arrow's shortest length, in the menu's font size.
 const FORM_FONTS: float = 2.6
 const ARROW_FONTS: float = 4.0
@@ -43,7 +43,10 @@ func _init() -> void:
 	_form_name = _centered()
 	_form.add_child(_form_name)
 	var middle: VBoxContainer = _column()
-	item = MenuWidgets.with_icon(MenuWidgets.button("", func() -> void: pass), ITEM_ICON)
+	item = MenuWidgets.with_icon(
+		MenuWidgets.button("", func() -> void: pass),
+		ResourcePacks.texture(ITEM_ICON),
+	)
 	item.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	middle.add_child(item)
 	card = HoverCard.attach(item)

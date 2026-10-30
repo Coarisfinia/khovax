@@ -52,6 +52,22 @@ static func glyphs_by_device(shown: Callable) -> Array:
 	return after
 
 
+## `wanted` with every glyph id in it (InputGlyphs) turned into its texture (ResourcePacks), in
+## lists inside lists too, to compare with the glyphs a hint shows.
+static func textures(wanted: Array) -> Array:
+	var turned: Array = []
+	for entry: Variant in wanted:
+		if entry is String:
+			var glyph: String = entry
+			turned.append(ResourcePacks.texture(glyph))
+		elif entry is Array:
+			var inner: Array = entry
+			turned.append(textures(inner))
+		else:
+			turned.append(entry)
+	return turned
+
+
 ## The glyph badge on `button` (ActionGlyph), or null.
 static func badge_of(button: Button) -> ActionGlyph:
 	for child: Node in button.get_children():

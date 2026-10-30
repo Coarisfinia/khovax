@@ -589,7 +589,7 @@ func _check_move_hint() -> String:
 		[InputGlyphs.AXES[JOY_AXIS_LEFT_X]],
 		[InputGlyphs.GESTURES[&"move_up"]],
 	]
-	if shown != expected:
+	if shown != FlowInput.textures(expected):
 		return "the move hint didn't show W, A, S and D, the left stick and a drag"
 	var kept: DeviceInUse.Device = DeviceInUse.device
 	DeviceInUse.device = DeviceInUse.Device.KEYBOARD

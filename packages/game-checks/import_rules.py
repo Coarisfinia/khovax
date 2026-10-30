@@ -41,9 +41,9 @@ from game_shared.git_files import git_files
 
 # The slices, each after every slice it names (#821).
 SLICE_ORDER: tuple[str, ...] = (
-    "emoji_grid", "menu_widgets", "realms", "camera", "music", "credits", "movement",
-    "entering", "paths", "loot", "board", "exits", "fog", "input_prompts", "action_buttons",
-    "triggers", "texts", "species", "development", "outbox", "host_settings", "health", "players",
+    "resource_packs", "emoji_grid", "menu_widgets", "realms", "camera", "music", "credits",
+    "movement", "entering", "paths", "loot", "board", "exits", "fog", "input_prompts",
+    "action_buttons", "triggers", "texts", "species", "development", "outbox", "host_settings", "health", "players",
     "npcs", "trail",
     "wild_monsters", "hiding", "schedules", "packs", "tiles", "controls",
     "settings", "factions",

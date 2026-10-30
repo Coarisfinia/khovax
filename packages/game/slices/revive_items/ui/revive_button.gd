@@ -11,7 +11,7 @@ extends ActionButton
 
 
 func _init() -> void:
-	icon = preload("res://assets/game-icons/herbs-bundle.svg")
+	icon = ResourcePacks.texture("icon_herbs_bundle")
 	action = &"revive_monster"
 	column_index = 3
 

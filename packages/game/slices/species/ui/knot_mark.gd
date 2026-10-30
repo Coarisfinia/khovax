@@ -5,14 +5,14 @@ extends HBoxContainer
 ## and so does the menu's open button while a carried monster waits (GameMenu). It only shows: the
 ## knot is taken on the monster's web (DevelopmentWebView, #679).
 
-const ICON: Texture2D = preload("res://assets/game-icons/knot.svg")
+const ICON: String = "icon_knot"
 
 var _icon: TextureRect
 
 
 func _init() -> void:
 	_icon = TextureRect.new()
-	_icon.texture = ICON
+	_icon.texture = ResourcePacks.texture(ICON)
 	_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER

@@ -8,11 +8,11 @@ extends VBoxContainer
 ## outside a fight (owner, #223, Fight): during one, the buttons still show the slots but don't
 ## change them, and a line says why. It keeps up with the profile and the fight while shown.
 
-## Each slot's icon (#459): white shapes, drawn in ink by the UI's theme.
-const ICONS: Dictionary[String, Texture2D] = {
-	"ward": preload("res://assets/game-icons/magic-shield.svg"),
-	"trap": preload("res://assets/game-icons/wolf-trap.svg"),
-	"throw": preload("res://assets/game-icons/berries-bowl.svg"),
+## Each slot's icon (#459), by its id (ResourcePacks): white shapes, drawn in ink by the UI's theme.
+const ICONS: Dictionary[String, String] = {
+	"ward": "icon_magic_shield",
+	"trap": "icon_wolf_trap",
+	"throw": "icon_berries_bowl",
 }
 
 ## Where the fight is: this machine's player's instance.
@@ -57,7 +57,7 @@ func _process(_delta: float) -> void:
 ## Adds the row of `slot`: the picture of its gear, then its button.
 func _add_slot(slot: String) -> void:
 	var button: Button = MenuWidgets.button("", change.bind(slot))
-	button.icon = ICONS[slot]
+	button.icon = ResourcePacks.texture(ICONS[slot])
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	buttons[slot] = button

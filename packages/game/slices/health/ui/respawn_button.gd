@@ -6,7 +6,7 @@ extends ActionButton
 
 
 func _init() -> void:
-	icon = preload("res://assets/game-icons/exit-door.svg")
+	icon = ResourcePacks.texture("icon_exit_door")
 	action = &"respawn"
 	column_index = 2
 

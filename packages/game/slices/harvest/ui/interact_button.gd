@@ -8,7 +8,7 @@ extends ActionButton
 
 
 func _init() -> void:
-	icon = preload("res://assets/game-icons/grab.svg")
+	icon = ResourcePacks.texture("icon_grab")
 	action = &"interact"
 	column_index = 2
 

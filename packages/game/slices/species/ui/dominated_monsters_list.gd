@@ -15,8 +15,8 @@ signal monster_shown(monster: DominatedMonster)
 
 ## The buttons that move a monster one place up or down in the order: their icons (#584); their
 ## words on hover say so (_row).
-const UP_ICON: Texture2D = preload("res://assets/game-icons/plain-arrow-up.svg")
-const DOWN_ICON: Texture2D = preload("res://assets/game-icons/plain-arrow-down.svg")
+const UP_ICON: String = "icon_plain_arrow_up"
+const DOWN_ICON: String = "icon_plain_arrow_down"
 
 ## This machine's player's monsters, handed in by the profile (ProfilePanelsTie), whose slice comes
 ## after this one; none without it: their short ids in their order and the ones they carry (each an
@@ -217,8 +217,8 @@ func _row(line: String, short_id: String, place: int, with_mark: bool) -> Contro
 		)
 	var up: Callable = move.bind(short_id, place - 1)
 	var down: Callable = move.bind(short_id, place + 1)
-	row.add_child(MenuWidgets.icon_button(UP_ICON, tr("Move up"), up))
-	row.add_child(MenuWidgets.icon_button(DOWN_ICON, tr("Move down"), down))
+	row.add_child(MenuWidgets.icon_button(ResourcePacks.texture(UP_ICON), tr("Move up"), up))
+	row.add_child(MenuWidgets.icon_button(ResourcePacks.texture(DOWN_ICON), tr("Move down"), down))
 	return row
 
 
