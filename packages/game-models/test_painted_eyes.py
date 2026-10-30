@@ -64,6 +64,9 @@ SPECKS = {"dim_speck": (3, False), "dim_texel": (1, True)}
 # texel wider on the surface than two of the cells `fragments` groups by, and the dim patch this many
 # texels square on it, which must fail.
 COARSE_SIZE, COARSE_SEGMENTS, COARSE_ACROSS = 32, (8, 4), 2
+# A texture so coarse that the patch is more than marked_eyes.TONE_SHARE of the texels the head
+# touches: still a fragment, not a tone of the head's paint (#1782).
+TINY_SIZE = 6
 # Two islands on a texture of COARSE_SIZE texels: flat squares facing forward at either side of the
 # head, the left one's UVs ending a little short of texel column ISLAND_EDGE and the right one's
 # starting a little past it, so their texels touch on the texture. Each has two dim texels at that
@@ -223,21 +226,22 @@ def speck(name, across, passes):
     return ok
 
 
-def coarse():
+def coarse(name, size):
     """Whether the check fails a dim patch COARSE_ACROSS texels square by the left eye on a coarse
-    texture over a low ball, whose texels lie farther apart than `fragments` groups by on the
-    surface (#1781): side by side on the texture, they are one spot."""
-    skin = build(None, False, 1.0, SKIN, 0.0, COARSE_SIZE, COARSE_SEGMENTS)
+    texture `size` texels square over a low ball, whose texels lie farther apart than `fragments`
+    groups by on the surface (#1781): side by side on the texture, they are one spot."""
+    skin = build(None, False, 1.0, SKIN, 0.0, size, COARSE_SEGMENTS)
     head = marked_eyes.Head(skin, "head")
     rows, columns, texels = marked_eyes._texels(head, numpy.ones(len(head.spots), dtype=bool))
     nearest = numpy.sqrt(((texels - numpy.array(EYE)) ** 2).sum(axis=1)).argmin()
-    row, column = int(rows[nearest]), int(columns[nearest])
+    # The patch stays on the texture.
+    row, column = (min(int(at), size - COARSE_ACROSS) for at in (rows[nearest], columns[nearest]))
     head.pixels[row:row + COARSE_ACROSS, column:column + COARSE_ACROSS, :3] = DIM
     head.image.pixels.foreach_set(head.pixels.ravel())
     found = marked_eyes.fragments(skin)
     ok = bool(found)
-    (log.info if ok else log.error)("%s coarse_patch: %s at texel (%d, %d), should fail" % (
-        "ok" if ok else "FAIL", "found %s texels" % [mark.count for mark in found] if found else "nothing found",
+    (log.info if ok else log.error)("%s %s: %s at texel (%d, %d), should fail" % (
+        "ok" if ok else "FAIL", name, "found %s texels" % [mark.count for mark in found] if found else "nothing found",
         row, column))
     return ok
 
@@ -340,7 +344,8 @@ def main():
         (log.info if ok else log.error)(line)
     for name, (across, passes) in SPECKS.items():
         passed = speck(name, across, passes) and passed
-    passed = coarse() and passed
+    passed = coarse("coarse_patch", COARSE_SIZE) and passed
+    passed = coarse("tiny_patch", TINY_SIZE) and passed
     passed = islands() and passed
     for name, (left, right, passes) in TWO_TONES.items():
         passed = two_tone(name, left, right, passes) and passed
