@@ -440,7 +440,8 @@ def fragments(skin, bone="head", weight=HEAD_WEIGHT):
     points, texels = spots[dark], texels[dark]
     cell = numpy.ptp(head.points, axis=0).max() / CELLS
     marks = []
-    for group in _touching(_spots(points, cell), texels, head.pixels.shape[1]):
+    islands = _islands(head)[triangles[dark]]
+    for group in _touching(_spots(points, cell), texels, islands, head.pixels.shape[1]):
         count = len(numpy.unique(texels[group]))
         if count >= FRAGMENT_TEXELS:
             mark = Mark(points[group], normals[group])
@@ -449,11 +450,32 @@ def fragments(skin, bone="head", weight=HEAD_WEIGHT):
     return marks
 
 
-def _touching(groups, texels, width):
-    """`groups` (lists of indices into `texels`, keys row * `width` + column) joined wherever a texel
-    of one is the same as, or beside, a texel of another on the texture (#1781): a coarse texture's
-    texels lie farther apart on the surface than `_spots`' cells, yet a patch of them is one spot.
-    In a fixed order (by their lowest index)."""
+def _islands(head):
+    """Each of the head's triangles' UV island, as a number: triangles that share a corner, at
+    the same spot and the same UV, lie on the same one."""
+    corners = numpy.concatenate([head.spots, head.uvs], axis=2).reshape(-1, 5)
+    corners = numpy.unique(numpy.round(corners, 6), axis=0, return_inverse=True)[1].reshape(-1)
+    parent = list(range(len(head.spots)))
+
+    def root(index):
+        while parent[index] != index:
+            parent[index] = parent[parent[index]]
+            index = parent[index]
+        return index
+
+    first = {}
+    for corner, triangle in zip(corners.tolist(), numpy.repeat(numpy.arange(len(head.spots)), 3).tolist()):
+        low, high = sorted((root(first.setdefault(corner, triangle)), root(triangle)))
+        parent[high] = low
+    return numpy.array([root(triangle) for triangle in range(len(head.spots))])
+
+
+def _touching(groups, texels, islands, width):
+    """`groups` (lists of indices into `texels`, keys row * `width` + column, on the UV island
+    `islands` gives each) joined wherever a texel of one is the same as, or beside, a texel of
+    another on the same island (#1781): a coarse texture's texels lie farther apart on the surface
+    than `_spots`' cells, yet a patch of them is one spot, while two islands side by side on the
+    texture may lie far apart on the head. In a fixed order (by their lowest index)."""
     parent = list(range(len(groups)))
 
     def root(index):
@@ -464,15 +486,15 @@ def _touching(groups, texels, width):
 
     owners = {}
     for number, group in enumerate(groups):
-        for key in set(texels[group].tolist()):
-            owners.setdefault(key, set()).add(number)
-    for key in sorted(owners):
+        for key, island in set(zip(texels[group].tolist(), islands[group].tolist())):
+            owners.setdefault((key, island), set()).add(number)
+    for key, island in sorted(owners):
         row, column = divmod(key, width)
         for dy in (-1, 0, 1):
             for dx in (-1, 0, 1):
                 if 0 <= column + dx < width:
-                    for other in owners.get((row + dy) * width + column + dx, ()):
-                        for number in owners[key]:
+                    for other in owners.get(((row + dy) * width + column + dx, island), ()):
+                        for number in owners[(key, island)]:
                             low, high = sorted((root(number), root(other)))
                             parent[high] = low
     joined = {}
