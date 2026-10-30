@@ -4,6 +4,8 @@ with the game's import settings by the Godot version the game is built with.
 
     uv run --locked --package khovax-game-pack-builder packages/game-pack-builder/build_pack.py <pack> <out>
 
+or, from the zip each release ships (release_zip.py), python3 build_pack.py <pack> <out>.
+
 A pack is data, never code (#1859): every file must be on the allow-list (ALLOWED), and a Godot
 .import file beside one (the default pack keeps the game's import settings that way) may name no
 script and no importer but a texture's or a scene's. Anything else refuses the whole pack.
