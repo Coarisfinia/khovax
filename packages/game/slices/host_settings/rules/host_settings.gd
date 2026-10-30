@@ -20,6 +20,11 @@ extends RefCounted
 ## instance reset delay is how long an instance nobody is in stays loaded before it's purged
 ## (World, through BlueprintSource). Revive on waystones (#1891), off by default, has a player
 ## standing next to a waystone get their fainted beasts back (WaystoneFeature).
+##
+## The difficulty presets (#1892), Easy, Standard and Hard, each set the wild monsters' factor and
+## revive on waystones, which only Easy turns on; the drop rate and the reset delay stay apart from
+## them. A preset is never kept: the world keeps each setting it sets, and the host's world is on a
+## preset while all of them are as that preset sets them, else on Custom.
 
 ## The slot of the host, the player whose world it is.
 const HOST: int = 0
@@ -61,6 +66,16 @@ const CODES: Dictionary[String, int] = {
 	RESET_DELAY: 3,
 	REVIVE_ON_WAYSTONES: 4,
 }
+## The difficulty presets (#1892), Easy, Standard and Hard: each one's settings, by their keys.
+## PRESET is the key of their row in the Settings tab, never kept in the world.
+const PRESET: String = "difficulty_preset"
+const PRESETS: Array[Dictionary] = [
+	{ DIFFICULTY: EASY, REVIVE_ON_WAYSTONES: ON },
+	{ DIFFICULTY: STANDARD, REVIVE_ON_WAYSTONES: OFF },
+	{ DIFFICULTY: HARD, REVIVE_ON_WAYSTONES: OFF },
+]
+## The preset of a world whose settings no preset sets as they are.
+const CUSTOM: int = -1
 ## The ticks of a minute of play.
 const MINUTE_TICKS: int = 60 * Simulation.TICKS_PER_SECOND
 const CODE_SPAN: int = 1_000_000
@@ -125,6 +140,48 @@ static func reset_ticks(host: PlayerStore) -> int:
 ## Whether the host of the world `state` is in has fainted beasts revived at waystones (#1891).
 static func revives_on_waystones(state: GameState) -> bool:
 	return chosen(state.stored(HOST, FEATURE_ID), REVIVE_ON_WAYSTONES) == ON
+
+
+## The settings a preset sets, as the host's entry `entry` has them, by their keys.
+static func preset_values(entry: Dictionary) -> Dictionary[String, int]:
+	var values: Dictionary[String, int] = {}
+	for setting: String in PRESETS[0]:
+		values[setting] = chosen(entry, setting)
+	return values
+
+
+## The preset (an index into PRESETS) that sets the settings `values` (preset_values) as they are,
+## or CUSTOM.
+static func preset_of(values: Dictionary[String, int]) -> int:
+	for preset: int in PRESETS.size():
+		var matches: bool = true
+		for setting: String in PRESETS[preset]:
+			matches = matches and values.get(setting) == PRESETS[preset][setting]
+		if matches:
+			return preset
+	return CUSTOM
+
+
+## The preset stepping `steps` presets on (back for fewer) from the settings `values` lands on,
+## stopping at the first and the last. From Custom, a step either way lands on the preset with
+## the wild monsters' factor of `values` first.
+static func preset_step(values: Dictionary[String, int], steps: int) -> int:
+	var preset: int = preset_of(values)
+	if preset == CUSTOM:
+		preset = DIFFICULTIES.find(values[DIFFICULTY])
+		steps -= signi(steps)
+	return clampi(preset + steps, 0, PRESETS.size() - 1)
+
+
+## The data of the requests that set the settings `values` (preset_values) as `preset` sets them,
+## one for each that isn't yet.
+static func preset_requests(values: Dictionary[String, int], preset: int) -> Array[int]:
+	var requests: Array[int] = []
+	for setting: String in PRESETS[preset]:
+		var value: int = PRESETS[preset][setting]
+		if values.get(setting) != value:
+			requests.append(request_data(setting, value))
+	return requests
 
 
 ## A wild monster's `strength` at the difficulty of `state`.
