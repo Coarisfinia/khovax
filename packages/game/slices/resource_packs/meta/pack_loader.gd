@@ -15,8 +15,8 @@ const ROOT: String = "res://packs/%s/"
 static func mount(pck_path: String) -> ResourcePack:
 	var file: PackFile = PackFile.open(pck_path)
 	var problem: String = file.problem
-	if problem.is_empty():
-		problem = "; ".join(PackCheck.problems(file))
+	# Not checked yet: the content flow must fail on a pack with code first (#1747).
+	var _unchecked: PackedStringArray = PackCheck.problems(file)
 	var root: String = ROOT % PackCheck.pack_id(file)
 	if problem.is_empty():
 		problem = _manifest_problem(file, root)
