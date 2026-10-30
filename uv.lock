@@ -8,6 +8,7 @@ members = [
     "khovax-game-checks",
     "khovax-game-models",
     "khovax-game-offscreen",
+    "khovax-game-pack-builder",
     "khovax-game-replays",
     "khovax-game-shared",
     "khovax-game-visuals",
@@ -73,6 +74,17 @@ requires-dist = [{ name = "khovax-game-shared", editable = "packages/game-shared
 name = "khovax-game-offscreen"
 version = "0.0.0"
 source = { virtual = "packages/game-offscreen" }
+
+[[package]]
+name = "khovax-game-pack-builder"
+version = "0.0.0"
+source = { virtual = "packages/game-pack-builder" }
+dependencies = [
+    { name = "khovax-game-shared" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "khovax-game-shared", editable = "packages/game-shared" }]
 
 [[package]]
 name = "khovax-game-replays"

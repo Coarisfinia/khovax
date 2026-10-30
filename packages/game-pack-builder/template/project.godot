@@ -1,0 +1,15 @@
+; The pack builder's template project (#1869): build_pack.py copies it, puts a pack's files under
+; packs/<id>/ and exports them as <id>.desktop.pck and <id>.mobile.pck. Its settings are the
+; game's import settings: a texture set to VRAM compression is imported for desktop (S3TC/BPTC)
+; and for mobile (ETC2/ASTC), and each preset packs its own.
+
+config_version=5
+
+[application]
+
+config/name="khovax pack"
+
+[rendering]
+
+textures/vram_compression/import_s3tc_bptc=true
+textures/vram_compression/import_etc2_astc=true

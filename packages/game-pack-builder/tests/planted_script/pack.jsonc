@@ -1,0 +1,8 @@
+// A pack with a script in it (#1869): the pack builder must refuse it, since a pack is data,
+// never code. CI builds it and fails unless it's refused.
+{
+	"id": "planted",
+	"name": "Planted",
+	"version": "1.0.0",
+	"game_version": "0.1.0"
+}
