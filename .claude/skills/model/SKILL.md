@@ -278,17 +278,24 @@ a second model could use goes into the library or a generic tool, never into one
 A model whose mesh and colour come from the owner's Meshy download (as Drakkudor's do,
 `packages/game-models/drakkudor.py`) goes through these steps, in this order:
 
-1. **Inspect:** `uv run --locked packages/game-models/inspect_meshy.py <download.glb>` (#1523),
+1. **Generating in Meshy** (the owner generates; owner, #1671): **triangle** topology at about
+   **6,000 triangles**. That budget comes out a bit flawed now and then (thin parts merged into
+   lumps, holes, stray faces); fix those spots by hand on import, never by asking for more
+   triangles. The face carries only the prompt's two flat black ovals (#1682), never eyes Meshy
+   draws or details: ours replace them (step 5). Meshy rigs it first wherever it can (#1514);
+   where it can't, we build our own Blender rig (#1732, section 2). An evolution's image comes
+   from the copypasta above (#1754).
+2. **Inspect:** `uv run --locked packages/game-models/inspect_meshy.py <download.glb>` (#1523),
    one report on its mesh, material, painted eyes, body columns and rig. Read it before measuring
-   anything by hand.
-2. **Import and strip:** `packages/game-models/import_source.py` makes the source the script
+   anything by hand. It warns when the download is far above step 1's triangle target.
+3. **Import and strip:** `packages/game-models/import_source.py` makes the source the script
    builds from (`packages/game-models/sources/<name>.glb`): only the base colour, opaque,
    single-sided and matte (#1476). A download Meshy has rigged keeps its skin and rig, adopted
    by `lib/rigged.py` (#1516): its chains checked against the parts they move, a short one
    regrown and one bleeding into another's part cleaned, its bones named to the library's scheme,
    and the model placed on its feet under a `root`. Read what it prints (`KEEP`, `FIX`,
    `RENAME`).
-3. **Scale to the hex, first:** settle the model's size before any clip, gait or render
+4. **Scale to the hex, first:** settle the model's size before any clip, gait or render
    (#1522). The gait's limits depend on the size, and Drakkudor's late rescale redid its gait and
    every render. `import_source.py` fits a rigged download to its hex by itself: its `scale` is
    `hex` (the default) for a regular monster and `hex-large` for a boss, enraged or stronger one,
@@ -297,15 +304,15 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
    check once the clips exist; a `hex-large` model goes into `LARGE` in `check_footprint.py`
    first, or the check holds it to a regular monster's limits. An unrigged download is sized by its model script (`SCALE`, as
    `drakkudor.py` does), to the same limits.
-4. **Rig:** start from the rig the import adopted (the owner rigs in Meshy first, #1514), and
+5. **Rig:** start from the rig the import adopted (the owner rigs in Meshy first, #1514), and
    check its fixes bend right (bend each chain and see that it moves only its own part). An
    unrigged download is rigged by the model script, as `drakkudor.py` does with `lib/hexapod.py`.
    Once the head bone is named, swap in our eyes: `marked_eyes.replace(rig, skin, mats, faint)`
    before `attachments.add` (its eye points) and `clips.animate` (its `Lids.shut` among the
    overlays), and read its `EYES` line.
-5. **Clips:** the full creature set through `clips.animate`, as for any model; tune the gait
+6. **Clips:** the full creature set through `clips.animate`, as for any model; tune the gait
    with the gait sweep, not by hand.
-6. **Checks, renders, PR:** the checks of section 4, `render_media.py` for the pictures, then
+7. **Checks, renders, PR:** the checks of section 4, `render_media.py` for the pictures, then
    section 5.
 
 **The traps found on Drakkudor (#1476, #1514):**
@@ -506,7 +513,8 @@ clips. Ask the owner only when it's unclear what should move how.
    each made with `packages/game-models/gif.py`. Check that loops don't jump, steps don't slide, and the
    attack and hit read at game zoom.
 7. **Budget:** report the triangles, bones, materials, texture sizes and `.glb` size. Medium-poly
-   means a few thousand triangles for a monster; justify anything far above.
+   means a few thousand triangles for a monster (a Meshy download about 6,000, #1671); justify
+   anything far above.
 8. **Renderer:** check the glow and materials in the web build (Compatibility renderer) as well as
    on desktop.
 9. **Ground contact:** `uv run --locked packages/game-models/blender.py --background --factory-startup

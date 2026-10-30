@@ -6,8 +6,9 @@ instead of measuring the mesh by hand before import_source.py and the model scri
 It starts Blender itself (through blender.py) and prints only the report:
 - **file:** its size, the glTF's generator and whether it carries AI-generation markers (a
   generator, copyright or `extras` naming them, or metadata inside its images);
-- **mesh:** triangles, vertices and how many of them are seam splits, UV islands, custom normals,
-  node rotations, the bounds and where the origin sits against the soles;
+- **mesh:** triangles (warned when far above Meshy's target, #1671), vertices and how many of
+  them are seam splits, UV islands, custom normals, node rotations, the bounds and where the
+  origin sits against the soles;
 - **material:** `doubleSided`, the alpha mode and each texture's kind, size and format;
 - **eyes:** glowing spots painted on the base colour (bright and saturated), found on the surface
   and grouped where they sit;
@@ -59,6 +60,9 @@ REACH = 0.12
 # BLEED_WEIGHT or more carry that much of both, farther than REACH from both chains' starts (next to
 # a fork, mixed weights only smooth the joint), and at least BLEED_VERTICES of them.
 BLEED, BLEED_WEIGHT, BLEED_VERTICES = 0.2, 0.1, 20
+# The triangles the owner generates at in Meshy (#1671), and how far above it a download draws a
+# warning: as generated, a download near the target needs no reduction.
+TARGET_TRIANGLES, FAR_ABOVE = 6000, 2
 # How long (seconds) Blender may take before the report gives up on it: far above a large download's.
 TIMEOUT = 300
 
@@ -326,6 +330,9 @@ def report_mesh(gltf, mesh):
     out("MESH     %d triangles, %d vertices (%d seam splits), %s UV islands, custom normals %s, mesh nodes "
         "rotated: %s" % (triangles, count, count - welded, islands, "yes" if normals else "no",
                          ", ".join(rotated) or "none"))
+    if triangles > TARGET_TRIANGLES * FAR_ABOVE:
+        out("         far above the target of about %d triangles (#1671)" % TARGET_TRIANGLES)
+        NEXT.append("regenerate it in Meshy at about %d triangles, or reduce it" % TARGET_TRIANGLES)
     low, high = positions.min(axis=0), positions.max(axis=0)
     size = high - low
     centre = (low + high) / 2
