@@ -326,6 +326,26 @@ jobs:
             ../game-models/blender.py --background --factory-startup \
             --python ../game-models/check_brows.py --
 
+      - name: "🧪 Test the covered-eye check on a ball"
+        # Our eyes set clear of the skin pass; pushed into the head, or under a loose patch of skin,
+        # they fail (#1758).
+        if: steps.models.outputs.changed == 'true'
+        timeout-minutes: 2
+        run: |
+          uv run --locked --package khovax-game-models ../game-models/blender.py --background --factory-startup \
+            --python ../game-models/test_eyes_covered.py
+
+      - name: "👀 Check no body surface covers our eyes"
+        # Every other frame of every clip of every .glb, each eye straight on: nothing but its own
+        # pieces lies in front of it within its rim (the owner, on #1747 and #1758); a model
+        # without eye points passes.
+        if: steps.models.outputs.changed == 'true'
+        timeout-minutes: 8
+        run: |
+          git ls-files -z ':(top)packages/game/*.glb' | xargs -0 uv run --locked --package khovax-game-models \
+            ../game-models/blender.py --background --factory-startup \
+            --python ../game-models/check_eyes_covered.py --
+
       - name: "🧪 Test the painted-eye check on a ball"
         # Painted black or glowing eyes fail it, and a beast's own pale or hue-bounded ones (#1719);
         # and `fit` sets our eyes on the marks, also off the middle (#1735);

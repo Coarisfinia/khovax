@@ -27,7 +27,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 from lib import attachments, clips, limbless, marked_eyes, metrics, scene, tuning  # noqa: E402
-from lib.materials import palette  # noqa: E402
+from lib.materials import material, palette  # noqa: E402
 
 SOURCE = os.path.join(HERE, "sources", "wobulumu.glb")
 FPS = 30
@@ -52,8 +52,8 @@ COLORS = {
     "glow": ((0.62, 1.0, 0.18, 1.0), 1.0),
 }
 # A round, gentle baby's eyes: a wide round pupil and a soft brow, sized up to the generator's
-# upright oval marks (marked_eyes.fit).
-EYE_SHAPE = {"pupil": (0.4, 0.5), "brow_size": 0.4, "upright": True}
+# upright oval marks, their rims kept clear of the skin (marked_eyes.fit).
+EYE_SHAPE = {"pupil": (0.4, 0.5), "brow_size": 0.4, "upright": True, "rim": True}
 # It butts with its snout's front.
 SNOUT = (0.0, -1.80, 0.70)
 
@@ -94,10 +94,22 @@ def build(out):
     scene.apply_scale([skin], SCALE)
     rig = limbless.armature("WobulumuRig", limbless.scaled(BODY, SCALE))
     limbless.bind(skin, rig)
-    lids, eyes = marked_eyes.replace(rig, skin, palette(COLORS), FAINT_LIDS, **EYE_SHAPE)
+    head = marked_eyes.Head(skin, limbless.HEAD)
+    marks = marked_eyes.find(head)
+    around = marked_eyes.repaint(head, marks)
     # Its colours have no black: every dark fragment of the generator's eyes goes too, after
-    # they've been found by it (the owner, on #1747: "those should be removed fully").
+    # they've been found by it (the owner, on #1747: "those should be removed fully"), while the
+    # skin is still whole.
     print("SCRUBBED", marked_eyes.scrub(skin, limbless.HEAD), "texels")
+    # The generator modelled a loose piece of skin round each of its eyes, which lay over the
+    # lower half of ours (the owner, on #1747; check_eyes_covered.py): it goes, the marks keeping
+    # their size.
+    sizes = [(mark.width, mark.height) for mark in marks]
+    marked_eyes.modelled(skin, marks)
+    for mark, (width, height) in zip(marks, sizes):
+        mark.width, mark.height = width, height
+    mats = dict(palette(COLORS), skin=material("EyeSkin", marked_eyes.linear(around)))
+    lids, eyes = marked_eyes.replace(rig, skin, mats, FAINT_LIDS, marks=marks, **EYE_SHAPE)
     attachments.add(rig, eyes, [(tuple(SCALE * value for value in SNOUT), limbless.HEAD)])
     clips.animate(rig, {
         "Idle": limbless.idle(TAIL),

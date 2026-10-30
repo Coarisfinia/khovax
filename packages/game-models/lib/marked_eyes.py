@@ -81,6 +81,8 @@ CHUNK = 1024
 # `clear` tries the eye further out and across the head in STEPs of its size, at most OUT out and
 # SHIFT across.
 FRONT = (".iris", ".pupil")
+# With `rim`, the glowing rim round them is kept clear too (check_eyes_covered.py, #1758).
+RIM = (".rim",)
 BURIED, STEP, OUT, SHIFT = 0.02, 0.05, 0.5, 0.2
 # Which way our eyes look, blended with the head's surface there (eyes.eye): ahead and a little
 # out on the left (+X); the right mirrors it.
@@ -723,7 +725,7 @@ def _spread(mask):
 
 
 def fit(skin, marks, mats, bone, forward=FORWARD, ridge=True, middle=0.0, upright=False,
-        grow=1.0, **shape):
+        grow=1.0, rim=False, **shape):
     """Our eyes (eyes.eye, with lids) on `skin` where `marks` (left, right) are: the left one's
     position and size the mean of the left mark's and the right one's mirrored across the plane
     x = `middle` (the `Marked`'s that `find` paired them across, #1735), so the two mirror each
@@ -733,7 +735,8 @@ def fit(skin, marks, mats, bone, forward=FORWARD, ridge=True, middle=0.0, uprigh
     than it is wide (an upright oval, #1737) gives a rounder eye, as wide as the mark's mean of
     width and height, since ours is never taller than it is wide: as wide as the mark, it would be
     half the eye the generator drew (and as tall, its top would show above its brow,
-    check_brows.py). `ridge=False` leaves out the brow; `shape` goes on to eyes.eye (`tilt`,
+    check_brows.py). With `rim`, `clear` keeps the glowing rim clear of the skin too, not only
+    the iris and pupil (#1758, opt-in so other models don't change). `ridge=False` leaves out the brow; `shape` goes on to eyes.eye (`tilt`,
     `pupil`, `brow_size`, ...). Returns the pieces, weighted to `bone` and the lids' bones."""
     left, right = marks
     spot = (left.middle + right.middle * (-1.0, 1.0, 1.0) + (2.0 * middle, 0.0, 0.0)) / 2.0
@@ -748,23 +751,25 @@ def fit(skin, marks, mats, bone, forward=FORWARD, ridge=True, middle=0.0, uprigh
             bpy.data.objects.remove(piece, do_unlink=True)
         else:
             pieces.append(piece)
-    clear(skin, pieces, size, middle)
+    clear(skin, pieces, size, middle, rim)
     return pieces + eyes.mirrored(pieces, middle)
 
 
-def buried(skin, pieces, middle=0.0):
-    """The share of the vertices on the face of an eye's front (its iris and pupil among
-    `pieces`, the halves facing the way it looks) that lie under `skin`'s surface: the head's
+def buried(skin, pieces, middle=0.0, front=FRONT):
+    """The share of the vertices on the face of an eye's `front` (its iris and pupil among
+    `pieces`, the halves facing the way it looks, and with RIM its whole rim) that lie under
+    `skin`'s surface: the head's
     skin cutting across the eye (#1690). For a left eye (left of the plane x = `middle`), the worse
     of it and its mirror image across that plane on the right (eyes.mirrored makes the right eye
     so), since a generated head is rarely symmetric."""
     look = eyes.look(pieces)
     spots = []
-    for piece in (piece for piece in pieces if piece.name.endswith(FRONT)):
+    for piece in (piece for piece in pieces if piece.name.endswith(front)):
         centre = piece.matrix_world.translation
-        # Its face toward the way the eye looks: the side of it that shows.
+        # Its face toward the way the eye looks: the side of it that shows; all round the rim,
+        # whose outer edge shows round the eye too.
         spots += [spot for spot in (piece.matrix_world @ vertex.co for vertex in piece.data.vertices)
-                  if (spot - centre).dot(look) > 0.0]
+                  if (spot - centre).dot(look) > 0.0 or piece.name.endswith(RIM)]
     if centre.x <= middle:
         return _under(skin, spots)
     return max(_under(skin, spots),
@@ -780,15 +785,15 @@ def _under(skin, spots):
     return under / len(spots)
 
 
-def clear(skin, pieces, size, middle=0.0):
+def clear(skin, pieces, size, middle=0.0, rim=False):
     """Sets a left eye (`pieces`, its lid's hinge with it) where the head's skin covers the least
     of its front and its mirror image's (buried): first up to OUT of its size further out along
     the way it looks, in STEPs, the nearest such spot of the least. When that still leaves more
     than BURIED covered (a head that isn't symmetric can bury the right eye), it tries up to SHIFT
     of its size across the head too (sideways and up or down), the nearest spot within BURIED.
     So on a curved head or a sculpted socket the skin doesn't cut across either eye. The right
-    eye is the left one's mirror image across the plane x = `middle`. Raises when more than
-    BURIED stays covered."""
+    eye is the left one's mirror image across the plane x = `middle`. With `rim`, the rim's front
+    counts with the iris's and pupil's (#1758). Raises when more than BURIED stays covered."""
     look = eyes.look(pieces)
     side = look.cross(Vector((0.0, 0.0, 1.0))).normalized()
     up = side.cross(look).normalized()
@@ -803,7 +808,7 @@ def clear(skin, pieces, size, middle=0.0):
             if "hinge" in piece:
                 piece["hinge"] = tuple(Vector(piece["hinge"]) + shift)
         bpy.context.view_layer.update()
-        return buried(skin, pieces, middle)
+        return buried(skin, pieces, middle, FRONT + RIM if rim else FRONT)
 
     out = range(round(OUT / STEP) + 1)
     best = min((place((step, 0, 0)), (step, 0, 0)) for step in out)
