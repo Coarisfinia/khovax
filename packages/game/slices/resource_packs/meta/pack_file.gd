@@ -13,8 +13,10 @@ const FORMATS: Array[int] = [3, 4]
 const ENCRYPTED_DIRECTORY: int = 1
 ## The header's flag for file offsets counted from the file base rather than the file's start.
 const RELATIVE_FILE_BASE: int = 2
-## How many files a pack may hold, so a broken count can't hang the reading.
+## How many files a pack may hold, and how long a file's path may be, so a broken directory
+## can't hang the reading or ask for a huge buffer.
 const MAX_FILES: int = 100_000
+const MAX_PATH: int = 4096
 
 ## Why the file can't be read as a pack, or "" when it can.
 var problem: String = ""
@@ -64,6 +66,10 @@ func _read_directory(file: FileAccess) -> String:
 		return "was built with another Godot than the game's"
 	if flags & ENCRYPTED_DIRECTORY:
 		return "has an encrypted directory"
+	# Any other flag (a sparse bundle reads its files from elsewhere) means Godot would mount bytes
+	# that weren't checked here.
+	if flags & ~RELATIVE_FILE_BASE:
+		return "has pack flags this game doesn't read"
 	_file_base = file_base if flags & RELATIVE_FILE_BASE else 0
 	file.seek(directory)
 	var count: int = file.get_32()
@@ -71,23 +77,28 @@ func _read_directory(file: FileAccess) -> String:
 		return "holds too many files"
 	for _index: int in count:
 		if not _read_entry(file):
-			return "has a broken directory"
+			return "has a broken directory: a file's path or place is off, or named twice"
 	return ""
 
 
 ## Reads one file's entry of the directory from `file`; whether it was all there.
 func _read_entry(file: FileAccess) -> bool:
-	var name_bytes: PackedByteArray = file.get_buffer(file.get_32())
+	var length: int = file.get_32()
+	if length > MAX_PATH:
+		return false
+	var name_bytes: PackedByteArray = file.get_buffer(length)
 	var offset: int = file.get_64()
 	var size: int = file.get_64()
 	var _md5: PackedByteArray = file.get_buffer(16)
 	var file_flags: int = file.get_32()
-	if file.get_position() > file.get_length():
+	if file.get_position() > file.get_length() or _file_base + offset + size > file.get_length():
 		return false
 	# The name is padded with zeros to whole words.
 	var end: int = name_bytes.find(0)
 	if end >= 0:
 		name_bytes = name_bytes.slice(0, end)
-	var file_name: String = name_bytes.get_string_from_utf8()
-	files[file_name.trim_prefix("res://")] = PackedInt64Array([offset, size, file_flags])
+	var file_name: String = name_bytes.get_string_from_utf8().trim_prefix("res://")
+	if files.has(file_name):
+		return false
+	files[file_name] = PackedInt64Array([offset, size, file_flags])
 	return true
