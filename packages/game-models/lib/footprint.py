@@ -27,10 +27,10 @@ import math
 import bpy
 import numpy
 
-from . import imported
+from . import imported, world_scale
 
 # The game's hex, centre to corner, in metres (HexLayout.SIZE).
-SIZE = 1.0
+SIZE = world_scale.HEX_SIZE
 INRADIUS = SIZE * math.sqrt(3.0) / 2.0
 # The six edge normals on the ground plane, the first straight ahead (-Y).
 NORMALS = numpy.array([(math.cos(math.radians(a)), math.sin(math.radians(a))) for a in range(270, 630, 60)])
@@ -70,19 +70,24 @@ def meshes(rig, objects):
 
 def reach(meshes):
     """The reach of the deformed `meshes` at the scene's current frame (see the module's notes)."""
+    found = points(meshes)
+    return max(0.0, spread(found)) if len(found) else 0.0
+
+
+def points(meshes):
+    """Every vertex of the deformed `meshes` at the scene's current frame, an (n, 3) array in world
+    space."""
     depsgraph = bpy.context.evaluated_depsgraph_get()
-    far = 0.0
+    found = [numpy.empty((0, 3))]
     for obj in meshes:
         evaluated = obj.evaluated_get(depsgraph)
         mesh = evaluated.to_mesh()
         coords = numpy.empty(len(mesh.vertices) * 3)
         mesh.vertices.foreach_get("co", coords)
         evaluated.to_mesh_clear()
-        if not len(coords):
-            continue
         world = numpy.array(evaluated.matrix_world)
-        far = max(far, spread(coords.reshape(-1, 3) @ world[:3, :3].T + world[:3, 3]))
-    return far
+        found.append(coords.reshape(-1, 3) @ world[:3, :3].T + world[:3, 3])
+    return numpy.concatenate(found)
 
 
 def spread(points):

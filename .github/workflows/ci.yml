@@ -452,6 +452,26 @@ jobs:
             ../game-models/blender.py --background --factory-startup \
             --python ../game-models/check_footprint.py --
 
+      - name: "🧪 Test the world-scale check on boxes"
+        # Walls, gates, towers and props sized to their kind or off it (#1837): the check passes
+        # and fails them.
+        if: steps.models.outputs.changed == 'true'
+        timeout-minutes: 2
+        run: |
+          uv run --locked --package khovax-game-models ../game-models/blender.py --background --factory-startup \
+            --python ../game-models/test_world_scale.py
+
+      - name: "📏 Check every prop, wall and building is sized to the world's scale"
+        # A hex's size and a wall's height against the player's height (#1837): every .glb built
+        # here that isn't a monster by the kind its script names, and the players' figure against
+        # the player's height; a monster is sized against its hex (above).
+        if: steps.models.outputs.changed == 'true'
+        timeout-minutes: 5
+        run: |
+          git ls-files -z ':(top)packages/game/*.glb' | xargs -0 -r uv run --locked --package khovax-game-models \
+            ../game-models/blender.py --background --factory-startup \
+            --python ../game-models/check_world_scale.py --
+
       - name: "📤 Upload the models CI built"
         # On a difference, the .glb files this runner built, to compare with or commit.
         if: failure() && steps.models.outputs.changed == 'true'

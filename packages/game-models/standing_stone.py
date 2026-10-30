@@ -30,6 +30,8 @@ from lib import footprint, prop_paint, repaint, scene  # noqa: E402
 
 SOURCE = os.path.join(HERE, "sources", "standing_stone.glb")
 FPS = 30
+# Its kind on the world's scale (lib/world_scale.py): a thing standing on one hex.
+WORLD_SCALE = "prop"
 # Edges sharper than this stay sharp in the shading: the slab's chiselled facets.
 SHARP = math.radians(40.0)
 

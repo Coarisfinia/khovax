@@ -35,6 +35,26 @@ def load(glb, fps):
     return rig
 
 
+def load_view(glb, fps, scale=1.0):
+    """The model in an empty scene at the clip rate, drawn at `scale` as a view's node would, and
+    its armature (None for a static one)."""
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    bpy.context.scene.render.fps = fps
+    bpy.ops.import_scene.gltf(filepath=glb)
+    if scale != 1.0:
+        holder = bpy.data.objects.new("view", None)
+        bpy.context.scene.collection.objects.link(holder)
+        holder.scale = (scale, scale, scale)
+        for obj in bpy.data.objects:
+            if obj.parent is None and obj is not holder:
+                obj.parent = holder
+        bpy.context.view_layer.update()
+    rig = next((obj for obj in bpy.data.objects if obj.type == "ARMATURE"), None)
+    if rig is not None and rig.animation_data is not None:
+        rig.animation_data.use_nla = False
+    return rig
+
+
 def play(rig, action):
     """Puts `action` on the rig and returns its first and last frames."""
     rig.animation_data.action = action

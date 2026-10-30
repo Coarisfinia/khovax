@@ -132,6 +132,26 @@ def find(game, model, scripts=None):
     return list(distinct.values())
 
 
+def decorations(game):
+    """The names (.glb or .gltf without the extension) of the models the tile blueprints of the
+    Godot project at `game` name as their decoration (TileDecorations shows it): the tile's own
+    look, sized to its tile, not a thing standing on it."""
+    # A tile names its model's id in the default resource pack, whose manifest gives its file (#1864).
+    pack_models = models(read_manifest(Path(game) / MANIFEST))
+    tiles = os.path.join(game, "core", "data", "tiles", "*.jsonc")
+    names = set()
+    for path in glob.glob(tiles):
+        with open(path, encoding="utf-8") as text:
+            # JSONC: a commented-out model names no decoration. A comment starts after a space or
+            # at a line's start, never in a path's `res://`.
+            body = re.sub(r"(?m)(^|\s)//.*$", "", re.sub(r"/\*.*?\*/", "", text.read(), flags=re.S))
+            for found in re.finditer(r'"model"\s*:\s*"([^"]+)"', body):
+                names.add(os.path.splitext(os.path.basename(pack_models[found.group(1)]))[0])
+    if not names:
+        raise ValueError("no tile blueprint names a model in %s: the path moved?" % tiles)
+    return names
+
+
 def model_ids(game, model):
     """The ids the default resource pack gives the .glb named `model` (without its extension)."""
     path = os.path.join(game, MANIFEST)

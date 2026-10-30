@@ -26,6 +26,8 @@ from lib import scene, starfield  # noqa: E402
 
 SOURCE = os.path.join(HERE, "sources", "starry_egg.glb")
 FPS = 30
+# Its kind on the world's scale (lib/world_scale.py): a thing standing on one hex.
+WORLD_SCALE = "prop"
 # Vertices closer than this are one (the export's seam splits), and an edge sharper than this
 # angle stays sharp in the shading.
 WELD = 1e-5
