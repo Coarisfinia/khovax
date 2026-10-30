@@ -306,9 +306,10 @@ background; only wait in the foreground for a result the very next step needs.
     nothing blocking, named on the pull request. The merge queue still needs one approving review
     and doesn't apply the bot's bypass (#1867), so the main session then labels the pull request
     `subagent-cleared` and `.github/workflows/approve-cleared.yml` approves it (#1874), but only
-    when the agent bot or a human admin put the label on, and never for a pull request that
-    changes user-facing files (`packages/game/` outside its `tests/` and `tools/`; owner's pick 1
-    on #1874). A push withdraws that approval, never a person's; clear it again (label off and on).
+    when the agent bot or a human admin put the label on, only into the default branch, and never
+    for a pull request that changes or renames user-facing files (`packages/game/` outside its
+    `tests/` and `tools/`; owner's pick 1 on #1874). A push or a new base withdraws that approval,
+    never a person's; clear it again (label off and on).
     Queue it once that approval is there.
 
   **CodeRabbit reviews at most once per pull request** (owner's ground rule, #1783): its automatic
@@ -750,8 +751,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   (`gh auth refresh -h github.com -s workflow`).
 - **Never use the `pull_request_target` or `workflow_run` triggers**, and never add self-hosted
   runners to this public repository. **The one exception** (owner's pick on #1867, #1874):
-  `approve-cleared.yml` runs on `pull_request_target`'s `labeled`, with only `pull-requests: write`,
-  and never checks out or runs anything from the pull request.
+  `approve-cleared.yml` runs on `pull_request_target` (`labeled`, `synchronize`, `edited`), with
+  only `pull-requests: write`, and never checks out or runs anything from the pull request.
 - **Everything CI downloads is pinned and verified:** actions by full commit SHA (with the tag in a
   comment), and Godot, its export templates, Blender, gdstyle and uv by checksum, with cache keys
   that include the checksum. Bump a version and its checksum together, in `ci.yml` and `release.yml` both.
