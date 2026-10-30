@@ -1,0 +1,201 @@
+# Approves a pull request once it is labelled `subagent-cleared` (#1874, the owner's pick on #1867),
+# and withdraws that approval when its commits or its base change.
+#
+# The merge queue requires one approving review ("main approval") and doesn't apply the agent
+# bot's bypass, and the bot can't approve its own pull requests. A pull request that isn't
+# user-facing is cleared by the main session's review subagent, which then labels it
+# `subagent-cleared`; this workflow turns that label into the approval the queue needs.
+#
+# The label counts only when the agent bot or a human admin of the repository (the owner) put it
+# on, and only for a pull request into the default branch that touches no user-facing files (the
+# owner's pick 1 on #1874). The approval comes from a separate reviewer GitHub App, whose key is a
+# secret of the `approve-cleared` environment, which only `main` may use (the owner's second pick
+# 1 on #1874): workflows on other branches can't approve, and "Allow GitHub Actions to create and
+# approve pull requests" stays off. `pull_request_target` is the one exception to AGENTS.md's ban
+# on it: it runs this file from the base branch, so it must never check out or run anything from
+# the pull request, and it doesn't.
+name: approve-cleared
+
+on:
+  pull_request_target:
+    types: [labeled, synchronize, edited]
+
+# The workflow's own token only reads; approving and dismissing use the reviewer app's token.
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  approve:
+    if: github.event.action == 'labeled' && github.event.label.name == 'subagent-cleared'
+    # One approval per pull request at a time. Only this job is in the group: GitHub keeps one
+    # pending run per group, so a withdrawal in it could be dropped by a later label.
+    concurrency:
+      group: approve-cleared-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    environment: approve-cleared
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    env:
+      REPO: ${{ github.repository }}
+      PR: ${{ github.event.pull_request.number }}
+      HEAD: ${{ github.event.pull_request.head.sha }}
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+    steps:
+      - name: Check that the agent bot or the owner cleared it and it isn't user-facing
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SENDER: ${{ github.event.sender.login }}
+          SENDER_TYPE: ${{ github.event.sender.type }}
+          BOT: coarisfinia-ai-agent[bot]
+          CHANGED_FILES: ${{ github.event.pull_request.changed_files }}
+        run: |
+          if [ "$SENDER" = "$BOT" ]; then
+            who="the agent bot"
+          elif [ "$SENDER_TYPE" = User ] &&
+            [ "$(gh api "repos/$REPO/collaborators/$SENDER/permission" --jq .permission)" = admin ]; then
+            who="an admin"
+          else
+            echo "Not approving #$PR: '$SENDER' put the label subagent-cleared on, and only the" \
+              "agent bot or a human admin of the repository may clear a pull request."
+            exit 0
+          fi
+          # The pull request as it is now: the same commits as labelled, into the default branch.
+          if [ "$(gh api "repos/$REPO/pulls/$PR" --jq '.head.sha + " " + .base.ref')" != "$HEAD $DEFAULT_BRANCH" ]; then
+            echo "Not approving #$PR: its commits or its base changed after the label, or it" \
+              "doesn't go into $DEFAULT_BRANCH; clear it again."
+            exit 0
+          fi
+          # The bot that labels is also the bot that opens pull requests, so the label alone could
+          # approve a user-facing one (#1874). The game itself is user-facing; its tests and tools
+          # aren't. The files come from the labelled commits, one JSON string per line ("F" for a
+          # file's path, "P" for the path a rename came from, which counts too), so a newline in
+          # a name can't split it. A list that can't be read in full approves nothing. It is
+          # compared against the default branch, as GitHub counts `changed_files`.
+          files=$(gh api --paginate "repos/$REPO/compare/$DEFAULT_BRANCH...$HEAD" --jq '.files[]? |
+            ("F" + (.filename | @json)), (select(.previous_filename) | "P" + (.previous_filename | @json))')
+          if [ "$(printf '%s\n' "$files" | grep -c '^F"')" -ne "$CHANGED_FILES" ]; then
+            echo "Not approving #$PR: its list of changed files couldn't be read in full."
+            exit 0
+          fi
+          # The guard never approves a change to itself (#1874). Any workflow may reach the
+          # reviewer app's environment once merged, and a name built at run time hides that from
+          # any text check, so a change to any workflow needs the owner.
+          guard=$(printf '%s\n' "$files" | cut -c2- | grep '^"\.github/workflows/' || true)
+          if [ -n "$guard" ]; then
+            echo "Not approving #$PR: it changes workflows, which can reach the approval guard" \
+              "and always need the owner's approval:"
+            printf '%s\n' "$guard"
+            exit 0
+          fi
+          user_facing=$(printf '%s\n' "$files" | cut -c2- |
+            grep '^"packages/game/' | grep -v -e '^"packages/game/tests/' -e '^"packages/game/tools/' || true)
+          if [ -n "$user_facing" ]; then
+            echo "Not approving #$PR: it changes user-facing files, which need the owner's approval:"
+            printf '%s\n' "$user_facing"
+            exit 0
+          fi
+          echo "#$PR at $HEAD may be approved: $who ('$SENDER') labelled it subagent-cleared."
+          echo "sender=$SENDER" >> "$GITHUB_OUTPUT"
+      - name: Get the reviewer app's token
+        if: steps.check.outputs.sender
+        id: reviewer
+        # actions/create-github-app-token v3.3.0
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510
+        with:
+          app-id: ${{ vars.REVIEWER_APP_ID }}
+          private-key: ${{ secrets.REVIEWER_APP_KEY }}
+          permission-pull-requests: write
+      - name: Approve as the reviewer app
+        if: steps.check.outputs.sender
+        env:
+          GH_TOKEN: ${{ steps.reviewer.outputs.token }}
+          SENDER: ${{ steps.check.outputs.sender }}
+        run: |
+          body="Approved because \`$SENDER\` labelled it \`subagent-cleared\`: a review subagent"
+          body+=" found nothing blocking in this pull request, which isn't user-facing (#1874)."
+          # Pinned to the commit that was checked, so a later push never inherits it unseen.
+          review=$(gh api --method POST "repos/$REPO/pulls/$PR/reviews" -f commit_id="$HEAD" \
+            -f event=APPROVE -f body="$body" --jq .id)
+          echo "Approved: review $review."
+          # A push or a new base during the checks gets its own withdrawal, but take it back here
+          # too, at once.
+          if [ "$(gh api "repos/$REPO/pulls/$PR" --jq '.head.sha + " " + .base.ref')" != "$HEAD $DEFAULT_BRANCH" ]; then
+            gh api --method PUT "repos/$REPO/pulls/$PR/reviews/$review/dismissals" -f event=DISMISS \
+              -f message="It changed while it was being approved: clear it again (#1874)." --silent
+            echo "Withdrawn again: its commits or its base changed while it was being approved."
+          fi
+
+  # The ruleset keeps approvals across pushes and base changes, so on every run the reviewer app's
+  # approvals that no longer fit are dismissed: any for a commit other than the live head, and all
+  # of them when the base changed. A person's approval stays. Neither job is in a concurrency
+  # group, so no later run can drop them.
+  stale:
+    # Only reads, outside the environment, so a push enters `approve-cleared` (a deployment on the
+    # pull request) only when some bot's approval no longer fits.
+    if: github.event.action != 'edited' || github.event.changes.base
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    outputs:
+      found: ${{ steps.find.outputs.found }}
+    steps:
+      - name: Look for bot approvals that no longer fit
+        id: find
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          BASE_CHANGED: ${{ github.event.action == 'edited' }}
+        run: |
+          LIVE_HEAD=$(gh api "repos/$REPO/pulls/$PR" --jq .head.sha)
+          export LIVE_HEAD BASE_CHANGED
+          found=$(gh api --paginate "repos/$REPO/pulls/$PR/reviews" --jq '.[] |
+            select(.user.type == "Bot" and .state == "APPROVED"
+              and (env.BASE_CHANGED == "true" or .commit_id != env.LIVE_HEAD)) | .id')
+          echo "found=${found:+true}" >> "$GITHUB_OUTPUT"
+          echo "#$PR: ${found:+a bot approval to check}${found:-no bot approval to withdraw}."
+
+  withdraw:
+    needs: stale
+    if: needs.stale.outputs.found == 'true'
+    environment: approve-cleared
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    steps:
+      - name: Get the reviewer app's token
+        id: reviewer
+        # actions/create-github-app-token v3.3.0
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510
+        with:
+          app-id: ${{ vars.REVIEWER_APP_ID }}
+          private-key: ${{ secrets.REVIEWER_APP_KEY }}
+          permission-pull-requests: write
+      - name: Dismiss the reviewer app's approvals that no longer fit
+        env:
+          GH_TOKEN: ${{ steps.reviewer.outputs.token }}
+          SLUG: ${{ steps.reviewer.outputs.app-slug }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          BASE_CHANGED: ${{ github.event.action == 'edited' }}
+        run: |
+          # Matched by the app's user id, so a missing or renamed slug can't make it miss silently.
+          if [ -z "$SLUG" ]; then
+            echo "::error::The reviewer app's token step gave no app slug."
+            exit 1
+          fi
+          REVIEWER=$(gh api "users/$SLUG%5Bbot%5D" --jq .id)
+          LIVE_HEAD=$(gh api "repos/$REPO/pulls/$PR" --jq .head.sha)
+          export LIVE_HEAD BASE_CHANGED REVIEWER
+          ids=$(gh api --paginate "repos/$REPO/pulls/$PR/reviews" --jq '.[] |
+            select(.user.id == (env.REVIEWER | tonumber) and .state == "APPROVED"
+              and (env.BASE_CHANGED == "true" or .commit_id != env.LIVE_HEAD)) | .id')
+          if [ -z "$ids" ]; then
+            echo "#$PR has no approval from $SLUG[bot] to withdraw."
+            exit 0
+          fi
+          for id in $ids; do
+            gh api --method PUT "repos/$REPO/pulls/$PR/reviews/$id/dismissals" -f event=DISMISS \
+              -f message="Its commits or its base changed after the clearance: clear it again (#1874)." \
+              --jq '"Dismissed review " + (.id | tostring)'
+          done
