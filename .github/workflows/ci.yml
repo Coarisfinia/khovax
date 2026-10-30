@@ -193,6 +193,12 @@ jobs:
         # scene, script, content file or setting, or by a glTF that is (#320).
         run: uv run --locked --package khovax-game-checks ../game-checks/unused_assets.py
 
+      - name: "🎨 Check the default resource pack"
+        # Our own resources are the default pack (#1860): every id resolves, nothing is
+        # unreferenced, the manifest matches the files, and nothing names a texture's path
+        # around the resolver.
+        run: uv run --locked --package khovax-game-checks ../game-checks/resource_packs_check.py
+
       - name: "🗂️ Check the content data against its schemas"
         # Each kind's content files, as Godot's data_to_json.gd writes them, against its schema;
         # the rules for which schema checks which folder are in the check itself.
