@@ -5,7 +5,8 @@ extends VBoxContainer
 ## next level (#1251), its types (each after
 ## its family's badge, TypeBadge), HP, strength and speed, its special attack and its two passives
 ## by name. A monster whose species ascends (#1235) shows how, as a picture (EvolutionGraphic,
-## #1796): at which level, with which material, into a form still unknown; and an Ascend button
+## #1796): at which level, with which material, into which form once the player knows it (#1801);
+## and an Ascend button
 ## that's pressable once it has reached that level and the player holds the material; after it
 ## ascends, a line says so. It only reads what it's given, and tells
 ## `ascend_chosen` when its button is pressed.
@@ -106,6 +107,13 @@ func show_monster(
 	MenuWidgets.show_lines(_lines, lines)
 	if monster != null and species != null:
 		_badge_types(species.types)
+
+
+## Shows the form the monster shown ascends into as `next`, or as a question mark for null: the
+## player doesn't know that species yet (#1801).
+func show_next_form(next: Species) -> void:
+	var next_types: Array[String] = next.types if next != null else ([] as Array[String])
+	evolution.show_next(tr(next.name) if next != null else "", next_types)
 
 
 ## Said once a monster has ascended: from which species, `from`, into which, `into`.

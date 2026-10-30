@@ -3,8 +3,10 @@ extends HBoxContainer
 ## How a dominated monster evolves (#1796), as a picture rather than a line: its current form on
 ## the left (its first type's badge, larger, over its species' name), then an arrow to the right
 ## with what the evolution takes shown above it as an item (its material, with how many of the one
-## it needs the player holds) and the level below it, and at the arrow's end a question mark in a
-## dark circle for the form that's still unknown (UnknownFormMark). The item is a button: hovering
+## it needs the player holds) and the level below it, and at the arrow's end the form it ascends
+## into: once the player knows it (#1801), like the current form, its first type's badge over its
+## name; until then a question mark in a dark circle (UnknownFormMark). The item is a button:
+## hovering
 ## it, giving it a controller's focus or tapping it opens a HoverCard saying what it is and what
 ## the evolution needs. MonsterDetails shows it for a monster whose species ascends (#1235).
 
@@ -19,11 +21,18 @@ const GAP_FONTS: float = 0.5
 ## The item standing for what the evolution takes, and the card it opens.
 var item: Button
 var card: HoverCard
-## The level it evolves at, as the line below the arrow says it. Kept here so tests can read it.
+## The level it evolves at, as the line below the arrow says it, and the name of the form it
+## ascends into, "" while that's unknown. Kept here so tests can read them.
 var level_line: String = ""
+var next_form: String = ""
+## What stands for the next form while it's unknown, and its badge once it's known (null before).
+var mark: UnknownFormMark
+var next_badge: TypeBadge
 var _form: VBoxContainer
 var _form_name: Label
 var _badge: TypeBadge
+var _next: VBoxContainer
+var _next_name: Label
 var _arrow: EvolutionArrow
 var _level: Label
 
@@ -42,14 +51,14 @@ func _init() -> void:
 	middle.add_child(_arrow)
 	_level = _centered()
 	middle.add_child(_level)
-	var unknown: VBoxContainer = _column()
-	var mark: UnknownFormMark = UnknownFormMark.new()
+	_next = _column()
+	mark = UnknownFormMark.new()
 	mark.fonts = FORM_FONTS
 	mark.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	unknown.add_child(mark)
-	var unknown_name: Label = _centered()
-	unknown_name.text = tr("Unknown")
-	unknown.add_child(unknown_name)
+	_next.add_child(mark)
+	_next_name = _centered()
+	_next_name.text = tr("Unknown")
+	_next.add_child(_next_name)
 
 
 func _notification(what: int) -> void:
@@ -73,20 +82,24 @@ func show_evolution(
 	holds: int,
 ) -> void:
 	_form_name.text = species_name
-	var first_type: String = types[0] if not types.is_empty() else ""
-	if _badge == null or _badge.tooltip_text != first_type:
-		if _badge != null:
-			_form.remove_child(_badge)
-			_badge.queue_free()
-		_badge = TypeBadge.new(first_type)
-		_badge.fonts = FORM_FONTS
-		_badge.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		_form.add_child(_badge)
-		_form.move_child(_badge, 0)
+	_badge = _badge_in(_form, _badge, types)
 	item.text = held_text(holds)
 	level_line = TranslationServer.tr("Level {level}").format({ "level": level })
 	_level.text = level_line
 	card.show_lines([given, material_text(given, holds), level_text(level)])
+
+
+## Shows the form it ascends into as the species named `next_name`, of `next_types`, or as a
+## question mark for a `next_name` of "": the player doesn't know that species yet.
+func show_next(next_name: String, next_types: Array[String]) -> void:
+	next_form = next_name
+	var known: bool = not next_name.is_empty()
+	_next_name.text = next_name if known else tr("Unknown")
+	mark.visible = not known
+	if known:
+		next_badge = _badge_in(_next, next_badge, next_types)
+	if next_badge != null:
+		next_badge.visible = known
 
 
 ## How many of the one material it needs the player `holds`, on the item.
@@ -107,6 +120,23 @@ static func material_text(given: String, holds: int) -> String:
 		"Given one {material}: you hold {count}",
 		holds,
 	).format({ "material": given, "count": holds })
+
+
+## The badge of the first of `types` at the top of `column`, in place of `old` (null for none),
+## which stays when it already shows that type: the graphic is shown anew every frame.
+static func _badge_in(column: VBoxContainer, old: TypeBadge, types: Array[String]) -> TypeBadge:
+	var first_type: String = types[0] if not types.is_empty() else ""
+	if old != null and old.tooltip_text == first_type:
+		return old
+	if old != null:
+		column.remove_child(old)
+		old.queue_free()
+	var made: TypeBadge = TypeBadge.new(first_type)
+	made.fonts = FORM_FONTS
+	made.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	column.add_child(made)
+	column.move_child(made, 0)
+	return made
 
 
 ## A column of the graphic, added to it, its parts centered.
