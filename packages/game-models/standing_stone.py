@@ -1,8 +1,8 @@
 """The standing stone (#1853), the savepoint (#1854): a slab of stone with a round hole through its
 upper middle, in a ring of flat paving stones. Its shape is the owner's generated model, made
 without a texture (`sources/standing_stone.glb`, from the download by import_source.py: see the
-asset's SOURCE.md); its colours are the props' shared texture set (lib/prop_paint.py), mapped by
-this script: pale weathered stone with chips and streaks, moss on its top and ledges, a darker
+asset's SOURCE.md); its colours are the props' shared texture set (lib/prop_paint.py, CC0
+textures), mapped by this script: weathered stone, moss on its top and ledges, darker crevices and
 foot, and the hole's inner wall as its own part (`glow`), which the game lights once the stone is
 activated (#1854). No runes: its faces stay free for an engraving (#1855, #1856). A static model:
 no rig and no clips.
@@ -38,23 +38,14 @@ SHARP = math.radians(40.0)
 # inner wall.
 HOLE_X, HOLE_Z, HOLE_RADIUS = 0.0, 0.05, 0.12
 RIM = 1.25
-# The rim's colour while unlit: a pale, faintly blue stone, so the glow's part reads as stone
+# The rim's colour while unlit: a shaded, faintly blue stone, so the glow's part reads as stone
 # until the game lights it.
-RIM_COLOUR = (0.70, 0.73, 0.74)
+RIM_COLOUR = (0.52, 0.56, 0.58)
+# The materials, in their slots: (name, the set's texture, its grey factor, linear).
+MATERIALS = (("stone", "stone", 1.0), ("stone_shaded", "stone", prop_paint.Weathering.shade), ("moss", "moss", 1.0))
+STONE, SHADED, MOSS, GLOW = range(4)
 # How far a crevice's darkness looks, in metres once sized.
 REACH = 0.25
-
-
-class Slab(prop_paint.Weathering):
-    foot = 0.45
-    foot_height = 0.30
-    foot_wobble = 0.08
-
-
-class Paving(prop_paint.Weathering):
-    base = 0.40
-    foot = 0.0
-    chip_share = 0.30
 
 
 def place(obj):
@@ -85,6 +76,21 @@ def subdivide(obj, faces):
     work.free()
 
 
+def vertex_data(mesh):
+    return (numpy.array([vertex.co[:] for vertex in mesh.vertices]),
+            numpy.array([vertex.normal[:] for vertex in mesh.vertices]))
+
+
+def slab_vertices(mesh):
+    """Whether each vertex is the slab's (the largest piece) rather than a paving stone's."""
+    pieces = repaint.pieces(mesh)
+    slab = numpy.zeros(len(mesh.vertices), dtype=bool)
+    for polygon in mesh.polygons:
+        if pieces[polygon.index] == 0:
+            slab[list(polygon.vertices)] = True
+    return slab
+
+
 def main():
     out = sys.argv[sys.argv.index("--") + 1]
     scene.reset(FPS)
@@ -102,45 +108,50 @@ def main():
 
     pieces = repaint.pieces(stone.data)
     subdivide(stone, sorted(face for face, piece in pieces.items() if piece == 0))
-    pieces = repaint.pieces(stone.data)
     bpy.ops.object.shade_smooth_by_angle(angle=SHARP)
     mesh = stone.data
+    for name, texture, factor in MATERIALS:
+        mesh.materials.append(prop_paint.material(name, texture, factor))
+    mesh.materials.append(prop_paint.glow("glow", RIM_COLOUR))
 
-    points = numpy.array([vertex.co[:] for vertex in mesh.vertices])
-    normals = numpy.array([vertex.normal[:] for vertex in mesh.vertices])
-    on_slab = numpy.zeros(len(points), dtype=bool)
-    for polygon in mesh.polygons:
-        if pieces[polygon.index] == 0:
-            on_slab[list(polygon.vertices)] = True
+    # Moss on the slab's top and ledges, never on the paving: cut along its edge, then given to
+    # the faces above it (the cuts keep a face's material, so the next cut keeps the moss).
+    slab = slab_vertices(mesh)
+    points, normals = vertex_data(mesh)
+    moss = numpy.where(slab, prop_paint.mossiness(points, normals), -1.0)
+    moss = prop_paint.contour(mesh, moss, 0.0)
+    for polygon, above in zip(mesh.polygons, prop_paint.side(mesh, moss, 0.0)):
+        polygon.material_index = MOSS if above else STONE
+
+    # The shaded step: crevices, and the slab's foot (the paving lies on the ground whole, so
+    # only its cracks darken).
+    slab = slab_vertices(mesh)
+    points, normals = vertex_data(mesh)
+    shut = prop_paint.occlusion(stone, points, normals, REACH)
+    dark = numpy.where(slab, prop_paint.darkness(points, shut), prop_paint.darkness(points, shut, foot=False))
+    dark = prop_paint.contour(mesh, dark, prop_paint.Weathering.shaded)
+    for polygon, above in zip(mesh.polygons, prop_paint.side(mesh, dark, prop_paint.Weathering.shaded)):
+        if above and polygon.material_index == STONE:
+            polygon.material_index = SHADED
 
     # The hole's inner wall: slab faces near the axis, turned toward it.
-    rim = []
+    pieces = repaint.pieces(mesh)
+    rim = 0
     for polygon in mesh.polygons:
-        if pieces[polygon.index] != 0:
-            continue
         centre = polygon.center
         inward = numpy.array((axis_x - centre.x, axis_z - centre.z))
         distance = float(numpy.hypot(*inward))
-        if distance < radius * RIM and float(numpy.dot(inward / max(distance, 1e-9), (polygon.normal.x, polygon.normal.z))) > 0.5:
-            rim.append(polygon.index)
+        if pieces[polygon.index] == 0 and distance < radius * RIM and \
+                float(numpy.dot(inward / max(distance, 1e-9), (polygon.normal.x, polygon.normal.z))) > 0.5:
+            polygon.material_index = GLOW
+            rim += 1
+    prop_paint.box_uv(mesh)
 
-    shut = prop_paint.occlusion(stone, points, normals, REACH)
-    tone, cover = numpy.empty(len(points)), numpy.empty(len(points))
-    slab_tone, slab_cover = prop_paint.weathered(points[on_slab], normals[on_slab], shut[on_slab], Slab)
-    paving_tone, paving_cover = prop_paint.weathered(points[~on_slab], normals[~on_slab], shut[~on_slab], Paving, moss=False)
-    tone[on_slab], cover[on_slab] = slab_tone, slab_cover
-    tone[~on_slab], cover[~on_slab] = paving_tone, paving_cover
-    prop_paint.apply(mesh, prop_paint.uv("stone", tone, cover))
-
-    mesh.materials.append(prop_paint.material())
-    mesh.materials.append(prop_paint.glow("glow", RIM_COLOUR))
-    for index in rim:
-        mesh.polygons[index].material_index = 1
-
-    top = points[:, 2].max()
+    points, _normals = vertex_data(mesh)
+    counts = numpy.bincount([polygon.material_index for polygon in mesh.polygons], minlength=len(mesh.materials))
     print("BUDGET triangles", scene.triangles(stone), "materials", len(mesh.materials),
-          "atlas", "%dx%d" % (prop_paint.WIDTH, prop_paint.HEIGHT), "scale %.4f" % size,
-          "height %.3f" % top, "rim faces", len(rim), "mossy vertices", int((cover >= 0.5).sum()),
+          "textures %dx%d" % tuple(bpy.data.images["stone"].size), "scale %.4f" % size,
+          "height %.3f" % points[:, 2].max(), "faces per material", dict(zip([m.name for m in mesh.materials], counts.tolist())),
           "reach %.3f" % footprint.spread(points))
     scene.export_glb(out)
 
