@@ -10,7 +10,7 @@ from scratch. The owner gives its source (the mesh, and the rig if it has one), 
 scenery it comes from a free licensed source; agents import, rig, animate, check and fix it, and
 work on the tooling. Needing a new model goes as AGENTS.md
 says (#1575): a `question` issue with base prompts for a monster, a free licensed source for
-anything else.
+anything else, and never a new model for what a retexture of an existing one resolves (#1847).
 
 **Every base prompt for a monster ends with the same sentence** (the owner's pick on #1682):
 `Two small, plain, flat black oval eyes.` Word for word, in every prompt, whatever else the
@@ -42,6 +42,19 @@ One single creature, centred and alone, in a front three-quarter view, its whole
 Pose: a calm, symmetrical rest pose, head level, mouth closed. No loose or floating parts, no effects such as sparks, steam or smoke.
 Style: a stylized game creature with large, readable shapes and flat matte colours, smooth like a clay 3D render and ready for cel shading: plain flat colour areas without drawn outlines, painted highlights or painted shadows. Soft, even, shadowless light. No text.
 Two small, plain, flat black oval eyes.
+```
+
+**Every prop prompt ends with this fixed block** (owner, #1824, #1825): a non-monster asset (the
+world-asset list's props, scenery) is asked for with the first line, its own description, then the
+block word for word. **No single-hex asset has a door, doorway or entrance** (AGENTS.md, #1825):
+never describe one.
+
+```text
+Generate a brand-new image of a game prop for a stylized fantasy world.
+<the asset, as one or two plain sentences>
+
+One single object, centred and alone, in a front three-quarter view from slightly above, the whole object in frame with space all around it. The background is plain, flat light grey and continues unbroken beneath it; no ground, grass or base under it unless described above.
+Style: a stylized game asset with large, readable shapes and flat matte colours, smooth like a clay 3D render and ready for cel shading: plain flat colour areas without drawn outlines, painted highlights or painted shadows. Soft, even, shadowless light. No text, no people, no creatures, no effects such as sparks, steam or smoke.
 ```
 
 Every model is **built by a committed Blender script**, so it can be rebuilt, reviewed and changed
@@ -296,8 +309,11 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
 1. **Generating in Meshy** (the owner generates; owner, #1671): **triangle** topology at about
    **6,000 triangles**. That budget comes out a bit flawed now and then (thin parts merged into
    lumps, holes, stray faces); fix those spots by hand on import, never by asking for more
-   triangles. The face carries only the prompt's two flat black ovals (#1682), never eyes Meshy
-   draws or details: ours replace them (step 5). Meshy rigs it first wherever it can (#1514);
+   triangles. **The owner's raw export goes to the private repository
+   `Coarisfinia/khovax-sources`** (#1849): one folder per issue (`<issue>-<slug>/`), each file
+   named after its asset (`<slug>.glb`, a variant with a suffix); the import issue links the file,
+   and the import takes it from there as the `<download.glb>` of steps 2 and 3. The face carries only the prompt's two flat black ovals
+   (#1682), never eyes Meshy draws or details: ours replace them (step 5). Meshy rigs it first wherever it can (#1514);
    where it can't, we build our own Blender rig (#1732, section 2). An evolution's image comes
    from the copypasta above (#1754).
 2. **Inspect:** `uv run --locked packages/game-models/inspect_meshy.py <download.glb>` (#1523),
@@ -446,11 +462,13 @@ prop's own, and never another grey stone. A prop's script only maps its parts on
 "assets/<name>/<name>.glb"`), and content files and views name it by that id, never by its
 `res://` path (`resource_packs_check.py` in CI).
 
-A new material goes into the set (`prop_textures.py`'s `SET` and `textures/SOURCE.md`), CC0 only,
-for every prop. **When the set falls short**, a prop is textured in Meshy after all (10 credits
-more): painted detail the set can't place (a sign's lettering, a banner's pattern, a face), or the
-owner preferring Meshy's look for it. No runes or carvings by script: they come from the rune set
-(#1855) and the engraving work (#1856).
+A new material goes into the set (`prop_textures.py`'s `SET` and `textures/SOURCE.md`), for every
+prop. **Any free texture under a licence AGENTS.md allows for assets is permitted** (owner, #1825;
+#1511: CC0, or CC BY with credit): its source and licence go into `textures/SOURCE.md`, its licence
+file beside it, so the generated `CREDITS.md` credits it where the licence asks. **When the set
+falls short**, a prop is textured in Meshy after all (10 credits more): painted detail the set can't
+place (a sign's lettering, a banner's pattern, a face), or the owner preferring Meshy's look for it.
+No runes or carvings by script: they come from the rune set (#1855) and the engraving work (#1856).
 
 ## 1. Build (Blender script)
 - **Where:** `packages/game-models/<name>.py` builds the model, and
