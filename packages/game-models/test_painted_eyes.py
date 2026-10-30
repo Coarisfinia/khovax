@@ -12,6 +12,8 @@ while a single dim texel passes; and a dim patch two texels square on a coarse t
 low ball, whose texels lie farther apart on the surface than `fragments` groups by, fails as one
 spot (#1781), while two dim texels on each of two islands side by side on the texture, far apart
 on the head, pass: neither is a spot of FRAGMENT_TEXELS.
+A two-tone head whose right half is dark basalt, as the Kavrikka's, passes: that half is a tone of
+its own paint (#1782); a dim fragment on its pale half or a black one on its basalt fails.
 `fit` sets our eyes where the marks it was given are, mirrored across the middle they were found
 across (#1735): on a ball centred on x = 0 with `DARK`'s ovals, and on one off the middle with the
 hound's.
@@ -62,11 +64,23 @@ SPECKS = {"dim_speck": (3, False), "dim_texel": (1, True)}
 # texel wider on the surface than two of the cells `fragments` groups by, and the dim patch this many
 # texels square on it, which must fail.
 COARSE_SIZE, COARSE_SEGMENTS, COARSE_ACROSS = 32, (8, 4), 2
+# A texture so coarse that the patch is more than marked_eyes.TONE_SHARE of the texels the head
+# touches: still a fragment, not a tone of the head's paint (#1782).
+TINY_SIZE = 6
 # Two islands on a texture of COARSE_SIZE texels: flat squares facing forward at either side of the
 # head, the left one's UVs ending a little short of texel column ISLAND_EDGE and the right one's
 # starting a little past it, so their texels touch on the texture. Each has two dim texels at that
 # edge, on rows ISLAND_ROWS.
 ISLAND_EDGE, ISLAND_ROWS = 10, (4, 5)
+# A two-tone head (#1782), as lib/frostfire.py paints the Kavrikka: its right half (-X) dark basalt.
+BASALT = (0.17, 0.11, 0.10)
+# Name: (what is painted by the left eye and by the right one (on the basalt), each None or a
+# colour, and whether the check passes it).
+TWO_TONES = {
+    "two_tone": (None, None, True),
+    "two_tone_dim_fragment": (DIM, None, False),
+    "two_tone_black_fragment": (None, BLACK, False),
+}
 
 # Name: (the paint on the left eye and the right one (either may be None), or None, whether our eyes are joined in,
 # the head's weight to "head", the skin's colour, the beast in BEASTS whose own marking the check
@@ -212,21 +226,22 @@ def speck(name, across, passes):
     return ok
 
 
-def coarse():
+def coarse(name, size):
     """Whether the check fails a dim patch COARSE_ACROSS texels square by the left eye on a coarse
-    texture over a low ball, whose texels lie farther apart than `fragments` groups by on the
-    surface (#1781): side by side on the texture, they are one spot."""
-    skin = build(None, False, 1.0, SKIN, 0.0, COARSE_SIZE, COARSE_SEGMENTS)
+    texture `size` texels square over a low ball, whose texels lie farther apart than `fragments`
+    groups by on the surface (#1781): side by side on the texture, they are one spot."""
+    skin = build(None, False, 1.0, SKIN, 0.0, size, COARSE_SEGMENTS)
     head = marked_eyes.Head(skin, "head")
     rows, columns, texels = marked_eyes._texels(head, numpy.ones(len(head.spots), dtype=bool))
     nearest = numpy.sqrt(((texels - numpy.array(EYE)) ** 2).sum(axis=1)).argmin()
-    row, column = int(rows[nearest]), int(columns[nearest])
+    # The patch stays on the texture.
+    row, column = (min(int(at), size - COARSE_ACROSS) for at in (rows[nearest], columns[nearest]))
     head.pixels[row:row + COARSE_ACROSS, column:column + COARSE_ACROSS, :3] = DIM
     head.image.pixels.foreach_set(head.pixels.ravel())
     found = marked_eyes.fragments(skin)
     ok = bool(found)
-    (log.info if ok else log.error)("%s coarse_patch: %s at texel (%d, %d), should fail" % (
-        "ok" if ok else "FAIL", "found %s texels" % [mark.count for mark in found] if found else "nothing found",
+    (log.info if ok else log.error)("%s %s: %s at texel (%d, %d), should fail" % (
+        "ok" if ok else "FAIL", name, "found %s texels" % [mark.count for mark in found] if found else "nothing found",
         row, column))
     return ok
 
@@ -264,6 +279,27 @@ def islands():
     ok = not found
     (log.info if ok else log.error)("%s islands: %s, should pass" % (
         "ok" if ok else "FAIL", "found %s texels" % [mark.count for mark in found] if found else "nothing found"))
+    return ok
+
+
+def two_tone(name, left, right, passes):
+    """Whether the check passes as it should a ball whose right half is basalt, a tone of its own
+    paint (#1782), with `left` painted by the left eye and `right` by the right one, each over half
+    the eye's reach, if not None."""
+    skin = build(None, False, 1.0, SKIN, 0.0)
+    head = marked_eyes.Head(skin, "head")
+    rows, columns, texels = marked_eyes._texels(head, numpy.ones(len(head.spots), dtype=bool))
+    head.pixels[rows[texels[:, 0] < 0.0], columns[texels[:, 0] < 0.0], :3] = BASALT
+    for colour, eye in ((left, EYE), (right, Vector((-EYE.x, EYE.y, EYE.z)))):
+        if colour is not None:
+            near = numpy.sqrt(((texels - numpy.array(eye)) ** 2).sum(axis=1)) <= EYE_RADIUS / 2.0
+            head.pixels[rows[near], columns[near], :3] = colour
+    head.image.pixels.foreach_set(head.pixels.ravel())
+    found = sorted(marked_eyes.painted(skin)) + (["FRAGMENTS"] if marked_eyes.fragments(skin) else [])
+    ok = (not found) == passes
+    (log.info if ok else log.error)("%s %s: %s, %s" % (
+        "ok" if ok else "FAIL", name, "found " + ", ".join(found) if found else "nothing found",
+        "should pass" if passes else "should fail"))
     return ok
 
 
@@ -308,8 +344,11 @@ def main():
         (log.info if ok else log.error)(line)
     for name, (across, passes) in SPECKS.items():
         passed = speck(name, across, passes) and passed
-    passed = coarse() and passed
+    passed = coarse("coarse_patch", COARSE_SIZE) and passed
+    passed = coarse("tiny_patch", TINY_SIZE) and passed
     passed = islands() and passed
+    for name, (left, right, passes) in TWO_TONES.items():
+        passed = two_tone(name, left, right, passes) and passed
     for name, (paint, colour, beast) in FITS.items():
         passed = fits(name, paint, colour, beast) and passed
     log.info("PAINTED EYES TEST: %s" % ("PASS" if passed else "FAIL"))
