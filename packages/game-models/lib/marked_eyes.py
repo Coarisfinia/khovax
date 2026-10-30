@@ -55,6 +55,12 @@ MIRROR, WIDER = 0.6, 2.0
 # a few are a speck of shading in the paint (clean heads have single ones, the generator's
 # fragments a hundred).
 FRAGMENT_RATIO, FRAGMENT_TEXELS = 0.6, 4
+# A dark spot of at least this share of the texels the head touches is a tone of its own paint (a
+# two-tone head's basalt half, #1782, about 0.4 of the Kavrikka's), not an eye's leftovers (an eye
+# covers a few hundredths of a head): it is searched again against its own median. A spot is one
+# where it runs on across the surface, whatever UV islands it spans; a beast's own dark marks in
+# pieces apart, each smaller, are #1765's.
+TONE_SHARE = 0.1
 # The repaint, in the oval's own radii (1 at its edge): every texel inside FILL is painted over,
 # blended from the skin's samples between RING_IN and RING_OUT.
 FILL, RING_IN, RING_OUT = 1.35, 1.5, 2.3
@@ -422,7 +428,10 @@ def fragments(skin, bone="head", weight=HEAD_WEIGHT):
     those its samples read, so a speck between them shows too), those darker than FRAGMENT_RATIO
     of their median, grouped where they lie or sit side by side on the texture, each spot of at
     least FRAGMENT_TEXELS distinct texels as a `Mark` whose `count` is that number (a sliver across
-    an island's seam, a pupil on an island of its own, a dark speck by the eye). The ratio is below
+    an island's seam, a pupil on an island of its own, a dark speck by the eye). A spot of at least
+    TONE_SHARE of the head's texels is a tone of the head's own paint (#1782: a two-tone head's
+    dark half), not reported but searched the same way against its own median, so eye paint left on
+    it still shows. The ratio is below
     `scrub`'s, so a head `scrub` has cleaned, whose filled texels may sit a little under its own
     threshold, passes. Our own eyes are plain colours, not the texture, so they never count. The
     head is the faces weighted at least `weight` to `bone` (a beast's own `Marked`'s,
@@ -437,22 +446,29 @@ def fragments(skin, bone="head", weight=HEAD_WEIGHT):
     # A texel two triangles touch (along their shared side) counts once.
     texels = rows * head.pixels.shape[1] + columns
     value = head.pixels[rows, columns, :3].max(axis=1)
-    distinct = numpy.unique(texels, return_index=True)[1]
-    dark = numpy.flatnonzero(value < FRAGMENT_RATIO * float(numpy.median(value[distinct])))
-    if len(dark) == 0:
-        return []
     # Each triangle's normal: the one its samples carry.
-    normals = head.normals[::len(head.points) // len(head.spots)][triangles[dark]]
-    points, texels = spots[dark], texels[dark]
+    normals = head.normals[::len(head.points) // len(head.spots)][triangles]
+    islands = _islands(head)[triangles]
     cell = numpy.ptp(head.points, axis=0).max() / CELLS
+    tone = TONE_SHARE * len(numpy.unique(texels))
     marks = []
-    islands = _islands(head)[triangles[dark]]
-    for group in _touching(_spots(points, cell), texels, islands, head.pixels.shape[1]):
-        count = len(numpy.unique(texels[group]))
-        if count >= FRAGMENT_TEXELS:
-            mark = Mark(points[group], normals[group])
-            mark.count = count
-            marks.append(mark)
+    # The parts of the head searched, each against its own median: the whole head first, then each
+    # tone of its own paint found dark in it (#1782). Each part's dark texels are fewer than its own,
+    # so the search ends.
+    parts = [numpy.arange(len(texels))]
+    while parts:
+        part = parts.pop(0)
+        distinct = numpy.unique(texels[part], return_index=True)[1]
+        dark = part[value[part] < FRAGMENT_RATIO * float(numpy.median(value[part][distinct]))]
+        for group in _touching(_spots(spots[dark], cell), texels[dark], islands[dark], head.pixels.shape[1]):
+            spot = dark[group]
+            count = len(numpy.unique(texels[spot]))
+            if count >= tone:
+                parts.append(spot)
+            elif count >= FRAGMENT_TEXELS:
+                mark = Mark(spots[spot], normals[spot])
+                mark.count = count
+                marks.append(mark)
     return marks
 
 
