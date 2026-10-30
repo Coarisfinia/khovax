@@ -1,5 +1,6 @@
-# Approves a pull request once it is labelled `subagent-cleared` (#1874, the owner's pick on #1867),
-# and withdraws that approval when its commits or its base change.
+# Approves a pull request once it is labelled `subagent-cleared` (#1874, the owner's pick on #1867).
+# The approval is permanent, like the owner's (the owner's pick 2 on #1895, #1900): later pushes or
+# a new base never withdraw it.
 #
 # The merge queue requires one approving review ("main approval") and doesn't apply the agent
 # bot's bypass, and the bot can't approve its own pull requests. A pull request that isn't
@@ -18,7 +19,7 @@ name: approve-cleared
 
 on:
   pull_request_target:
-    types: [labeled, synchronize, edited]
+    types: [labeled]
 
 # The workflow's own token only reads; approving and dismissing use the reviewer app's token.
 permissions:
@@ -28,8 +29,7 @@ permissions:
 jobs:
   approve:
     if: github.event.action == 'labeled' && github.event.label.name == 'subagent-cleared'
-    # One approval per pull request at a time. Only this job is in the group: GitHub keeps one
-    # pending run per group, so a withdrawal in it could be dropped by a later label.
+    # One approval per pull request at a time.
     concurrency:
       group: approve-cleared-${{ github.event.pull_request.number }}
       cancel-in-progress: false
@@ -115,87 +115,14 @@ jobs:
         run: |
           body="Approved because \`$SENDER\` labelled it \`subagent-cleared\`: a review subagent"
           body+=" found nothing blocking in this pull request, which isn't user-facing (#1874)."
-          # Pinned to the commit that was checked, so a later push never inherits it unseen.
+          # Pinned to the commit that was checked, so the review shows what was cleared.
           review=$(gh api --method POST "repos/$REPO/pulls/$PR/reviews" -f commit_id="$HEAD" \
             -f event=APPROVE -f body="$body" --jq .id)
           echo "Approved: review $review."
-          # A push or a new base during the checks gets its own withdrawal, but take it back here
-          # too, at once.
+          # A push or a new base during the checks means the approval is for commits nobody
+          # cleared: take it back at once (the only time it is withdrawn).
           if [ "$(gh api "repos/$REPO/pulls/$PR" --jq '.head.sha + " " + .base.ref')" != "$HEAD $DEFAULT_BRANCH" ]; then
             gh api --method PUT "repos/$REPO/pulls/$PR/reviews/$review/dismissals" -f event=DISMISS \
               -f message="It changed while it was being approved: clear it again (#1874)." --silent
-            echo "Withdrawn again: its commits or its base changed while it was being approved."
+            echo "Withdrawn: its commits or its base changed while it was being approved."
           fi
-
-  # The ruleset keeps approvals across pushes and base changes, so on every run the reviewer app's
-  # approvals that no longer fit are dismissed: any for a commit other than the live head, and all
-  # of them when the base changed. A person's approval stays. Neither job is in a concurrency
-  # group, so no later run can drop them.
-  stale:
-    # Only reads, outside the environment, so a push enters `approve-cleared` (a deployment on the
-    # pull request) only when some bot's approval no longer fits.
-    if: github.event.action != 'edited' || github.event.changes.base
-    runs-on: ubuntu-26.04
-    timeout-minutes: 5
-    outputs:
-      found: ${{ steps.find.outputs.found }}
-    steps:
-      - name: Look for bot approvals that no longer fit
-        id: find
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          PR: ${{ github.event.pull_request.number }}
-          BASE_CHANGED: ${{ github.event.action == 'edited' }}
-        run: |
-          LIVE_HEAD=$(gh api "repos/$REPO/pulls/$PR" --jq .head.sha)
-          export LIVE_HEAD BASE_CHANGED
-          found=$(gh api --paginate "repos/$REPO/pulls/$PR/reviews" --jq '.[] |
-            select(.user.type == "Bot" and .state == "APPROVED"
-              and (env.BASE_CHANGED == "true" or .commit_id != env.LIVE_HEAD)) | .id')
-          echo "found=${found:+true}" >> "$GITHUB_OUTPUT"
-          echo "#$PR: ${found:+a bot approval to check}${found:-no bot approval to withdraw}."
-
-  withdraw:
-    needs: stale
-    if: needs.stale.outputs.found == 'true'
-    environment: approve-cleared
-    runs-on: ubuntu-26.04
-    timeout-minutes: 5
-    steps:
-      - name: Get the reviewer app's token
-        id: reviewer
-        # actions/create-github-app-token v3.3.0
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510
-        with:
-          app-id: ${{ vars.REVIEWER_APP_ID }}
-          private-key: ${{ secrets.REVIEWER_APP_KEY }}
-          permission-pull-requests: write
-      - name: Dismiss the reviewer app's approvals that no longer fit
-        env:
-          GH_TOKEN: ${{ steps.reviewer.outputs.token }}
-          SLUG: ${{ steps.reviewer.outputs.app-slug }}
-          REPO: ${{ github.repository }}
-          PR: ${{ github.event.pull_request.number }}
-          BASE_CHANGED: ${{ github.event.action == 'edited' }}
-        run: |
-          # Matched by the app's user id, so a missing or renamed slug can't make it miss silently.
-          if [ -z "$SLUG" ]; then
-            echo "::error::The reviewer app's token step gave no app slug."
-            exit 1
-          fi
-          REVIEWER=$(gh api "users/$SLUG%5Bbot%5D" --jq .id)
-          LIVE_HEAD=$(gh api "repos/$REPO/pulls/$PR" --jq .head.sha)
-          export LIVE_HEAD BASE_CHANGED REVIEWER
-          ids=$(gh api --paginate "repos/$REPO/pulls/$PR/reviews" --jq '.[] |
-            select(.user.id == (env.REVIEWER | tonumber) and .state == "APPROVED"
-              and (env.BASE_CHANGED == "true" or .commit_id != env.LIVE_HEAD)) | .id')
-          if [ -z "$ids" ]; then
-            echo "#$PR has no approval from $SLUG[bot] to withdraw."
-            exit 0
-          fi
-          for id in $ids; do
-            gh api --method PUT "repos/$REPO/pulls/$PR/reviews/$id/dismissals" -f event=DISMISS \
-              -f message="Its commits or its base changed after the clearance: clear it again (#1874)." \
-              --jq '"Dismissed review " + (.id | tostring)'
-          done
