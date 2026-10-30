@@ -227,6 +227,13 @@ jobs:
           timeout 300 ~/godot/godot --headless --path . --export-release "Web" build/web/index.html
           test -s build/web/index.html && test -s build/web/index.wasm && test -s build/web/index.pck
 
+      - name: "📦 Pack builder: zip it for pack makers"
+        # The resource pack builder (#1869), pinned to this release's Godot, as a zip beside the
+        # game (#1871).
+        run: |
+          uv run --locked --package khovax-game-pack-builder \
+            ../game-pack-builder/release_zip.py "build/release/${NAME}-${TAG}-pack-builder.zip"
+
       - name: "🔑 🤖 Android: export the release APK, signed with the release key"
         # Only with the release key's secrets (#1776); without them the release goes out without an
         # APK and says so. A dry run without them signs with a throwaway key instead, so the export
@@ -307,6 +314,7 @@ jobs:
           else
             notes+=" No Android APK yet: prod APKs need the release key, which isn't set up yet (#1776)."
           fi
+          notes+=" The pack-builder zip builds resource packs for this release; its README says how."
           notes+=" The Linux file needs \`chmod +x\` after downloading. The web build is playable at ${pages}; its files here run when served from one folder."
           # The changes since the previous prod release, as GitHub lists them; the first prod release
           # lists none, not the whole history.

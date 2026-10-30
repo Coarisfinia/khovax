@@ -11,7 +11,8 @@ script and no importer but a texture's or a scene's. Anything else refuses the w
 The pack's files go under res://packs/<id>/ in a copy of template/, a project with the game's
 import settings, which Godot imports and exports once per preset: a texture imported with VRAM
 compression packs as S3TC/BPTC for desktop and ETC2/ASTC for mobile, so each platform gets its
-own .pck. Godot is the one setup-godot pins (GODOT_VERSION): GODOT, ~/godot/godot or godot on the
+own .pck. Godot is the one setup-godot pins (GODOT_VERSION; in the builder each release ships,
+release_zip.py, godot.json beside it): GODOT, ~/godot/godot or godot on the
 PATH when it's that version, else it's downloaded to ~/godot/godot and checked against its
 GODOT_SHA512 (Linux x86_64 only).
 """
@@ -34,8 +35,10 @@ from game_shared.resource_packs import read_manifest
 
 HERE = Path(__file__).resolve().parent
 TEMPLATE = HERE / "template"
-# The one place Godot's version and checksum are pinned (#924).
+# The one place Godot's version and checksum are pinned (#924), and the copy of them the released
+# builder carries instead (release_zip.py, #1871).
 SETUP_GODOT = HERE.parents[1] / ".github" / "actions" / "setup-godot" / "action.yml"
+RELEASED_GODOT = HERE / "godot.json"
 MANIFEST = "pack.jsonc"
 PRESETS = ("desktop", "mobile")
 # What a pack may hold: images, models (a glTF's buffers too), text, and Godot's .import files.
@@ -147,7 +150,11 @@ def gltf_problems(pack: Path, gltf: Path) -> list[str]:
 
 
 def pinned() -> tuple[str, str]:
-    """Godot's pinned version and its Linux editor's SHA-512, from setup-godot."""
+    """Godot's pinned version and its Linux editor's SHA-512, from setup-godot, or from the
+    released builder's godot.json."""
+    if RELEASED_GODOT.is_file():
+        released = json.loads(RELEASED_GODOT.read_text(encoding="utf-8"))
+        return released["version"], released["sha512"]
     text = SETUP_GODOT.read_text(encoding="utf-8")
     version = re.search(r'"GODOT_VERSION=([0-9.]+)"', text)
     checksum = re.search(r'"GODOT_SHA512=([0-9a-f]+)"', text)
