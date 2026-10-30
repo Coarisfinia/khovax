@@ -2118,10 +2118,11 @@ func _check_prefetched() -> String:
 	return _check_resource_packs()
 
 
-## The default resource pack reads as the pack `default`, and every texture and model it lists
-## resolves through ResourcePacks (#1860, #1864). A manifest with an unknown field, a bad id or
-## version, or a texture or model whose file is missing, of another kind or lies outside the pack is
-## refused, as a player's pack will be (#1858).
+## The default resource pack reads as the pack `default`, and every texture, model and region it
+## lists resolves through ResourcePacks (#1860, #1864, #1861). A manifest with an unknown field, a
+## bad id or version, or a texture, model or region whose file is missing (a region's is read as
+## text and found when it's read), of another kind or lies outside the pack is refused, as a
+## player's pack will be (#1858).
 func _check_resource_packs() -> String:
 	var packs: Array[ResourcePack] = ResourcePacks.loaded()
 	if packs.size() != 1:
@@ -2136,10 +2137,19 @@ func _check_resource_packs() -> String:
 	for model_id: String in packs[0].models:
 		if ResourcePacks.model(model_id) == null:
 			return "the default pack's model %s doesn't resolve" % model_id
+	for region_id: String in packs[0].regions.keys() + packs[0].region_pieces.keys():
+		if not RegionFiles.exists(region_id):
+			return "the default pack's region %s doesn't resolve" % region_id
+	return _check_pack_manifests()
+
+
+## A player's pack manifest that's valid reads, and one with a problem is refused (#1858).
+func _check_pack_manifests() -> String:
 	var start: String = "{\"id\": \"%s\", \"name\": \"n\", \"version\": \"%s\","
 	var valid: String = (
 		start + " \"game_version\": \"0.1.0\", \"textures\": {\"%s\": \"%s\"},"
-		+ " \"models\": {\"m\": \"%s\"}%s}"
+		+ " \"models\": {\"m\": \"%s\"}, \"regions\": {\"r\": \"regions/r.md\"},"
+		+ " \"region_pieces\": {\"q\": [\"regions/q/start.md\"]}%s}"
 	)
 	var cog: String = "assets/game-icons/cog.svg"
 	var wolf: String = "assets/mana-wolf/mana_wolf.glb"
@@ -2154,6 +2164,15 @@ func _check_resource_packs() -> String:
 		"an image as a model": valid % ["p", "1.0.0", "a", cog, cog, ""],
 		"no models": (start + " \"game_version\": \"0.1.0\", \"textures\": {}}") % ["p", "1.0.0"],
 	}
+	var regions: String = valid % ["p", "1.0.0", "a", cog, wolf, ""]
+	cases["a region that isn't Markdown"] = regions.replace("regions/r.md", cog)
+	cases["a region piece outside the pack"] = regions.replace("regions/q/", "../")
+	cases["region pieces that aren't a list"] = regions.replace(
+		"[\"regions/q/start.md\"]",
+		"\"regions/q/start.md\"",
+	)
+	cases["a region without pieces"] = regions.replace("[\"regions/q/start.md\"]", "[]")
+	cases["no region pieces"] = regions.replace(", \"region_pieces\"", ", \"x_pieces\"")
 	if not ResourcePack.parse(
 		valid % ["p", "1.0.0", "a", cog, wolf, ""],
 		"res://",

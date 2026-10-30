@@ -1,8 +1,11 @@
 class_name RegionFiles
 extends Content
-## The text of a region's files (#816): its one region file, regions/<name>.md, or its region
-## pieces in regions/<name>/, read once per session (ContentCatalog), so loading an instance reads
-## no files. InstanceBlueprints reads the region from them.
+## The text of a region's files (#816): its one region file or its region pieces, as the resource
+## packs list them (#1861), read once per session (ContentCatalog), so loading an instance reads no
+## files. InstanceBlueprints reads the region from them.
+
+## The start of the catalog's keys for regions' files.
+const KEY: String = "region:"
 
 ## Each file's text, by its path, in path order: the one region file, or every region piece.
 var texts: Dictionary[String, String] = {}
@@ -17,32 +20,31 @@ static func cached(region_name: String) -> RegionFiles:
 
 ## The catalog's key for the files of the region `region_name`.
 static func key(region_name: String) -> String:
-	return InstanceBlueprints.REGIONS + region_name
+	return KEY + region_name
 
 
-## Whether the region `region_name` is in this build: a region file or a folder of pieces. The
-## device builds leave the test-only regions out (export_presets.cfg).
+## Whether the region `region_name` is in this build: a resource pack has it (#1861), and its files
+## are there. The device builds leave the test-only regions out (export_presets.cfg).
 static func exists(region_name: String) -> bool:
-	return (
-		FileAccess.file_exists(key(region_name) + ".md")
-		or DirAccess.dir_exists_absolute(key(region_name))
-	)
+	var whole_file: String = ResourcePacks.region_file(region_name)
+	if not whole_file.is_empty():
+		return FileAccess.file_exists(whole_file)
+	return ResourcePacks.region_pieces(region_name).any(FileAccess.file_exists)
 
 
-## The files of the region `region_name`, read: none when there's neither a region file nor a
-## folder of pieces.
+## The files of the region `region_name`, read from the resource packs (#1861): none when no pack
+## has it, or this build leaves its files out.
 static func load_region(region_name: String) -> RegionFiles:
 	var files: RegionFiles = RegionFiles.new()
-	var path: String = key(region_name) + ".md"
-	if FileAccess.file_exists(path):
-		files.whole = true
-		files.texts[path] = FileAccess.get_file_as_string(path)
+	var path: String = ResourcePacks.region_file(region_name)
+	if not path.is_empty():
+		if FileAccess.file_exists(path):
+			files.whole = true
+			files.texts[path] = FileAccess.get_file_as_string(path)
 		return files
-	var folder: String = key(region_name) + "/"
-	var names: Array[String] = []
-	names.assign(DirAccess.get_files_at(folder))
-	names.sort()
-	for file: String in names:
-		if file.ends_with(".md"):
-			files.texts[folder + file] = FileAccess.get_file_as_string(folder + file)
+	var paths: Array[String] = ResourcePacks.region_pieces(region_name)
+	paths.sort()
+	for piece: String in paths:
+		if FileAccess.file_exists(piece):
+			files.texts[piece] = FileAccess.get_file_as_string(piece)
 	return files

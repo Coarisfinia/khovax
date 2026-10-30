@@ -11,7 +11,6 @@ extends RefCounted
 ## starts and where each exit leads (#865), and only the tests and tools name the ones they load
 ## (#915).
 
-const REGIONS: String = "res://regions/"
 ## The region piece an arranged region starts from, holding the players' starts.
 const START_PIECE: String = "start.md"
 

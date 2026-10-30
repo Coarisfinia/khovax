@@ -6,13 +6,33 @@ extends RefCounted
 ## load differs.
 
 ## The manifest's fields, as resource_packs.schema.json beside the default pack lists them.
-const FIELDS: Array[String] = ["id", "name", "version", "game_version", "textures", "models"]
-## Each section of resources the manifest lists, with the type its files load as.
-const KINDS: Dictionary[String, String] = { "textures": "Texture2D", "models": "PackedScene" }
+const FIELDS: Array[String] = [
+	"id",
+	"name",
+	"version",
+	"game_version",
+	"textures",
+	"models",
+	"regions",
+	"region_pieces",
+]
+## Each section of resources the manifest lists, one file per id, with the type its files load as;
+## "" for a file read as text (a region file, #1861), which isn't checked to exist here: a build
+## may leave a test-only region out (export_presets.cfg), and RegionFiles finds only the files there
+## are.
+const KINDS: Dictionary[String, String] = {
+	"textures": "Texture2D",
+	"models": "PackedScene",
+	"regions": "",
+}
+## The section of regions arranged from pieces (#1861): each region's piece files by its id, read as
+## text like the region files.
+const PIECES: String = "region_pieces"
 ## The file endings each section takes, as resource_packs.schema.json lists them.
 const ENDINGS: Dictionary[String, Array] = {
 	"textures": ["svg", "png", "jpg", "jpeg", "webp"],
 	"models": ["glb", "gltf"],
+	"regions": ["md"],
 }
 ## A version: major.minor.patch.
 const VERSION: String = "\\A[0-9]+\\.[0-9]+\\.[0-9]+\\z"
@@ -27,6 +47,10 @@ var textures: Dictionary[String, String] = {}
 ## Each model's file (a .glb or .gltf, #1864) by its id, relative to `root`; empty while the pack
 ## has a problem.
 var models: Dictionary[String, String] = {}
+## Each region drawn whole in one file (#1861) by its id, relative to `root`.
+var regions: Dictionary[String, String] = {}
+## Each region arranged from pieces (#1861): its piece files by its id, relative to `root`.
+var region_pieces: Dictionary[String, PackedStringArray] = {}
 ## Where the pack's files are named from: res:// for the default pack.
 var root: String = ""
 ## Why the pack can't be used, or "" when it can.
@@ -34,8 +58,9 @@ var problem: String = ""
 
 
 ## The pack the manifest `text` describes, its files under `root`, with `problem` saying why it
-## can't be used: a field missing or unknown, an id that isn't one, or a texture or model whose
-## file doesn't exist or climbs out of `root`.
+## can't be used: a field missing or unknown, an id that isn't one, or a texture, model, region or
+## region piece whose file climbs out of `root`, has another kind's ending or (for a texture or
+## model) doesn't exist.
 static func parse(text: String, files_root: String) -> ResourcePack:
 	var pack: ResourcePack = ResourcePack.new()
 	pack.root = files_root
@@ -91,6 +116,27 @@ func _read(data: Dictionary) -> String:
 		found[kind] = files
 	textures.assign(found["textures"])
 	models.assign(found["models"])
+	regions.assign(found["regions"])
+	return _read_pieces(data.get(PIECES))
+
+
+## Reads the regions arranged from pieces from `raw` into this; returns why it can't, or "".
+func _read_pieces(raw: Variant) -> String:
+	if not raw is Dictionary:
+		return "its %s must be an object" % PIECES
+	var entries: Dictionary = raw
+	for key: Variant in entries:
+		var listed: Variant = entries[key]
+		var pieces: Array = listed if listed is Array else []
+		if pieces.is_empty():
+			return "region %s's pieces must be a list of files" % key
+		var files: PackedStringArray = []
+		for file: Variant in pieces:
+			var why: String = _entry_problem("regions", str(key), Content.text_of(file))
+			if not why.is_empty():
+				return why
+			var _added: bool = files.append(Content.text_of(file))
+		region_pieces[str(key)] = files
 	return ""
 
 
@@ -105,6 +151,6 @@ func _entry_problem(kind: String, resource_id: String, path: String) -> String:
 		return "%s %s's file %s must lie inside the pack" % [noun, resource_id, path]
 	if not ENDINGS[kind].has(path.get_extension()):
 		return "%s %s's file %s must end in one of %s" % [noun, resource_id, path, ENDINGS[kind]]
-	if not ResourceLoader.exists(root + path, KINDS[kind]):
+	if not KINDS[kind].is_empty() and not ResourceLoader.exists(root + path, KINDS[kind]):
 		return "%s %s's file %s doesn't exist" % [noun, resource_id, path]
 	return ""

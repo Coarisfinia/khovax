@@ -1525,9 +1525,10 @@ func _check_refusals(tiles: String) -> String:
 		var problem: String = InstanceBlueprints.read_region(text).problem
 		if not problem.begins_with(refusals[text]):
 			return "expected a refusal starting %s, got: %s" % [refusals[text], problem]
-	var thicket: String = FileAccess.get_file_as_string(
-		"res://regions/%s/thicket.md" % FlowSteps.GLADE,
-	)
+	var thicket: String = ""
+	for piece: String in ResourcePacks.region_pieces(FlowSteps.GLADE):
+		if piece.get_file() == "thicket.md":
+			thicket = FileAccess.get_file_as_string(piece)
 	var forest: String = "forest"
 	if not InstanceBlueprints.read_region(thicket).terrain.values().has(forest):
 		return "the glade's thicket has no forest"
@@ -1668,14 +1669,14 @@ func _check_dungeon_end() -> String:
 	return ""
 
 
-## Every region file and region piece.
+## Every region file and region piece the resource packs list (#1861).
 static func _region_files() -> Array[String]:
 	var paths: Array[String] = []
-	for folder: String in DirAccess.get_directories_at(InstanceBlueprints.REGIONS):
-		for file: String in DirAccess.get_files_at(InstanceBlueprints.REGIONS + folder):
-			paths.append(InstanceBlueprints.REGIONS + folder + "/" + file)
-	for file: String in DirAccess.get_files_at(InstanceBlueprints.REGIONS):
-		paths.append(InstanceBlueprints.REGIONS + file)
+	for pack: ResourcePack in ResourcePacks.loaded():
+		for region_id: String in pack.regions:
+			paths.append(ResourcePacks.region_file(region_id))
+		for region_id: String in pack.region_pieces:
+			paths.append_array(ResourcePacks.region_pieces(region_id))
 	return paths
 
 
