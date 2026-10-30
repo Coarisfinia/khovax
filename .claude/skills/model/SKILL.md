@@ -18,18 +18,24 @@ prompt says about its face. It only marks where the eyes go and how big they are
 replaces them with our own eyes, which blink and shut (`lib/marked_eyes.py`, below). A monster
 designed without eyes leaves the sentence out and says so in its issue.
 
-**Every evolution prompt is this copypasta** (owner, #1754): a baby form or any other evolution
-of an existing beast is asked for with the best picture of the earlier form attached and this
-block, word for word, only its `The change:` line differing between the issue's 20 variations. It
-ends with the eye sentence too. Every `The change:` line adds something unique, unusual or
-fantastical, such as nine tails, a skateboard, wings, extra heads or a landscape on its back, and
-a form later than the pictured one looks more powerful and more fantastical, never the same
-animal recoloured (owner, #1772); a baby form looks younger and smaller instead.
+**Every evolution prompt is this copypasta** (owner, #1754; reworded by the owner's ground rule
+of 2026-10-30, #1821): a baby form or any other evolution of an existing beast is asked for with
+the best picture of the earlier form attached as the reference and this block, word for word, only
+its two `<…>` lines differing between the issue's 20 variations. It ends with the eye sentence too.
+**An evolved form redesigns its body; it never copies the earlier form's body** (owner's ground
+rule, 2026-10-30, #1821): copying it isn't interesting. So each variation has a change, written as
+a plain sentence, that adds something unique, unusual or fantastical, such as nine tails, a
+skateboard, wings, extra heads or a landscape on its back, and its own body line saying how the
+body becomes different (e.g. "more sturdy"). A form later than the pictured one looks more
+powerful and more fantastical, never the same animal recoloured (owner, #1772); a baby form looks
+younger and smaller instead.
 
 ```text
-Generate a brand-new image of a creature. The attached picture is only a reference for it: it shows this creature's earlier form. Draw its next form: the same creature line, so keep its colours, materials, markings and character recognisable, and change only what the line below asks for.
-The change: <one of the 20 variations, e.g. "it should float">
-Body: keep the earlier form's body plan exactly. Add no legs, arms, wings, tail or other limbs it doesn't already have, and remove none it has, unless the change asks for it.
+Generate a brand-new image of a creature. Draw its evolved form.
+<the change, as a plain sentence, e.g. "It has grown one great wing of frosted ice and one great wing of cracked basalt, folded at its sides.">
+
+Its body also evolves. It becomes <how, e.g. "more sturdy"> - redesign it.
+
 One single creature, centred and alone, in a front three-quarter view, its whole body in frame with space all around it. The background is plain, flat light grey and continues unbroken beneath it.
 Pose: a calm, symmetrical rest pose, head level, mouth closed. No loose or floating parts, no effects such as sparks, steam or smoke.
 Style: a stylized game creature with large, readable shapes and flat matte colours, smooth like a clay 3D render and ready for cel shading: plain flat colour areas without drawn outlines, painted highlights or painted shadows. Soft, even, shadowless light. No text.
