@@ -151,7 +151,7 @@ def build(paint, ours, weight, colour, middle, size=SIZE, segments=(64, 32)):
     """The head: a ball of `colour`, weighted `weight` to "head" and centred on x = `middle`, with
     its texture, `paint`'s left and right colours laid over the eyes' spots on it (or nothing), and
     our eyes joined in when `ours`, their UVs on a black texel of the texture (`size` texels square);
-the ball has `segments` around and up."""
+    the ball has `segments` around and up."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
     image = bpy.data.images.new("skin", size, size)
     pixels = numpy.empty((size, size, 4), dtype=numpy.float32)
