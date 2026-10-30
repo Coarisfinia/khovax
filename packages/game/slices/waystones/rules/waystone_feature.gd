@@ -83,7 +83,8 @@ func _activate(state: GameState, player: Entity, stone: Vector2i) -> void:
 	if not RespawnPoint.set_to(state, player.slot, instance_name, stone):
 		return
 	var entry: Dictionary = state.store(player.slot, ID)
-	var stones: Array = entry.get(ACTIVATED, [])
+	var listed: Variant = entry.get(ACTIVATED)
+	var stones: Array = listed if listed is Array else []
 	var this_one: Array = [instance_name, stone.x, stone.y]
 	if not stones.has(this_one):
 		stones.append(this_one)
