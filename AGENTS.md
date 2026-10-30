@@ -305,7 +305,8 @@ background; only wait in the foreground for a result the very next step needs.
   - **not user-facing** (tooling, CI, docs, refactors, agent rules): once a review subagent finds
     nothing blocking, named on the pull request. The merge queue still needs one approving review
     and doesn't apply the bot's bypass (#1867), so the main session then labels the pull request
-    `subagent-cleared` and `.github/workflows/approve-cleared.yml` approves it (#1874), but only
+    `subagent-cleared` and `.github/workflows/approve-cleared.yml` approves it (#1874) as a
+    separate reviewer GitHub App, but only
     when the agent bot or a human admin put the label on, only into the default branch, and never
     for a pull request that changes or renames user-facing files (`packages/game/` outside its
     `tests/` and `tools/`; owner's pick 1 on #1874). A push or a new base withdraws that approval,
@@ -751,8 +752,12 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   (`gh auth refresh -h github.com -s workflow`).
 - **Never use the `pull_request_target` or `workflow_run` triggers**, and never add self-hosted
   runners to this public repository. **The one exception** (owner's pick on #1867, #1874):
-  `approve-cleared.yml` runs on `pull_request_target` (`labeled`, `synchronize`, `edited`), with
-  only `pull-requests: write`, and never checks out or runs anything from the pull request.
+  `approve-cleared.yml` runs on `pull_request_target` (`labeled`, `synchronize`, `edited`), with a
+  read-only token, and never checks out or runs anything from the pull request. It approves and
+  dismisses as a separate reviewer GitHub App (Pull requests: write, Contents: read), whose key is
+  the secret `REVIEWER_APP_KEY` (its ID the variable `REVIEWER_APP_ID`) of the environment
+  `approve-cleared`, which only `main` may use: a workflow on any other branch can't approve.
+  "Allow GitHub Actions to create and approve pull requests" stays off (owner's pick on #1874).
 - **Everything CI downloads is pinned and verified:** actions by full commit SHA (with the tag in a
   comment), and Godot, its export templates, Blender, gdstyle and uv by checksum, with cache keys
   that include the checksum. Bump a version and its checksum together, in `ci.yml` and `release.yml` both.
@@ -793,7 +798,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **`main` is protected by two rulesets** (#1783). **"main approval"** requires one approval
   (later pushes don't dismiss it). The agent bot is on its bypass list for pull requests only, but
   the merge queue ignores that bypass, so a pull request that isn't user-facing gets its approval
-  from `approve-cleared.yml` instead (above, #1874). **"protect main"**, with no bypass,
+  from the reviewer app through `approve-cleared.yml` instead (above, #1874). **"protect main"**, with no bypass,
   requires no approval itself but pull requests only, review threads resolved, the `headless` and `apk-e2e`
   checks from GitHub Actions green (`models`, the Blender model checks in their own job, #1357, joins
   them once the owner adds it to the ruleset), merged through the merge queue (#329; CI runs on its
