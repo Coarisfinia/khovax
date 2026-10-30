@@ -99,9 +99,10 @@ worktree, fully built and reviewed by Codex locally before it's pushed and opene
 one fix or one refactor, whole. Anything beyond it, even a related cleanup, side findings and tooling
 tweaks, gets its own issue and its own pull request later, never along for the ride.
 
-**Consider the default resource pack for everything new** (owner's ground rule, #1887): content,
-models, realms and region pieces, quests (#1888) and the like go into the default resource pack
-(#1860) when they belong there. The pull request's description says which was chosen and why.
+**Consider the default resource pack for everything new** (owner's ground rule, #1887):
+whatever is new (content, realms and region pieces, quests, #1888) is weighed for the default
+resource pack (#1860) and goes there if it belongs; every model does (the model skill, #1864). The
+pull request's description says which was chosen and why.
 
 **Keep each pull request low in complexity: a concise unit of progress, no bloat** (owner's rule).
 Prefer the simplest solution that does the job, and Godot's built-in way over a hand-built one. When
@@ -598,8 +599,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   or model has a door, doorway or entrance. A door is something the player expects to go through,
   so any door or opening is passable; gates and portals stand only where the path goes through.
 - **Every instance has at least one standing stone** (owner's ground rule, #1825, #1872): a
-  waystone at least 15 tiles from any hostile monster. With fast travel on (a host setting the
-  difficulty presets set), players travel between standing stones (#1873).
+  waystone at least 15 tiles from any hostile monster, as #1872 places it. With fast travel on (a
+  host setting, which the difficulty presets set), players travel between standing stones (#1873).
 - **Every attack is a species' own** (owner, #228): no move shared by every monster, and no
   borrowed move names. What attacks have in common is a property (a non-lethal auto attack, like a
   bird-style monster's beak strike, never takes a wild monster below 1 HP), not a common move.
@@ -693,7 +694,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
       ("no rig possible") gets its own skeleton and the full set of clips in Blender (the model
       skill, "Rig").
   - B. **Anything else** (props, scenery): use a free source whose license allows it here (below);
-    if there is none, do A, with the prop prompt block in the model skill.
+    if there is none, the owner makes it from prompts on the world-asset list (below), each ending
+    with the model skill's prop block.
 - **The world-asset list** (owner's ground rule, #1824, #1825): the issue of non-monster assets,
   3 prompts each. When the owner submits an asset, file a follow-up issue for its import and take
   the asset off the list.

@@ -311,8 +311,8 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
    lumps, holes, stray faces); fix those spots by hand on import, never by asking for more
    triangles. **The owner's raw export goes to the private repository
    `Coarisfinia/khovax-sources`** (#1849): one folder per issue (`<issue>-<slug>/`), each file
-   named after its asset (`<slug>.glb`, a variant with a suffix); the import issue links the file
-   and the import reads it from there. The face carries only the prompt's two flat black ovals
+   named after its asset (`<slug>.glb`, a variant with a suffix); the import issue links the file,
+   and the import takes it from there as the `<download.glb>` of steps 2 and 3. The face carries only the prompt's two flat black ovals
    (#1682), never eyes Meshy draws or details: ours replace them (step 5). Meshy rigs it first wherever it can (#1514);
    where it can't, we build our own Blender rig (#1732, section 2). An evolution's image comes
    from the copypasta above (#1754).
@@ -463,9 +463,9 @@ prop's own, and never another grey stone. A prop's script only maps its parts on
 `res://` path (`resource_packs_check.py` in CI).
 
 A new material goes into the set (`prop_textures.py`'s `SET` and `textures/SOURCE.md`), for
-every prop. **Any FOSS texture is permitted** (owner, #1825) whose licence fits the public
-repository (AGENTS.md's asset licences, #1511): its source and licence are recorded in
-`textures/SOURCE.md`, with its licence file, and credited where the licence asks. **When the set falls short**, a prop is textured in Meshy after all (10 credits
+every prop. **Any FOSS texture is permitted** (owner, #1825) under a licence AGENTS.md allows for
+assets (#1511: CC0, or CC BY with credit): its source and licence go into `textures/SOURCE.md`,
+its licence file beside it, so the generated `CREDITS.md` credits it where the licence asks. **When the set falls short**, a prop is textured in Meshy after all (10 credits
 more): painted detail the set can't place (a sign's lettering, a banner's pattern, a face), or the
 owner preferring Meshy's look for it. No runes or carvings by script: they come from the rune set
 (#1855) and the engraving work (#1856).
