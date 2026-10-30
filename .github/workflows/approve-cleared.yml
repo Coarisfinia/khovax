@@ -21,6 +21,12 @@ on:
 permissions:
   pull-requests: write
 
+# One run per pull request at a time, in order, so a push's withdrawal always runs after an
+# approval that was already being posted.
+concurrency:
+  group: approve-cleared-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
 jobs:
   approve:
     if: github.event.action == 'labeled' && github.event.label.name == 'subagent-cleared'
@@ -51,17 +57,18 @@ jobs:
           # The bot that labels is also the bot that opens pull requests, so the label alone could
           # approve a user-facing one (#1874). The game itself is user-facing; its tests and tools
           # aren't. A file list that can't be read in full, or of another commit, approves nothing.
-          files=$(gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[].filename')
+          # Each path is one JSON string per line, so a newline in a file name can't split it.
+          files=$(gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[].filename | @json')
           if [ "$(gh api "repos/$REPO/pulls/$PR" --jq .head.sha)" != "$HEAD" ]; then
             echo "Not approving #$PR: new commits arrived after it was labelled; clear it again."
             exit 0
           fi
-          if [ "$(printf '%s\n' "$files" | grep -c .)" -ne "$CHANGED_FILES" ]; then
+          if [ "$(printf '%s\n' "$files" | grep -c '^"')" -ne "$CHANGED_FILES" ]; then
             echo "Not approving #$PR: its list of changed files couldn't be read in full."
             exit 0
           fi
           user_facing=$(printf '%s\n' "$files" |
-            grep '^packages/game/' | grep -v -e '^packages/game/tests/' -e '^packages/game/tools/' || true)
+            grep '^"packages/game/' | grep -v -e '^"packages/game/tests/' -e '^"packages/game/tools/' || true)
           if [ -n "$user_facing" ]; then
             echo "Not approving #$PR: it changes user-facing files, which need the owner's approval:"
             printf '%s\n' "$user_facing"
@@ -71,8 +78,16 @@ jobs:
           body="Approved because \`$SENDER\` labelled it \`subagent-cleared\`: a review subagent"
           body+=" found nothing blocking in this pull request, which isn't user-facing (#1874)."
           # Pinned to the commit that was checked, so a later push never inherits it unseen.
-          gh api --method POST "repos/$REPO/pulls/$PR/reviews" -f commit_id="$HEAD" \
-            -f event=APPROVE -f body="$body" --jq '"Approved: " + .html_url'
+          review=$(gh api --method POST "repos/$REPO/pulls/$PR/reviews" -f commit_id="$HEAD" \
+            -f event=APPROVE -f body="$body" --jq .id)
+          echo "Approved: review $review."
+          # A push during the checks above gets its withdrawal after this run (concurrency), but
+          # take it back here too, at once.
+          if [ "$(gh api "repos/$REPO/pulls/$PR" --jq .head.sha)" != "$HEAD" ]; then
+            gh api --method PUT "repos/$REPO/pulls/$PR/reviews/$review/dismissals" -f event=DISMISS \
+              -f message="New commits arrived while it was being approved: clear it again (#1874)." --silent
+            echo "Withdrawn again: new commits arrived while it was being approved."
+          fi
 
   withdraw:
     # New commits weren't cleared, and the ruleset keeps approvals across pushes, so this
