@@ -908,6 +908,10 @@ msgid "Instance reset delay"
 msgstr ""
 
 #: slices/menu/ui/game_menu.gd
+msgid "Revive beasts at waystones"
+msgstr ""
+
+#: slices/menu/ui/game_menu.gd
 msgid "Menu"
 msgstr ""
 
@@ -2098,4 +2102,12 @@ msgstr ""
 
 #: slices/waystones/ui/waystone_notice_tie.gd
 msgid "You'll return here when you fall."
+msgstr ""
+
+#: slices/waystones/ui/waystone_notice_tie.gd
+msgid "Waystone"
+msgstr ""
+
+#: slices/waystones/ui/waystone_notice_tie.gd
+msgid "Your fainted beasts are back on their feet."
 msgstr ""

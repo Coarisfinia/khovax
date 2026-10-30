@@ -6,7 +6,8 @@ extends RefCounted
 ## ×0.70 and Hard stronger by ×1.30: their strength, the damage they take (their HP), their pace and
 ## the ring's power against them. The world settings (#1316), which the difficulty leaves alone:
 ## the drop rate scales the loot rolls, at least one where there were any, and the instance reset
-## delay is how long the world keeps an instance nobody is in.
+## delay is how long the world keeps an instance nobody is in. Revive on waystones (#1891) starts
+## off, and the host turns it on; a choice there is none of is refused.
 
 ## A species the flow makes up, with round numbers.
 const BEAST: String = "test_beast"
@@ -71,6 +72,19 @@ func _check_reset_delay() -> String:
 			before,
 			after,
 		]
+	return _check_revive_toggle()
+
+
+## Revive on waystones starts off; the host turns it on, and a choice there is none of is refused.
+func _check_revive_toggle() -> String:
+	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.BASIC)
+	var state: GameState = world.instances[FlowSteps.BASIC]
+	var off: bool = not HostSettings.revives_on_waystones(state)
+	world.step([_command_for(0, HostSettings.REVIVE_ON_WAYSTONES, HostSettings.ON)])
+	var on: bool = HostSettings.revives_on_waystones(state)
+	world.step([_command_for(0, HostSettings.REVIVE_ON_WAYSTONES, 2)])
+	if not off or not on or not HostSettings.revives_on_waystones(state):
+		return "revive on waystones didn't start off, turn on, or refuse a bad choice"
 	return ""
 
 

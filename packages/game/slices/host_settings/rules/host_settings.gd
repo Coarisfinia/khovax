@@ -18,7 +18,8 @@ extends RefCounted
 ## The world settings (#1316) are apart from the difficulty, which never changes them: the drop rate
 ## scales how many loot rolls a domination, a harvest, a chest or loot on the ground gives, and the
 ## instance reset delay is how long an instance nobody is in stays loaded before it's purged
-## (World, through BlueprintSource).
+## (World, through BlueprintSource). Revive on waystones (#1891), off by default, has a player
+## standing next to a waystone get their fainted beasts back (WaystoneFeature).
 
 ## The slot of the host, the player whose world it is.
 const HOST: int = 0
@@ -39,15 +40,27 @@ const DROP_RATES: Array[int] = [500, STANDARD, 1500, 2000]
 ## the default.
 const RESET_DELAY: String = "reset_delay"
 const RESET_DELAYS: Array[int] = [15, 30, 60, 120, 240]
+## Whether fainted beasts are revived at a waystone (#1891): its key, and its choices, off (the
+## default) or on.
+const REVIVE_ON_WAYSTONES: String = "revive_on_waystones"
+const OFF: int = 0
+const ON: int = 1
+const TOGGLE: Array[int] = [OFF, ON]
 ## Each setting's choices, by its key: a request for any other is refused.
 const CHOICES: Dictionary[String, Array] = {
 	DIFFICULTY: DIFFICULTIES,
 	DROP_RATE: DROP_RATES,
 	RESET_DELAY: RESET_DELAYS,
+	REVIVE_ON_WAYSTONES: TOGGLE,
 }
 ## Each setting's code in a request's data (`request_data`), by its key; never changed once
 ## shipped. The data is the code times CODE_SPAN plus the choice.
-const CODES: Dictionary[String, int] = { DIFFICULTY: 1, DROP_RATE: 2, RESET_DELAY: 3 }
+const CODES: Dictionary[String, int] = {
+	DIFFICULTY: 1,
+	DROP_RATE: 2,
+	RESET_DELAY: 3,
+	REVIVE_ON_WAYSTONES: 4,
+}
 ## The ticks of a minute of play.
 const MINUTE_TICKS: int = 60 * Simulation.TICKS_PER_SECOND
 const CODE_SPAN: int = 1_000_000
@@ -70,6 +83,8 @@ static func chosen(entry: Dictionary, setting: String) -> int:
 static func default_of(setting: String) -> int:
 	if setting == RESET_DELAY:
 		return Fixed.div_floor(Tuning.INSTANCE_RESET_TICKS, MINUTE_TICKS)
+	if setting == REVIVE_ON_WAYSTONES:
+		return OFF
 	return STANDARD
 
 
@@ -105,6 +120,11 @@ static func drops(state: GameState, rolls: int) -> int:
 ## reset delay.
 static func reset_ticks(host: PlayerStore) -> int:
 	return chosen(host.stored(FEATURE_ID), RESET_DELAY) * MINUTE_TICKS
+
+
+## Whether the host of the world `state` is in has fainted beasts revived at waystones (#1891).
+static func revives_on_waystones(state: GameState) -> bool:
+	return chosen(state.stored(HOST, FEATURE_ID), REVIVE_ON_WAYSTONES) == ON
 
 
 ## A wild monster's `strength` at the difficulty of `state`.
