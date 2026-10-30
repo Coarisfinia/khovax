@@ -20,7 +20,7 @@ const UNPLACED_PROPS: Dictionary[String, Array] = {
 }
 ## Static models built before anything places them in the world (#1635): each must load and show
 ## a mesh, until what places it names it and it leaves this list.
-const UNPLACED_MODELS: Array[String] = ["model_starry_egg", "model_standing_stone"]
+const UNPLACED_MODELS: Array[String] = ["model_starry_egg"]
 
 
 func run(tree: SceneTree) -> String:

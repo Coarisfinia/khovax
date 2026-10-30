@@ -92,6 +92,8 @@ static func _region_and_party_rules() -> Dictionary[String, Callable]:
 		# health, whose events say a guide's player leaves.
 		EscortFeature.ID: _plain(EscortFeature),
 		ChestFeature.ID: ChestFactory.build,
+		# Waystones (#1890), after the knockdowns, whose downed players activate none.
+		WaystoneFeature.ID: _waystones,
 		# The control points of a battle (#643), after domination, which places a totem on a ring
 		# with wild monsters inside first and holds the totems a point is taken with (#644).
 		ControlPointFeature.ID: _plain(ControlPointFeature),
@@ -121,6 +123,11 @@ static func _region_and_party_rules() -> Dictionary[String, Callable]:
 		QuestEventFeature.ID: QuestEventFactory.build,
 	}
 	return rules
+
+
+## Waystones, which name their instance in the respawn point they set.
+static func _waystones(setup: FeatureSetup) -> Feature:
+	return WaystoneFeature.new(setup.instance)
 
 
 ## What builds a feature that reads nothing: its class's new().

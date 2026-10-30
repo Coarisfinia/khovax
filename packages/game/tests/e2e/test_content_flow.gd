@@ -34,7 +34,12 @@ extends RefCounted
 const MODEL: String = "model_mana_wolf"
 ## The tile blueprints whose pack's model is drawn larger, in hundredths: too small to read
 ## from the camera as the pack made it.
-const SCALED: Dictionary[String, int] = { "stump": 400, "cracked_rock": 350, "rubble": 400 }
+const SCALED: Dictionary[String, int] = {
+	"stump": 400,
+	"cracked_rock": 350,
+	"rubble": 400,
+	"waystone": 125,
+}
 ## A species file's speed, abilities (#222), name (#351), strike type (#626), codex entry (#1173),
 ## behaviour traits (#1200) and model (#1223), as a valid species ends.
 const KIT: String = (

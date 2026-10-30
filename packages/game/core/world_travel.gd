@@ -3,8 +3,9 @@ extends RefCounted
 ## How players travel between the world's instances (#154, #457, #716), split out of World (#828).
 ## A player who walks out through an exit (ExitFeature raises ExitTaken) is moved into the instance
 ## it leads to, onto its way back, and the world raises that they entered it (InstanceEntered,
-## #370). A player sent to the spawn (SentToSpawn, #457) is moved onto their start in the starting
-## instance. Whoever follows a player (Feature.followers_of, #716), like their companion, moves with
+## #370). A player sent to the spawn (SentToSpawn, #457) is moved beside their respawn point
+## (RespawnPoint, #1890), or else onto their start in the starting instance. Whoever follows a
+## player (Feature.followers_of, #716), like their companion, moves with
 ## them, carrying its data along. It keeps nothing: the world is handed in, as to WorldLayout.
 ## Deterministic, like everything in core/.
 
@@ -63,21 +64,54 @@ static func _arrival(world: World, from: String, taken: ExitTaken, region: Regio
 	return Vector2i(first.x, first.y)
 
 
-## Moves the player `sent` names from `from` onto their start in the starting instance (#457), as a
-## new entity, so at full HP: back at the world's spawn.
+## Moves the player `sent` names from `from` back, as a new entity, so at full HP: beside their
+## respawn point (#1890, RespawnPoint) while it's still there, else onto their start in the
+## starting instance (#457), the world's spawn.
 static func _send_to_spawn(world: World, from: String, sent: SentToSpawn) -> void:
-	var spawn: GameState = world.entering(world.start_name)
-	if spawn == null or spawn.region.starts.is_empty():
+	var landing: Array = _respawn_landing(world, sent.slot)
+	if landing.is_empty():
+		landing = _spawn_landing(world, sent.slot)
+	if landing.is_empty():
 		return
-	var starts: Array[Vector2i] = spawn.region.starts
+	var target_name: String = landing[0]
+	var arrival: Vector2i = landing[1]
+	var target: GameState = world.instances[target_name]
 	var left: GameState = world.instances[from]
 	var leaders: Dictionary[int, Array] = _followers(left, sent.slot)
 	left.remove_entity(sent.entity_id)
-	var start: Vector2i = starts[mini(sent.slot, starts.size() - 1)]
-	var arrived: Array[Entity] = [spawn.add_entity(sent.slot, start)]
+	var arrived: Array[Entity] = [target.add_entity(sent.slot, arrival)]
 	if arrived[0] != null:
-		_bring_followers(left, leaders, spawn, start)
-		raise_entered(world, world.start_name, arrived)
+		_bring_followers(left, leaders, target, arrival)
+		raise_entered(world, target_name, arrived)
+
+
+## Where the player in `slot` lands at the world's spawn: `[instance, tile]`, their start in the
+## starting instance, or empty when it can't load.
+static func _spawn_landing(world: World, slot: int) -> Array:
+	var spawn: GameState = world.entering(world.start_name)
+	if spawn == null or spawn.region.starts.is_empty():
+		return []
+	var starts: Array[Vector2i] = spawn.region.starts
+	return [world.start_name, starts[mini(slot, starts.size() - 1)]]
+
+
+## Where the player in `slot` lands at their respawn point (#1890): `[instance, tile]`, the first
+## walkable tile beside it, or empty for none, or one whose instance can't load, whose tile no
+## longer holds what it was set on, or with nowhere to stand beside it.
+static func _respawn_landing(world: World, slot: int) -> Array:
+	var entry: Dictionary = world.stored(slot, RespawnPoint.ENTRY)
+	var point: Array = RespawnPoint.of(entry)
+	if point.is_empty():
+		return []
+	var instance_name: String = point[0]
+	var tile: Vector2i = point[1]
+	if not world.source.exists(instance_name):
+		return []
+	var target: GameState = world.entering(instance_name)
+	if target == null or not RespawnPoint.still_there(entry, target.region, tile):
+		return []
+	var beside: Vector2i = _beside(target.region, tile)
+	return [instance_name, beside] if beside != tile else []
 
 
 ## Moves the followers `leaders` names (`_followers`, #716) out of `left` into `target` along with

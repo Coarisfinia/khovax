@@ -321,8 +321,10 @@ background; only wait in the foreground for a result the very next step needs.
     for a pull request that changes or renames user-facing files (`packages/game/` outside its
     `tests/` and `tools/`; owner's pick 1 on #1874), nor for one that changes any workflow
     (`.github/workflows/`): any workflow could reach the guard's environment, so **a change to the
-    guard, or to any workflow, always needs the owner**. A push or a new base withdraws that approval,
-    never a person's; clear it again (label off and on).
+    guard, or to any workflow, always needs the owner**. That approval is permanent, like
+    the owner's (owner's pick 2 on #1895, #1900): a later push or a new base never withdraws it,
+    so name each push after the clearance in a PR comment, as after the owner's approval. (Only a
+    pull request that changed while it was being approved gets that approval taken back at once.)
     Queue it once that approval is there.
 
   **CodeRabbit reviews at most once per pull request** (owner's ground rule, #1783): its automatic
@@ -788,9 +790,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   (`gh auth refresh -h github.com -s workflow`).
 - **Never use the `pull_request_target` or `workflow_run` triggers**, and never add self-hosted
   runners to this public repository. **The one exception** (owner's pick on #1867, #1874):
-  `approve-cleared.yml` runs on `pull_request_target` (`labeled`, `synchronize`, `edited`), with a
-  read-only token, and never checks out or runs anything from the pull request. It approves and
-  dismisses as a separate reviewer GitHub App (Pull requests: write, Contents: read), whose key is
+  `approve-cleared.yml` runs on `pull_request_target` (`labeled` only), with a
+  read-only token, and never checks out or runs anything from the pull request. It approves as a
+  separate reviewer GitHub App (Pull requests: write, Contents: read), whose key is
   the secret `REVIEWER_APP_KEY` (its ID the variable `REVIEWER_APP_ID`) of the environment
   `approve-cleared`, which only `main` may use: a workflow on any other branch can't approve.
   "Allow GitHub Actions to create and approve pull requests" stays off (owner's pick on #1874).

@@ -56,6 +56,8 @@ static func of(region: Region) -> Array[String]:
 		needed.append(HidingFeature.ID)
 	if TileHarvestFeature.has_harvestable(region):
 		needed.append(TileHarvestFeature.ID)
+	if WaystoneFeature.has_waystone(region):
+		needed.append(WaystoneFeature.ID)
 	for reader: PlacementReader in readers():
 		for kind: String in reader.kinds():
 			if not region.placed(kind).is_empty() and not needed.has(reader.feature()):
@@ -76,4 +78,5 @@ static func _built_in() -> Array[String]:
 		ForagingFeature.ID,
 		HidingFeature.ID,
 		TileHarvestFeature.ID,
+		WaystoneFeature.ID,
 	]
