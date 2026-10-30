@@ -136,8 +136,9 @@ static func _answers_problem(quest: QuestDefinition, dialogs: DialogContent) -> 
 static func _items_problem(quest: QuestDefinition, tables: Array[LootContent]) -> String:
 	for index: int in quest.steps.size():
 		for trigger: QuestStep in quest.steps[index].triggers():
-			if trigger.condition == QuestStep.OBTAINED and not _drops(trigger.item, tables):
-				return "step %d: no loot or harvest table drops the item %s" % [index, trigger.item]
+			var item: String = trigger.awaited
+			if trigger.condition == QuestStep.OBTAINED and not _drops(item, tables):
+				return "step %d: no loot or harvest table drops the item %s" % [index, item]
 	return ""
 
 

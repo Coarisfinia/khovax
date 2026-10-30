@@ -10,7 +10,7 @@ The texts come from:
 - content data: the fields its schema marks with "x-translate": true, followed through $ref,
   items, the combinators and if/then/else, so a new player-facing field is marked once, where it's
   declared;
-- realms: the codex entry and gloss of each realms/<id>.md.
+- realms: the name (its title, #1710), codex entry and gloss of each realms/<id>.md.
 
 Texts are kept as written, text tags (${…}) included: a tag is resolved after the line is
 translated. Each entry names the files it comes from, without line numbers, so moving a line
@@ -61,6 +61,8 @@ SCENE_MODE = re.compile(r"^auto_translate_mode = ([0-9]+)$", re.MULTILINE)
 # Node.AUTO_TRANSLATE_MODE_*: inherit from the parent, always, disabled.
 ALWAYS, DISABLED = 1, 2
 REALM_CODEX = re.compile(r"^- (?:Entry|Gloss): (.+)$", re.MULTILINE)
+# A realm's title, its name: the first line, as RealmDocument reads it.
+REALM_TITLE = re.compile(r"\A\s*# (.+)$", re.MULTILINE)
 # Control characters other than the line break, tab and carriage return, which quoted() escapes.
 UNWRITABLE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 # Godot's string escapes (\uXXXX and \UXXXXXX are read apart).
@@ -198,7 +200,10 @@ def scene_texts(source: str) -> Iterator[Found]:
 
 
 def realm_texts(source: str) -> Iterator[Found]:
-    """A realm's codex entry and gloss."""
+    """A realm's name, its title, then its codex entry and gloss."""
+    title = REALM_TITLE.match(source)
+    if title and title[1].strip():
+        yield Found(title[1].strip())
     _, _, codex = source.partition("\n## Codex\n")
     codex = codex.split("\n## ", 1)[0]
     for match in REALM_CODEX.finditer(codex):

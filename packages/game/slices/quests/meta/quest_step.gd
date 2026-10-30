@@ -22,6 +22,7 @@ const CONDITION_FIELDS: Array[String] = [
 	"item",
 	"place",
 	"piece",
+	"name",
 	"instance",
 	"dialog",
 	"answer",
@@ -29,6 +30,8 @@ const CONDITION_FIELDS: Array[String] = [
 	"person",
 	"count",
 ]
+## The fields naming what a step asks for that need its player-facing `name` too (#1710).
+const NAMED_FIELDS: Array[String] = ["place", "piece", "target", "item"]
 ## The conditions of a step, each counted from the facts QuestFacts makes of events (CONDITIONS says
 ## what each asks for).
 const DOMINATED: String = "dominated"
@@ -50,6 +53,8 @@ const EMITTED: String = "emitted"
 ## The condition met by talking to a person (NpcTalkedTo, #1592), named by `person`, as the people's
 ## files name them: only a side quest's start waits on one, such as a guide's escort quest.
 const TALKED: String = "talked"
+## The field each condition names what it awaits in (`awaited`), but an emitted one's event.
+const AWAITED_FIELDS: Dictionary[String, String] = { TALKED: "person", OBTAINED: "item" }
 ## The conditions a side quest's start can have: being somewhere, an event emitted, or a person
 ## talked to.
 const START_CONDITIONS: Array[String] = [REACHED, ENTERED, EMITTED, TALKED]
@@ -88,21 +93,22 @@ var choices: Array[QuestStep] = []
 var next: String = ""
 ## The event it emits once it's done, or once it's taken on a choice (#575), or "" for none.
 var emits: String = ""
-## What a side quest's start waits on: the event an `emitted` condition asks for, or the id of the
-## person a `talked` one asks for (#1592).
+## What a side quest's start waits on, or a step for an item: the event an `emitted` condition asks
+## for, the id of the person a `talked` one asks for (#1592), or the id of the item an `obtained`
+## step asks for (#686), as loot tables name it: a material or a piece of gear (#694).
 var awaited: String = ""
 ## What the step asks for, or "" on a step with choices.
 var condition: String = ""
 ## The wild monster a `dominated` step asks for (#625): any, on any other step.
 var quarry: QuestQuarry = QuestQuarry.new()
-## The item an `obtained` step asks for, by its id, as loot tables name it: a material or a piece
-## of gear (#694).
-var item: String = ""
 ## The place a `reached` step asks for, as region legends name it (TileTrigger.REACH).
 var place: String = ""
 ## The region piece an `entered` step asks for, by its file name, or "" when it asks for an
 ## instance.
 var piece: String = ""
+## The player-facing name of the place, piece, quest target or item it asks for (#1710),
+## untranslated, as it reads in the middle of its line ("beach"), or "" when it asks for none.
+var name: String = ""
 ## The instance an `entered` step without a piece asks for, by its blueprint name; on any other
 ## step, the one it counts in only (#769), or "" for anywhere, which only the flows' own quests
 ## use: every step of the game's quests names one (owner, #1282; the quest flow checks it).
@@ -203,13 +209,13 @@ func _read_condition(data: Dictionary, known_species: Dictionary[String, Species
 	condition = Content.text_of(data.get("condition"))
 	var species_id: String = Content.text_of(data.get("species"))
 	quarry.target = Content.text_of(data.get("target"))
-	item = Content.text_of(data.get("item"))
 	place = Content.text_of(data.get("place"))
 	piece = Content.text_of(data.get("piece"))
+	name = Content.text_of(data.get("name"))
 	instance = Content.text_of(data.get("instance"))
 	answer.dialog = Content.text_of(data.get("dialog"))
 	answer.id = Content.text_of(data.get("answer"))
-	awaited = Content.text_of(data.get("person" if condition == TALKED else "event"))
+	awaited = Content.text_of(data.get(AWAITED_FIELDS.get(condition, "event")))
 	count = Content.amount(data.get("count", 1))
 	if not CONDITIONS.has(condition) and condition != EMITTED and condition != TALKED:
 		problem = "its condition must be one of %s" % [CONDITIONS]
@@ -230,7 +236,8 @@ func _read_condition(data: Dictionary, known_species: Dictionary[String, Species
 ## or both for a piece in that instance, an answered step a dialog and its answer (#636), an
 ## emitted condition an event (#575), a talked condition a person (#1592) and an obtained step an
 ## item (#686), each as an id, and no
-## other step names any; a dominated step's quest target is an id too (#625). Every step but an
+## other step names any; a dominated step's quest target is an id too (#625). A step naming a
+## place, piece, target or item gives its name too, and only such a step (#1710). Every step but an
 ## emitted condition, which happens in the whole world, may name the instance it counts in (#769).
 ## Whether the dialog has the answer, and whether the person exists, is QuestContent's check, which
 ## reads the dialogs and the people. Whether the
@@ -248,6 +255,11 @@ static func _where_problem(data: Dictionary, step: QuestStep) -> String:
 	var area: String = _area_problem(data, step.condition)
 	if not area.is_empty():
 		return area
+	var named_thing: bool = false
+	for field: String in NAMED_FIELDS:
+		named_thing = named_thing or data.has(field)
+	if named_thing != data.has("name") or (named_thing and step.name.strip_edges().is_empty()):
+		return "its name is what a step naming a place, piece, target or item gives it (#1710)"
 	var answered: bool = step.condition == ANSWERED
 	if answered != data.has("dialog") or answered != data.has("answer"):
 		return "its dialog and answer are what an answered step asks for, both, and only that"
@@ -259,7 +271,7 @@ static func _where_problem(data: Dictionary, step: QuestStep) -> String:
 		"answer": step.answer.id,
 		"event": step.awaited,
 		"person": step.awaited,
-		"item": step.item,
+		"item": step.awaited,
 		"target": step.quarry.target,
 	}
 	for field: String in named:
@@ -315,14 +327,12 @@ func counts(fact_condition: String, what: String, where: String) -> bool:
 ## Whether one fact of `fact_condition`, `what` as `counts` reads them, is what its own condition
 ## asks for, wherever it happened.
 func _asks_for(fact_condition: String, what: String) -> bool:
-	if condition == EMITTED or condition == TALKED:
+	if condition == EMITTED or condition == TALKED or condition == OBTAINED:
 		return fact_condition == condition and awaited == what
 	if condition == ANSWERED:
 		return fact_condition == condition and answer.key() == what
 	if condition == REACHED:
 		return fact_condition == condition and place == what
-	if condition == OBTAINED:
-		return fact_condition == condition and item == what
 	if condition == ENTERED:
 		return fact_condition == condition and piece == what
 	if not quarry.target.is_empty():

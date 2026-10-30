@@ -1,16 +1,35 @@
 name: release
 
-# A version tag (v1.2.3) makes a GitHub release with the desktop and web builds attached as plain
-# files, never zips (#21, #22, #92, #1312). The tag must match application/config/version in
-# packages/game/project.godot; the README says how to cut one. The build runs read-only; only the
-# release job, which runs no project code, may write.
+# The prod button (#747, #1773): "Run workflow" on the Actions tab, with the part of the version to
+# bump, makes a prod release of main's newest commit: the full GitHub release v<x.y.z>, with the
+# desktop and web builds attached as plain files, never zips (#21, #22, #92, #1312), and the Android
+# APK signed with the release key once its secrets exist (#1776). The version comes from the last
+# prod release's tag and is stamped into the builds (#744), so config/version is never bumped by
+# hand. Release tags can't be moved or deleted (ruleset "immutable release tags"), so everything
+# is checked and built before the tag is made, right before the release is published. A dry
+# run does all of it but the release itself. The build runs read-only; only the release job, which
+# runs no project code, may write.
 on:
-  push:
-    # Not the dev releases' tags (v1.2.3-dev.45, made by ci.yml, #1312).
-    tags: ["v*", "!v*-*"]
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "The part of the last prod release's version to bump (the first prod release is config/version itself)"
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+      dry_run:
+        description: "Dry run: check, build and write the notes, but tag and publish nothing"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
+
+# One release at a time: a second waits rather than racing the first for the same version. GitHub
+# keeps only one waiting run per group, so a third dispatch cancels the one already waiting.
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 env:
   # Godot's version and checksums are pinned once, in .github/actions/setup-godot (#924).
@@ -18,30 +37,150 @@ env:
   UV_SHA256: 2b428396f12572d4429cf210ca234dd599a33b3af0958a4d5ed569d63e3f344f
 
 jobs:
-  build:
+  plan:
     runs-on: ubuntu-26.04
-    timeout-minutes: 20
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      # The CI runs of the commit, which must have passed.
+      actions: read
+    outputs:
+      tag: ${{ steps.plan.outputs.tag }}
+      previous: ${{ steps.plan.outputs.previous }}
+    steps:
+      - name: "📥 Check out the game's project settings"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: packages/game/project.godot
+          sparse-checkout-cone-mode: false
+
+      - name: "🏷️ Work out the version, and check the commit may be released"
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUMP: ${{ inputs.bump }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          # Only main is released; a dry run may try any branch.
+          if [ "$GITHUB_REF" != refs/heads/main ] && [ "$DRY_RUN" != true ]; then
+            echo "::error::a prod release is made from main only, not ${GITHUB_REF}"
+            exit 1
+          fi
+          # The last prod release's tag (a full release, never a prerelease), or nothing when there
+          # is none. Any other error fails the job, so it is never mistaken for "none" (#1329).
+          if ! previous=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName \
+            2> "$RUNNER_TEMP/release-view.err"); then
+            if [ "$(< "$RUNNER_TEMP/release-view.err")" != 'release not found' ]; then
+              cat "$RUNNER_TEMP/release-view.err" >&2
+              exit 1
+            fi
+            previous=
+          fi
+          if [[ "$previous" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            major=${BASH_REMATCH[1]} minor=${BASH_REMATCH[2]} patch=${BASH_REMATCH[3]}
+            case "$BUMP" in
+              major) next="$((major + 1)).0.0" ;;
+              minor) next="${major}.$((minor + 1)).0" ;;
+              patch) next="${major}.${minor}.$((patch + 1))" ;;
+              *) echo "::error::unknown bump \"${BUMP}\""; exit 1 ;;
+            esac
+          elif [ -n "$previous" ]; then
+            echo "::error::the last prod release's tag \"${previous}\" isn't v<x.y.z>"
+            exit 1
+          else
+            # The first prod release: config/version, which the dev builds before it are named after.
+            next=$(awk -F'"' '/^\[/ { section = $0 } section == "[application]" && /^config\/version="/ { print $2 }' \
+              packages/game/project.godot)
+            echo "::notice::no prod release yet: the first is config/version, ${next}, whatever the bump"
+          fi
+          # No leading zeros, which bash's arithmetic would read as octal.
+          if ! [[ "$next" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error::no x.y.z version to release: last prod release \"${previous}\", next \"${next}\""
+            exit 1
+          fi
+          # The Android version code is major * 1000000 + minor * 1000 + patch, which grows with
+          # every release only while minor and patch stay below 1000, and stays under Android's limit.
+          IFS=. read -r major minor patch <<< "$next"
+          if [ "$minor" -ge 1000 ] || [ "$patch" -ge 1000 ] || [ "$major" -ge 2100 ]; then
+            echo "::error::${next} doesn't fit the Android version code: bump minor or major instead"
+            exit 1
+          fi
+          tag="v${next}"
+          # The tag must be new: an existing one can't be moved. Only "not found" counts as new.
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${tag}" > /dev/null 2> "$RUNNER_TEMP/ref.err"; then
+            echo "::error::the tag ${tag} exists already"
+            exit 1
+          elif ! grep -q 'HTTP 404' "$RUNNER_TEMP/ref.err"; then
+            cat "$RUNNER_TEMP/ref.err" >&2
+            exit 1
+          fi
+          # The commit must have passed every check: a successful ci.yml run of it, on the push to
+          # main or in the merge queue, which ran on this very commit. A dry run of a branch also
+          # takes its pull request's run. Any one passing run is enough: a later run's failure on
+          # the same commit is a flake to look into, not a change to the code.
+          events='"push", "merge_group"'
+          if [ "$GITHUB_REF" != refs/heads/main ]; then
+            events+=', "pull_request"'
+          fi
+          passed=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${GITHUB_SHA}&status=success&per_page=100" \
+            --jq "[.workflow_runs[] | select(.event | IN(${events}))] | length" | awk '{ n += $1 } END { print n + 0 }')
+          if [ "$passed" = 0 ]; then
+            echo "::error::${GITHUB_SHA} has no passing ci.yml run yet: wait for its checks, then try again"
+            exit 1
+          fi
+          {
+            echo "tag=${tag}"
+            echo "previous=${previous}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Releasing ${GITHUB_SHA} as ${tag} (previous prod release: ${previous:-none})" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
+  build:
+    needs: plan
+    # The release key's secrets live in the Environment "release", which only main may deploy to
+    # (#1776), so a branch's own copy of this file can't reach them; a dry run of a branch runs
+    # without the Environment. The secrets' main-only expression below is a second guard.
+    environment: ${{ github.ref == 'refs/heads/main' && 'release' || '' }}
+    runs-on: ubuntu-26.04
+    timeout-minutes: 25
+    outputs:
+      # How the APK was signed: release, test (a dry run's throwaway key, not attached) or none.
+      apk: ${{ steps.apk.outputs.apk }}
     # Every step runs in the game's project (#1101), where its version and builds are; the Python
     # tooling is beside it, in ../<package>/.
     defaults:
       run:
         working-directory: packages/game
+    env:
+      TAG: ${{ needs.plan.outputs.tag }}
     steps:
       - name: "📥 Check out the code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: "🏷️ Check the tag matches the game's version, and stamp it into the builds"
-        # The version is read from [application] only, and must be a plain x.y.z. The builds carry
-        # the tag in their own setting, as ci.yml's export job stamps a dev build's (#744).
+      - name: "🏷️ Stamp the version into the builds"
+        # The tag goes into the builds' own setting, as ci.yml's export job stamps a dev build's
+        # (#744), and its x.y.z into config/version, which the Windows and Android version fields
+        # read. The Android version code grows with it, so a newer APK installs over an older one.
         run: |
-          version=$(awk -F'"' '/^\[/ { section = $0 } section == "[application]" && /^config\/version="/ { print $2 }' project.godot)
-          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
-            echo "::error::tag ${GITHUB_REF_NAME} doesn't match config/version \"${version}\" (x.y.z) in project.godot"
-            exit 1
-          fi
-          printf '\n[khovax]\n\nbuild_version="%s"\n' "$GITHUB_REF_NAME" >> project.godot
+          version=${TAG#v}
+          IFS=. read -r major minor patch <<< "$version"
+          awk -v version="$version" '/^\[/ { section = $0 }
+            section == "[application]" && /^config\/version="/ { $0 = "config/version=\"" version "\"" } { print }' \
+            project.godot > project.godot.new
+          mv project.godot.new project.godot
+          printf '\n[khovax]\n\nbuild_version="%s"\n' "$TAG" >> project.godot
+          grep -qx "config/version=\"${version}\"" project.godot
+          code=$((major * 1000000 + minor * 1000 + patch))
+          android=$(awk '/^\[preset\.[0-9]+\]$/ { preset = $0 } /^name="Android"$/ { print preset }' export_presets.cfg)
+          awk -v options="${android%]}.options]" -v code="$code" '/^\[/ { section = $0 }
+            section == options && /^version\/code=/ { $0 = "version/code=" code } { print }' \
+            export_presets.cfg > export_presets.cfg.new
+          mv export_presets.cfg.new export_presets.cfg
+          grep -qx "version/code=${code}" export_presets.cfg
+          echo "Builds carry ${TAG}, Android version code ${code}"
 
       - name: "🧰 Install uv (the Python tooling's runner)"
         run: |
@@ -50,6 +189,17 @@ jobs:
           echo "${UV_SHA256}  /tmp/uv.tar.gz" | sha256sum --check
           sudo tar xzf /tmp/uv.tar.gz -C /usr/local/bin --strip-components=1 \
             uv-x86_64-unknown-linux-gnu/uv
+
+      - name: "🤖 Android: point Godot at the SDK and Java"
+        run: |
+          mkdir -p ~/.config/godot
+          cat > ~/.config/godot/editor_settings-4.tres <<SETTINGS
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "${ANDROID_HOME}"
+          export/android/java_sdk_path = "${JAVA_HOME_17_X64}"
+          SETTINGS
 
       - name: "🤖 Set up Godot and its export templates, and import the project"
         uses: ./.github/actions/setup-godot
@@ -66,17 +216,61 @@ jobs:
           name=$(awk -F'"' '/^\[/ { section = $0 } section == "[application]" && /^config\/name="/ { print $2 }' project.godot \
             | tr ' ' '-' | tr -cd 'A-Za-z0-9._-' | sed 's/^[-.]*//')
           name=${name:-khovax}
+          echo "NAME=${name}" >> "$GITHUB_ENV"
           mkdir -p build/release build/web
           timeout 300 ~/godot/godot --headless --path . --export-release "Windows Desktop" build/khovax.exe
           test -s build/khovax.exe
-          cp build/khovax.exe "build/release/${name}-${GITHUB_REF_NAME}-windows-x86_64.exe"
+          cp build/khovax.exe "build/release/${name}-${TAG}-windows-x86_64.exe"
           timeout 300 ~/godot/godot --headless --path . --export-release "Linux" build/khovax.x86_64
           test -s build/khovax.x86_64
-          cp build/khovax.x86_64 "build/release/${name}-${GITHUB_REF_NAME}-linux.x86_64"
+          cp build/khovax.x86_64 "build/release/${name}-${TAG}-linux.x86_64"
           timeout 300 ~/godot/godot --headless --path . --export-release "Web" build/web/index.html
           test -s build/web/index.html && test -s build/web/index.wasm && test -s build/web/index.pck
 
-      - name: "⬆️ 📦 Release builds: upload (Windows, Linux and web)"
+      - name: "🔑 🤖 Android: export the release APK, signed with the release key"
+        # Only with the release key's secrets (#1776); without them the release goes out without an
+        # APK and says so. A dry run without them signs with a throwaway key instead, so the export
+        # is proven before the key exists, and attaches nothing; so does a dry run of a branch,
+        # which never gets the release key. The key lives in the runner's temp folder for this step
+        # only.
+        id: apk
+        env:
+          KEYSTORE_BASE64: ${{ github.ref == 'refs/heads/main' && secrets.ANDROID_RELEASE_KEYSTORE_BASE64 || '' }}
+          KEYSTORE_PASSWORD: ${{ github.ref == 'refs/heads/main' && secrets.ANDROID_RELEASE_KEYSTORE_PASSWORD || '' }}
+          KEY_ALIAS: ${{ github.ref == 'refs/heads/main' && secrets.ANDROID_RELEASE_KEY_ALIAS || '' }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          keystore="${RUNNER_TEMP}/release.keystore"
+          trap 'rm -f "$keystore"' EXIT
+          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ]; then
+            base64 -d <<< "$KEYSTORE_BASE64" > "$keystore"
+            apk=release
+          elif [ -n "${KEYSTORE_BASE64}${KEYSTORE_PASSWORD}${KEY_ALIAS}" ]; then
+            echo "::error::only some of the release key's secrets exist: ANDROID_RELEASE_KEYSTORE_BASE64, ANDROID_RELEASE_KEYSTORE_PASSWORD and ANDROID_RELEASE_KEY_ALIAS are needed together (#1776)"
+            exit 1
+          elif [ "$DRY_RUN" = true ]; then
+            KEYSTORE_PASSWORD=dry-run-only KEY_ALIAS=dry-run
+            keytool -genkeypair -keystore "$keystore" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" \
+              -keypass "$KEYSTORE_PASSWORD" -keyalg RSA -keysize 2048 -validity 1 -dname "CN=Dry run" 2> /dev/null
+            apk="test"
+          else
+            echo "::notice::no release key yet (#1776): this release has no APK"
+            echo "apk=none" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$keystore" GODOT_ANDROID_KEYSTORE_RELEASE_USER="$KEY_ALIAS" \
+            GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="$KEYSTORE_PASSWORD" \
+            timeout 300 ~/godot/godot --headless --path . --export-release "Android" build/khovax.apk
+          test -s build/khovax.apk
+          apksigner=$(find "${ANDROID_HOME}/build-tools" -name apksigner -type f | sort -V | tail -n 1)
+          # Godot verified the APK already; this shows which key signed it.
+          "$apksigner" verify --print-certs build/khovax.apk 2>&1
+          if [ "$apk" = release ]; then
+            cp build/khovax.apk "build/release/${NAME}-${TAG}-android.apk"
+          fi
+          echo "apk=${apk}" >> "$GITHUB_OUTPUT"
+
+      - name: "⬆️ 📦 Release builds: upload"
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-builds
@@ -86,11 +280,11 @@ jobs:
           retention-days: 3
 
   release:
-    needs: build
+    needs: [plan, build]
     runs-on: ubuntu-26.04
-    timeout-minutes: 10
+    timeout-minutes: 20
     permissions:
-      # Only this job may create the release; it checks out and runs nothing from the repository.
+      # Only this job may write; it checks out and runs nothing from the repository.
       contents: write
     steps:
       - name: "⬇️ 📦 Release builds: download"
@@ -98,20 +292,73 @@ jobs:
         with:
           name: release-builds
 
-      - name: "🚀 Create the GitHub release"
+      - name: "🚀 Publish the release (a dry run stops before it)"
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.plan.outputs.tag }}
+          PREVIOUS: ${{ needs.plan.outputs.previous }}
+          APK: ${{ needs.build.outputs.apk }}
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
-          # The tag must still point at the commit that was built: a tag moved since then fails.
-          tagged=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_REF_NAME}" --jq .sha)
-          if [ "$tagged" != "$GITHUB_SHA" ]; then
-            echo "::error::tag ${GITHUB_REF_NAME} now points at ${tagged}, not the built ${GITHUB_SHA}"
-            exit 1
+          pages="https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}/"
+          notes="Built from ${GITHUB_SHA} by [this run](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})."
+          if [ "$APK" = release ]; then
+            notes+=" The Android APK is signed with the release key, so a newer one installs over it."
+          else
+            notes+=" No Android APK yet: prod APKs need the release key, which isn't set up yet (#1776)."
+          fi
+          notes+=" The Linux file needs \`chmod +x\` after downloading. The web build is playable at ${pages}; its files here run when served from one folder."
+          # The changes since the previous prod release, as GitHub lists them; the first prod release
+          # lists none, not the whole history.
+          if [ -n "$PREVIOUS" ]; then
+            changes=$(gh api -X POST "repos/${GITHUB_REPOSITORY}/releases/generate-notes" -f tag_name="$TAG" \
+              -f target_commitish="$GITHUB_SHA" -f previous_tag_name="$PREVIOUS" --jq .body)
+            notes+=$'\n\n'"$changes"
           fi
           files=(release/*)
           for file in web/*; do
             files+=("${file}#web: $(basename "$file")")
           done
-          gh release create "$GITHUB_REF_NAME" "${files[@]}" --repo "$GITHUB_REPOSITORY" --verify-tag \
-            --title "$GITHUB_REF_NAME" --generate-notes \
-            --notes 'The Linux file needs `chmod +x` after downloading, which drops the executable bit.'
+          {
+            echo "## ${TAG}"
+            echo
+            echo "$notes"
+            echo
+            echo "Files:"
+            printf -- '- %s\n' "${files[@]}"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$DRY_RUN" = true ]; then
+            echo "::notice::dry run: ${TAG} would be released from ${GITHUB_SHA}; nothing tagged or published"
+            exit 0
+          fi
+          # A draft until every file is up: the tag, which can't be moved or deleted, comes last. A
+          # draft a failed run left behind is dropped first, so a rerun starts clean.
+          ids=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
+            --jq ".[] | select(.draft and .tag_name == \"${TAG}\") | .id")
+          for id in $ids; do
+            gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/${id}"
+          done
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --draft \
+            --title "$TAG" --notes "$notes"
+          for file in "${files[@]}"; do
+            gh release upload "$TAG" "$file" --repo "$GITHUB_REPOSITORY" --clobber
+          done
+          # The tag is made only now, at the built commit, once every file is up (a draft makes none).
+          # Making it fails if it appeared meanwhile, and a tag that exists already must point at the
+          # built commit, so the draft is never published on a tag pointing elsewhere. Should
+          # publishing fail after this, the draft waits on its tag to be published by hand.
+          if tagged=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${TAG}" --jq .object.sha 2> /dev/null); then
+            if [ "$tagged" != "$GITHUB_SHA" ]; then
+              echo "::error::${TAG} appeared at ${tagged} while this run built ${GITHUB_SHA}; the draft is left for a look"
+              exit 1
+            fi
+          else
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/git/refs" -f ref="refs/tags/${TAG}" -f sha="$GITHUB_SHA" > /dev/null
+          fi
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest
+          tagged=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${TAG}" --jq .sha)
+          if [ "$tagged" != "$GITHUB_SHA" ]; then
+            echo "::error::${TAG} points at ${tagged}, not the built ${GITHUB_SHA}"
+            exit 1
+          fi
+          echo "Released ${TAG}" | tee -a "$GITHUB_STEP_SUMMARY"

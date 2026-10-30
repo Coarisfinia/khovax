@@ -70,13 +70,24 @@ CI builds the web version on every pull request and every push to `main`, as the
 
 ## Cutting a release
 
-The dev releases (`v<next>-dev.<run number>`, prereleases) are made by CI on its own. A version
-release is a GitHub release with the desktop and web builds attached, made by
-`.github/workflows/release.yml`:
-1. Set the new version in `packages/game/project.godot` (`config/version="0.2.0"` under `[application]`), in a pull request like any change.
-2. Once that's merged, tag that commit on `main` with the same version and push the tag:
-   `git tag v0.2.0 && git push origin v0.2.0`.
-3. The workflow checks the tag against `config/version`, exports the build, and creates the release with the files named after the game. The release notes list the merged pull requests.
+The dev releases (`v<next>-dev.<run number>`, prereleases) are made by CI on its own. A nightly
+(`v<next>-nightly.<date>`, a kept prerelease with the same files) is made by
+`.github/workflows/nightly.yml` every night at 02:00 UTC, or with its "Run workflow" button on the
+Actions tab: it runs every check on `main` and publishes a passing build, and it skips a night when
+`main` hasn't changed since the last nightly, or when today's is out already. A prod
+release (`v<x.y.z>`, a full GitHub release with the desktop and web builds attached) is made with
+the button of `.github/workflows/release.yml`: on the Actions tab, pick "release", then "Run
+workflow" on `main`, and choose the part of the version to bump (`patch`, `minor` or `major`). It
+bumps the last prod release's version (the first prod release is `config/version` itself), checks
+that `main`'s newest commit passed CI and that the tag is new, builds everything with the version
+stamped in, and only then makes the tag and publishes the release. `config/version` is never
+bumped by hand. Tick "Dry run" to do all of it but the release itself: the run's summary shows the
+version, the notes and the files it would publish. The release notes list the merged pull
+requests since the last prod release (the first prod release lists none). The Android APK is
+attached once the release key's secrets exist (#1776), in the repository's Environment `release`,
+which only `main` may deploy to; until then a prod release goes out without it, and says so. A
+dry run never makes a tag, so the first real release is the first run to make a `v*` tag under
+the "immutable release tags" ruleset.
 
 ## Tests
 

@@ -2,6 +2,7 @@
 // play it (#712): no exit leads to it, so they load it directly.
 {
 	"id": "senwel_sael",
+	"name": "Senwel Sael",
 	"codex": {
 		"entry": "A small, quiet ground by a still pool, where only the world's testers walk. Soft sounds for a calm place; Sael is still water.",
 		"gloss": "the quiet pool"

@@ -58,12 +58,12 @@ static func _realm_names() -> Dictionary[String, Dictionary]:
 	var realm_names: Dictionary[String, String] = {}
 	var place_names: Dictionary[String, String] = {}
 	for realm: Realm in Realms.all():
-		realm_names[realm.id] = Realms.name_of(realm.id)
+		realm_names[realm.id] = realm.name
 		for tile: Vector2i in realm.instances:
 			var instance_name: String = realm.instances[tile]
-			place_names[instance_name] = Realms.name_of(instance_name)
+			place_names[instance_name] = InstanceBlueprints.place_name(instance_name)
 			var blueprint: Blueprint = InstanceBlueprints.blueprint(instance_name)
 			if blueprint != null:
 				for variant: String in blueprint.variant_codex:
-					place_names[variant] = Realms.name_of(variant)
+					place_names[variant] = InstanceBlueprints.place_name(variant)
 	return { TextTags.REALM: realm_names, TextTags.PLACE: place_names }

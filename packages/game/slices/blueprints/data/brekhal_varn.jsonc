@@ -5,6 +5,7 @@
 // (#1733, #1260).
 {
 	"id": "brekhal_varn",
+	"name": "Brekhal Varn",
 	"codex": {
 		"entry": "The mountain pass southwest of Edhra Tewk. Its name is rocky to say, br and k, as the pass is to walk; Varn is the Land-speech word for a pass.",
 		"gloss": "the broken pass"

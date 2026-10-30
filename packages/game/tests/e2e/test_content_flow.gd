@@ -50,9 +50,9 @@ const ASCENSION: String = (
 	", \"ascension\": {\"into\": \"%s\", \"level\": %s, \"material\": \"m\"}"
 )
 ## A quest step to reach a place, its id left open (#339).
-const REACH: String = "{\"condition\": \"reached\", \"place\": \"%s\"}"
+const REACH: String = "{\"condition\": \"reached\", \"name\": \"n\", \"place\": \"%s\"}"
 ## A quest step to enter a region piece, its id left open (#350).
-const ENTER: String = "{\"condition\": \"entered\", \"piece\": \"%s\"}"
+const ENTER: String = "{\"condition\": \"entered\", \"name\": \"n\", \"piece\": \"%s\"}"
 ## A quest step to enter an instance, its blueprint left open (#370).
 const ENTER_INSTANCE: String = "{\"condition\": \"entered\", \"instance\": \"%s\"}"
 ## A quest step to choose an answer in a dialog, both ids left open (#636).
@@ -72,7 +72,7 @@ const FIVE_RANKS: String = "[\"a\", \"b\", \"c\", \"d\", \"e\"]"
 ## A blueprint file x on the rule set small (#941) with a codex entry (#1175), its last fields left
 ## open.
 const BLUEPRINT: String = (
-	"{\"id\": \"x\", \"rules\": \"small\", \"wild_species\": {\"a\": 1}, "
+	"{\"id\": \"x\", \"name\": \"X\", \"rules\": \"small\", \"wild_species\": {\"a\": 1}, "
 	+ "\"codex\": {\"entry\": \"e\", \"gloss\": \"g\"}%s}"
 )
 ## What ContentTerms says of a name that breaks its kind's shape.
@@ -353,7 +353,9 @@ func _check_side_quests(content: QuestContent) -> String:
 			or pond.starts_on.piece != "pond" or first.starts_on != null):
 		return "the pond's chest doesn't start on entering the pond, or another quest has a start"
 	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"starts_on\": %s, \"steps\": [%s]}"
-	var counted: String = "{\"condition\": \"entered\", \"piece\": \"pond\", \"count\": 1}"
+	var counted: String = (
+		"{\"condition\": \"entered\", \"piece\": \"pond\", \"name\": \"pond\", \"count\": 1}"
+	)
 	var cases: Dictionary[String, String] = {
 		quest % ["{\"condition\": \"opened\"}", OPENED_END]: "its start must be one of",
 		quest % ["{\"condition\": \"entered\"}", OPENED_END]: "its start: its piece or instance",
@@ -507,7 +509,9 @@ func _check_branches(content: QuestContent) -> String:
 		return "the glade's fork didn't read as a choice between two ends"
 	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"steps\": [%s, " + STEP_B + "]}"
 	var choices: String = "{\"choices\": [%s]}"
-	var to_b: String = "{\"condition\": \"entered\", \"piece\": \"pond\", \"next\": \"%s\"}"
+	var to_b: String = (
+		"{\"condition\": \"entered\", \"piece\": \"pond\", \"name\": \"pond\", \"next\": \"%s\"}"
+	)
 	var two: String = to_b % "b" + ", " + to_b % "b"
 	var cases: Dictionary[String, String] = {
 		quest % (choices % (to_b % "b")): "step 0: its choices are a list of two",
@@ -628,7 +632,7 @@ func _check_quests() -> String:
 ## with a species or counts more than once, or "".
 func _check_target_steps(content: QuestContent) -> String:
 	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"steps\": [{\"condition\": \"%s\"%s}]}"
-	var target: String = ", \"target\": \"%s\""
+	var target: String = ", \"target\": \"%s\", \"name\": \"old toad\""
 	var asked: String = quest % ["dominated", target % "old_toad" + ", \"ends\": \"x\""]
 	var read: QuestDefinition = QuestDefinition.parse("x", asked, {})
 	if not read.problem.is_empty() or read.steps[0].quarry.target != "old_toad":
@@ -641,6 +645,9 @@ func _check_target_steps(content: QuestContent) -> String:
 		quest % ["dominated", target % "old_toad" + ", \"species\": \"ombulumo\""]: (
 			"step 0: its target"
 		),
+		quest % ["dominated", ", \"target\": \"old_toad\""]: "step 0: its name",
+		quest % ["dominated", ", \"name\": \"old toad\""]: "step 0: its name",
+		quest % ["dominated", target.replace("old toad", " ") % "old_toad"]: "step 0: its name",
 	}
 	return _unrefused(cases, content)
 
@@ -782,8 +789,9 @@ func _wild_species_problem(instance_name: String, species: Dictionary[String, Sp
 ## glade itself, its chests to its corrupted variant too, through its chest table. A blueprint file
 ## with a wrong id, an unknown field, no species, a weight below 1, a chest table without a loot
 ## table, a variant without its region, a variant's region with a codex entry but no gloss or its
-## own region with one (#1448), or without a codex entry and gloss is refused. A variant's region
-## without a codex entry is the instance changed (#1590), which the world flow loads.
+## own region with one (#1448), a variant's region with a codex entry but no name or a name but no
+## codex entry (#1710), or without a codex entry and gloss or a name (#1710) is refused. A variant's
+## region without a codex entry is the instance changed (#1590), which the world flow loads.
 func _check_blueprints() -> String:
 	var glade: Blueprint = InstanceBlueprints.blueprint(FlowSteps.GLADE)
 	if glade == null or glade.loot_table != "glade" or glade.chest_table != "glade_chest":
@@ -821,6 +829,11 @@ func _check_blueprints() -> String:
 		BLUEPRINT % ", \"variants\": [{\"flag\": \"f\"}]": "its variants",
 		BLUEPRINT % (variant % ["r", ", \"codex\": {\"entry\": \"e\"}"]): "its variants",
 		BLUEPRINT % (variant % ["", codex]): "its variants",
+		BLUEPRINT % (variant % ["r", codex]): "its variants",
+		BLUEPRINT % (variant % ["r", ", \"name\": \"R\""]): "its variants",
+		BLUEPRINT % (variant % ["r", ", \"name\": \" \"" + codex]): "its variants",
+		BLUEPRINT.replace("\"X\"", "\" \"") % "": "it needs a name",
+		BLUEPRINT.replace("\"name\": \"X\", ", "") % "": "it needs a name",
 		BLUEPRINT % ", \"turned\": 1": "turned must",
 		BLUEPRINT.replace("\"g\"", "\" \"") % "": "it needs a codex entry",
 		BLUEPRINT.replace(", \"codex\": {\"entry\": \"e\", \"gloss\": \"g\"}", "") % "": (
@@ -903,7 +916,7 @@ func _small_rule_set() -> Dictionary[String, RuleSet]:
 ## The realms mark one start, the glade (#712). A realm file drawing an instance twice, with a
 ## symbol its legend doesn't explain, marking two starts or one it doesn't draw, or without its
 ## codex entry and gloss (#959) or its look by day and at night (#1247, a signed colour too, #1367)
-## is refused.
+## is refused; then the realms' names.
 func _check_realms() -> String:
 	var starts: Array[String] = []
 	for realm: Realm in Realms.all():
@@ -950,6 +963,25 @@ func _check_realms() -> String:
 		var refusal: String = RealmDocument.parse(case).problem
 		if refusal != cases[case]:
 			return "a broken realm gave %s, not %s" % [refusal, cases[case]]
+	return _check_realm_names()
+
+
+## Every realm is named by its file's title (#1710), as the player reads it, and a realm file
+## without a title is refused.
+func _check_realm_names() -> String:
+	for realm: Realm in Realms.all():
+		if realm.name.is_empty() or Realms.name_of(realm.id) != realm.name:
+			return "realm %s is named %s" % [realm.id, Realms.name_of(realm.id)]
+	var text: String = "## Tiles\n\n```\n🌲\n```\n\n## Legend\n\n- `🌲`: the instance %s\n"
+	text = text % FlowSteps.FOREST + "\n## Codex\n\n- Entry: e\n- Gloss: g\n\n## Day and night\n\n"
+	text += "- Day light: #000000\n- Day ambience: #000000\n"
+	text += "- Night light: #000000\n- Night ambience: #000000\n"
+	var titled: Realm = RealmDocument.parse("# R\n\n" + text)
+	if not titled.problem.is_empty() or titled.name != "R":
+		return "a realm file titled R read %s: %s" % [titled.name, titled.problem]
+	var untitled: String = RealmDocument.parse(text).problem
+	if untitled != "its name, the title (%s<name>), is missing (#1710)" % RealmDocument.TITLE:
+		return "a realm file without a title gave %s" % untitled
 	return ""
 
 

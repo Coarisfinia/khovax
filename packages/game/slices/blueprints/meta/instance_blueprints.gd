@@ -53,6 +53,25 @@ static func variant_owner(region_id: String) -> String:
 	return ""
 
 
+## The player-facing name of the place `id`, untranslated (#1710): an instance's, its blueprint's
+## name, or a variant's region of its own's (Blueprint.variant_names, #1448); "" for neither.
+static func place_name(id: String) -> String:
+	var named: Blueprint = blueprint(id)
+	if named != null:
+		return named.name
+	var owner: String = variant_owner(id)
+	return blueprint(owner).variant_names.get(id, "") if not owner.is_empty() else ""
+
+
+## The name the player reads for the place `id` (place_name), translated, or "Unknown place" for
+## one there isn't.
+static func name_of(id: String) -> String:
+	var untranslated: String = place_name(id)
+	if untranslated.is_empty():
+		return TranslationServer.tr("Unknown place")
+	return TranslationServer.tr(untranslated)
+
+
 ## A new instance from the named blueprint, as its state, with `players` players in slots 0 and
 ## up (none for an instance loaded before anyone walks in, #148), from its `variant_name`'s region
 ## ("" for its own), starting at the world's tick `world_tick` (#1215), or null (with an error) for

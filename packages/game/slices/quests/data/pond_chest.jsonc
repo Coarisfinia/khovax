@@ -3,6 +3,6 @@
 {
 	"id": "pond_chest",
 	"name": "The chest by the pond",
-	"starts_on": { "condition": "entered", "piece": "pond", "instance": "lumwen_hoal" },
+	"starts_on": { "condition": "entered", "piece": "pond", "name": "pond", "instance": "lumwen_hoal" },
 	"steps": [{ "condition": "opened", "instance": "lumwen_hoal", "ends": "pond_chest" }]
 }

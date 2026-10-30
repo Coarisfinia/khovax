@@ -138,19 +138,19 @@ static func step_tagged(step: QuestStep, count: int) -> String:
 static func _asks(step: QuestStep) -> String:
 	match step.condition:
 		QuestStep.DOMINATED:
-			return _dominate_line(step.quarry)
+			return _dominate_line(step.quarry, step.name)
 		QuestStep.OPENED:
 			return TranslationServer.tr("Open a chest")
 		QuestStep.REACHED:
-			return TranslationServer.tr("Go to the %s") % _words(step.place)
+			return TranslationServer.tr("Go to the %s") % TranslationServer.tr(step.name)
 		QuestStep.ENTERED:
 			if step.enters_instance():
 				return TranslationServer.tr("Enter %s") % QuestPill.place_tagged(step.instance)
-			return TranslationServer.tr("Enter the %s") % _words(step.piece)
+			return TranslationServer.tr("Enter the %s") % TranslationServer.tr(step.name)
 		QuestStep.ANSWERED:
 			return _answer_line(step)
 		QuestStep.OBTAINED:
-			return TranslationServer.tr("Collect %s") % _words(step.item)
+			return TranslationServer.tr("Collect %s") % TranslationServer.tr(step.name)
 	return ""
 
 
@@ -160,7 +160,7 @@ static func _asks_counted(step: QuestStep, parts: Dictionary[String, Variant]) -
 	var total: int = step.count
 	match step.condition:
 		QuestStep.DOMINATED:
-			return _dominate_counted(step.quarry, total, parts)
+			return _dominate_counted(step.quarry, step.name, total, parts)
 		QuestStep.OPENED:
 			return TranslationServer.tr_n(
 				"Open a chest  {count}/{total}",
@@ -168,7 +168,7 @@ static func _asks_counted(step: QuestStep, parts: Dictionary[String, Variant]) -
 				total,
 			).format(parts)
 		QuestStep.REACHED:
-			parts["place"] = _words(step.place)
+			parts["place"] = TranslationServer.tr(step.name)
 			return TranslationServer.tr_n(
 				"Go to the {place}  {count}/{total}",
 				"Go to the {place}  {count}/{total}",
@@ -182,7 +182,7 @@ static func _asks_counted(step: QuestStep, parts: Dictionary[String, Variant]) -
 					"Enter {place}  {count}/{total}",
 					total,
 				).format(parts)
-			parts["place"] = _words(step.piece)
+			parts["place"] = TranslationServer.tr(step.name)
 			return TranslationServer.tr_n(
 				"Enter the {place}  {count}/{total}",
 				"Enter the {place}  {count}/{total}",
@@ -191,7 +191,7 @@ static func _asks_counted(step: QuestStep, parts: Dictionary[String, Variant]) -
 		QuestStep.ANSWERED:
 			return _answer_counted(step, parts)
 		QuestStep.OBTAINED:
-			parts["item"] = _words(step.item)
+			parts["item"] = TranslationServer.tr(step.name)
 			return TranslationServer.tr_n(
 				"Collect {item}  {count}/{total}",
 				"Collect {item}  {count}/{total}",
@@ -201,8 +201,9 @@ static func _asks_counted(step: QuestStep, parts: Dictionary[String, Variant]) -
 
 
 ## What a dominated step asks for, `quarry`: a species, after "a" or "an" by its English name's
-## first letter, one monster, the quest's target, or any monster.
-static func _dominate_line(quarry: QuestQuarry) -> String:
+## first letter, one monster, the quest's target by its step's `target_name` (#1710), or any
+## monster.
+static func _dominate_line(quarry: QuestQuarry, target_name: String) -> String:
 	if quarry.species != null:
 		var species_name: String = quarry.species.name
 		var shown_name: String = TranslationServer.tr(species_name)
@@ -210,15 +211,16 @@ static func _dominate_line(quarry: QuestQuarry) -> String:
 			return TranslationServer.tr("Dominate an %s") % shown_name
 		return TranslationServer.tr("Dominate a %s") % shown_name
 	if not quarry.target.is_empty():
-		return TranslationServer.tr("Dominate the %s") % _words(quarry.target)
+		return TranslationServer.tr("Dominate the %s") % TranslationServer.tr(target_name)
 	return TranslationServer.tr("Dominate a monster")
 
 
 ## What a dominated step asks for, `quarry`, `total` times, with `parts`' count and total: a
-## species, after "a" or "an" as _dominate_line chooses, the quest's target (one monster, so its
-## content never counts it), or any monster.
+## species, after "a" or "an" as _dominate_line chooses, the quest's target by `target_name` (one
+## monster, so its content never counts it), or any monster.
 static func _dominate_counted(
 	quarry: QuestQuarry,
+	target_name: String,
 	total: int,
 	parts: Dictionary[String, Variant],
 ) -> String:
@@ -237,7 +239,7 @@ static func _dominate_counted(
 			total,
 		).format(parts)
 	if not quarry.target.is_empty():
-		parts["target"] = _words(quarry.target)
+		parts["target"] = TranslationServer.tr(target_name)
 		return TranslationServer.tr_n(
 			"Dominate the {target}  {count}/{total}",
 			"Dominate the {target}  {count}/{total}",
@@ -287,8 +289,8 @@ static func _answer_counted(step: QuestStep, parts: Dictionary[String, Variant])
 	).format(parts)
 
 
-## An id (a place, a region piece, an item or a quest target) as words: they have no
-## player-facing names yet.
+## An answer's id as words, for a step whose dialogs weren't read with it: places, region pieces,
+## items and quest targets are shown by the name their step gives (QuestStep.name, #1710).
 static func _words(id: String) -> String:
 	return id.replace("_", " ")
 

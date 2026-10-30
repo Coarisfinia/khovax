@@ -209,7 +209,7 @@ func _show_place(id: String) -> bool:
 		id,
 		PackedStringArray([blueprint.codex_entry, blueprint.codex_gloss]),
 	)
-	_show_name(TextTags.PLACE, Realms.name_of(id), tr(codex[1]))
+	_show_name(TextTags.PLACE, InstanceBlueprints.name_of(id), tr(codex[1]))
 	entry.text = tr(codex[0])
 	return true
 

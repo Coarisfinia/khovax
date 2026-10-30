@@ -10,6 +10,10 @@ msgid "Loading the world…"
 msgstr ""
 
 #: realms/ardvaun.md
+msgid "Ardvaun"
+msgstr ""
+
+#: realms/ardvaun.md
 msgid "The high land at the heart of the world, where the settlers made their first camps and named the ground in Land-speech. Every realm's name ends in -vaun, the Land-speech word for land."
 msgstr ""
 
@@ -25,12 +29,20 @@ msgstr ""
 msgid "the broken pass"
 msgstr ""
 
+#: slices/blueprints/data/brekhal_varn.jsonc
+msgid "Brekhal Varn"
+msgstr ""
+
 #: slices/blueprints/data/dhorvone_stolm.jsonc
 msgid "A ruined castle west of Morwe Wudhen, named in Land-speech with a harsh dh, r and v. Stolm is a stronghold. Once corruption takes it, the beast-tongue seeps into its name: Dhyrvone Stolmm."
 msgstr ""
 
 #: slices/blueprints/data/dhorvone_stolm.jsonc
 msgid "the fallen stronghold"
+msgstr ""
+
+#: slices/blueprints/data/dhorvone_stolm.jsonc
+msgid "Dhorvone Stolm"
 msgstr ""
 
 #: slices/blueprints/data/edhra_tewk.jsonc
@@ -41,12 +53,20 @@ msgstr ""
 msgid "the plain camp"
 msgstr ""
 
+#: slices/blueprints/data/edhra_tewk.jsonc
+msgid "Edhra Tewk"
+msgstr ""
+
 #: slices/blueprints/data/hrovumel_stolm.jsonc
 msgid "A stronghold sunk into the rock, shut for so long that nobody living remembers its halls, until a guide opens the way. Its name is hushed: a breathy hr, then round o, u and soft m and l, like air moving through a closed hall; Stolm is a stronghold."
 msgstr ""
 
 #: slices/blueprints/data/hrovumel_stolm.jsonc
 msgid "the hushed stronghold"
+msgstr ""
+
+#: slices/blueprints/data/hrovumel_stolm.jsonc
+msgid "Hrovumel Stolm"
 msgstr ""
 
 #: slices/blueprints/data/hrunde_orl.jsonc
@@ -57,12 +77,20 @@ msgstr ""
 msgid "the drumming ring"
 msgstr ""
 
+#: slices/blueprints/data/hrunde_orl.jsonc
+msgid "Hrunde Orl"
+msgstr ""
+
 #: slices/blueprints/data/ivenwhal_wudhen.jsonc
 msgid "A wood southeast of the foot of Brekhal Varn, its moss soaked violet with mana and ringed by gems taller than a person, where the Vynakiir den, wolves whose mana has deepened into the arcane. Its name hums in v and n like the mana in its ground, with the breathy wh of the settlers' tongue; Wudhen is their word for a wood."
 msgstr ""
 
 #: slices/blueprints/data/ivenwhal_wudhen.jsonc
 msgid "the humming wood"
+msgstr ""
+
+#: slices/blueprints/data/ivenwhal_wudhen.jsonc
+msgid "Ivenwhal Wudhen"
 msgstr ""
 
 #: slices/blueprints/data/lumwen_hoal.jsonc
@@ -74,11 +102,19 @@ msgid "the soft clearing"
 msgstr ""
 
 #: slices/blueprints/data/lumwen_hoal.jsonc
+msgid "Lumwen Hoal"
+msgstr ""
+
+#: slices/blueprints/data/lumwen_hoal.jsonc
 msgid "Lumwen Hoal, corrupted. The beast-tongue has crept into the land and into its name: a y where its first vowel was, and its last sound doubled, as only beast-calls have them. Purifying it gives the clearing back its own name."
 msgstr ""
 
 #: slices/blueprints/data/lumwen_hoal.jsonc
 msgid "the soft clearing, gone wild"
+msgstr ""
+
+#: slices/blueprints/data/lumwen_hoal.jsonc
+msgid "Lymwen Hoall"
 msgstr ""
 
 #: slices/blueprints/data/morwe_wudhen.jsonc
@@ -89,6 +125,10 @@ msgstr ""
 msgid "the dark wood"
 msgstr ""
 
+#: slices/blueprints/data/morwe_wudhen.jsonc
+msgid "Morwe Wudhen"
+msgstr ""
+
 #: slices/blueprints/data/senwel_sael.jsonc
 msgid "A small, quiet ground by a still pool, where only the world's testers walk. Soft sounds for a calm place; Sael is still water."
 msgstr ""
@@ -97,12 +137,25 @@ msgstr ""
 msgid "the quiet pool"
 msgstr ""
 
+#: slices/blueprints/data/senwel_sael.jsonc
+msgid "Senwel Sael"
+msgstr ""
+
 #: slices/blueprints/data/thudren_orl.jsonc
 msgid "A wide ring teeming with wild monsters, where the world's testers measure how much it can bear. Its name thuds like many feet; Orl is a ring."
 msgstr ""
 
 #: slices/blueprints/data/thudren_orl.jsonc
 msgid "the thronging ring"
+msgstr ""
+
+#: slices/blueprints/data/thudren_orl.jsonc
+msgid "Thudren Orl"
+msgstr ""
+
+#: slices/blueprints/meta/instance_blueprints.gd
+#: slices/quests/ui/quest_pill.gd
+msgid "Unknown place"
 msgstr ""
 
 #: slices/codex/ui/bestiary_entry.gd
@@ -930,16 +983,53 @@ msgstr ""
 msgid "Dominate your first monster"
 msgstr ""
 
+#: slices/quests/data/first_domination.jsonc
+msgid "beach"
+msgstr ""
+
 #: slices/quests/data/guild_charts_morwe_wudhen.jsonc
 msgid "Chart Morwe Wudhen for the ${FACTION:amvrel_velmarai}"
+msgstr ""
+
+#: slices/quests/data/guild_charts_morwe_wudhen.jsonc
+msgid "stream"
+msgstr ""
+
+#: slices/quests/data/guild_charts_morwe_wudhen.jsonc
+msgid "grove"
+msgstr ""
+
+#: slices/quests/data/guild_charts_morwe_wudhen.jsonc
+msgid "felling"
 msgstr ""
 
 #: slices/quests/data/guild_holds_edhra_tewk.jsonc
 msgid "Hold Edhra Tewk for the ${FACTION:amvrel_velmarai}"
 msgstr ""
 
+#: slices/quests/data/guild_holds_edhra_tewk.jsonc
+msgid "north hold"
+msgstr ""
+
+#: slices/quests/data/guild_holds_edhra_tewk.jsonc
+msgid "south hold"
+msgstr ""
+
+#: slices/quests/data/guild_holds_edhra_tewk.jsonc
+msgid "watch"
+msgstr ""
+
 #: slices/quests/data/lumwen_hoal_fork.jsonc
 msgid "Pond or thicket"
+msgstr ""
+
+#: slices/quests/data/lumwen_hoal_fork.jsonc
+#: slices/quests/data/pond_chest.jsonc
+msgid "pond"
+msgstr ""
+
+#: slices/quests/data/lumwen_hoal_fork.jsonc
+msgid "thicket"
 msgstr ""
 
 #: slices/quests/data/pond_chest.jsonc
@@ -964,6 +1054,14 @@ msgstr ""
 
 #: slices/quests/data/tormaesk_escort.jsonc
 msgid "The way into ${PLACE:hrovumel_stolm}"
+msgstr ""
+
+#: slices/quests/data/tormaesk_escort.jsonc
+msgid "sealed passage"
+msgstr ""
+
+#: slices/quests/data/tormaesk_escort.jsonc
+msgid "inner shrine"
 msgstr ""
 
 #: slices/quests/ui/quest_list_view.gd
@@ -1116,6 +1214,10 @@ msgstr ""
 
 #: slices/quests/ui/quests_tab.gd
 msgid "Follow"
+msgstr ""
+
+#: slices/realms/meta/realms.gd
+msgid "Unknown realm"
 msgstr ""
 
 #: slices/settings/look/graphics.gd

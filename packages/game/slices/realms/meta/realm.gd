@@ -8,6 +8,8 @@ extends RefCounted
 
 ## The realm's id, its file's name.
 var id: String = ""
+## Its player-facing name (#1710), its file's title, untranslated.
+var name: String = ""
 ## Each instance's id (its blueprint's), by the tile it's drawn on, in reading order.
 var instances: Dictionary[Vector2i, String] = {}
 ## The instance the players start in, if this realm is where the world starts, or "".
