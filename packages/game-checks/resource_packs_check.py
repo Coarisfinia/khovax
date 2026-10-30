@@ -11,7 +11,12 @@ will have (#1858), and looked up only through ResourcePacks. It fails when
   region file or piece under regions/, a realm under realms/) is in the repository but not in the
   manifest;
 - a script, scene, resource or content file names a texture's, model's, region's or realm's res://
-  path instead of its id, so it would get around the resolver, and a pack could never override it.
+  path instead of its id, so it would get around the resolver, and a pack could never override it;
+  or a script loads anything by its uid:// (stricter than the pack needs: scripts never do), or
+  builds a path under assets/, regions/ or realms/ at runtime (#1865; the tools, which list the
+  assets for the credits, may).
+An id named only in the tests counts as unreferenced (#1865): they name ids to check them. The models
+the boot flow lists as built before what uses them are the exception.
 The images a listed model uses (a glTF's own files, or the textures Godot extracted from a model,
 as unused_assets.py finds them) come with their model's entry, not through the manifest. What a schema can
 check (the fields and their types) is content_schemas_check.py's, and what a pack is checked for
@@ -71,7 +76,24 @@ STRING = re.compile(r"\"([a-z][a-z0-9_]*)\"")
 PATH = re.compile(
     r"res://(assets/[A-Za-z0-9._/-]+\.(?:"
     + "|".join(ending[1:] for ending in IMAGES + MODELS)
-    + r")\b|regions/[A-Za-z0-9._/-]*|realms/[A-Za-z0-9._/-]*)"
+    + r")\b|regions/[A-Za-z0-9._/-]+|realms/[A-Za-z0-9._/-]+)"
+)
+
+# Lookups around the resolver that name no path the check above could read (#1865): a uid://
+# reference, or a path built from parts at runtime (a string that starts a path under one of the
+# pack's folders but isn't a whole file's). A relative path is import_rules.py's to refuse.
+UID_LOAD = re.compile(r"\b(?:pre)?load\(\s*[\"'](uid://[^\"']*)")
+PACK_STRING = re.compile(r"[\"']res://(?:assets|regions|realms)(?:/[^\"'\n]*)?[\"']")
+WHOLE_FILE = re.compile(r"[\"']res://[A-Za-z0-9._/-]+\.[A-Za-z0-9]+[\"']")
+# The tools list the assets as files (the credits), never looking one up for the game.
+TOOLS = "tools/"
+# The tests name ids to check them, so an id only they name is unreferenced (#1865)...
+TESTS = "tests/"
+# ...but for the models built before what uses them, which the boot flow lists to check each
+# until it's used (#1476, #1634, #1635).
+WAITING = Path("tests/e2e/test_boot_flow.gd")
+WAITING_LISTS = re.compile(
+    r"^const (?:UNWORN_MODELS|UNPLACED_PROPS|UNPLACED_MODELS)\b.*?(?=^\S|\Z)", re.MULTILINE | re.DOTALL
 )
 
 type Problems = list[tuple[str, str | None]]
@@ -180,14 +202,40 @@ def manifest_sections() -> tuple[dict[str, Entries], Problems]:
     return entries, problems
 
 
+def waiting() -> set[str]:
+    """The models the boot flow checks before anything uses them (WAITING)."""
+    code = code_of(WAITING.as_posix()) if WAITING.is_file() else ""
+    return {match for block in WAITING_LISTS.findall(code) for match in STRING.findall(block)}
+
+
+def around_resolver(file: str, code: str) -> Problems:
+    """Where the file's `code` reaches a resource around the resolver: by its path, by its
+    uid://, or by a path built at runtime."""
+    problems: Problems = [
+        (f"names {path} directly: look it up by its id (ResourcePacks)", file)
+        for path in PATH.findall(code)
+    ]
+    if file.endswith(".gd"):
+        problems += [
+            (f"loads {found} by its uid://: scripts never load by uid:// (a resource by its id, ResourcePacks)", file)
+            for found in UID_LOAD.findall(code)
+        ]  # fmt: skip
+    if not file.startswith(TOOLS):
+        problems += [
+            (f"builds a path from {found} at runtime: look it up by its id (ResourcePacks)", file)
+            for found in PACK_STRING.findall(code)
+            if not WHOLE_FILE.fullmatch(found) and not PATH.search(found)
+        ]  # fmt: skip
+    return problems
+
+
 def main() -> int:
     # The game's project folder (#1101): every path below is relative to it.
     os.chdir(Path(__file__).resolve().parents[1] / "game")
     problems: Problems = []
     naming = [file for file in git_files(*NAMING) if not file.startswith(RESOLVER)]
     for file in naming:
-        for path in PATH.findall(code_of(file)):
-            problems.append((f"names {path} directly: look it up by its id (ResourcePacks)", file))
+        problems += around_resolver(file, code_of(file))
 
     entries, read_problems = manifest_sections()
     problems += read_problems
@@ -204,7 +252,13 @@ def main() -> int:
     tracked = set(git_files("assets", "regions", "realms"))
     models = {path for paths in entries["models"].values() for path in paths}
     used_by_models = model_images(sorted(models & tracked))
-    named = {match for file in naming for match in STRING.findall(code_of(file))}
+    named = {
+        match
+        for file in naming
+        if not file.startswith(TESTS)
+        for match in STRING.findall(code_of(file))
+    }
+    named |= waiting()
     for name, kind in KINDS.items():
         files = sorted(
             path
