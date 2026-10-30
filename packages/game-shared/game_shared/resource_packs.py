@@ -42,7 +42,12 @@ def read_manifest(path: Path = MANIFEST) -> dict[str, object]:
 
 
 def textures(manifest: dict[str, object]) -> dict[str, str]:
-    """The manifest's textures, each file by its id, leaving out entries that aren't text."""
+    """The manifest's textures, each file by its id; ValueError when they aren't an object of
+    texts, so no entry slips past the checks."""
     raw = manifest.get("textures")
-    entries = raw if isinstance(raw, dict) else {}
-    return {key: value for key, value in entries.items() if isinstance(value, str)}
+    if not isinstance(raw, dict):
+        raise ValueError("has no textures object")
+    odd = sorted(key for key, value in raw.items() if not isinstance(value, str))
+    if odd:
+        raise ValueError(f"names no file for the textures {', '.join(odd)}")
+    return dict(raw)

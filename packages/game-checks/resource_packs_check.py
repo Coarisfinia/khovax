@@ -3,8 +3,8 @@ manifest a player's pack will have (#1858), and looked up only through ResourceP
 - the manifest (game_shared.resource_packs.MANIFEST) is missing or isn't a JSON object;
 - an id doesn't resolve: it isn't an id (Ids), or its file isn't tracked, isn't imported by Godot
   (a .import beside it) or isn't an image;
-- a texture is unreferenced: the manifest lists it but no script, scene or resource of the game's
-  names its id as a string, or an image under assets/ is in the repository but not in the manifest;
+- a texture is unreferenced: the manifest lists it but no script (outside its comments), scene or
+  resource of the game's names its id as a string, or an image under assets/ is in the repository but not in the manifest;
 - a script, scene or resource names a texture's res:// path instead of its id, so it would get
   around the resolver, and a pack could never override it.
 The images a model uses (a glTF's own files, or the textures Godot extracted from a model, as
@@ -21,6 +21,7 @@ import sys
 from pathlib import Path
 
 from game_shared import log
+from game_shared.gdscript_code import without_comments
 from game_shared.git_files import git_files
 from game_shared.resource_packs import MANIFEST, read_manifest, textures
 from unused_assets import extracted_textures, gltf_files
@@ -47,12 +48,19 @@ def model_images() -> set[str]:
     return images
 
 
+def code_of(file: str) -> str:
+    """The file's text, a script's without its comments, so an id named only in a comment counts
+    as unreferenced."""
+    text = Path(file).read_text(encoding="utf-8")
+    return without_comments(text) if file.endswith(".gd") else text
+
+
 def unresolved(entries: dict[str, str], tracked: set[str]) -> Problems:
     """Why each texture id doesn't resolve to an imported image."""
     problems: Problems = []
     for texture_id, path in entries.items():
         if not ID.fullmatch(texture_id):
-            problems.append((f"texture id {texture_id!r} isn't lowercase words with underscores", None))
+            problems.append((f"texture id {texture_id!r} isn't lowercase words and underscores", None))
         if path not in tracked:
             problems.append((f"texture {texture_id}'s file {path} isn't in the repository", None))
         elif f"{path}.import" not in tracked:
@@ -103,11 +111,7 @@ def main() -> int:
     images = sorted(
         path for path in tracked if path.endswith(IMAGES) and path not in used_by_models
     )
-    named = {
-        match
-        for file in naming
-        for match in STRING.findall(Path(file).read_text(encoding="utf-8"))
-    }
+    named = {match for file in naming for match in STRING.findall(code_of(file))}
     problems += unresolved(entries, tracked)
     problems += unreferenced(entries, named, images)
     for message, file in problems:
