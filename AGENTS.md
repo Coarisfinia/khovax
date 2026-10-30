@@ -306,7 +306,10 @@ background; only wait in the foreground for a result the very next step needs.
     nothing blocking, named on the pull request. The merge queue still needs one approving review
     and doesn't apply the bot's bypass (#1867), so the main session then labels the pull request
     `subagent-cleared` and `.github/workflows/approve-cleared.yml` approves it (#1874), but only
-    when the agent bot or a human admin put the label on. Queue it once that approval is there.
+    when the agent bot or a human admin put the label on, and never for a pull request that
+    changes user-facing files (`packages/game/` outside its `tests/` and `tools/`; owner's pick 1
+    on #1874). A push withdraws that approval, never a person's; clear it again (label off and on).
+    Queue it once that approval is there.
 
   **CodeRabbit reviews at most once per pull request** (owner's ground rule, #1783): its automatic
   reviews are off (`.coderabbit.yml`), and its approval is no part of the rule above. Only for a

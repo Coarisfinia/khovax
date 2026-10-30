@@ -1,4 +1,5 @@
-# Approves a pull request once it is labelled `subagent-cleared` (#1874, the owner's pick on #1867).
+# Approves a pull request once it is labelled `subagent-cleared` (#1874, the owner's pick on #1867),
+# and withdraws that approval when new commits arrive.
 #
 # The merge queue requires one approving review ("main approval") and doesn't apply the agent
 # bot's bypass, and the bot can't approve its own pull requests. A pull request that isn't
@@ -6,33 +7,36 @@
 # `subagent-cleared`; this workflow turns that label into the approval the queue needs.
 #
 # The label counts only when the agent bot or a human admin of the repository (the owner) put it
-# on. `pull_request_target` is the one exception to AGENTS.md's ban on it: it runs this file from
-# the base branch with a token that can write, so it must never check out or run anything from
-# the pull request, and it doesn't. It needs "Allow GitHub Actions to create and approve pull
+# on, and only for a pull request that touches no user-facing files (the owner's pick 1 on #1874).
+# `pull_request_target` is the one exception to AGENTS.md's ban on it: it runs this file from the
+# base branch with a token that can write, so it must never check out or run anything from the
+# pull request, and it doesn't. It needs "Allow GitHub Actions to create and approve pull
 # requests" on in Settings -> Actions -> General.
 name: approve-cleared
 
 on:
   pull_request_target:
-    types: [labeled]
+    types: [labeled, synchronize]
 
 permissions:
   pull-requests: write
 
 jobs:
   approve:
-    if: github.event.label.name == 'subagent-cleared'
+    if: github.event.action == 'labeled' && github.event.label.name == 'subagent-cleared'
     runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
-      - name: Approve if the agent bot or the owner applied the label
+      - name: Approve if the agent bot or the owner cleared it and it isn't user-facing
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
           SENDER: ${{ github.event.sender.login }}
           SENDER_TYPE: ${{ github.event.sender.type }}
           BOT: coarisfinia-ai-agent[bot]
+          CHANGED_FILES: ${{ github.event.pull_request.changed_files }}
         run: |
           if [ "$SENDER" = "$BOT" ]; then
             who="the agent bot"
@@ -44,7 +48,55 @@ jobs:
               "agent bot or a human admin of the repository may clear a pull request."
             exit 0
           fi
-          echo "Approving #$PR: $who ('$SENDER') labelled it subagent-cleared."
+          # The bot that labels is also the bot that opens pull requests, so the label alone could
+          # approve a user-facing one (#1874). The game itself is user-facing; its tests and tools
+          # aren't. A file list that can't be read in full, or of another commit, approves nothing.
+          files=$(gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[].filename')
+          if [ "$(gh api "repos/$REPO/pulls/$PR" --jq .head.sha)" != "$HEAD" ]; then
+            echo "Not approving #$PR: new commits arrived after it was labelled; clear it again."
+            exit 0
+          fi
+          if [ "$(printf '%s\n' "$files" | grep -c .)" -ne "$CHANGED_FILES" ]; then
+            echo "Not approving #$PR: its list of changed files couldn't be read in full."
+            exit 0
+          fi
+          user_facing=$(printf '%s\n' "$files" |
+            grep '^packages/game/' | grep -v -e '^packages/game/tests/' -e '^packages/game/tools/' || true)
+          if [ -n "$user_facing" ]; then
+            echo "Not approving #$PR: it changes user-facing files, which need the owner's approval:"
+            printf '%s\n' "$user_facing"
+            exit 0
+          fi
+          echo "Approving #$PR at $HEAD: $who ('$SENDER') labelled it subagent-cleared."
           body="Approved because \`$SENDER\` labelled it \`subagent-cleared\`: a review subagent"
           body+=" found nothing blocking in this pull request, which isn't user-facing (#1874)."
-          gh pr review "$PR" --repo "$REPO" --approve --body "$body"
+          # Pinned to the commit that was checked, so a later push never inherits it unseen.
+          gh api --method POST "repos/$REPO/pulls/$PR/reviews" -f commit_id="$HEAD" \
+            -f event=APPROVE -f body="$body" --jq '"Approved: " + .html_url'
+
+  withdraw:
+    # New commits weren't cleared, and the ruleset keeps approvals across pushes, so this
+    # workflow's own approvals are dismissed. A person's approval stays.
+    if: github.event.action == 'synchronize'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    steps:
+      - name: Dismiss this workflow's approvals of older commits
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          ids=$(gh api --paginate "repos/$REPO/pulls/$PR/reviews" --jq '.[] |
+            select(.user.login == "github-actions[bot]" and .state == "APPROVED"
+              and .commit_id != env.HEAD) | .id')
+          if [ -z "$ids" ]; then
+            echo "#$PR has no approval from this workflow to withdraw."
+            exit 0
+          fi
+          for id in $ids; do
+            gh api --method PUT "repos/$REPO/pulls/$PR/reviews/$id/dismissals" -f event=DISMISS \
+              -f message="New commits arrived after the clearance: clear it again (#1874)." \
+              --jq '"Dismissed review " + (.id | tostring)'
+          done
