@@ -13,6 +13,9 @@ static func all() -> Array[Realm]:
 	if _all.is_empty():
 		var files: Dictionary[String, String] = ResourcePacks.realms()
 		for realm_id: String in files:
+			# A build may leave a realm's file out, like a test-only region's (ResourcePack.KINDS).
+			if not FileAccess.file_exists(files[realm_id]):
+				continue
 			var realm: Realm = RealmDocument.parse(FileAccess.get_file_as_string(files[realm_id]))
 			realm.id = realm_id
 			_all.append(realm)

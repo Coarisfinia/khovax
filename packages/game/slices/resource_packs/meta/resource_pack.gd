@@ -19,9 +19,8 @@ const FIELDS: Array[String] = [
 ]
 ## Each section of resources the manifest lists, one file per id, with the type its files load as;
 ## "" for a file read as text (a region file or a realm, #1861), which isn't checked to exist here:
-## a build
-## may leave a test-only region out (export_presets.cfg), and RegionFiles finds only the files there
-## are.
+## a build may leave a test-only region out (export_presets.cfg), and RegionFiles and Realms read
+## only the files there are.
 const KINDS: Dictionary[String, String] = {
 	"textures": "Texture2D",
 	"models": "PackedScene",
@@ -66,8 +65,7 @@ var problem: String = ""
 ## The pack the manifest `text` describes, its files under `root`, with `problem` saying why it
 ## can't be used: a field missing or unknown, an id that isn't one, or a texture, model, region,
 ## region piece or realm whose file climbs out of `root`, has another kind's ending or (for a
-## texture or
-## model) doesn't exist.
+## texture or model) doesn't exist.
 static func parse(text: String, files_root: String) -> ResourcePack:
 	var pack: ResourcePack = ResourcePack.new()
 	pack.root = files_root

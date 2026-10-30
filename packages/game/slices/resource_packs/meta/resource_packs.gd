@@ -3,9 +3,8 @@ extends RefCounted
 ## The one resolver of the game's resources (#1860): it turns a resource id into the resource by
 ## walking the loaded packs in order, the first that has the id giving it. The game's own resources
 ## are the default pack, last in the order; a player's packs (#1858) will come before it, and
-## override what they provide. Nothing looks up a built-in texture, model, region or realm any other
-## way
-## (resource_packs_check.py in CI).
+## override what they provide. Nothing looks up a built-in texture, model, region or realm any
+## other way (resource_packs_check.py in CI).
 
 ## The default pack's manifest; its files are named from res://.
 const DEFAULT: String = "res://slices/resource_packs/data/default.jsonc"

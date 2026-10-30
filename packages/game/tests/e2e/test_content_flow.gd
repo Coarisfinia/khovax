@@ -2141,7 +2141,9 @@ func _check_resource_packs() -> String:
 		if not RegionFiles.exists(region_id):
 			return "the default pack's region %s doesn't resolve" % region_id
 	var realms: Dictionary[String, String] = ResourcePacks.realms()
-	if realms.keys() != packs[0].realms.keys() or not realms.values().all(FileAccess.file_exists):
+	var listed: Array = packs[0].realms.keys()
+	listed.sort()
+	if realms.keys() != listed or not realms.values().all(FileAccess.file_exists):
 		return "the default pack's realms don't resolve: %s" % realms
 	return _check_pack_manifests()
 
