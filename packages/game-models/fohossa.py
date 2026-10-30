@@ -108,19 +108,6 @@ FAINT_FOREPAWS = 0.25
 SLEEP_PAWS = {"front_paw": (0.0, 0.0, 0.25), "hind_paw": (0.08, 0.0, -0.08)}
 
 
-class Body:
-    """What clips.gait reads of a quadruped.Proportions, from the adopted rig: each leg's top and
-    paw tip, the hips, the shoulders and the muzzle's tip."""
-
-    def __init__(self, rig):
-        bones = rig.data.bones
-        self.front_leg = [tuple(bones["scapula.L"].head_local), tuple(bones["front_paw.L"].tail_local)]
-        self.hind_leg = [tuple(bones["thigh.L"].head_local), tuple(bones["hind_paw.L"].tail_local)]
-        self.hips = tuple(bones["hips"].head_local)
-        self.chest = tuple(bones["neck"].head_local)
-        self.nose = MUZZLE
-
-
 # The share of the neck's bow the withers take: one joint turning the whole bow pinches the neck
 # between the shoulders, whose skin stays (the volume check).
 WITHERS = 0.4
@@ -135,22 +122,6 @@ def withers(_name, poses, _loop):
         pose["neck"] = ((1.0 - WITHERS) * bow[0], bow[1], bow[2])
 
 
-def lesser(clip, share=SHARE):
-    """`clip` with its body's shifts, its paws' moves and its tail's swing `share` as large: its
-    legs are short against its body, so they reach less far than the wolf's the library's clips
-    were made for, and its long tail would sweep out of its hex."""
-    keys = []
-    for key in clip.keys:
-        pose = {name: tuple(share * value for value in values)
-                if name == "root_loc" or name.startswith(("plant.", "tail_")) else values
-                for name, values in key[1].items()}
-        keys.append((key[0], pose, *key[2:]))
-    clip.keys = keys
-    for step in clip.steps:
-        step.spot = tuple(share * value for value in step.spot)
-    return clip
-
-
 # The skin between the legs, this near the midline (metres), moves with the trunk rather than the
 # legs, so a swinging leg doesn't drag the chest's or the belly's underside along (#1422's trap).
 MIDLINE = 0.1
@@ -158,26 +129,15 @@ MIDLINE = 0.1
 TRUNK = {"scapula": "spine_03", "upper_arm": "spine_03", "thigh": "pelvis", "shin": "pelvis"}
 
 
-def merge(skin, weights, where=lambda vertex: True):
-    """Moves the weights of the vertices `where` holds as {from bone: to bone} says."""
-    groups = {group.index: group.name for group in skin.vertex_groups}
-    moves = [(vertex.index, groups[element.group], element.weight)
-             for vertex in skin.data.vertices if where(vertex)
-             for element in vertex.groups if groups[element.group] in weights and element.weight > 0.0]
-    for index, name, weight in moves:
-        skin.vertex_groups[name].remove([index])
-        skin.vertex_groups[weights[name]].add([index], weight, "ADD")
-
-
 def keep_trunk(skin):
     """The legs' tops give up their weights near the midline to the trunk (MIDLINE, TRUNK)."""
-    merge(skin, {"%s.%s" % (bone, side): trunk for bone, trunk in TRUNK.items() for side in ("L", "R")},
-          lambda vertex: abs(vertex.co.x) < MIDLINE)
+    rigged.merge(skin, {"%s.%s" % (bone, side): trunk for bone, trunk in TRUNK.items() for side in ("L", "R")},
+                 lambda vertex: abs(vertex.co.x) < MIDLINE)
 
 
 def rename(rig, skin):
     rigged.rename(rig, skin, {old: new for old, new in RENAMES.items() if old in rig.data.bones})
-    merge(skin, {"skull_base": "neck"})
+    rigged.merge(skin, {"skull_base": "neck"})
     skin.vertex_groups.remove(skin.vertex_groups["skull_base"])
     keep_trunk(skin)
     scene.select_only(rig)
@@ -219,17 +179,17 @@ def build(out):
     bpy.ops.object.shade_smooth()
     rename(rig, skin)
     points(rig)
-    body = Body(rig)
+    body = adopted.Body(rig, MUZZLE, shoulder="scapula")
     clips.animate(rig, {
         "Idle": clips.idle(),
         "Walk": clips.gait(WALK_FRAMES, WALK_STRIDE, body, clips.WALK, duty=WALK_DUTY, fold=0.0, lift=WALK_LIFT,
                            curl=WALK_CURL, roll=WALK_ROLL, bob=WALK_BOB),
         "Run": clips.gait(RUN_FRAMES, RUN_STRIDE, body, clips.GALLOP, duty=RUN_DUTY, fold=RUN_FOLD,
                           spine_flex=RUN_SPINE_FLEX, roll=RUN_ROLL, bob=RUN_BOB, planted=False),
-        "Attack": lesser(clips.attack()),
-        "Hit": lesser(clips.hit()),
+        "Attack": adopted.lesser(clips.attack(), SHARE),
+        "Hit": adopted.lesser(clips.hit(), SHARE),
         "Faint": clips.faint(BELLY_HEIGHT, forepaws=FAINT_FOREPAWS),
-        **{name: lesser(clip) for name, clip in clips.channel().items()},
+        **{name: adopted.lesser(clip, SHARE) for name, clip in clips.channel().items()},
         "Feed": clips.feed(forepaws=0.04),
         "Sleep": clips.sleep(clips.curled(BELLY_HEIGHT), SLEEP_PAWS),
     }, SCALE, ground_meshes=[skin], chains=FOLLOW, limbs=adopted.limbs(rig),

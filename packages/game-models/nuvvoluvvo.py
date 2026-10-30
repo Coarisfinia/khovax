@@ -353,36 +353,6 @@ def paddle(frames, pairs, bounces, bounce, swing, fold, roll=0.0, pitch=0.0):
     return clips.Clip(poses, loop=True, planted=False)
 
 
-def lesser(clip, share=SHARE, turns=1.0):
-    """`clip` with its body's shifts, its paws' steps (how far and how high) and its tail's swing
-    `share` as large: its legs are short under its big body, so they reach less far than the
-    wolf's the library's clips were made for. Its neck and head turn `turns` as far."""
-    keys = []
-    for key in clip.keys:
-        pose = {name: tuple(share * value for value in values)
-                if name == "root_loc" or name.startswith(("plant.", "tail_"))
-                else tuple(turns * value for value in values) if name in ("neck", "head") else values
-                for name, values in key[1].items()}
-        keys.append((key[0], pose, *key[2:]))
-    clip.keys = keys
-    for step in clip.steps:
-        step.spot = tuple(share * value for value in step.spot)
-        step.height *= share
-    return clip
-
-
-def merge(skin, weights, where=lambda vertex: True):
-    """Moves the weights of the vertices `where` holds as {from bone: to bone} says."""
-    groups = {group.index: group.name for group in skin.vertex_groups}
-    moves = [(vertex.index, groups[element.group], element.weight)
-             for vertex in skin.data.vertices if where(vertex)
-             for element in vertex.groups if groups[element.group] in weights and element.weight > 0.0]
-    for index, name, weight in moves:
-        skin.vertex_groups[name].remove([index])
-        (skin.vertex_groups.get(weights[name]) or skin.vertex_groups.new(name=weights[name])).add(
-            [index], weight, "ADD")
-
-
 def mirror_head(skin):
     """The head's left side takes the weights of its right side mirrored (a vertex those of the
     nearest one at its mirrored spot), the right ear's bones as the left ear's: the left ear's own
@@ -410,15 +380,15 @@ def mirror_head(skin):
 
 def rename(rig, skin):
     rigged.rename(rig, skin, {old: new for old, new in RENAMES.items() if old in rig.data.bones})
-    merge(skin, JOINS)
+    rigged.merge(skin, JOINS)
     for bone, paw, height in (("hock", "hind_paw", HEEL), ("forearm", "front_paw", FOOT)):
-        merge(skin, {"%s.%s" % (bone, side): "%s.%s" % (paw, side) for side in ("L", "R")},
-              lambda vertex, height=height: vertex.co.z < height)
+        rigged.merge(skin, {"%s.%s" % (bone, side): "%s.%s" % (paw, side) for side in ("L", "R")},
+                     lambda vertex, height=height: vertex.co.z < height)
     # From the front: each takes what lies in front of its limit and is still the legs'.
     for limit, trunk in TRUNK_BONES:
-        merge(skin, {"%s.%s" % (bone, side): trunk for bone in LEG_BONES for side in ("L", "R")},
-              lambda vertex, limit=limit: vertex.co.z > FOOT and vertex.co.y < limit and (
-                  abs(vertex.co.x) < MIDLINE or BELLY_SPAN[0] < vertex.co.y < BELLY_SPAN[1]))
+        rigged.merge(skin, {"%s.%s" % (bone, side): trunk for bone in LEG_BONES for side in ("L", "R")},
+                     lambda vertex, limit=limit: vertex.co.z > FOOT and vertex.co.y < limit and (
+                         abs(vertex.co.x) < MIDLINE or BELLY_SPAN[0] < vertex.co.y < BELLY_SPAN[1]))
     mirror_head(skin)
     scene.select_only(rig)
     bpy.ops.object.mode_set(mode="EDIT")
@@ -560,10 +530,10 @@ def build(out):
         "Idle": clips.idle(),
         "Walk": paddle(WALK_FRAMES, TROT, 2, WALK_BOUNCE, WALK_SWING, WALK_FOLD, roll=WALK_ROLL),
         "Run": paddle(RUN_FRAMES, BOUND, 1, RUN_BOUNCE, RUN_SWING, RUN_FOLD, pitch=RUN_PITCH),
-        "Attack": lesser(clips.attack()),
-        "Hit": lesser(clips.hit()),
-        "Faint": lesser(clips.faint(BELLY_HEIGHT, forepaws=FAINT_FOREPAWS)),
-        **{name: lesser(clip, turns=REAR) for name, clip in clips.channel().items()},
+        "Attack": adopted.lesser(clips.attack(), SHARE, lift=SHARE),
+        "Hit": adopted.lesser(clips.hit(), SHARE, lift=SHARE),
+        "Faint": adopted.lesser(clips.faint(BELLY_HEIGHT, forepaws=FAINT_FOREPAWS), SHARE, lift=SHARE),
+        **{name: adopted.lesser(clip, SHARE, turns=REAR, lift=SHARE) for name, clip in clips.channel().items()},
         "Feed": clips.feed(forepaws=0.04),
         "Sleep": clips.sleep(curled, paws={}, planted=False),
         "RollOver": roll_over(),

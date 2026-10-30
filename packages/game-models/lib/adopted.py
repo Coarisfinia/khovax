@@ -86,28 +86,32 @@ def follow(rig):
 class Body:
     """What clips.gait reads of a quadruped.Proportions, from an adopted rig named to the
     quadruped's scheme (`upper_arm`, `front_paw`, `thigh`, `hind_paw`, `hips`, `neck`), with
-    the tip of its nose at `nose`."""
+    the tip of its nose at `nose`. Its front leg starts at the `shoulder` bone, for a rig whose
+    leg hangs from a shoulder blade (`scapula`)."""
 
-    def __init__(self, rig, nose):
+    def __init__(self, rig, nose, shoulder="upper_arm"):
         bones = rig.data.bones
-        self.front_leg = [tuple(bones["upper_arm.L"].head_local), tuple(bones["front_paw.L"].tail_local)]
+        self.front_leg = [tuple(bones["%s.L" % shoulder].head_local), tuple(bones["front_paw.L"].tail_local)]
         self.hind_leg = [tuple(bones["thigh.L"].head_local), tuple(bones["hind_paw.L"].tail_local)]
         self.hips = tuple(bones["hips"].head_local)
         self.chest = tuple(bones["neck"].head_local)
         self.nose = nose
 
 
-def lesser(clip, share):
+def lesser(clip, share, turns=1.0, lift=1.0):
     """`clip` with its body's shifts, its paws' moves and its tail's swing `share` as large: for a
     body whose legs are short against the wolf's the library's clips are made for, which would
-    reach too far for its hex."""
+    reach too far for its hex. Its neck and head turn `turns` as far, and its paws' steps rise
+    `lift` as high."""
     keys = []
     for key in clip.keys:
         pose = {name: tuple(share * value for value in values)
-                if name == "root_loc" or name.startswith(("plant.", "tail_")) else values
+                if name == "root_loc" or name.startswith(("plant.", "tail_"))
+                else tuple(turns * value for value in values) if name in ("neck", "head") else values
                 for name, values in key[1].items()}
         keys.append((key[0], pose, *key[2:]))
     clip.keys = keys
     for step in clip.steps:
         step.spot = tuple(share * value for value in step.spot)
+        step.height *= lift
     return clip
