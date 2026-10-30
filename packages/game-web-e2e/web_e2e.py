@@ -6,7 +6,10 @@ its context, or the page no longer answering at all. It films the run into
 <export>-video/web-e2e.webm (owner, #115). Run by CI; the browser comes from the CHROME variable,
 and Playwright's ffmpeg, which the video needs, from PLAYWRIGHT_BROWSERS_PATH (Playwright's own
 browsers are never installed). The flow must end in the state hash the headless run of the same
-commit ended in (#876), from the EXPECTED_HASH variable.
+commit ended in (#876), from the EXPECTED_HASH variable. At its end the flow saves the error log
+with a controller's press alone (#1598): the run checks that the browser let it through as a
+download named errors.log holding the web build's log, while the page never had user activation,
+as for a player who only ever pressed a controller.
 
     CHROME=<chrome-headless-shell> EXPECTED_HASH=<hash> \
         uv run --locked --package khovax-game-web-e2e packages/game-web-e2e/web_e2e.py [build/web-test]
@@ -22,7 +25,7 @@ import time
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from playwright.async_api import Page, async_playwright
+from playwright.async_api import CDPSession, Download, Page, async_playwright
 
 RESULT = re.compile(r"^KHOVAX_E2E: (PASS -?[0-9]+|FAIL .*)$")
 TIMEOUT_S = 180
@@ -32,6 +35,12 @@ TIMEOUT_S = 180
 HEARTBEAT_S = 10
 ANSWER_S = 10
 MISSES = 3
+# How long the error log's download may take to arrive after the flow reported.
+SAVE_S = 20
+# The file the Credits tab's error log button saves (ErrorLogButton.FILE_NAME), and how its second
+# line starts: the platform, as the log's header names it (ErrorLog.header).
+SAVED_NAME = "errors.log"
+SAVED_PLATFORM = "Web "
 # Small enough that the software-rendered WebGL and the video encoder keep up on a busy runner
 # (#193).
 SIZE = {"width": 960, "height": 540}
@@ -141,6 +150,8 @@ class Run:
         self.bar_full = False
         loop = asyncio.get_running_loop()
         self.reported: asyncio.Future[str] = loop.create_future()
+        # The first download the page started, the error log's.
+        self.download: asyncio.Future[Download] = loop.create_future()
         self.stopped: asyncio.Future[str] = loop.create_future()
         self.started = time.monotonic()
 
@@ -169,9 +180,21 @@ class Run:
             self.ended = True
             self.reported.set_result(line)
 
+    def downloaded(self, download: Download) -> None:
+        if not self.download.done():
+            self.download.set_result(download)
+
     def error(self, message: str) -> None:
         if not self.ended:
             self.errors.append(message)
+
+
+async def quietly(cdp: CDPSession, expression: str) -> object:
+    """Evaluates `expression` on the page without giving it user activation: Playwright's own
+    evaluate passes the DevTools protocol's userGesture, which would count as a click for the
+    browser and spoil the controller-only save (#1598)."""
+    answer = await cdp.send("Runtime.evaluate", {"expression": expression, "returnByValue": True})
+    return answer["result"].get("value")
 
 
 async def heartbeat(page: Page, run: Run) -> None:
@@ -189,6 +212,25 @@ async def heartbeat(page: Page, run: Run) -> None:
             missed += 1
         if missed >= MISSES:
             run.stop(f"the page stopped answering ({MISSES} heartbeats in a row)")
+
+
+async def check_saved_log(cdp: CDPSession, run: Run) -> None:
+    """Checks that the flow's controller press saved the error log (#1598): a download named
+    SAVED_NAME holding the web build's log arrived, and the page never had user activation."""
+    await first(run.download, run.stopped, timeout=SAVE_S)
+    if not run.download.done():
+        run.errors.append(f"the error log saved by a controller never arrived within {SAVE_S} s")
+        return
+    download = run.download.result()
+    if await quietly(cdp, "navigator.userActivation.hasBeenActive"):
+        run.errors.append("the page had user activation, so the controller's save proves nothing")
+    if download.suggested_filename != SAVED_NAME:
+        name = download.suggested_filename
+        run.errors.append(f"the error log was saved as {name}, not {SAVED_NAME}")
+        return
+    lines = Path(await download.path()).read_text(encoding="utf-8").splitlines()
+    if len(lines) < 2 or not lines[1].startswith(SAVED_PLATFORM):
+        run.errors.append(f"the saved error log doesn't start with the web's header: {lines[:2]}")
 
 
 async def first(*waits: asyncio.Future, timeout: float | None = None) -> None:
@@ -217,6 +259,7 @@ async def drive(root: Path, chrome: str, gl: str, run: Run, url: str) -> None:
                 viewport=SIZE, record_video_dir=str(video), record_video_size=SIZE
             )
             page = await context.new_page()
+            cdp = await context.new_cdp_session(page)
             renderer = await page.evaluate(RENDERER_JS)
             print(f"CHROME_GL {gl}: WebGL 2 renderer {renderer}")
             if GL[gl]["expect"] not in renderer:
@@ -227,6 +270,7 @@ async def drive(root: Path, chrome: str, gl: str, run: Run, url: str) -> None:
             browser.on("disconnected", lambda _: run.stop("the browser went away"))
             await page.add_init_script(WATCH_JS)
             page.on("console", lambda message: run.console(message.type, message.text))
+            page.on("download", run.downloaded)
             page.on("pageerror", lambda error: run.error(error.message))
             page.on("requestfailed", lambda request: run.error(f"failed to load {request.url}"))
 
@@ -241,6 +285,9 @@ async def drive(root: Path, chrome: str, gl: str, run: Run, url: str) -> None:
             await first(loading, run.stopped)
             beating = asyncio.ensure_future(heartbeat(page, run))
             await first(run.reported, run.stopped, timeout=TIMEOUT_S)
+            reported = run.reported.done() and not run.stop_reason
+            if reported and run.reported.result().startswith("KHOVAX_E2E: PASS "):
+                await check_saved_log(cdp, run)
             beating.cancel()
             loading.cancel()
             if run.reported.done() and not run.stop_reason:
