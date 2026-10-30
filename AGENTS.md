@@ -309,9 +309,9 @@ background; only wait in the foreground for a result the very next step needs.
     separate reviewer GitHub App, but only
     when the agent bot or a human admin put the label on, only into the default branch, and never
     for a pull request that changes or renames user-facing files (`packages/game/` outside its
-    `tests/` and `tools/`; owner's pick 1 on #1874), nor for one that changes the guard itself (that
-    workflow, or anything under `.github/` naming its environment or the reviewer app's secret):
-    **a change to the guard always needs the owner**. A push or a new base withdraws that approval,
+    `tests/` and `tools/`; owner's pick 1 on #1874), nor for one that changes any workflow
+    (`.github/workflows/`): any workflow could reach the guard's environment, so **a change to the
+    guard, or to any workflow, always needs the owner**. A push or a new base withdraws that approval,
     never a person's; clear it again (label off and on).
     Queue it once that approval is there.
 

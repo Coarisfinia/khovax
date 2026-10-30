@@ -73,26 +73,23 @@ jobs:
           # file's path, "P" for the path a rename came from, which counts too), so a newline in
           # a name can't split it. A list that can't be read in full approves nothing. It is
           # compared against the default branch, as GitHub counts `changed_files`.
-          # The guard never approves a change to itself (#1874): "G" marks a file under .github/
-          # that is or was this workflow, names its environment or the reviewer app's secret, or
-          # whose diff GitHub doesn't show.
           files=$(gh api --paginate "repos/$REPO/compare/$DEFAULT_BRANCH...$HEAD" --jq '.files[]? |
-            ("F" + (.filename | @json)), (select(.previous_filename) | "P" + (.previous_filename | @json)),
-            (select((.filename + "\n" + (.previous_filename // "")) | test("(^|\n)\\.github/"))
-              | select(.patch == null or ((.filename + "\n" + (.previous_filename // "") + "\n" + .patch)
-                | test("approve-cleared|REVIEWER_APP"))) | "G" + (.filename | @json))')
+            ("F" + (.filename | @json)), (select(.previous_filename) | "P" + (.previous_filename | @json))')
           if [ "$(printf '%s\n' "$files" | grep -c '^F"')" -ne "$CHANGED_FILES" ]; then
             echo "Not approving #$PR: its list of changed files couldn't be read in full."
             exit 0
           fi
-          guard=$(printf '%s\n' "$files" | grep '^G' | cut -c2- || true)
+          # The guard never approves a change to itself (#1874). Any workflow may reach the
+          # reviewer app's environment once merged, and a name built at run time hides that from
+          # any text check, so a change to any workflow needs the owner.
+          guard=$(printf '%s\n' "$files" | cut -c2- | grep '^"\.github/workflows/' || true)
           if [ -n "$guard" ]; then
-            echo "Not approving #$PR: it changes the approval guard itself, which always needs the" \
-              "owner's approval:"
+            echo "Not approving #$PR: it changes workflows, which can reach the approval guard" \
+              "and always need the owner's approval:"
             printf '%s\n' "$guard"
             exit 0
           fi
-          user_facing=$(printf '%s\n' "$files" | grep -v '^G' | cut -c2- |
+          user_facing=$(printf '%s\n' "$files" | cut -c2- |
             grep '^"packages/game/' | grep -v -e '^"packages/game/tests/' -e '^"packages/game/tools/' || true)
           if [ -n "$user_facing" ]; then
             echo "Not approving #$PR: it changes user-facing files, which need the owner's approval:"
