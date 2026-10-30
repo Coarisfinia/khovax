@@ -20,5 +20,5 @@
 	// A hound: it hunts with its pack, and with heat on one side and cold on the other it never
 	// settles into day or night, sleeping in bouts (#1200).
 	"behaviour": ["cathemeral", "predator", "pack_species"],
-	"model": "res://assets/frostfire_hound/frostfire_hound.glb"
+	"model": "model_frostfire_hound"
 }

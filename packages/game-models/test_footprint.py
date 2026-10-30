@@ -8,8 +8,8 @@ monster may do so (props have limits of their own, never an exemption).
         --python packages/game-models/test_footprint.py
 
 It also reads a pack's model's views from a small Godot project of its own (lib/views.py, #1652):
-a script that preloads it at a scale, and a scene that instances it under a view using another
-class's constants. It prints each model's report and `FOOTPRINT TEST: PASS` or `FAIL` (and exits 1
+views naming its id in the default resource pack (#1864) at a scale, one through another class's
+constants. It prints each model's report and `FOOTPRINT TEST: PASS` or `FAIL` (and exits 1
 on a fail)."""
 
 import os
@@ -103,51 +103,45 @@ def build(width, clips):
     return rig, [skin]
 
 
-# A tiny Godot project: a figure view with its constants (a list over lines, with comments), a chest
-# view that preloads its model at a scale and shares the figure's hidden parts, a scene that
-# instances the figure under the view, and one whose root is the view.
+# A tiny Godot project: a figure view with its constants (a list over lines, with comments) and its
+# model's id, a person view showing the same model through the figure's constants at its own scale,
+# a chest view at a scale sharing the figure's hidden parts, a tool naming a model (no view), and
+# the default resource pack's manifest, which gives each id its .glb (#1864).
 PROJECT = {
     "slices/figures/look/figure_view.gd": (
         'class_name FigureView\n'
+        'const MODEL: String = "model_figure"\n'
+        'const MODEL_SCALE: float = 2.0\n'
         'const IDLE: StringName = &"Idle"\n'
         'const MOVE: StringName = &"Run"  # moving\n'
         'const CLIPS: Array[StringName] = [\n\tIDLE,  # standing, still\n\tMOVE,  # "moving", running\n]\n'
         'const HIDDEN_PARTS: Array[String] = [\n\t"Knife",\n\t"Bow",\n]\n'),
+    "slices/people/look/person_view.gd": (
+        'const MODEL: String = FigureView.MODEL\n'
+        'const MODEL_SCALE: float = 1.5\n'
+        'const CLIPS: Array[StringName] = FigureView.CLIPS\n'
+        'func _stand() -> void:\n\tplay(FigureView.IDLE)\n'
+        '\tfor part: String in FigureView.HIDDEN_PARTS:\n\t\tpass\n'),
     "slices/chests/look/chest_view.gd": (
-        'const MODEL: PackedScene = preload("res://chest.glb")\n'
+        'const MODEL: String = "model_chest"\n'
         'const MODEL_SCALE: float = 0.5\n'
         'const CLIPS: Array[StringName] = []\n'
         'func _hide() -> void:\n\tfor part: String in FigureView.HIDDEN_PARTS:\n\t\tpass\n'),
-    "tools/render_lamp.gd": 'const MODEL: PackedScene = preload("res://lamp.glb")\n',
-    "main.tscn": (
-        '[ext_resource type="Script" path="res://slices/figures/look/figure_view.gd" id="1_view"]\n'
-        '[ext_resource type="PackedScene" path="res://assets/figure.glb" id="2_figure"]\n\n'
-        '[node name="Main" type="Node3D"]\n\n'
-        '[node name="Player" type="Node3D" parent="."]\nscript = ExtResource("1_view")\n\n'
-        '[node name="Model" parent="Player" instance=ExtResource("2_figure")]\n'
-        'transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)\n'),
-    # The view on the scene's root, scaled, its model a direct child drawn at the root's scale.
-    "slices/people/look/person.tscn": (
-        '[ext_resource type="Script" path="res://slices/figures/look/figure_view.gd" id="1_view"]\n'
-        '[ext_resource type="PackedScene" path="res://person.glb" id="2_person"]\n\n'
-        '[node name="Person" type="Node3D"]\nscript = ExtResource("1_view")\n'
-        'transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 0, 0, 0)\n\n'
-        '[node name="Model" parent="." instance=ExtResource("2_person")]\n\n'
-        # A top_level holder draws its own scale only, not the root's.
-        '[node name="Held" type="Node3D" parent="."]\nscript = ExtResource("1_view")\n'
-        'top_level = true\ntransform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, 0, 0)\n\n'
-        '[node name="Model" parent="Held" instance=ExtResource("2_person")]\n'),
+    "tools/render_lamp.gd": 'const MODEL: String = "model_lamp"\n',
+    "slices/resource_packs/data/default.jsonc": (
+        "// The tiny project's pack.\n"
+        '{ "models": { "model_figure": "assets/figure.glb", "model_chest": "chest.glb",'
+        ' "model_lamp": "lamp.glb", "model_pebble": "assets/pebble.glb" } }\n'),
 }
 # Per model: what its views read as (name, scale, clips, standing clip, hidden parts).
 VIEWS = {
-    "figure": [("figure_view", 2.0, ["Idle", "Run"], "Idle", ["Knife", "Bow"])],
-    "chest": [("chest_view", 0.5, [], None, ["Knife", "Bow"])],
-    # Only a view in a slice's look/ counts: a tool that preloads a model is no view.
-    "lamp": [],
-    "person": [
-        ("figure_view", 0.5, ["Idle", "Run"], "Idle", ["Knife", "Bow"]),
-        ("figure_view", 1.5, ["Idle", "Run"], "Idle", ["Knife", "Bow"]),
+    "figure": [
+        ("figure_view", 2.0, ["Idle", "Run"], "Idle", ["Knife", "Bow"]),
+        ("person_view", 1.5, ["Idle", "Run"], "Idle", ["Knife", "Bow"]),
     ],
+    "chest": [("chest_view", 0.5, [], None, ["Knife", "Bow"])],
+    # Only a view in a slice's look/ counts: a tool that names a model is no view.
+    "lamp": [],
     "pebble": [],
 }
 

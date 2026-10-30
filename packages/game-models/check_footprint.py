@@ -33,6 +33,7 @@ import glob
 import os
 import re
 import sys
+from pathlib import Path
 
 import bpy
 
@@ -42,6 +43,7 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "game-shared"))
 
 from game_shared import log  # noqa: E402
+from game_shared.resource_packs import MANIFEST, models, read_manifest  # noqa: E402
 from lib import footprint, imported, known, views  # noqa: E402
 
 # The Godot project, whose views show the packs' models.
@@ -84,7 +86,10 @@ KNOWN = {
 
 
 def decorations():
-    """The names of the models the tile blueprints name as their decoration."""
+    """The names (.glb or .gltf without the extension) of the models the tile blueprints name as
+    their decoration."""
+    # A tile names its model's id in the default resource pack, whose manifest gives its file (#1864).
+    pack_models = models(read_manifest(Path(GAME) / MANIFEST))
     names = set()
     for path in glob.glob(TILES):
         with open(path, encoding="utf-8") as text:
@@ -92,7 +97,7 @@ def decorations():
             # at a line's start, never in a path's `res://`.
             body = re.sub(r"(?m)(^|\s)//.*$", "", re.sub(r"/\*.*?\*/", "", text.read(), flags=re.S))
             for found in re.finditer(r'"model"\s*:\s*"([^"]+)"', body):
-                names.add(os.path.splitext(os.path.basename(found.group(1)))[0])
+                names.add(os.path.splitext(os.path.basename(pack_models[found.group(1)]))[0])
     if not names:
         sys.exit("no tile blueprint names a model in %s: the path moved?" % TILES)
     return names

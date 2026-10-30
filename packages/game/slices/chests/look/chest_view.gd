@@ -13,8 +13,8 @@ const LOOT_SECONDS: float = 2.0
 ## How far the loot rises while it fades, in world units.
 const LOOT_RISE: float = 0.8
 ## The placeholder chest until the game's own look exists, scaled to sit inside its tile next to
-## a player's size.
-const MODEL: PackedScene = preload("res://assets/kaykit-dungeon/chest.glb")
+## a player's size. Its id in the resource packs (#1864).
+const MODEL: String = "model_chest"
 const MODEL_SCALE: float = 0.5
 ## Loot on the ground: a small cut gem, a placeholder made of a primitive mesh.
 const GEM_COLOR: Color = Color(0.95, 0.78, 0.3)
@@ -132,7 +132,7 @@ func _add_figure(tile: Vector2i, gem: bool) -> HexPiece:
 	if gem:
 		piece.add_child(_gem())
 	else:
-		var model: Node3D = MODEL.instantiate() as Node3D
+		var model: Node3D = ResourcePacks.model(MODEL).instantiate() as Node3D
 		model.scale = Vector3.ONE * MODEL_SCALE
 		Toon.apply_to_model(model)
 		piece.add_child(model)

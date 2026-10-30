@@ -282,7 +282,8 @@ jobs:
         # the checks sample at), to Blender's pin, or to the tile blueprints (whose models the
         # footprint check leaves out as decorations, #1651), or to the slices' look/ scripts and the
         # scenes (the views whose scale, clips and hidden parts it measures a pack's model by, read
-        # only from there, #1652), against the parent, or on a push to main against the commit
+        # only from there, #1652), or to the default resource pack's manifest (which gives each
+        # model id its .glb, #1864), against the parent, or on a push to main against the commit
         # before the push, fetched here, so a push of several commits counts them all. A
         # failing diff counts as a change, so the check runs rather than being skipped.
         env:
@@ -296,7 +297,8 @@ jobs:
           fi
           if git diff --quiet "$base" -- ':(top)packages/game-models' ':(top)*.glb' ':(top)*.glb.import' \
             ':(top).github/actions/setup-blender' ':(top)packages/game/core/data/tiles' \
-            ':(top)packages/game/slices/*/look/*' ':(top)packages/game/*.tscn'; then
+            ':(top)packages/game/slices/*/look/*' ':(top)packages/game/*.tscn' \
+            ':(top)packages/game/slices/resource_packs/data'; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"

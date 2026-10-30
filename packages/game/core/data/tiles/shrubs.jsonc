@@ -4,6 +4,6 @@
 	"id": "shrubs",
 	"color": "#4f7d45",
 	"symbol": "*", // tells it apart without its color (#68)
-	"model": "res://assets/kaykit-hexagon/trees_B_small.gltf",
+	"model": "model_trees_b_small",
 	"traits": { "walkable": true, "hides": true }
 }

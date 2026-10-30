@@ -19,6 +19,6 @@
 	"self_passive": "wobulumu_lobbu_wobbu",
 	// A tadpole of the shallows, awake by night with its elders: it nibbles weed and keeps near water (#1200).
 	"behaviour": ["nocturnal", "grazer", "drinker"],
-	"model": "res://assets/wobulumu/wobulumu.glb",
+	"model": "model_wobulumu",
 	"ascension": { "into": "ombuwomo", "level": 20, "material": "pondweed" }
 }

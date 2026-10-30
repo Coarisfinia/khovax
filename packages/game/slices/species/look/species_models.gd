@@ -23,7 +23,7 @@ static func scene_of(species_id: String) -> PackedScene:
 				known = species[other_id]
 	if known == null:
 		return null
-	var scene: PackedScene = load(known.model) as PackedScene
+	var scene: PackedScene = ResourcePacks.model(known.model)
 	if scene == null:
 		push_error("%s's model %s doesn't load" % [known.id, known.model])
 	_scenes[species_id] = scene

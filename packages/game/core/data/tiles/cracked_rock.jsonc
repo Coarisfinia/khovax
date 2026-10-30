@@ -6,7 +6,7 @@
 	"id": "cracked_rock",
 	"color": "#8a7b6c",
 	"symbol": "x", // tells it apart without its color (#68)
-	"model": "res://assets/kaykit-hexagon/rock_single_E.gltf", // split rocks: no color alone (#68)
+	"model": "model_rock_single_e", // split rocks: no color alone (#68)
 	"scale": 350, // in hundredths: the pack's rocks are too small to read from the camera
 	"harvest": { "yields": "loose_stones", "becomes": "rubble", "takes": "hands" },
 	"traits": { "walkable": false }

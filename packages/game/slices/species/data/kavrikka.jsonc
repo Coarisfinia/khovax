@@ -21,6 +21,6 @@
 	// A hound pup: it hunts with its pack and, hot on one side and cold on the other, sleeps in
 	// bouts like its elders (#1200).
 	"behaviour": ["cathemeral", "predator", "pack_species"],
-	"model": "res://assets/kavrikka/kavrikka.glb",
+	"model": "model_kavrikka",
 	"ascension": { "into": "kalvrakkor", "level": 20, "material": "rime_shard" }
 }

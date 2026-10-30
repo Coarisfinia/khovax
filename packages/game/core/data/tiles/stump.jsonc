@@ -3,7 +3,7 @@
 	"id": "stump",
 	"color": "#6b8a4a",
 	"symbol": "=", // tells it apart without its color (#68)
-	"model": "res://assets/kaykit-hexagon/tree_single_B_cut.gltf",
+	"model": "model_tree_single_b_cut",
 	"scale": 400, // in hundredths: the pack's stump is too small to read from the camera
 	"traits": { "walkable": true }
 }

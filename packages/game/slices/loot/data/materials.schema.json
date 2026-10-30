@@ -19,9 +19,9 @@
 			"pattern": "\\S"
 		},
 		"model": {
-			"description": "Its 3D model (every item has one, #1579): a res:// path to a glTF model under assets/ that exists. Optional until every material has one (#1585, #1586).",
+			"description": "Its 3D model (every item has one, #1579): a model id in the resource packs (#1864) that a pack has. Optional until every material has one (#1585, #1586).",
 			"type": "string",
-			"pattern": "^res://assets/.+[.](gltf|glb)$"
+			"pattern": "^[a-z][a-z0-9_]*$"
 		}
 	}
 }

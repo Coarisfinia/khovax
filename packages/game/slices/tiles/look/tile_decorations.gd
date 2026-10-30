@@ -196,7 +196,7 @@ static func off_center(tile: Vector2i) -> Vector3:
 func _add_figure(tile: Vector2i, blueprint: TileBlueprint, turn: int) -> HexPiece:
 	var path: String = blueprint.model
 	if not _models.has(path):
-		_models[path] = load(path) as PackedScene
+		_models[path] = ResourcePacks.model(path)
 	var piece: HexPiece = HexPiece.new()
 	piece.base_offset = 0.0
 	var model: Node3D = _models[path].instantiate() as Node3D

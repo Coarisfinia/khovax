@@ -439,7 +439,12 @@ prop's own, and never another grey stone. A prop's script only maps its parts on
    the file.
 4. The `.import` embeds the textures uncompressed (`gltf/embedded_image_handling=3`, as the
    egg's), so Godot extracts no copy beside the model. A model nothing places yet goes into the
-   boot flow's `UNPLACED_MODELS`. Its `SOURCE.md` names the set's textures it uses.
+   boot flow's `UNPLACED_MODELS`, by its id. Its `SOURCE.md` names the set's textures it uses.
+
+**Every model is a resource of the default pack** (#1864): a new `.glb` gets an entry in the
+`models` of `packages/game/slices/resource_packs/data/default.jsonc` (`"model_<name>":
+"assets/<name>/<name>.glb"`), and content files and views name it by that id, never by its
+`res://` path (`resource_packs_check.py` in CI).
 
 A new material goes into the set (`prop_textures.py`'s `SET` and `textures/SOURCE.md`), CC0 only,
 for every prop. **When the set falls short**, a prop is textured in Meshy after all (10 credits

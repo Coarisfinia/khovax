@@ -30,8 +30,8 @@ extends RefCounted
 ## read ahead in the background (#816). The default resource pack (#1860) reads with every texture
 ## resolving, and broken pack manifests are refused.
 
-## A model a species can wear (#1223).
-const MODEL: String = "res://assets/mana-wolf/mana_wolf.glb"
+## A model a species can wear (#1223), by its id in the resource packs (#1864).
+const MODEL: String = "model_mana_wolf"
 ## The tile blueprints whose pack's model is drawn larger, in hundredths: too small to read
 ## from the camera as the pack made it.
 const SCALED: Dictionary[String, int] = { "stump": 400, "cracked_rock": 350, "rubble": 400 }
@@ -656,7 +656,8 @@ func _check_target_steps(content: QuestContent) -> String:
 ## Every tile blueprint file reads, its id matching its file; ground, water and rock are the
 ## built-in kinds and keep their walkability; the rules know every kind by its file's name (#802);
 ## forest, shrubs and a stump are walkable and a boulder isn't (#205), each with its model, and sand
-## is plain and walkable (#321); every model a blueprint names exists; the stump is drawn at 400
+## is plain and walkable (#321); every model a blueprint names is in a resource pack (#1864); the
+## stump is drawn at 400
 ## hundredths of its size (#588), every other kind at 100, the default; no two kinds share a symbol
 ## (#68). Broken blueprints are refused.
 func _check_tiles() -> String:
@@ -688,7 +689,7 @@ func _check_tiles() -> String:
 		if symbols.has(tile.symbol):
 			return "tile blueprints %s and %s share one symbol" % [symbols[tile.symbol], tile.id]
 		symbols[tile.symbol] = tile.id
-		var missing: bool = not tile.model.is_empty() and not ResourceLoader.exists(tile.model)
+		var missing: bool = not tile.model.is_empty() and not ResourcePacks.has_model(tile.model)
 		if missing or tile.scale != SCALED.get(tile.id, TileBlueprint.FULL_SCALE):
 			return "tile blueprint %s's model %s doesn't exist, or it's drawn at scale %s" % [
 				tile.id,
@@ -1059,14 +1060,14 @@ func _check_refused() -> String:
 	return ""
 
 
-## A species without a model (#1223) is refused: one it doesn't name, one that isn't there, or a
-## file that isn't a glTF model under assets/.
+## A species without a model (#1223) is refused: one it doesn't name, an id no resource pack has
+## (#1864), a texture's id, or a file's path instead of an id.
 func _check_model_refused() -> String:
 	var texts: Array[String] = [
 		XO + KIT.replace(", \"model\": \"" + MODEL + "\"", "") + "}",
-		XO + KIT.replace(MODEL, "res://assets/mana-wolf/no_wolf.glb") + "}",
+		XO + KIT.replace(MODEL, "model_no_wolf") + "}",
+		XO + KIT.replace(MODEL, "icon_cog") + "}",
 		XO + KIT.replace(MODEL, "res://CREDITS.md") + "}",
-		XO + KIT.replace(MODEL, "res://assets/../assets/mana-wolf/mana_wolf.glb") + "}",
 	]
 	for text: String in texts:
 		var problem: String = _add_to_empty(text)
@@ -1554,20 +1555,20 @@ func _check_loot_items() -> String:
 	return _check_gear_models()
 
 
-## Every piece of gear loads with a model that exists (#1581): every item has one. A gear file
-## without one, or naming one that isn't a glTF model under assets/, is refused; then the gear's
+## Every piece of gear loads with a model a resource pack has (#1581, #1864): every item has one. A
+## gear file without one, or naming an id no pack has as a model, is refused; then the gear's
 ## names (#1657).
 func _check_gear_models() -> String:
 	var gear: GearContent = GearContent.load_gear()
 	if not gear.problem.is_empty() or gear.items.is_empty():
 		return "the gear didn't load: " + gear.problem
 	for item: GearItem in gear.items.values():
-		if not ResourceLoader.exists(item.model):
+		if not ResourcePacks.has_model(item.model):
 			return "%s's model %s doesn't exist" % [item.id, item.model]
 	var text: String = (
 		"{\"id\": \"x\", \"name\": \"X\", \"slot\": \"throw\", \"rarity\": \"loose\"%s}"
 	)
-	for model: String in ["", ", \"model\": \"res://assets/none.glb\"", ", \"model\": 5"]:
+	for model: String in ["", ", \"model\": \"model_none\"", ", \"model\": 5"]:
 		var refused: GearItem = GearItem.parse("x", text % model)
 		if not refused.problem.begins_with("it needs a model"):
 			return "gear with the model \"%s\" was refused with %s" % [model, refused.problem]
@@ -2117,33 +2118,46 @@ func _check_prefetched() -> String:
 	return _check_resource_packs()
 
 
-## The default resource pack reads as the pack `default`, and every texture it lists resolves
-## through ResourcePacks (#1860). A manifest with an unknown field, a bad id or version, or a
-## texture
-## whose file is missing or lies outside the pack is refused, as a player's pack will be (#1858).
+## The default resource pack reads as the pack `default`, and every texture and model it lists
+## resolves through ResourcePacks (#1860, #1864). A manifest with an unknown field, a bad id or
+## version, or a texture or model whose file is missing, of another kind or lies outside the pack is
+## refused, as a player's pack will be (#1858).
 func _check_resource_packs() -> String:
 	var packs: Array[ResourcePack] = ResourcePacks.loaded()
 	if packs.size() != 1:
 		return "not only the default resource pack is loaded: %d packs" % packs.size()
 	if packs[0].id != "default" or not packs[0].problem.is_empty():
 		return "the default resource pack didn't read: " + packs[0].problem
-	if packs[0].textures.is_empty():
-		return "the default resource pack lists no textures"
+	if packs[0].textures.is_empty() or packs[0].models.is_empty():
+		return "the default resource pack lists no textures or no models"
 	for texture_id: String in packs[0].textures:
 		if ResourcePacks.texture(texture_id) == null:
 			return "the default pack's texture %s doesn't resolve" % texture_id
+	for model_id: String in packs[0].models:
+		if ResourcePacks.model(model_id) == null:
+			return "the default pack's model %s doesn't resolve" % model_id
 	var start: String = "{\"id\": \"%s\", \"name\": \"n\", \"version\": \"%s\","
-	var valid: String = start + " \"game_version\": \"0.1.0\", \"textures\": {\"%s\": \"%s\"}%s}"
+	var valid: String = (
+		start + " \"game_version\": \"0.1.0\", \"textures\": {\"%s\": \"%s\"},"
+		+ " \"models\": {\"m\": \"%s\"}%s}"
+	)
 	var cog: String = "assets/game-icons/cog.svg"
+	var wolf: String = "assets/mana-wolf/mana_wolf.glb"
 	var cases: Dictionary[String, String] = {
-		"an unknown field": valid % ["p", "1.0.0", "a", cog, ", \"x\": 1"],
-		"a bad id": valid % ["P", "1.0.0", "a", cog, ""],
-		"a bad version": valid % ["p", "1.0", "a", cog, ""],
-		"a bad texture id": valid % ["p", "1.0.0", "A", cog, ""],
-		"a missing file": valid % ["p", "1.0.0", "a", "assets/game-icons/nothing.svg", ""],
-		"a file outside the pack": valid % ["p", "1.0.0", "a", "assets/../../" + cog, ""],
+		"an unknown field": valid % ["p", "1.0.0", "a", cog, wolf, ", \"x\": 1"],
+		"a bad id": valid % ["P", "1.0.0", "a", cog, wolf, ""],
+		"a bad version": valid % ["p", "1.0", "a", cog, wolf, ""],
+		"a bad texture id": valid % ["p", "1.0.0", "A", cog, wolf, ""],
+		"a missing file": valid % ["p", "1.0.0", "a", "assets/game-icons/nothing.svg", wolf, ""],
+		"a file outside the pack": valid % ["p", "1.0.0", "a", "assets/../../" + cog, wolf, ""],
+		"a missing model": valid % ["p", "1.0.0", "a", cog, "assets/mana-wolf/no_wolf.glb", ""],
+		"an image as a model": valid % ["p", "1.0.0", "a", cog, cog, ""],
+		"no models": (start + " \"game_version\": \"0.1.0\", \"textures\": {}}") % ["p", "1.0.0"],
 	}
-	if not ResourcePack.parse(valid % ["p", "1.0.0", "a", cog, ""], "res://").problem.is_empty():
+	if not ResourcePack.parse(
+		valid % ["p", "1.0.0", "a", cog, wolf, ""],
+		"res://",
+	).problem.is_empty():
 		return "a valid resource pack manifest was refused"
 	for what: String in cases:
 		if ResourcePack.parse(cases[what], "res://").problem.is_empty():

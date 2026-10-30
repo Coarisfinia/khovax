@@ -5,5 +5,5 @@
 	"slot": "trap",
 	"rarity": "loose",
 	"damage": 5, // a placeholder to tune (#960): a nudge next to a companion's strike
-	"model": "res://assets/quaternius-items/spikes.glb"
+	"model": "model_spikes"
 }

@@ -28,7 +28,7 @@ static func height_of(kind: String) -> int:
 static func _measured(blueprint: TileBlueprint) -> int:
 	if blueprint == null or blueprint.model.is_empty():
 		return 0
-	var model: Node3D = (load(blueprint.model) as PackedScene).instantiate() as Node3D
+	var model: Node3D = ResourcePacks.model(blueprint.model).instantiate() as Node3D
 	var meshes: Array[Node] = model.find_children("*", "MeshInstance3D", true, false)
 	if model is MeshInstance3D:
 		meshes.append(model)

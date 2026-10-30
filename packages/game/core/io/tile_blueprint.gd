@@ -28,7 +28,8 @@ var color: int = 0
 ## What tells the kind apart without its color (#68): one printable ASCII character, so every font
 ## has it, unique among the kinds (the content flow checks), drawn on the Survey.
 var symbol: String = ""
-## The decoration drawn on every tile of this kind, a res:// path, or "" for none.
+## The decoration drawn on every tile of this kind, a model id in the resource packs (#1864), or
+## "" for none.
 var model: String = ""
 ## How much larger than the pack made it the model is drawn, in hundredths (150 is 1.5 times),
 ## for a model too small to read; the look turns it into a factor where it draws.

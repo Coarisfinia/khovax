@@ -23,9 +23,9 @@
 			"pattern": "^[!-~]$"
 		},
 		"model": {
-			"description": "A decoration drawn on every tile of this kind: a res:// path to a model under assets/.",
+			"description": "A decoration drawn on every tile of this kind: a model id in the resource packs (#1864).",
 			"type": "string",
-			"pattern": "^res://assets/.+[.](gltf|glb)$"
+			"pattern": "^[a-z][a-z0-9_]*$"
 		},
 		"scale": {
 			"description": "How much larger than the pack made it the model is drawn, in hundredths (150 is 1.5 times; 100 when left out), for a model too small to read from the camera.",
