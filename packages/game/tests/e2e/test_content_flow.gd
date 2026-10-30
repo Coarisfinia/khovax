@@ -2118,11 +2118,11 @@ func _check_prefetched() -> String:
 	return _check_resource_packs()
 
 
-## The default resource pack reads as the pack `default`, and every texture, model and region it
-## lists resolves through ResourcePacks (#1860, #1864, #1861). A manifest with an unknown field, a
-## bad id or version, or a texture, model or region whose file is missing (a region's is read as
-## text and found when it's read), of another kind or lies outside the pack is refused, as a
-## player's pack will be (#1858).
+## The default resource pack reads as the pack `default`, and every texture, model, region and
+## realm it lists resolves through ResourcePacks (#1860, #1864, #1861). A manifest with an unknown
+## field, a bad id or version, or a texture, model, region or realm whose file is missing (a
+## region's or realm's is read as text and found when it's read), of another kind or lies outside
+## the pack is refused, as a player's pack will be (#1858).
 func _check_resource_packs() -> String:
 	var packs: Array[ResourcePack] = ResourcePacks.loaded()
 	if packs.size() != 1:
@@ -2140,6 +2140,9 @@ func _check_resource_packs() -> String:
 	for region_id: String in packs[0].regions.keys() + packs[0].region_pieces.keys():
 		if not RegionFiles.exists(region_id):
 			return "the default pack's region %s doesn't resolve" % region_id
+	var realms: Dictionary[String, String] = ResourcePacks.realms()
+	if realms.keys() != packs[0].realms.keys() or not realms.values().all(FileAccess.file_exists):
+		return "the default pack's realms don't resolve: %s" % realms
 	return _check_pack_manifests()
 
 
@@ -2149,7 +2152,8 @@ func _check_pack_manifests() -> String:
 	var valid: String = (
 		start + " \"game_version\": \"0.1.0\", \"textures\": {\"%s\": \"%s\"},"
 		+ " \"models\": {\"m\": \"%s\"}, \"regions\": {\"r\": \"regions/r.md\"},"
-		+ " \"region_pieces\": {\"q\": [\"regions/q/start.md\"]}%s}"
+		+ " \"region_pieces\": {\"q\": [\"regions/q/start.md\"]},"
+		+ " \"realms\": {\"w\": \"realms/w.md\"}%s}"
 	)
 	var cog: String = "assets/game-icons/cog.svg"
 	var wolf: String = "assets/mana-wolf/mana_wolf.glb"
@@ -2176,6 +2180,8 @@ func _check_pack_manifests() -> String:
 		", \"region_pieces\": {\"q\": [\"regions/q/start.md\"]}",
 		"",
 	)
+	cases["a realm that isn't Markdown"] = regions.replace("realms/w.md", cog)
+	cases["no realms"] = regions.replace(", \"realms\": {\"w\": \"realms/w.md\"}", "")
 	cases["a region both whole and in pieces"] = regions.replace("{\"q\": [", "{\"r\": [")
 	if not ResourcePack.parse(
 		valid % ["p", "1.0.0", "a", cog, wolf, ""],

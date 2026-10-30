@@ -15,15 +15,18 @@ const FIELDS: Array[String] = [
 	"models",
 	"regions",
 	"region_pieces",
+	"realms",
 ]
 ## Each section of resources the manifest lists, one file per id, with the type its files load as;
-## "" for a file read as text (a region file, #1861), which isn't checked to exist here: a build
+## "" for a file read as text (a region file or a realm, #1861), which isn't checked to exist here:
+## a build
 ## may leave a test-only region out (export_presets.cfg), and RegionFiles finds only the files there
 ## are.
 const KINDS: Dictionary[String, String] = {
 	"textures": "Texture2D",
 	"models": "PackedScene",
 	"regions": "",
+	"realms": "",
 }
 ## The section of regions arranged from pieces (#1861): each region's piece files by its id, read as
 ## text like the region files.
@@ -33,6 +36,7 @@ const ENDINGS: Dictionary[String, Array] = {
 	"textures": ["svg", "png", "jpg", "jpeg", "webp"],
 	"models": ["glb", "gltf"],
 	"regions": ["md"],
+	"realms": ["md"],
 }
 ## A version: major.minor.patch.
 const VERSION: String = "\\A[0-9]+\\.[0-9]+\\.[0-9]+\\z"
@@ -51,6 +55,8 @@ var models: Dictionary[String, String] = {}
 var regions: Dictionary[String, String] = {}
 ## Each region arranged from pieces (#1861): its piece files by its id, relative to `root`.
 var region_pieces: Dictionary[String, PackedStringArray] = {}
+## Each realm's file (#1861) by its id, relative to `root`.
+var realms: Dictionary[String, String] = {}
 ## Where the pack's files are named from: res:// for the default pack.
 var root: String = ""
 ## Why the pack can't be used, or "" when it can.
@@ -58,8 +64,9 @@ var problem: String = ""
 
 
 ## The pack the manifest `text` describes, its files under `root`, with `problem` saying why it
-## can't be used: a field missing or unknown, an id that isn't one, or a texture, model, region or
-## region piece whose file climbs out of `root`, has another kind's ending or (for a texture or
+## can't be used: a field missing or unknown, an id that isn't one, or a texture, model, region,
+## region piece or realm whose file climbs out of `root`, has another kind's ending or (for a
+## texture or
 ## model) doesn't exist.
 static func parse(text: String, files_root: String) -> ResourcePack:
 	var pack: ResourcePack = ResourcePack.new()
@@ -122,6 +129,7 @@ func _read(data: Dictionary) -> String:
 	textures.assign(found["textures"])
 	models.assign(found["models"])
 	regions.assign(found["regions"])
+	realms.assign(found["realms"])
 	region_pieces = pieces
 	return ""
 

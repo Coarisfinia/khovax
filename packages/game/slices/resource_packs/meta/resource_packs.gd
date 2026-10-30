@@ -3,7 +3,8 @@ extends RefCounted
 ## The one resolver of the game's resources (#1860): it turns a resource id into the resource by
 ## walking the loaded packs in order, the first that has the id giving it. The game's own resources
 ## are the default pack, last in the order; a player's packs (#1858) will come before it, and
-## override what they provide. Nothing looks up a built-in texture, model or region any other way
+## override what they provide. Nothing looks up a built-in texture, model, region or realm any other
+## way
 ## (resource_packs_check.py in CI).
 
 ## The default pack's manifest; its files are named from res://.
@@ -73,6 +74,18 @@ static func region_pieces(region_id: String) -> Array[String]:
 		for file: String in pack.region_pieces[region_id]:
 			paths.append(pack.root + file)
 	return paths
+
+
+## Every realm (#1861) the loaded packs have, its file as a res:// path by its id, in id order: the
+## first pack that has an id gives its file.
+static func realms() -> Dictionary[String, String]:
+	var found: Dictionary[String, String] = {}
+	for pack: ResourcePack in loaded():
+		for realm_id: String in pack.realms:
+			if not found.has(realm_id):
+				found[realm_id] = pack.root + pack.realms[realm_id]
+	found.sort()
+	return found
 
 
 ## The first loaded pack that has the region `region_id`, drawn whole or in pieces, or null.
