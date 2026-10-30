@@ -32,6 +32,9 @@ const EDGE_SHARE: float = 0.04
 
 ## The family it shows, or -1 for a type that isn't on the chart (drawn as nothing).
 var family: int = -1
+## Its side, in the menu's font size: FONTS beside a type's name, larger where it stands for a
+## whole monster (EvolutionGraphic, #1796).
+var fonts: float = FONTS
 
 
 func _init(type: String = "") -> void:
@@ -42,7 +45,7 @@ func _init(type: String = "") -> void:
 func _notification(what: int) -> void:
 	# The menu scales its font with the screen; the badge follows it, as the labels beside it do.
 	if what == NOTIFICATION_THEME_CHANGED or what == NOTIFICATION_ENTER_TREE:
-		custom_minimum_size = Vector2.ONE * get_theme_default_font_size() * FONTS
+		custom_minimum_size = Vector2.ONE * get_theme_default_font_size() * fonts
 
 
 func _draw() -> void:

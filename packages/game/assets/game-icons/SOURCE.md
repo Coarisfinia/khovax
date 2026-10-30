@@ -2,7 +2,7 @@
 
 - **Author:** Lorc (http://lorcblog.blogspot.com): `cog.svg`, `evil-moon.svg`, `fist.svg`,
   `grab.svg`, `magic-shield.svg`, `magic-swirl.svg`, `magnifying-glass.svg`, `spiky-explosion.svg`,
-  `sprout.svg`, `tornado.svg`, `wolf-trap.svg`; Delapouite (http://delapouite.com):
+  `sprout.svg`, `swap-bag.svg`, `tornado.svg`, `wolf-trap.svg`; Delapouite (http://delapouite.com):
   `berries-bowl.svg`, `exit-door.svg`, `hamburger-menu.svg`, `herbs-bundle.svg`, `knot.svg`,
   `resize.svg`, `totem.svg`, `plain-arrow-up.svg`, `plain-arrow-down.svg`, `plain-arrow-left.svg`,
   `plain-arrow-right.svg`; Sbed (http://opengameart.org/content/95-game-icons): `cancel.svg`
@@ -23,4 +23,5 @@
   Settings tab's steps back and on (`plain-arrow-left.svg`, `plain-arrow-right.svg`) and the
   monsters' order (`plain-arrow-up.svg`, `plain-arrow-down.svg`), and the mark of a monster with a
   development knot to take (#1443): `knot.svg`, and the button that harvests a tile by hand
-  (#1488): `grab.svg`
+  (#1488): `grab.svg`, and the item an evolution needs in a monster's details (#1796):
+  `swap-bag.svg`
