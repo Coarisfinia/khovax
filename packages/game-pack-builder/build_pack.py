@@ -17,6 +17,7 @@ GODOT_SHA512 (Linux x86_64 only).
 """
 
 import hashlib
+import json
 import os
 import platform
 import re
@@ -50,6 +51,12 @@ SCRIPT_SETTING = re.compile(r"^[^=\n]*script[^=\n]*=(?!null$|\"\"$).*$", re.MULT
 # A .import names no file at all: no res://, uid:// or other scheme, so no setting saves to or
 # loads from a path.
 SCHEME = re.compile(r"[a-z]+://", re.IGNORECASE)
+# Nor any other path: a string that starts at a root or a drive, or climbs out, nor a setting
+# that ties the file to a project (Godot writes those itself).
+PATH_STRING = re.compile(r'"(?:[/\\]|[A-Za-z]:|[^"\n]*\.\.[/\\])')
+PROJECT_BOUND = re.compile(r"^(?:uid|path(?:\.[a-z0-9_]+)?|source_file|dest_files)=|^\[deps\]", re.MULTILINE)
+# How long downloading Godot may stall, in seconds.
+DOWNLOAD_TIMEOUT = 300
 REMAP_SETTING = re.compile(r'^(importer|type)="([^"\n]*)"$')
 # How long Godot may take to import or export a pack, in seconds.
 TIMEOUT = 900
@@ -71,6 +78,8 @@ def refused(pack: Path) -> list[str]:
             reasons.append(f"{name} isn't a plain file")
         elif name.endswith(IMPORT):
             reasons += [f"{name} {problem}" for problem in import_problems(path)]
+        elif name.endswith(".gltf"):
+            reasons += [f"{name} {problem}" for problem in gltf_problems(pack, path)]
         elif not name.endswith(ALLOWED):
             reasons.append(f"{name} isn't one of {', '.join(ALLOWED)} (a pack is data, never code)")
     return reasons
@@ -102,8 +111,38 @@ def import_problems(path: Path) -> list[str]:
         if not source.name.endswith(sources) or not source.is_file() or source.is_symlink():
             problems.append(f"imports no {'/'.join(sources)} file beside it")
     problems += [f"names a script: {setting}" for setting in SCRIPT_SETTING.findall(settings)]
-    if SCHEME.search(settings):
+    if SCHEME.search(settings) or PATH_STRING.search(settings) or PROJECT_BOUND.search(settings):
         problems.append("names a path (a pack's settings name no file)")
+    return problems
+
+
+def gltf_problems(pack: Path, gltf: Path) -> list[str]:
+    """Why a glTF can't come with a pack: it isn't JSON, or a buffer or image it points at isn't
+    embedded (data:) nor a plain file inside the pack, so Godot's import would read elsewhere."""
+    try:
+        document = json.loads(gltf.read_text(encoding="utf-8"))
+        uris = [
+            entry["uri"]
+            for entry in document.get("buffers", []) + document.get("images", [])
+            if "uri" in entry
+        ]
+    except (ValueError, TypeError, AttributeError, KeyError):
+        return ["isn't a glTF Godot could read"]
+    problems = []
+    for uri in uris:
+        if isinstance(uri, str) and uri.startswith("data:"):
+            continue
+        target = gltf.parent / uri if isinstance(uri, str) else None
+        inside = (
+            target is not None
+            and not SCHEME.search(uri)
+            and not Path(uri).is_absolute()
+            and target.resolve().is_relative_to(pack.resolve())
+            and target.is_file()
+            and not target.is_symlink()
+        )
+        if not inside:
+            problems.append(f"points at {uri!r}, which isn't a plain file in the pack")
     return problems
 
 
@@ -128,15 +167,19 @@ def godot(version: str, checksum: str) -> str:
     name = f"Godot_v{version}-stable_linux.x86_64"
     url = f"https://github.com/godotengine/godot/releases/download/{version}-stable/{name}.zip"
     log.text("notice", f"downloading Godot {version} to {home}")
-    with tempfile.TemporaryDirectory() as folder:
-        archive = Path(folder) / "godot.zip"
-        urllib.request.urlretrieve(url, archive)
-        if hashlib.sha512(archive.read_bytes()).hexdigest() != checksum:
-            raise RuntimeError(f"{url} doesn't match its pinned SHA-512")
-        with zipfile.ZipFile(archive) as files:
-            files.extract(name, folder)
-        home.parent.mkdir(parents=True, exist_ok=True)
-        shutil.move(Path(folder) / name, home)
+    try:
+        with tempfile.TemporaryDirectory() as folder:
+            archive = Path(folder) / "godot.zip"
+            with urllib.request.urlopen(url, timeout=DOWNLOAD_TIMEOUT) as download:
+                archive.write_bytes(download.read())
+            if hashlib.sha512(archive.read_bytes()).hexdigest() != checksum:
+                raise RuntimeError(f"{url} doesn't match its pinned SHA-512")
+            with zipfile.ZipFile(archive) as files:
+                files.extract(name, folder)
+            home.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(Path(folder) / name, home)
+    except (OSError, zipfile.BadZipFile, shutil.Error) as problem:
+        raise RuntimeError(f"Godot {version} couldn't be downloaded: {problem}") from problem
     home.chmod(0o755)
     return str(home)
 
