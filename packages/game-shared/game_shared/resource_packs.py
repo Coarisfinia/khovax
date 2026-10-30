@@ -41,13 +41,23 @@ def read_manifest(path: Path = MANIFEST) -> dict[str, object]:
     return data
 
 
-def textures(manifest: dict[str, object]) -> dict[str, str]:
-    """The manifest's textures, each file by its id; ValueError when they aren't an object of
-    texts, so no entry slips past the checks."""
-    raw = manifest.get("textures")
+def section(manifest: dict[str, object], kind: str) -> dict[str, str]:
+    """The manifest's resources of `kind` ("textures", "models"), each file by its id; ValueError
+    when they aren't an object of texts, so no entry slips past the checks."""
+    raw = manifest.get(kind)
     if not isinstance(raw, dict):
-        raise ValueError("has no textures object")
+        raise ValueError(f"has no {kind} object")
     odd = sorted(key for key, value in raw.items() if not isinstance(value, str))
     if odd:
-        raise ValueError(f"names no file for the textures {', '.join(odd)}")
+        raise ValueError(f"names no file for the {kind} {', '.join(odd)}")
     return dict(raw)
+
+
+def textures(manifest: dict[str, object]) -> dict[str, str]:
+    """The manifest's textures, each file by its id (section)."""
+    return section(manifest, "textures")
+
+
+def models(manifest: dict[str, object]) -> dict[str, str]:
+    """The manifest's models (#1864), each .glb or .gltf by its id (section)."""
+    return section(manifest, "models")
