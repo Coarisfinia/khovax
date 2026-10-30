@@ -15,6 +15,8 @@ const ROOT: String = "res://packs/%s/"
 static func mount(pck_path: String) -> ResourcePack:
 	var file: PackFile = PackFile.open(pck_path)
 	var problem: String = file.problem
+	if problem.is_empty():
+		problem = "; ".join(PackCheck.problems(file))
 	if problem.is_empty() and not ProjectSettings.load_resource_pack(pck_path, false):
 		problem = "Godot couldn't mount it"
 	if not problem.is_empty():
