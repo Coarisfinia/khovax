@@ -265,6 +265,10 @@ a second model could use goes into the library or a generic tool, never into one
   model no view preloads (shown only in the gear panel) isn't measured. Its `KNOWN` list
   is judged like the volume check's. `test_footprint.py` tests it on boxes that fit their hex or
   are too big for it.
+- **The world-scale check (#1837):** `packages/game-models/check_world_scale.py -- <model.glb>`
+  measures each model against the world's scale (`lib/world_scale.py`): a model that isn't a
+  monster by the kind its script names, the players' figure against the player's height (step
+  23). `test_world_scale.py` tests it on boxes of each kind, sized to it or off it.
 - **The dimensions check (#1299):** `packages/game-models/check_dimensions.py -- <model.glb> [...]`
   measures each limb at rest per body plan (forearm against upper arm, shin against thigh, the
   foreleg against the shoulder's height) and fails a measure outside its range
@@ -444,7 +448,8 @@ prop's own, and never another grey stone. A prop's script only maps its parts on
 (`lib/prop_paint.py`), as `standing_stone.py` does:
 
 1. Import the download with `import_source.py` (it has no texture to keep) and place and size it
-   in the script (`footprint.spread`, a prop's limits).
+   in the script (`footprint.spread`, a prop's limits), to the world's scale for its kind
+   (`WORLD_SCALE`, below).
 2. `prop_paint.box_uv` projects the textures triplanar (baked into the UVs, the same size on
    every prop); `prop_paint.material(<name>)` is each of the set's materials. Give each part its
    material (`repaint.pieces` tells the parts apart), the moss to the faces `prop_paint.mossy`
@@ -491,6 +496,18 @@ No runes or carvings by script: they come from the rune set (#1855) and the engr
   Blender's -Y; `Vector3.MODEL_FRONT`), like every model in the game: the views turn a figure with
   `atan2(heading.x, heading.z)`, so one built facing -Z walks backwards. The height matches the
   model it sits beside in the game (measure the reference .glb).
+- **The world's scale (#1837):** a hex, a wall and the player are sized against each other, and
+  `lib/world_scale.py` holds the numbers; read them from there, never copy them. The hex is
+  `HEX_SIZE` from centre to corner (one edge is `HEX_EDGE` long, the hex `HEX_WIDTH` across its
+  flats), the player `PLAYER_HEIGHT` tall (the players' figure standing, which the check
+  measures), and a wall `WALL_HEIGHT`, a quarter above the player. Every model that isn't a
+  monster names its kind in its script, `WORLD_SCALE = "<kind>"`, from `KINDS` there: `prop`
+  (on one hex: a well, a campfire, a signpost), `portal` (on one hex, walked through), `wall`,
+  `gate` and `ruined_wall` (**edge pieces**: along Blender's X, centred on the origin at the
+  edge's middle, `HEX_EDGE` long, so pieces meet end to end at the hex's corners), `tower` (at a
+  hex corner, above the walls) and `ruin`. Its height must be in its kind's range. Size it in its
+  script, then confirm with the world-scale check (step 23). A kind a new model needs is added
+  to `KINDS` with its range, in the pull request that needs it.
 - **Mesh health:** apply transforms, recalculate normals outside, no loose or non-manifold geometry.
 - **Reproducible (#1085):** a rebuild from an unchanged script gives the same file, byte for byte,
   so a pull request shows whether its build changed the model and two builds compare by hash.
@@ -725,6 +742,16 @@ clips. Ask the owner only when it's unclear what should move how.
    `marked_eyes.modelled`. A model the check still fails waits in its `KNOWN` list with the issue
    that fixes it. Its lines go into the PR. CI runs it on every `.glb`, with its test
    (`test_eyes_covered.py`).
+
+23. **World scale (#1837):** `uv run --locked packages/game-models/blender.py --background
+   --factory-startup --python packages/game-models/check_world_scale.py -- <model.glb>` must print
+   `WORLD SCALE CHECK: PASS`: a model built here that isn't a monster names its kind
+   (`WORLD_SCALE`) and stands, at rest, within its kind's height, and an edge piece spans its hex
+   edge (`lib/world_scale.py`); the players' figure stands at the player's height; a pack's model a
+   view stands on the board is held to a prop's height as the view shows it. A monster is sized
+   against its hex instead (step 20), and a tile's decoration and an item aren't measured. A model
+   that still fails waits in its `KNOWN` list with the issue that fixes it. Its lines go into the
+   PR. CI runs it on every `.glb`, with its test (`test_world_scale.py`).
 
 ## 5. PR
 - **Visuals (owner's rule), in this order:**

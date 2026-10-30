@@ -33,6 +33,9 @@ from lib import scene  # noqa: E402
 
 SOURCE = os.path.join(HERE, "sources", "tentacle_gate.glb")
 FPS = 30
+# Its kind on the world's scale (lib/world_scale.py): a gate on one hex the player walks through
+# (#1634).
+WORLD_SCALE = "portal"
 # The loop's length (frames): slow, so the gate breathes rather than fidgets.
 LOOP = 180
 # How much the source is shrunk, so the gate's rest pose reaches within a prop's limit on its hex

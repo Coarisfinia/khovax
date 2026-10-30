@@ -29,11 +29,8 @@ A clip that still fails today waits in KNOWN with the issue that fixes it: it pr
 and doesn't fail the check. The list only shrinks: a clip on it that passes fails the check
 until it's taken off."""
 
-import glob
 import os
-import re
 import sys
-from pathlib import Path
 
 import bpy
 
@@ -43,13 +40,10 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "game-shared"))
 
 from game_shared import log  # noqa: E402
-from game_shared.resource_packs import MANIFEST, models, read_manifest  # noqa: E402
 from lib import footprint, imported, known, views  # noqa: E402
 
 # The Godot project, whose views show the packs' models.
 GAME = os.path.join(os.path.dirname(HERE), "game")
-# The tile blueprints, whose `model` is the tile's decoration (TileDecorations shows it).
-TILES = os.path.join(os.path.dirname(HERE), "game", "core", "data", "tiles", "*.jsonc")
 
 # The models (by .glb name) of bosses, enraged or stronger monsters, which may reach past their hex.
 LARGE = {"fohossa"}
@@ -85,50 +79,12 @@ KNOWN = {
 }
 
 
-def decorations():
-    """The names (.glb or .gltf without the extension) of the models the tile blueprints name as
-    their decoration."""
-    # A tile names its model's id in the default resource pack, whose manifest gives its file (#1864).
-    pack_models = models(read_manifest(Path(GAME) / MANIFEST))
-    names = set()
-    for path in glob.glob(TILES):
-        with open(path, encoding="utf-8") as text:
-            # JSONC: a commented-out model names no decoration. A comment starts after a space or
-            # at a line's start, never in a path's `res://`.
-            body = re.sub(r"(?m)(^|\s)//.*$", "", re.sub(r"/\*.*?\*/", "", text.read(), flags=re.S))
-            for found in re.finditer(r'"model"\s*:\s*"([^"]+)"', body):
-                names.add(os.path.splitext(os.path.basename(pack_models[found.group(1)]))[0])
-    if not names:
-        sys.exit("no tile blueprint names a model in %s: the path moved?" % TILES)
-    return names
-
-
-def load(glb, fps, scale=1.0):
-    """The model in an empty scene at the clip rate, drawn at `scale` as a view's node would, and
-    its armature (None for a static one)."""
-    bpy.ops.wm.read_factory_settings(use_empty=True)
-    bpy.context.scene.render.fps = fps
-    bpy.ops.import_scene.gltf(filepath=glb)
-    if scale != 1.0:
-        holder = bpy.data.objects.new("view", None)
-        bpy.context.scene.collection.objects.link(holder)
-        holder.scale = (scale, scale, scale)
-        for obj in bpy.data.objects:
-            if obj.parent is None and obj is not holder:
-                obj.parent = holder
-        bpy.context.view_layer.update()
-    rig = next((obj for obj in bpy.data.objects if obj.type == "ARMATURE"), None)
-    if rig is not None and rig.animation_data is not None:
-        rig.animation_data.use_nla = False
-    return rig
-
-
 def measure(model, glb, fps, scripts):
     """The report lines for `model`: its own when a script here builds it, else one set per view
     that shows the pack's model on the board, each line named after its view. None when nothing
     stands it on the board."""
     if os.path.exists(os.path.join(HERE, model + ".py")):
-        rig = load(glb, fps)
+        rig = imported.load_view(glb, fps)
         lines, _passed = footprint.report(
             rig, footprint.meshes(rig, bpy.data.objects), footprint.limits(rig, model in LARGE))
         return [(line, "") for line in lines]
@@ -137,7 +93,7 @@ def measure(model, glb, fps, scripts):
         return None
     lines = []
     for view in shown:
-        rig = load(glb, fps, view.scale)
+        rig = imported.load_view(glb, fps, view.scale)
         meshes = [obj for obj in footprint.meshes(rig, bpy.data.objects) if obj.name not in view.hidden]
         # A figure stands in its idle clip and plays only the view's clips; a static model has
         # only its rest pose. It's held to a prop's limits: it neither walks on nor strikes.
@@ -150,7 +106,7 @@ def measure(model, glb, fps, scripts):
 
 def main():
     glbs = sys.argv[sys.argv.index("--") + 1:]
-    tile_looks = decorations()
+    tile_looks = views.decorations(GAME)
     scripts = views.Scripts(GAME)
     passed = True
     for glb in glbs:
