@@ -772,8 +772,10 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 
 ### Repository and accounts
 
-- **`main` is protected by the ruleset "protect main"**, with no bypass: pull requests only, one
-  approval (later pushes don't dismiss it), review threads resolved, the `headless` and `apk-e2e`
+- **`main` is protected by two rulesets** (#1783). **"main approval"** requires one approval
+  (later pushes don't dismiss it), with the agent bot on its bypass list for pull requests only
+  (the rule for pull requests that aren't user-facing, above). **"protect main"**, with no bypass,
+  requires no approval itself but pull requests only, review threads resolved, the `headless` and `apk-e2e`
   checks from GitHub Actions green (`models`, the Blender model checks in their own job, #1357, joins
   them once the owner adds it to the ruleset), merged through the merge queue (#329; CI runs on its
   `merge_group` events), squash merges only, no force-push or deletion. The required checks are named after the CI jobs: renaming a job means
