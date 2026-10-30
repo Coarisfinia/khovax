@@ -7,7 +7,8 @@ extends RefCounted
 ## in headless Chrome and on the Linux build in CI (started by game/test_mode.gd in the test
 ## builds), and headless (tests/e2e/test_apk_flow.gd). CI compares each device's final hash with
 ## the headless one for the same commit (#876): a pass on a device means it plays the very same
-## game.
+## game. On the web it then saves the error log with a controller's press alone (#1598), which the
+## web e2e job checks arrives as a download.
 
 ## With the flow's result: "" when it passed, or why it failed.
 signal finished(result: String)
@@ -61,7 +62,8 @@ func run(main: Node, tree: SceneTree) -> String:
 	# Frames pass in real time here, so the views and the camera catch up with the state.
 	await tree.create_timer(1.5).timeout
 	final_hash = driver.state.state_hash()
-	return _result(driver, camera, start, camera_before)
+	var result: String = _result(driver, camera, start, camera_before)
+	return result if not result.is_empty() else _save_log_by_controller(main)
 
 
 func _result(
@@ -100,6 +102,34 @@ func _play(driver: GameDriver, tree: SceneTree, origin: Vector2, leg: int, tick:
 		await _play(driver, tree, origin, leg, tick + 1)
 	else:
 		await _play(driver, tree, origin, leg + 1, 0)
+
+
+## On the web, saves the error log the way a player with only a controller does (#1598): the
+## Credits tab's save button, focused, pressed with a controller's A. The page has had no click or
+## key press, so the browser has to let the download through without any user activation;
+## packages/game-web-e2e/web_e2e.py checks that it arrives and holds the log. Elsewhere the button
+## hides, and nothing is saved.
+func _save_log_by_controller(main: Node) -> String:
+	if not OS.has_feature("web"):
+		return ""
+	var save: ErrorLogButton = ErrorLogButton.new()
+	main.add_child(save)
+	if not save.visible:
+		save.queue_free()
+		return "the error log's save button doesn't show on the web"
+	save.grab_focus()
+	_press_a(true)
+	_press_a(false)
+	save.queue_free()
+	return ""
+
+
+func _press_a(pressed: bool) -> void:
+	var press: InputEventJoypadButton = InputEventJoypadButton.new()
+	press.button_index = JOY_BUTTON_A
+	press.pressed = pressed
+	Input.parse_input_event(press)
+	Input.flush_buffered_events()
 
 
 func _touch(point: Vector2, pressed: bool) -> void:
