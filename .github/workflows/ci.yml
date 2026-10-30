@@ -593,12 +593,12 @@ jobs:
           persist-credentials: false
 
       - name: "🏷️ Stamp the build's version"
-        # v<next>-dev.<run number> (#747), or v<next>-nightly.<date> in nightly.yml's run, <next> being
-        # the patch after the last prod release (a full release, never a prerelease), or
-        # config/version while there is none. Every run's builds carry it, though only a push to main
-        # or a nightly publishes it, as dev-release's tag. It goes
-        # into its own setting, which BuildVersion.SETTING reads: Godot refuses anything but
-        # numbers in config/version for the Windows and Android version fields (#744).
+        # v<next>-dev.<run number> (#747), or v<next>-nightly.<date> in nightly.yml's run, <next>
+        # being the patch after the last prod release (a full release, never a prerelease), or
+        # config/version while there is none. Every run's builds carry it, though only a push to
+        # main or a nightly publishes it, as dev-release's tag. It goes into its own setting, which
+        # BuildVersion.SETTING reads: Godot refuses anything but numbers in config/version for the
+        # Windows and Android version fields (#744).
         id: version
         env:
           GH_TOKEN: ${{ github.token }}
@@ -1022,8 +1022,9 @@ jobs:
 
   dev-release:
     # A dev release on every push to main whose checks all pass (#1312, #747: one kept prerelease per
-    # build), and a nightly one for nightly.yml's passing run on main (#747), with the builds the export job just made attached as plain files, never zips: the
-    # Android APK, the Windows .exe, the Linux executable and the web build's files. Its tag is the
+    # build), and a nightly one for nightly.yml's passing run on main (#747), with the builds the
+    # export job just made attached as plain files, never zips: the Android APK, the Windows .exe,
+    # the Linux executable and the web build's files. Its tag is the
     # version the export job stamped into them (#744). It checks out only project.godot, for the
     # game's name, and runs nothing from the repository. Pull requests and the merge queue never
     # release.
