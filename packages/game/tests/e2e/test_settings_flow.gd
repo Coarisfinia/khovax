@@ -794,10 +794,32 @@ static func _evolution_told(evolution: EvolutionGraphic) -> String:
 		return "the item's card shows before the item is focused"
 	evolution.item.grab_focus()
 	var opened: bool = evolution.card.visible
+	# The pointer on the open card meets the card, not what it covers, like the Ascend button
+	# (#1807).
+	var on_card: bool = _pointed_at(evolution.card, evolution.card.get_global_rect().get_center())
+	var _away: bool = _pointed_at(evolution.card, Vector2.ZERO)
 	evolution.item.release_focus()
 	if not opened or evolution.card.visible:
 		return "the item's card doesn't open on a controller's focus, or stays once it leaves"
+	if not on_card:
+		return "a pointer on the item's card reaches what lies below it"
 	return ""
+
+
+## Whether moving the mouse to `at` on `seen`'s screen puts it on `seen`, which takes it. The
+## headless window is tiny, so the screen grows to a real one's size for the move, then shrinks
+## back.
+static func _pointed_at(seen: Control, at: Vector2) -> bool:
+	var window: Window = seen.get_tree().root
+	var was: Vector2i = window.size
+	window.size = Vector2i(1280, 720)
+	var motion: InputEventMouseMotion = InputEventMouseMotion.new()
+	motion.position = at
+	motion.global_position = at
+	window.push_input(motion)
+	var hovered: Control = window.gui_get_hovered_control()
+	window.size = was
+	return hovered == seen
 
 
 ## Whether a run of carry requests posted to `outbox` past its first `posted` entries brings the
