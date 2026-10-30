@@ -2,10 +2,10 @@
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://github.com/Coarisfinia/khovax/slices/resource_packs/data/resource_packs.schema.json",
 	"title": "Resource pack",
-	"description": "A resource pack's manifest (#1860): its id, its name, its own version, the game version it targets, and the resources it provides (textures and models), each file by its id. The game's own resources are the default pack; a player's pack (#1858) shares this format. One file per pack, named after its id.",
+	"description": "A resource pack's manifest (#1860): its id, its name, its own version, the game version it targets, and the resources it provides (textures, models, regions and region pieces), each by its id. The game's own resources are the default pack; a player's pack (#1858) shares this format. One file per pack, named after its id.",
 	"type": "object",
 	"additionalProperties": false,
-	"required": ["id", "name", "version", "game_version", "textures", "models"],
+	"required": ["id", "name", "version", "game_version", "textures", "models", "regions", "region_pieces"],
 	"properties": {
 		"id": {
 			"description": "Stable: lowercase words joined by underscores.",
@@ -39,6 +39,25 @@
 			"additionalProperties": {
 				"type": "string",
 				"pattern": "^[A-Za-z0-9_-][A-Za-z0-9._/-]*\\.(glb|gltf)$"
+			}
+		},
+		"regions": {
+			"description": "Each region drawn whole in one Markdown file (#1861), by its id (an instance blueprint's or a variant's region), relative to the pack's root, never climbing out of it.",
+			"type": "object",
+			"propertyNames": { "pattern": "^[a-z][a-z0-9_]*$" },
+			"additionalProperties": {
+				"type": "string",
+				"pattern": "^[A-Za-z0-9_-][A-Za-z0-9._/-]*\\.md$"
+			}
+		},
+		"region_pieces": {
+			"description": "Each region arranged from region pieces (#1861), by its id: its pieces' Markdown files, relative to the pack's root, the start piece among them unless it's a variant that changes only some of its blueprint's pieces (#1590).",
+			"type": "object",
+			"propertyNames": { "pattern": "^[a-z][a-z0-9_]*$" },
+			"additionalProperties": {
+				"type": "array",
+				"minItems": 1,
+				"items": { "type": "string", "pattern": "^[A-Za-z0-9_-][A-Za-z0-9._/-]*\\.md$" }
 			}
 		}
 	}

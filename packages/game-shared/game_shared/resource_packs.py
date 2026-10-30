@@ -61,3 +61,18 @@ def textures(manifest: dict[str, object]) -> dict[str, str]:
 def models(manifest: dict[str, object]) -> dict[str, str]:
     """The manifest's models (#1864), each .glb or .gltf by its id (section)."""
     return section(manifest, "models")
+
+
+def file_lists(manifest: dict[str, object], kind: str) -> dict[str, list[str]]:
+    """The manifest's resources of `kind` that are several files each ("region_pieces", #1861),
+    each list by its id; ValueError when they aren't an object of lists of texts."""
+    raw = manifest.get(kind)
+    if not isinstance(raw, dict):
+        raise ValueError(f"has no {kind} object")
+    odd = sorted(
+        key for key, value in raw.items()
+        if not isinstance(value, list) or not all(isinstance(file, str) for file in value)
+    )  # fmt: skip
+    if odd:
+        raise ValueError(f"names no list of files for the {kind} {', '.join(odd)}")
+    return {key: list(value) for key, value in raw.items()}

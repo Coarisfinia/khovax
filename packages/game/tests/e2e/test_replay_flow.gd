@@ -1025,9 +1025,9 @@ func _check_end_last() -> String:
 ## more than one way, while the arena, one piece the seeds never turn, loads for every seed exactly
 ## as its file is drawn, and takes four players.
 func _check_turning() -> String:
-	var folder: String = InstanceBlueprints.REGIONS + FlowSteps.ARENA + "/"
+	# The arena's one piece, as the resource packs list it (#1861).
 	var drawn: Region = InstanceBlueprints.read_region(
-		FileAccess.get_file_as_string(folder + "start.md"),
+		FileAccess.get_file_as_string(ResourcePacks.region_pieces(FlowSteps.ARENA)[0]),
 	)
 	var pieces: Array[Region] = _glade_pieces()
 	var glade_starts: Dictionary[Vector2i, bool] = {}
@@ -1062,19 +1062,22 @@ func _check_glade(seed_value: int, pieces: Array[Region]) -> String:
 	return ""
 
 
-## The glade's region pieces, read straight from their files, its start piece first.
+## The glade's region pieces, read straight from the files the resource packs list (#1861), its
+## start piece first.
 func _glade_pieces() -> Array[Region]:
-	var folder: String = InstanceBlueprints.REGIONS + FlowSteps.GLADE + "/"
 	var files: Array[String] = []
-	for file: String in DirAccess.get_files_at(folder):
-		if file.ends_with(".md") and file != InstanceBlueprints.START_PIECE:
+	var start: String = ""
+	for file: String in ResourcePacks.region_pieces(FlowSteps.GLADE):
+		if file.get_file() == InstanceBlueprints.START_PIECE:
+			start = file
+		else:
 			files.append(file)
 	# In a fixed order, as the blueprints read them: the order is part of the arrangement.
 	files.sort()
-	files.push_front(InstanceBlueprints.START_PIECE)
+	files.push_front(start)
 	var pieces: Array[Region] = []
 	for file: String in files:
-		pieces.append(InstanceBlueprints.read_region(FileAccess.get_file_as_string(folder + file)))
+		pieces.append(InstanceBlueprints.read_region(FileAccess.get_file_as_string(file)))
 	return pieces
 
 

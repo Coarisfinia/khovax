@@ -3,7 +3,7 @@ extends RefCounted
 ## The one resolver of the game's resources (#1860): it turns a resource id into the resource by
 ## walking the loaded packs in order, the first that has the id giving it. The game's own resources
 ## are the default pack, last in the order; a player's packs (#1858) will come before it, and
-## override what they provide. Nothing looks up a built-in texture or model any other way
+## override what they provide. Nothing looks up a built-in texture, model or region any other way
 ## (resource_packs_check.py in CI).
 
 ## The default pack's manifest; its files are named from res://.
@@ -53,6 +53,34 @@ static func has_model(model_id: String) -> bool:
 		if pack.models.has(model_id):
 			return true
 	return false
+
+
+## The file of the region `region_id` (#1861) when the first loaded pack that has it draws it whole,
+## as a res:// path, or "" when that pack arranges it from pieces or no pack has it.
+static func region_file(region_id: String) -> String:
+	var pack: ResourcePack = _with_region(region_id)
+	if pack == null or not pack.regions.has(region_id):
+		return ""
+	return pack.root + pack.regions[region_id]
+
+
+## The piece files of the region `region_id` (#1861) when the first loaded pack that has it arranges
+## it from pieces, as res:// paths, or none when that pack draws it whole or no pack has it.
+static func region_pieces(region_id: String) -> Array[String]:
+	var paths: Array[String] = []
+	var pack: ResourcePack = _with_region(region_id)
+	if pack != null and pack.region_pieces.has(region_id):
+		for file: String in pack.region_pieces[region_id]:
+			paths.append(pack.root + file)
+	return paths
+
+
+## The first loaded pack that has the region `region_id`, drawn whole or in pieces, or null.
+static func _with_region(region_id: String) -> ResourcePack:
+	for pack: ResourcePack in loaded():
+		if pack.regions.has(region_id) or pack.region_pieces.has(region_id):
+			return pack
+	return null
 
 
 ## The loaded packs, in lookup order: for now only the default pack. One that can't be read is
