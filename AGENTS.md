@@ -650,8 +650,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
     - **A baby form or any other evolution** (owner, #1754): the best picture of the earlier form
       (a clean render), attached as the reference, and 20 variations of the evolution copypasta
       in the model skill, word for word, each with its own change as a plain sentence and its
-      own `Its body also evolves. It becomes <how> - redesign it.` line ("more sturdy" by
-      default). **An evolved form redesigns its body, never copies the earlier one** (owner's
+      own body line: for a later form `Its body also evolves. It becomes <how> - redesign it.`
+      ("more sturdy" by default). **An evolved form redesigns its body, never copies the earlier one** (owner's
       ground rule, 2026-10-30, #1821). Every variation adds something unique, unusual or
       fantastical, such as nine tails, a skateboard, wings, extra heads or a landscape on its
       back, and a form later than the pictured one looks more powerful and more fantastical,
