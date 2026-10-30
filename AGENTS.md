@@ -95,9 +95,13 @@ committed.
 **Build the next pull requests while the open ones wait for review** (owner, #217): each in its own
 worktree, fully built and reviewed by Codex locally before it's pushed and opened.
 
-**One pull request per coherent change**: one feature, one fix or one refactor, whole. Side findings,
-refactors and tooling tweaks get their own issue and their own pull request later, never along for the
-ride.
+**One pull request per coherent change, tightly scoped** (owner's ground rule, #1825): one feature,
+one fix or one refactor, whole. Anything beyond it, even a related cleanup, side findings and tooling
+tweaks, gets its own issue and its own pull request later, never along for the ride.
+
+**Consider the default resource pack for everything new** (owner's ground rule, #1887): content,
+models, realms and region pieces, quests (#1888) and the like go into the default resource pack
+(#1860) when they belong there. The pull request's description says which was chosen and why.
 
 **Keep each pull request low in complexity: a concise unit of progress, no bloat** (owner's rule).
 Prefer the simplest solution that does the job, and Godot's built-in way over a hand-built one. When
@@ -138,6 +142,11 @@ out of date.
 **Anything off, missing or tech debt gets an issue** (owner's rule, #630): whenever an agent or
 subagent notices something wrong, missing or owed while working, it files a GitHub issue before
 its work is done, labelled `question`, with numbered options and a ★ on the recommendation.
+
+**Blocked-by edges are mandatory** (owner's rule, #1825): every new issue gets a blocked_by edge to
+each issue it waits on, right after it's filed, set with household-brain's issue-links tool
+(`block_issue`), which refuses an edge that would close a cycle. Never set edges another way
+(GitHub's UI, `gh api`). A missing edge noticed on any issue, old or new, is set without asking.
 
 **`blocking` issues come first** (owner's rule). An open issue labelled `blocking` goes before
 everything else, tech debt included.
@@ -585,6 +594,12 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **Places connect across several tiles, never one** (owner's rule, on #689): region pieces join
   in the middle of a flat edge, so neighbours meet along the whole edge, and every exit to another
   instance is at least three tiles wide. The world flow checks both.
+- **A single hex is never a building to enter** (owner's ground rule, #1825): no single-hex asset
+  or model has a door, doorway or entrance. A door is something the player expects to go through,
+  so any door or opening is passable; gates and portals stand only where the path goes through.
+- **Every instance has at least one standing stone** (owner's ground rule, #1825, #1872): a
+  waystone at least 15 tiles from any hostile monster. With fast travel on (a host setting the
+  difficulty presets set), players travel between standing stones (#1873).
 - **Every attack is a species' own** (owner, #228): no move shared by every monster, and no
   borrowed move names. What attacks have in common is a property (a non-lethal auto attack, like a
   bird-style monster's beak strike, never takes a wild monster below 1 HP), not a common move.
@@ -651,6 +666,13 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   from scratch. Its source (the mesh, and the rig if it has one) comes from the owner, or for a
   prop or scenery from a free source (B below); agents import, rig, animate, check and fix it, and
   work on the model tooling.
+- **Retexture before asking for a new model** (owner's ground rule, #1847): what a retexture
+  can resolve is never filed as a new model. Go through the models there are
+  (`packages/game/assets/`, `Coarisfinia/khovax-sources`) and retexture one from the shared
+  texture set (the model skill).
+- **Every image prompt in an issue sits in its own accordion** (owner's ground rule, #1825), as on
+  #1770 to #1772: `<details><summary>N. short idea</summary>` around a `text` block, for monsters
+  and other assets alike.
 - **If you need a new model** (owner's ground rule, #1575):
   - A. **A new monster:** file a `question` issue for the owner, one issue per beast (owner's
     ground rule, #1726). The owner makes the model from it.
@@ -671,7 +693,10 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
       ("no rig possible") gets its own skeleton and the full set of clips in Blender (the model
       skill, "Rig").
   - B. **Anything else** (props, scenery): use a free source whose license allows it here (below);
-    if there is none, do A.
+    if there is none, do A, with the prop prompt block in the model skill.
+- **The world-asset list** (owner's ground rule, #1824, #1825): the issue of non-monster assets,
+  3 prompts each. When the owner submits an asset, file a follow-up issue for its import and take
+  the asset off the list.
 - **A beast exists only from the owner's vibe or model** (owner's ground rule, #1686): prompt
   suggestions, such as the brainstormed lists for A, make no beast: only the owner's vibe or model
   does. They're never rewritten, asked about or tracked as creatures, and a rule about "every beast"
