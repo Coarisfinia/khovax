@@ -164,6 +164,27 @@ BEASTS = {
 }
 
 
+class Box:
+    """A beast's own dark marking on its head (#1765), a stripe or a spot of its design as small as
+    an eye's leftovers, so size can't tell them apart: the box from `low` to `high` (x, y and z in
+    the skin's space) it lies in. `fragments` leaves the texels on the surface inside it out of its
+    search, and searches the rest of the head as before."""
+
+    def __init__(self, low, high):
+        self.low, self.high = numpy.array(low, dtype=float), numpy.array(high, dtype=float)
+
+    def holds(self, points):
+        """Which of `points` (rows of x, y, z) lie inside the box."""
+        return numpy.all((points >= self.low) & (points <= self.high), axis=1)
+
+
+# The beasts with small dark markings of their own on the head (#1765), each a list of `Box`es and
+# a comment saying what each marking is, with the renders showing it is the beast's design in the
+# PR that names it; keyed by the .glb's path in the game's project folder. A large dark area (a
+# basalt half) needs no box: `fragments` takes it for a tone of the head's own paint (#1782).
+MARKINGS = {}
+
+
 class Unpainted(ValueError):
     """A skin or head without a textured face: nothing painted on it."""
 
@@ -434,7 +455,7 @@ def linear(colour):
     return tuple(c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in colour) + (1.0,)
 
 
-def fragments(skin, bone="head", weight=HEAD_WEIGHT):
+def fragments(skin, bone="head", weight=HEAD_WEIGHT, keep=()):
     """What's left of the generator's eyes on `skin`'s texture over the head that `bone` moves,
     beyond a mirrored pair (#1756): of every texel the head's triangles touch (#1764: not only
     those its samples read, so a speck between them shows too), those darker than FRAGMENT_RATIO
@@ -450,7 +471,9 @@ def fragments(skin, bone="head", weight=HEAD_WEIGHT):
     whose filled texels may sit a little under its own threshold, passes. Our own eyes are plain
     colours, not the texture, so they never count. The head is the faces weighted at least
     `weight` to `bone` (a beast's own `Marked`'s,
-    as `painted` takes). Empty for a skin with no `bone` or no textured face on the head."""
+    as `painted` takes). A texel any of whose spots on the surface lies in one of the `Box`es in
+    `keep` (the beast's own dark markings, MARKINGS, #1765) is never reported, wherever it is
+    searched. Empty for a skin with no `bone` or no textured face on the head."""
     if bone not in skin.vertex_groups:
         return []
     try:
@@ -466,6 +489,12 @@ def fragments(skin, bone="head", weight=HEAD_WEIGHT):
     islands = _islands(head)[triangles]
     cell = numpy.ptp(head.points, axis=0).max() / CELLS
     tone = max(TONE_SHARE * len(numpy.unique(texels)), TONE_TEXELS)
+    # The texels of the beast's own markings, whole: a texel at a box's edge holds spots on either
+    # side of it.
+    inside = numpy.zeros(len(texels), dtype=bool)
+    for box in keep:
+        inside |= box.holds(spots)
+    marking = numpy.isin(texels, texels[inside])
     marks = []
     shape = head.pixels.shape[:2]
     # The parts of the head searched, each against its own median: the whole head first, then each
@@ -508,7 +537,7 @@ def fragments(skin, bone="head", weight=HEAD_WEIGHT):
         # its median, as on the Kavrikka, out of the search).
         if near is not None and most:
             median = float(numpy.median(value[rest][numpy.unique(texels[rest], return_index=True)[1]]))
-        dark = rest[value[rest] < FRAGMENT_RATIO * median]
+        dark = rest[(value[rest] < FRAGMENT_RATIO * median) & ~marking[rest]]
         groups = _touching(_spots(spots[dark], cell), texels[dark], islands[dark], shape[1])
         if near is not None:
             kept = _mask(texels[dark], shape)

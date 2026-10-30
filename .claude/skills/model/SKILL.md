@@ -642,7 +642,10 @@ clips. Ask the owner only when it's unclear what should move how.
    spots that `marked_eyes.find` picks out (`DARK`, `GLOW`), left beside or under ours because
    `replace` wasn't run or missed them; and fragments of them left beyond a pair (#1756), spots
    much darker than the head's median (`marked_eyes.fragments`), which `marked_eyes.scrub` paints
-   out on a head whose own colours have no dark marks. CI runs it on every `.glb`, with its test
+   out on a head whose own colours have no dark marks. A beast whose design has small dark marks
+   on its head (a stripe, a spot by the eyes) gets a `marked_eyes.Box` around each in
+   `marked_eyes.MARKINGS` (#1765), with renders in its PR showing they're its design; a large dark
+   area (a basalt half) needs none. CI runs it on every `.glb`, with its test
    (`test_painted_eyes.py`).
 
 ## 5. PR
