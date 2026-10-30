@@ -75,12 +75,13 @@ TINY_SIZE = 6
 # edge, on rows ISLAND_ROWS.
 ISLAND_EDGE, ISLAND_ROWS = 10, (4, 5)
 # A two-tone head (#1782), as lib/frostfire.py paints the Kavrikka: dark basalt right of a border
-# (-X), the right half of it at x = 0, or most of it at x = MOSTLY (#1799).
+# (-X), the right half of it at x = 0, most of it at x = MOSTLY or a little less than half at
+# x = -MOSTLY (#1799).
 BASALT = (0.17, 0.11, 0.10)
 MOSTLY = 0.05
 # Where the patches go: by the left eye, by the right one (on the basalt), and on the border at x =
 # 0, level with the eyes.
-RIGHT_EYE, ON_BORDER = Vector((-EYE.x, EYE.y, EYE.z)), Vector((0.0, EYE.y, EYE.z)).normalized() * RADIUS
+RIGHT_EYE, ON_BORDER = Vector((-EYE.x, EYE.y, EYE.z)), Vector((-MOSTLY, EYE.y, EYE.z)).normalized() * RADIUS
 # Name: (the border's x, the patches painted on it, each (its colour, its middle, its radius), and
 # whether the check passes it).
 TWO_TONES = {
@@ -91,7 +92,7 @@ TWO_TONES = {
     "mostly_basalt": (MOSTLY, [], True),
     "mostly_basalt_dim_fragment": (MOSTLY, [(DIM, EYE, EYE_RADIUS / 2.0)], False),
     # A dim patch touching the basalt is one spot with it (#1799).
-    "two_tone_dim_across": (0.0, [(DIM, ON_BORDER, EYE_RADIUS)], False),
+    "two_tone_dim_across": (-MOSTLY, [(DIM, ON_BORDER, EYE_RADIUS)], False),
 }
 
 # Name: (the paint on the left eye and the right one (either may be None), or None, whether our eyes are joined in,
