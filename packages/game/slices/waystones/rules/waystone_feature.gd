@@ -40,14 +40,18 @@ static func has_waystone(region: Region) -> bool:
 ## Every player next to a waystone, in slot order, activates it: the first one beside them in
 ## direction order.
 func step(state: GameState, _commands: Array[Command]) -> void:
-	var knockdown: KnockdownFeature = state.feature(KnockdownFeature.ID) as KnockdownFeature
 	for slot: int in GameState.MAX_PLAYERS:
 		var player: Entity = state.player(slot)
-		if player == null or (knockdown != null and knockdown.is_down(player.id)):
-			continue
-		var stone: Vector2i = beside(state.region, player.tile)
-		if stone != player.tile:
-			_activate(state, player, stone)
+		if player != null and not _is_down(state, player):
+			var stone: Vector2i = beside(state.region, player.tile)
+			if stone != player.tile:
+				_activate(state, player, stone)
+
+
+## Whether `player` is knocked down in `state`, where they activate nothing.
+static func _is_down(state: GameState, player: Entity) -> bool:
+	var knockdown: KnockdownFeature = state.feature(KnockdownFeature.ID) as KnockdownFeature
+	return knockdown != null and knockdown.is_down(player.id)
 
 
 ## The first waystone next to `tile` in `region`, in direction order, or `tile` itself for none.

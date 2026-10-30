@@ -4,21 +4,23 @@ extends Node
 ## (NoticeScreen) says it's now where they come back to when they fall, so they know it without
 ## telling the glow apart by colour (#68).
 
-@export var driver: Session
-## This machine's player, whose slot the event must name.
-@export var input: LocalInput
 ## Where the notice shows.
 @export var notice: NoticeScreen
+## This machine's player, whose slot the event must name.
+@export var input: LocalInput
+@export var driver: Session
 
 
 func _ready() -> void:
-	var _connected: int = driver.ticked.connect(_on_ticked)
+	var _connected: int = driver.ticked.connect(_say_activated)
 
 
-func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
+## Shows the notice for this machine's player's WaystoneActivated among a tick's `events`.
+func _say_activated(_tick: int, events: Array[RefCounted]) -> void:
+	if input == null:
+		return
 	for event: RefCounted in events:
-		var activated: WaystoneActivated = event as WaystoneActivated
-		if activated != null and input != null and activated.slot == input.slot:
+		if event is WaystoneActivated and (event as WaystoneActivated).slot == input.slot:
 			notice.notify(title(), line())
 
 
