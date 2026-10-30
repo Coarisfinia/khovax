@@ -90,8 +90,12 @@ func _draw_arrow() -> void:
 
 
 ## The instance `id` as a text with text tags: a place's tag where a realm draws it, which has a
-## codex page (TextTags.PLACE, #1175), else its player-facing name (#909, #975) in plain words, a
-## proper noun needing no article ("Lumwen Hoal"). Here, not in QuestListView, whose card scene
-## holds this pill: the pill naming the list would load in a cycle.
+## codex page (TextTags.PLACE, #1175) and shows its player-facing name (#909, #975, #1710), a
+## proper noun needing no article ("Lumwen Hoal"); else "Unknown place": only the tests load an
+## instance no realm draws, and the blueprints, which name it, come after the quests (#1710). Here,
+## not in QuestListView, whose card scene holds this pill: the pill naming the list would load in a
+## cycle.
 static func place_tagged(id: String) -> String:
-	return TextTags.tag(TextTags.PLACE, id) if Realms.holding(id) != null else Realms.name_of(id)
+	if Realms.holding(id) == null:
+		return TranslationServer.tr("Unknown place")
+	return TextTags.tag(TextTags.PLACE, id)

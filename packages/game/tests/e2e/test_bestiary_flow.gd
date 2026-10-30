@@ -124,7 +124,7 @@ func _check_habitat_link() -> String:
 		return "a met species' page didn't open"
 	var line: NameLinks = _page.beast.habitat_line
 	var link: String = TextTags.PLACE + NameLinks.META_SEPARATOR + place
-	var read: String = HABITAT + ", " + Realms.name_of(place)
+	var read: String = HABITAT + ", " + InstanceBlueprints.name_of(place)
 	if (line == null
 			or line.links.size() != 1
 			or line.links[0] != link
@@ -135,7 +135,7 @@ func _check_habitat_link() -> String:
 	line.select(link)
 	var turned: bool = (_page.is_open()
 			and _page.heading.text == CodexPage.heading_of(TextTags.PLACE)
-			and _page.title.text == Realms.name_of(place))
+			and _page.title.text == InstanceBlueprints.name_of(place))
 	_page.close()
 	return "" if turned else "selecting %s showed %s" % [place, _page.title.text]
 

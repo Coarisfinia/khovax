@@ -5,12 +5,18 @@
 	"description": "An instance blueprint (#117, #823): what an instance is loaded from besides its region, regions/<id>.md or the region pieces in regions/<id>/. One file per blueprint, named after its id. Saved worlds and quests name an instance by its id, so an id is never reused or changed once shipped.",
 	"type": "object",
 	"additionalProperties": false,
-	"required": ["id", "rules", "wild_species", "codex"],
+	"required": ["id", "name", "rules", "wild_species", "codex"],
 	"properties": {
 		"id": {
 			"description": "Stable, never reused: lowercase words joined by underscores, the name of its region too.",
 			"type": "string",
 			"pattern": "^[a-z][a-z0-9_]*$"
+		},
+		"name": {
+			"description": "The player-facing name of its instances (#1710), as the codex, the quest pill and text tags show it, e.g. \"Lumwen Hoal\".",
+			"type": "string",
+			"x-translate": true,
+			"pattern": "\\S"
 		},
 		"codex": {
 			"description": "Its codex entry (#959): what the player reads on its codex page.",
@@ -71,9 +77,15 @@
 				"properties": {
 					"flag": { "description": "The world flag that chooses it.", "type": "string", "pattern": "\\S" },
 					"region": {
-						"description": "The region it's loaded with instead, a region file or a folder of region pieces in regions/; \"\" for the blueprint's own. A folder holds only the pieces it changes, the rest are the blueprint's own (#1590). A region with a codex entry is a place of its own, named, its name its id in words (#909); one without is the instance itself, changed, under the instance's name.",
+						"description": "The region it's loaded with instead, a region file or a folder of region pieces in regions/; \"\" for the blueprint's own. A folder holds only the pieces it changes, the rest are the blueprint's own (#1590). A region with a codex entry and a name is a place of its own (#909); one without is the instance itself, changed, under the instance's name.",
 						"type": "string",
 						"pattern": "^([a-z][a-z0-9_]*)?$"
+					},
+					"name": {
+						"description": "The player-facing name (#1710) of the region it loads when that's a place of its own (a corrupted instance), with its codex entry, e.g. \"Lymwen Hoall\".",
+						"type": "string",
+						"x-translate": true,
+						"pattern": "\\S"
 					},
 					"codex": {
 						"description": "The codex entry (#959) of the region it loads when that's a place of its own (a corrupted instance); a variant changing the instance itself (an opened passage) has none, and its own region never has one.",
@@ -86,6 +98,7 @@
 						}
 					}
 				},
+				"dependentRequired": { "codex": ["name"], "name": ["codex"] },
 				"if": { "properties": { "region": { "const": "" } } },
 				"then": { "not": { "required": ["codex"] } }
 			}

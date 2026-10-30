@@ -8,8 +8,8 @@
 	"starts_on": { "condition": "entered", "instance": "edhra_tewk" },
 	"territory": { "instance": "edhra_tewk", "faction": "amvrel_velmarai" },
 	"steps": [
-		{ "condition": "reached", "place": "north_hold", "instance": "edhra_tewk" },
-		{ "condition": "reached", "place": "south_hold", "instance": "edhra_tewk" },
-		{ "condition": "entered", "piece": "watch", "instance": "edhra_tewk", "ends": "guild_holds_edhra_tewk" }
+		{ "condition": "reached", "place": "north_hold", "name": "north hold", "instance": "edhra_tewk" },
+		{ "condition": "reached", "place": "south_hold", "name": "south hold", "instance": "edhra_tewk" },
+		{ "condition": "entered", "piece": "watch", "name": "watch", "instance": "edhra_tewk", "ends": "guild_holds_edhra_tewk" }
 	]
 }

@@ -87,7 +87,8 @@ func _show_met(species: Species, habitat: Array[String]) -> void:
 	for where: String in habitat:
 		# Only a realm's instance has a place page (TextTags.PLACE); the playground has none.
 		var tagged: bool = Realms.holding(where) != null
-		places.append(TextTags.tag(TextTags.PLACE, where) if tagged else Realms.name_of(where))
+		var plain: String = "" if tagged else InstanceBlueprints.name_of(where)
+		places.append(TextTags.tag(TextTags.PLACE, where) if tagged else plain)
 	if not places.is_empty():
 		_add_habitat(tr("Found in: %s") % ", ".join(places))
 

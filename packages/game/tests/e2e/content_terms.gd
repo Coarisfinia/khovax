@@ -155,7 +155,7 @@ static func collected() -> ContentTerms:
 	for quest: QuestDefinition in QuestContent.load_quests().quests.values():
 		terms.add("quest", quest.id, quest.name)
 	for realm: Realm in Realms.all():
-		terms.add("realm", realm.id)
+		terms.add("realm", realm.id, realm.name)
 	_add_loot(terms)
 	for person: Person in PeopleContent.load_people().people.values():
 		terms.add("person", person.id, person.name)
@@ -370,15 +370,16 @@ static func _add_loot(terms: ContentTerms) -> void:
 static func _add_instances(terms: ContentTerms) -> void:
 	var start_piece: String = InstanceBlueprints.START_PIECE.get_basename()
 	for instance_name: String in InstanceBlueprints.names():
-		terms.add("instance", instance_name)
-		var region_names: Array[String] = [""]
 		var blueprint: Blueprint = InstanceBlueprints.blueprint(instance_name)
+		terms.add("instance", instance_name, blueprint.name)
+		var region_names: Array[String] = [""]
 		for chosen_by: PackedStringArray in blueprint.variants:
 			if not chosen_by[1].is_empty():
 				# A region with no codex entry is the instance itself, changed (#1590): it keeps
 				# the instance's name, so its id is vocabulary.
 				var own: bool = blueprint.variant_codex.has(chosen_by[1])
-				terms.add("region" if own else "variant", chosen_by[1], "", instance_name)
+				var own_name: String = blueprint.variant_names.get(chosen_by[1], "")
+				terms.add("region" if own else "variant", chosen_by[1], own_name, instance_name)
 				region_names.append(chosen_by[1])
 		for region_name: String in region_names:
 			var region: Region = InstanceBlueprints.region_of(instance_name, 0, region_name)

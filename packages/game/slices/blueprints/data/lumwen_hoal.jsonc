@@ -2,6 +2,7 @@
 // world starts (#712).
 {
 	"id": "lumwen_hoal",
+	"name": "Lumwen Hoal",
 	"codex": {
 		"entry": "The clearing where the settlers first made camp, named in Land-speech, the tongue they named the ground in. Its soft sounds, l, m and w, fit a gentle home; Hoal is the Land-speech word every clearing ends in.",
 		"gloss": "the soft clearing"
@@ -18,6 +19,7 @@
 		{
 			"flag": "lumwen_hoal_corrupted",
 			"region": "lymwen_hoall",
+			"name": "Lymwen Hoall",
 			"codex": {
 				"entry": "Lumwen Hoal, corrupted. The beast-tongue has crept into the land and into its name: a y where its first vowel was, and its last sound doubled, as only beast-calls have them. Purifying it gives the clearing back its own name.",
 				"gloss": "the soft clearing, gone wild"

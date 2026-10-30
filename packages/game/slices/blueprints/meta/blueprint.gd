@@ -10,6 +10,8 @@ extends RefCounted
 const SCHEMA: String = "res://slices/blueprints/data/blueprints.schema.json"
 
 var id: String = ""
+## The player-facing name of its instances (#1710), untranslated.
+var name: String = ""
 ## Its rule set's id (RuleSet, #941).
 var rules: String = ""
 ## The ids of the rules its instances have (FeatureFactories): its rule set's in the order written,
@@ -29,10 +31,13 @@ var wild_species: Dictionary[String, int] = {}
 ## "" for the blueprint's own; the first whose flag the world has set chooses.
 var variants: Array[PackedStringArray] = []
 ## The codex entry and gloss of each variant's region of its own (#1448), by that region's id: a
-## place of its own, named by its id in words like an instance (Lymwen Hoall). A variant's region
-## without one is the instance itself, changed (#1590), like a passage opened: it keeps the
-## instance's name and codex page.
+## place of its own, with a name of its own (`variant_names`). A variant's region without one is
+## the instance itself, changed (#1590), like a passage opened: it keeps the instance's name and
+## codex page.
 var variant_codex: Dictionary[String, PackedStringArray] = {}
+## The player-facing name of each variant's region of its own (#1710), untranslated, by that
+## region's id (Lymwen Hoall): the same regions `variant_codex` holds.
+var variant_names: Dictionary[String, String] = {}
 ## Its codex entry (#959, #1175): a short text about the place and where its name comes from.
 var codex_entry: String = ""
 ## What its name means, hand-written (#959), e.g. "the soft clearing".
@@ -55,6 +60,7 @@ static func parse(
 		return read
 	var data: Dictionary = parsed
 	read.id = Content.text_of(data.get("id"))
+	read.name = Content.text_of(data.get("name"))
 	read.loot_table = Content.text_of(data.get("loot_table"))
 	read.chest_table = Content.text_of(data.get("chest_table"))
 	read.rules = Content.text_of(data.get("rules"))
@@ -69,6 +75,8 @@ static func parse(
 	elif not codex.is_empty():
 		read.codex_entry = codex[0]
 		read.codex_gloss = codex[1]
+	if read.problem.is_empty() and read.name.strip_edges().is_empty():
+		read.problem = "it needs a name (#1710)"
 	return read
 
 
@@ -92,7 +100,7 @@ func _check(file_id: String, data: Dictionary) -> String:
 	if not _read_variants(data.get("variants", [])):
 		return (
 			"its variants must each be a flag and a region id, or \"\" for its own, without a"
-			+ " codex entry for its own"
+			+ " codex entry for its own, and a name with each codex entry"
 		)
 	return ""
 
@@ -135,8 +143,8 @@ func _read_species(raw: Variant) -> bool:
 
 
 ## Whether `raw` lists variants, each a flag and a region, its own with no codex entry and another
-## with one when it's a place of its own (#1448) or none when it's the instance changed (#1590);
-## reads them into `variants` and `variant_codex`.
+## with one and a name when it's a place of its own (#1448, #1710) or neither when it's the
+## instance changed (#1590); reads them into `variants`, `variant_codex` and `variant_names`.
 func _read_variants(raw: Variant) -> bool:
 	if not raw is Array:
 		return false
@@ -150,15 +158,19 @@ func _read_variants(raw: Variant) -> bool:
 		var raw_region: Variant = variant.get("region")
 		var region: String = Content.text_of(raw_region)
 		var codex: Array[String] = Content.codex_of(variant.get("codex"))
+		var variant_name: String = Content.text_of(variant.get("name"))
 		if (
 			not Content.unknown_field(variant, fields).is_empty()
 			or flag.strip_edges().is_empty()
 			or not raw_region is String
 			or not (region.is_empty() or Content.is_id(region))
 			or (variant.has("codex") and (region.is_empty() or codex.is_empty()))
+			or variant.has("codex") != variant.has("name")
+			or (variant.has("name") and variant_name.strip_edges().is_empty())
 		):
 			return false
 		variants.append(PackedStringArray([flag, region]))
 		if not codex.is_empty():
 			variant_codex[region] = PackedStringArray(codex)
+			variant_names[region] = variant_name
 	return true
