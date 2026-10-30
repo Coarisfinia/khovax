@@ -313,7 +313,8 @@ background; only wait in the foreground for a result the very next step needs.
     (`.github/workflows/`): any workflow could reach the guard's environment, so **a change to the
     guard, or to any workflow, always needs the owner**. That approval is permanent, like
     the owner's (owner's pick 2 on #1895, #1900): a later push or a new base never withdraws it,
-    so name each push after the clearance in a PR comment, as after the owner's approval.
+    so name each push after the clearance in a PR comment, as after the owner's approval. (Only a
+    pull request that changed while it was being approved gets that approval taken back at once.)
     Queue it once that approval is there.
 
   **CodeRabbit reviews at most once per pull request** (owner's ground rule, #1783): its automatic

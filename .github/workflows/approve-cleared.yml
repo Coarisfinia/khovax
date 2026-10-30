@@ -1,6 +1,7 @@
 # Approves a pull request once it is labelled `subagent-cleared` (#1874, the owner's pick on #1867).
 # The approval is permanent, like the owner's (the owner's pick 2 on #1895, #1900): later pushes or
-# a new base never withdraw it.
+# a new base never withdraw it. The one exception is a pull request that changed while it was
+# being approved: that approval is taken back at once, as nobody cleared the new commits.
 #
 # The merge queue requires one approving review ("main approval") and doesn't apply the agent
 # bot's bypass, and the bot can't approve its own pull requests. A pull request that isn't
