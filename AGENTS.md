@@ -269,8 +269,10 @@ background; only wait in the foreground for a result the very next step needs.
   --draft …` and stays a draft until the owner approves. Once the owner approves its head, the
   watcher marks it ready itself and reports `DRAFT_READIED` (`Flixbox/household-brain#301`,
   `Flixbox/household-brain#316`); only on `APPROVED_DRAFT` (an older head approved, or marking it
-  ready failed) run `agent-gh pr ready <n>` yourself, then queue it (below). Every other pull
-  request is not a draft.
+  ready failed) run `agent-gh pr ready <n>` yourself, then queue it (below). Until
+  `Flixbox/household-brain#324` is live, the watcher's `REVIEW_BOTS` hold never reports
+  `READY_TO_MERGE` for such a draft without a CodeRabbit review: don't wait for that event, queue
+  it once it may be queued. Every other pull request is not a draft.
 - **Reply in a review thread through GraphQL, not REST** (#1573): the bot's REST calls (the
   `pulls/<n>/comments/<id>/replies` endpoint, review reads) got HTTP 403 "API rate limit exceeded
   for installation" in bursts while `rate_limit` still showed much of the hourly quota left: many
@@ -306,7 +308,10 @@ background; only wait in the foreground for a result the very next step needs.
   reviews are off (`.coderabbit.yml`), and its approval is no part of the rule above. Only for a
   complex pull request, and only after the review subagent's review, the main session may ask for
   one CodeRabbit review, through the watcher (`Flixbox/household-brain#324`); its points are
-  settled before queueing. Agents never ask it themselves.
+  settled before queueing. Agents never ask it themselves. A CodeRabbit change request left on
+  an older commit after its threads are settled still blocks the merge, and without the owner's
+  approval the watcher doesn't dismiss it yet (`Flixbox/household-brain#327`): report it to the
+  main session, which dismisses it.
 - **Merging:** once the pull request may be queued (above), read it for unanswered comments (an
   approval and a comment often arrive together), then enable auto-merge:
   `agent-gh pr merge <n> --auto --squash`. It joins the merge queue, which tests it on top of the
@@ -817,7 +822,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   #1363's low-risk rule): queueing follows "When a pull request may be queued" above, whatever
   CodeRabbit rates a pull request. Its Triage rule "Merge low-risk changes" (in its app, not
   `.coderabbit.yml`) is paused; if it ever queues a pull request on its own, take it off the queue
-  (`agent-gh pr merge <n> --disable-auto`) unless that pull request meets the queue rule above.
+  unless that pull request meets the queue rule above: `agent-gh pr merge <n> --disable-auto`,
+  and, when it already has a queue entry, the GraphQL `dequeuePullRequest(input:{id:<PR node
+  id>})` mutation, which removes it.
 
 ### Toolchain
 
