@@ -1868,6 +1868,12 @@ func _check_instances() -> String:
 	)
 	if not astray.problem.is_empty() or _unknown_instance(astray) != "nowhere":
 		return "a quest naming an instance that doesn't exist wasn't found: " + astray.problem
+	# An instance no realm draws, which only the tests load, is named in a pill as the bestiary
+	# names it (#1788): its blueprint's name, in plain words.
+	var unrealmed: String = QuestPill.place_tagged(FlowSteps.BASIC)
+	if (Realms.holding(FlowSteps.BASIC) != null
+			or unrealmed != InstanceBlueprints.name_of(FlowSteps.BASIC)):
+		return "a quest's pill names %s, which no realm draws, %s" % [FlowSteps.BASIC, unrealmed]
 	return ""
 
 
