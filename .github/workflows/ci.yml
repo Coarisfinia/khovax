@@ -70,9 +70,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          REVIEWER_LOGIN: coderabbitai[bot]
-          # PLANTED (#1877, fail first): #1640 has a real stale approval from CodeRabbit.
-          PR: 1640
+          REVIEWER_LOGIN: coarisfinia-ai-reviewer[bot]
+          PR: ${{ github.event.pull_request.number }}
           GROUP_BASE: ${{ github.event.merge_group.base_sha }}
           GROUP_HEAD: ${{ github.event.merge_group.head_sha }}
         run: |
