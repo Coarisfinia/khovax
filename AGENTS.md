@@ -313,10 +313,11 @@ background; only wait in the foreground for a result the very next step needs.
   settled before queueing. Agents never ask it themselves. A settled CodeRabbit change request
   still blocks the merge, and no second review may replace it after a fix push
   (`Flixbox/household-brain#331`): once the review subagent has cleared a non-user-facing pull
-  request, the main session (never an implementation agent) labels it `subagent-cleared`, and the
-  watcher dismisses CodeRabbit's change requests made before the label went on, each once settled
-  by `Resolved:` replies (`REVIEW_DISMISSED`). A change request after that needs a new clearance:
-  label off and on again.
+  request, the main session (never an implementation agent) labels it `subagent-cleared`, and once
+  CI is green at the head and it is no draft, the watcher dismisses CodeRabbit's change requests
+  submitted before the label was last put on, each once settled by `Resolved:` replies
+  (`REVIEW_DISMISSED`). Only the owner's or the agent bot's labelling counts. A change request
+  after that needs a new clearance: label off and on again.
 - **Merging:** once the pull request may be queued (above), read it for unanswered comments (an
   approval and a comment often arrive together), then enable auto-merge:
   `agent-gh pr merge <n> --auto --squash`. It joins the merge queue, which tests it on top of the
@@ -814,7 +815,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   2. Rebase when needed.
   3. Keep auto-merge on and wait: the project watcher dismisses it itself
      (`DISMISS_STALE_BOT_REVIEWS=1`, owner, #1551) once the owner has approved (or the pull request
-     is labelled `subagent-cleared`, above), CI is green and
+     is labelled `subagent-cleared` since before the change request, above), CI is green and
      every review thread is settled, whether it was left on an older commit or is on the head and
      was settled with `Resolved:` replies, and reports `REVIEW_DISMISSED`. Agents don't run
      `dismiss-stale-coderabbit` (#1390) any more. The watcher reports `REVIEW_DISMISS_FAILED`
@@ -822,7 +823,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 
   Fix what a change request on the head commit asks, then settle each of its threads with a
   `Resolved:` reply: the watcher dismisses it once the owner has approved, or once the main
-  session has labelled the pull request `subagent-cleared` (above); CodeRabbit never reviews the
+  session has labelled the pull request `subagent-cleared` after it (above); CodeRabbit never reviews the
   fix push. A person's change request is never dismissed. Never post
   `@coderabbitai` commands yourself: the watcher posts `@coderabbitai resolve` when it is due
   (`RESOLVE_BOT_REVIEWS`, above). `resolve-review-thread` lives in `~/.local/bin` on the owner's machine,
