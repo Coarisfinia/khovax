@@ -11,40 +11,54 @@ const DEFAULT: String = "res://slices/resource_packs/data/default.jsonc"
 
 ## The loaded packs, in lookup order, the default pack last; read on the first lookup.
 static var _packs: Array[ResourcePack] = []
-## Each texture looked up so far, by its id, so a lookup each frame stays cheap.
+## Each texture looked up so far, by its id, so a lookup each frame stays cheap; null for one no
+## pack gives (#1866), so a view asking for it every frame neither loads it again nor warns again.
 static var _textures: Dictionary[String, Texture2D] = {}
-## Each model looked up so far, by its id (#1864).
+## Each model looked up so far, by its id (#1864), null when no pack gives it.
 static var _models: Dictionary[String, PackedScene] = {}
 
 
-## The texture `texture_id` from the first loaded pack that has it, or null (and an error) when
-## none does.
+## The texture `texture_id` from the first loaded pack that has it, or null when none does or its
+## file doesn't load as a texture: a player's pack may bring a broken one (#1858), which is warned
+## about once.
 static func texture(texture_id: String) -> Texture2D:
-	var found: Texture2D = _textures.get(texture_id)
-	if found != null:
-		return found
-	for pack: ResourcePack in loaded():
-		if pack.textures.has(texture_id):
+	if not _textures.has(texture_id):
+		var found: Texture2D = null
+		var pack: ResourcePack = _with(texture_id, "textures")
+		if pack != null:
 			found = pack.texture(texture_id)
-			_textures[texture_id] = found
-			return found
-	push_error("no resource pack has the texture " + texture_id)
-	return null
+		if found == null:
+			push_warning("no resource pack gives the texture %s: %s" % [texture_id, _where(pack)])
+		_textures[texture_id] = found
+	return _textures[texture_id]
 
 
-## The model `model_id` (#1864) from the first loaded pack that has it, or null (and an error) when
-## none does.
+## The model `model_id` (#1864) from the first loaded pack that has it, or null when none does or
+## its file doesn't load as a scene, which is warned about once.
 static func model(model_id: String) -> PackedScene:
-	var found: PackedScene = _models.get(model_id)
-	if found != null:
-		return found
-	for pack: ResourcePack in loaded():
-		if pack.models.has(model_id):
+	if not _models.has(model_id):
+		var found: PackedScene = null
+		var pack: ResourcePack = _with(model_id, "models")
+		if pack != null:
 			found = pack.model(model_id)
-			_models[model_id] = found
-			return found
-	push_error("no resource pack has the model " + model_id)
+		if found == null:
+			push_warning("no resource pack gives the model %s: %s" % [model_id, _where(pack)])
+		_models[model_id] = found
+	return _models[model_id]
+
+
+## The first loaded pack whose `kind` (textures or models) has `resource_id`, or null.
+static func _with(resource_id: String, kind: String) -> ResourcePack:
+	for pack: ResourcePack in loaded():
+		var listed: Dictionary = pack.get(kind)
+		if listed.has(resource_id):
+			return pack
 	return null
+
+
+## Why a resource didn't come from `pack`, the first that lists it, or from none.
+static func _where(pack: ResourcePack) -> String:
+	return "none lists it" if pack == null else "its file in %s doesn't load" % pack.id
 
 
 ## Whether a loaded pack has the model `model_id`, for the content that names one to check it.
