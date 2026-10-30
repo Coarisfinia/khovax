@@ -61,7 +61,9 @@ FRAGMENT_RATIO, FRAGMENT_TEXELS = 0.6, 4
 # where it runs on across the surface, whatever UV islands it spans; a beast's own dark marks in
 # pieces apart, each smaller, are #1765's. A dim fragment touching the tone, or a tone covering
 # half the head or more, still hides (#1799).
-TONE_SHARE = 0.1
+# On a texture so coarse that a fragment's few texels are that share, a tone also needs at least
+# TONE_TEXELS (an eye's leftovers are about a hundred, the Kavrikka's basalt about 49000).
+TONE_SHARE, TONE_TEXELS = 0.1, 1000
 # The repaint, in the oval's own radii (1 at its edge): every texel inside FILL is painted over,
 # blended from the skin's samples between RING_IN and RING_OUT.
 FILL, RING_IN, RING_OUT = 1.35, 1.5, 2.3
@@ -432,12 +434,12 @@ def fragments(skin, bone="head", weight=HEAD_WEIGHT):
     of their median, grouped where they lie or sit side by side on the texture, each spot of at
     least FRAGMENT_TEXELS distinct texels as a `Mark` whose `count` is that number (a sliver across
     an island's seam, a pupil on an island of its own, a dark speck by the eye). A spot of at least
-    TONE_SHARE of the head's texels is a tone of the head's own paint (#1782: a two-tone head's
-    dark half), not reported but searched the same way against its own median, so eye paint left on
-    it still shows. The ratio is below
-    `scrub`'s, so a head `scrub` has cleaned, whose filled texels may sit a little under its own
-    threshold, passes. Our own eyes are plain colours, not the texture, so they never count. The
-    head is the faces weighted at least `weight` to `bone` (a beast's own `Marked`'s,
+    TONE_SHARE of the head's texels and of TONE_TEXELS is a tone of the head's own paint (#1782: a
+    two-tone head's dark half), not reported but searched the same way against its own median, so
+    eye paint left on it still shows. The ratio is below `scrub`'s, so a head `scrub` has cleaned,
+    whose filled texels may sit a little under its own threshold, passes. Our own eyes are plain
+    colours, not the texture, so they never count. The head is the faces weighted at least
+    `weight` to `bone` (a beast's own `Marked`'s,
     as `painted` takes). Empty for a skin with no `bone` or no textured face on the head."""
     if bone not in skin.vertex_groups:
         return []
@@ -453,7 +455,7 @@ def fragments(skin, bone="head", weight=HEAD_WEIGHT):
     normals = head.normals[::head.per_triangle][triangles]
     islands = _islands(head)[triangles]
     cell = numpy.ptp(head.points, axis=0).max() / CELLS
-    tone = TONE_SHARE * len(numpy.unique(texels))
+    tone = max(TONE_SHARE * len(numpy.unique(texels)), TONE_TEXELS)
     marks = []
     # The parts of the head searched, each against its own median: the whole head first, then each
     # tone of its own paint found dark in it (#1782). Each part's dark texels are fewer than its own,
