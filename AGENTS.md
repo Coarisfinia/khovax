@@ -311,17 +311,22 @@ background; only wait in the foreground for a result the very next step needs.
   approval and a comment often arrive together), then enable auto-merge:
   `agent-gh pr merge <n> --auto --squash`. It joins the merge queue, which tests it on top of the
   pull requests queued before it and merges it once the required checks are green. Otherwise
-  never enable auto-merge. **If it doesn't merge** although the PR is
-  approved, CI is green and it shows as clean and mergeable (GitHub's auto-merge sometimes stalls),
-  merge it yourself: `agent-gh pr merge <n> --squash` (owner, #99). The watcher reports such a
-  pull request as `NOT_QUEUED` (`Flixbox/household-brain#311`: auto-merge on, approved, clean and
-  green, yet outside the queue after 5 minutes); run the `enqueuePullRequest` mutation the event
-  names, with `agent-gh`, which queues it at once. The owner's approval stays valid
+  never enable auto-merge. **If it doesn't merge** although it may be queued (above), CI is green
+  and it shows as clean and mergeable (GitHub's auto-merge sometimes stalls), merge it yourself:
+  `agent-gh pr merge <n> --squash` (owner, #99). The watcher reports an approved one as
+  `NOT_QUEUED` (`Flixbox/household-brain#311`: auto-merge on, approved, clean and green, yet
+  outside the queue after 5 minutes); run the `enqueuePullRequest` mutation the event names, with
+  `agent-gh`, which queues it at once. A pull request that isn't user-facing has no approval for
+  the watcher to see, so check it yourself a few minutes after enabling auto-merge
+  (GraphQL `pullRequest(number:<n>){mergeQueueEntry{position}}` is null while it is still open)
+  and enqueue it the same way. The owner's approval stays valid
   through later pushes (owner's rule), so check the comments again before enabling auto-merge after a
   fix. **Name every
   change pushed after the owner's approval** (owner's pick on #1632): before enabling auto-merge (or
   enqueueing), post a PR comment listing each such change and what it does.
-- **Read the reviews themselves to see an approval** (`gh api repos/Coarisfinia/khovax/pulls/<n>/reviews`),
+- **Read the reviews themselves to see the owner's approval** of a user-facing pull request
+  (a pull request that isn't user-facing goes by the review subagent's result named on it instead)
+  (`gh api repos/Coarisfinia/khovax/pulls/<n>/reviews`),
   never `reviewDecision` or the watcher's status line: under the ruleset `reviewDecision` stays
   empty, so an approved pull request shows as "awaiting approval" (`Flixbox/household-brain#197`).
   An approval often arrives together with review comments, and the watcher reports only those.
@@ -811,8 +816,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **CodeRabbit's approval no longer counts for merging** (owner's ground rule, #1783, replacing
   #1363's low-risk rule): queueing follows "When a pull request may be queued" above, whatever
   CodeRabbit rates a pull request. Its Triage rule "Merge low-risk changes" (in its app, not
-  `.coderabbit.yml`) is paused; if it ever queues a pull request that doesn't meet that rule, take
-  it off the queue (`agent-gh pr merge <n> --disable-auto`).
+  `.coderabbit.yml`) is paused; if it ever queues a pull request on its own, take it off the queue
+  (`agent-gh pr merge <n> --disable-auto`) unless that pull request meets the queue rule above.
 
 ### Toolchain
 
