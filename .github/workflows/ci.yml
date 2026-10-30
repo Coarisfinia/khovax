@@ -367,6 +367,15 @@ jobs:
             ../game-models/blender.py --background --factory-startup \
             --python ../game-models/check_volume.py --
 
+      - name: "🧪 Test the volume check on an upright neck"
+        # A nod of an upright neck's head keeps its girth and passes; a squeezed neck fails
+        # (#1680).
+        if: steps.models.outputs.changed == 'true'
+        timeout-minutes: 2
+        run: |
+          uv run --locked --package khovax-game-models ../game-models/blender.py --background --factory-startup \
+            --python ../game-models/test_volume.py
+
       - name: "🧪 Test the attached-part check on a box"
         # A part that stays, dips, lifts off and sinks in (#1458): the check passes and fails them.
         if: steps.models.outputs.changed == 'true'
