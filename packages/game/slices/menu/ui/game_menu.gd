@@ -319,13 +319,16 @@ func _relay_names(named: Control) -> void:
 	var _met: int = named.connect(&"name_shown", name_shown.emit)
 
 
-## The world's settings, which the host chooses (#1309), in the Settings tab: the difficulty in its
-## Difficulty submenu (#1315) and the world settings in its World submenu (#1316).
+## The world's settings, which the host chooses (#1309), in the Settings tab: the difficulty preset
+## (#1892) and the wild monsters' factor (#1315) in its Difficulty submenu, the world settings in
+## its World submenu (#1316).
 func _add_host_settings() -> void:
 	if driver == null:
 		return
-	var difficulties: Array[String] = [tr("Easy"), tr("Standard"), tr("Hard")]
-	_add_host_row(SettingsTab.DIFFICULTY, HostSettings.DIFFICULTY, tr("Difficulty"), difficulties)
+	var presets: Array[String] = [tr("Easy"), tr("Standard"), tr("Hard")]
+	_add_choice_row(SettingsTab.DIFFICULTY, PresetChoice.new(driver, presets), tr("Difficulty"))
+	var factors: Array[String] = [tr("Weaker (70%)"), tr("Standard (100%)"), tr("Stronger (130%)")]
+	_add_host_row(SettingsTab.DIFFICULTY, HostSettings.DIFFICULTY, tr("Wild monsters"), factors)
 	var rates: Array[String] = [tr("50%"), tr("Standard (100%)"), tr("150%"), tr("200%")]
 	_add_host_row(SettingsTab.WORLD, HostSettings.DROP_RATE, tr("Drop rate"), rates)
 	var delays: Array[String] = [
@@ -346,13 +349,23 @@ func _add_host_settings() -> void:
 
 
 ## A row in the Settings tab's `submenu` for the host's `setting` (HostChoice), named `title`, its
-## choices called `names`. The choice is a child of the menu, so the row's callables stay bound to
-## it.
+## choices called `names`.
 func _add_host_row(submenu: String, setting: String, title: String, names: Array[String]) -> void:
-	var choice: HostChoice = HostChoice.new(driver, setting, names)
-	choice.name = setting.to_pascal_case()
+	_add_choice_row(submenu, HostChoice.new(driver, setting, names), title)
+
+
+## A row in the Settings tab's `submenu` for the host's `choice`, named `title`. The choice is a
+## child of the menu, so the row's callables stay bound to it.
+func _add_choice_row(submenu: String, choice: HostChoice, title: String) -> void:
+	choice.name = choice.setting.to_pascal_case()
 	add_child(choice)
-	var _row: HBoxContainer = settings.add_row(submenu, setting, title, choice.label, choice.step)
+	var _row: HBoxContainer = settings.add_row(
+		submenu,
+		choice.setting,
+		title,
+		choice.label,
+		choice.step,
+	)
 
 
 ## The pause setting, an index into pause_choices(); Auto while there's no Graphics to keep it.

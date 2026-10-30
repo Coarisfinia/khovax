@@ -864,11 +864,23 @@ msgid "Difficulty"
 msgstr ""
 
 #: slices/menu/ui/game_menu.gd
-msgid "50%"
+msgid "Weaker (70%)"
 msgstr ""
 
 #: slices/menu/ui/game_menu.gd
 msgid "Standard (100%)"
+msgstr ""
+
+#: slices/menu/ui/game_menu.gd
+msgid "Stronger (130%)"
+msgstr ""
+
+#: slices/menu/ui/game_menu.gd
+msgid "Wild monsters"
+msgstr ""
+
+#: slices/menu/ui/game_menu.gd
+msgid "50%"
 msgstr ""
 
 #: slices/menu/ui/game_menu.gd
@@ -921,6 +933,10 @@ msgstr ""
 
 #: slices/menu/ui/host_choice.gd
 msgid "%s (the host chooses)"
+msgstr ""
+
+#: slices/menu/ui/preset_choice.gd
+msgid "Custom"
 msgstr ""
 
 #: slices/might/ui/might_panel.gd

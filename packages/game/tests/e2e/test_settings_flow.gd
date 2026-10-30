@@ -169,9 +169,7 @@ func _open_menu(menu: GameMenu) -> String:
 	# Laid out in its scene (#437): it scrolls only up and down.
 	if menu.settings.horizontal_scroll_mode != ScrollContainer.SCROLL_MODE_DISABLED:
 		return "the Settings tab's scene scrolls sideways"
-	var listed: Array[String] = []
-	for setting: String in shown:
-		listed.append(setting)
+	var listed: Array[String] = Array(shown.keys(), TYPE_STRING, &"", null)
 	var settings: Array[String] = [
 		Graphics.ANTI_ALIASING,
 		SurveyChoice.PLACE_SETTING,
@@ -179,6 +177,7 @@ func _open_menu(menu: GameMenu) -> String:
 		DamageNumbersChoice.SHOWN_SETTING,
 		DamageNumbersChoice.SIZE_SETTING,
 		GameMenu.PAUSE_SETTING,
+		HostSettings.PRESET,
 		HostSettings.DIFFICULTY,
 		HostSettings.DROP_RATE,
 		HostSettings.RESET_DELAY,
@@ -191,13 +190,14 @@ func _open_menu(menu: GameMenu) -> String:
 	listed.sort()
 	if listed != every:
 		return "the Settings tab lists %s, not every setting" % [listed]
-	# The world's settings have no Auto: Standard at first (#1315, #1316), and off (#1891).
+	# The world's settings have no Auto: Standard at first (#1315, #1316, #1892), and off (#1891).
 	var hosts: Array[String] = []
-	for setting: String in settings.slice(-4):
+	for setting: String in settings.slice(-5):
 		hosts.append(shown[setting])
-	if hosts != ["Standard", "Standard (100%)", "Standard (1 hour)", "Off"]:
+	var standard: Array[String] = ["Standard", "Standard (100%)", "Standard (100%)"]
+	if hosts != standard + ["Standard (1 hour)", "Off"]:
 		return "the world's settings aren't Standard at first: %s" % [hosts]
-	for setting: String in settings.slice(0, -4):
+	for setting: String in settings.slice(0, -5):
 		if not shown[setting].begins_with("Auto ("):
 			return "%s isn't on Auto at first: %s" % [setting, shown[setting]]
 	return _menu_submenus(menu)
@@ -1028,6 +1028,7 @@ func _menu_submenus(menu: GameMenu) -> String:
 		DamageNumbersChoice.SHOWN_SETTING: SettingsTab.INTERFACE,
 		DamageNumbersChoice.SIZE_SETTING: SettingsTab.INTERFACE,
 		GameMenu.PAUSE_SETTING: SettingsTab.GAME,
+		HostSettings.PRESET: SettingsTab.DIFFICULTY,
 		HostSettings.DIFFICULTY: SettingsTab.DIFFICULTY,
 		HostSettings.DROP_RATE: SettingsTab.WORLD,
 		HostSettings.RESET_DELAY: SettingsTab.WORLD,
@@ -1089,11 +1090,12 @@ func _submenus_open(menu: GameMenu, tab: SettingsTab, anti_aliasing: Button) -> 
 	return ""
 
 
-## The host opens the Difficulty submenu and steps the difficulty to Hard (#1315): it has no Auto
-## button, the row says Hard at once and the request waits in the profile's outbox for the world;
-## stepping back says Standard again, and the submenu's Back button returns to the list.
+## The host opens the Difficulty submenu and steps the preset to Hard (#1315, #1892): it has no
+## Auto button, the row says Hard at once, with the wild monsters' factor, and the request waits in
+## the profile's outbox for the world; stepping back says Standard again, and the submenu's Back
+## button returns to the list.
 func _menu_difficulty(menu: GameMenu, tab: SettingsTab) -> String:
-	var next: Button = tab.button(HostSettings.DIFFICULTY, "Next")
+	var next: Button = tab.button(HostSettings.PRESET, "Next")
 	if next.is_visible_in_tree():
 		return "the difficulty's row shows over the list"
 	tab.opener(SettingsTab.DIFFICULTY).pressed.emit()
@@ -1106,13 +1108,39 @@ func _menu_difficulty(menu: GameMenu, tab: SettingsTab) -> String:
 	var asked: bool = false
 	for request: OutboxEntry in outbox.entries:
 		asked = asked or request.kind == OutboxEntry.HOST_SETTING
-	var said: String = tab.shown[HostSettings.DIFFICULTY]
-	tab.button(HostSettings.DIFFICULTY, "Previous").pressed.emit()
-	if said != "Hard" or not asked or tab.shown[HostSettings.DIFFICULTY] != "Standard":
+	var said: Array[String] = [tab.shown[HostSettings.PRESET], tab.shown[HostSettings.DIFFICULTY]]
+	tab.button(HostSettings.PRESET, "Previous").pressed.emit()
+	if said != [
+		"Hard",
+		"Stronger (130%)",
+	] or not asked or tab.shown[HostSettings.PRESET] != "Standard":
 		return "stepping the difficulty shows %s, asking the world: %s" % [said, asked]
+	var custom: String = _menu_custom(tab)
+	if not custom.is_empty():
+		return custom
 	tab.back_button(SettingsTab.DIFFICULTY).pressed.emit()
 	if tab.open_submenu() != SettingsTab.LIST or next.is_visible_in_tree():
 		return "the Difficulty submenu's Back button doesn't return to the list"
+	return ""
+
+
+## Stepping the wild monsters' factor down shows the preset as Custom (#1892); stepping the preset
+## from there lands on Easy, which turns revive on waystones on, and on again on Standard.
+func _menu_custom(tab: SettingsTab) -> String:
+	tab.button(HostSettings.DIFFICULTY, "Previous").pressed.emit()
+	var custom: String = tab.shown[HostSettings.PRESET]
+	tab.button(HostSettings.PRESET, "Previous").pressed.emit()
+	var easy: Array[String] = [tab.shown[HostSettings.PRESET], tab.shown[HostSettings.DIFFICULTY]]
+	easy.append(tab.shown[HostSettings.REVIVE_ON_WAYSTONES])
+	tab.button(HostSettings.PRESET, "Next").pressed.emit()
+	var standard: Array[String] = [tab.shown[HostSettings.PRESET]]
+	standard.append(tab.shown[HostSettings.REVIVE_ON_WAYSTONES])
+	if custom != "Custom" or easy != [
+		"Easy",
+		"Weaker (70%)",
+		"On",
+	] or standard != ["Standard", "Off"]:
+		return "a changed factor shows %s, then the presets %s and %s" % [custom, easy, standard]
 	return ""
 
 
