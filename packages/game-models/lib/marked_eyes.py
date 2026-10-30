@@ -59,7 +59,8 @@ FRAGMENT_RATIO, FRAGMENT_TEXELS = 0.6, 4
 # two-tone head's basalt half, #1782, about 0.4 of the Kavrikka's), not an eye's leftovers (an eye
 # covers a few hundredths of a head): it is searched again against its own median. A spot is one
 # where it runs on across the surface, whatever UV islands it spans; a beast's own dark marks in
-# pieces apart, each smaller, are #1765's.
+# pieces apart, each smaller, are #1765's. A dim fragment touching the tone, or a tone covering
+# half the head or more, still hides (#1799).
 TONE_SHARE = 0.1
 # The repaint, in the oval's own radii (1 at its edge): every texel inside FILL is painted over,
 # blended from the skin's samples between RING_IN and RING_OUT.
