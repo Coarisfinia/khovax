@@ -2198,4 +2198,117 @@ func _check_pack_manifests() -> String:
 	for what: String in cases:
 		if ResourcePack.parse(cases[what], "res://").problem.is_empty():
 			return "a resource pack manifest with %s wasn't refused" % what
+	return _check_pack_loading()
+
+
+## A pack's .pck mounts under res://packs/<id>/ once it's all data, and one that holds code, a
+## scene with a script in it or a file outside its folder is refused unmounted (#1870). Each is
+## packed here as the pack builder packs one (#1869).
+func _check_pack_loading() -> String:
+	var valid: PackedByteArray = _pack_manifest("pack_valid").to_utf8_buffer()
+	var region: PackedByteArray = "# R".to_utf8_buffer()
+	var pack: ResourcePack = PackLoader.mount(
+		_packed("pack_valid", { "pack.jsonc": valid, "regions/r.md": region })
+	)
+	if not pack.problem.is_empty() or pack.id != "pack_valid":
+		return "a valid pack's .pck wasn't mounted: " + pack.problem
+	if FileAccess.get_file_as_string(pack.root + "regions/r.md") != "# R":
+		return "a mounted pack's file can't be read under " + pack.root
+	var cases: Dictionary[String, Dictionary] = {
+		"a script": { "pack.jsonc": valid, "code.gd": "extends Node".to_utf8_buffer() },
+		"a scene with a script": {
+			"pack.jsonc": valid,
+			"/.godot/imported/scripted.scn": _scripted_scene(),
+		},
+		"a file outside its folder": { "pack.jsonc": valid, "/outside.md": region },
+		"a scene loading a game file by its uid": {
+			"pack.jsonc": valid,
+			"/.godot/imported/textured.scn": _textured_scene(),
+		},
+		"no manifest": { "regions/r.md": region },
+	}
+	for what: String in cases:
+		var refused: String = "pack_" + what.to_snake_case().replace(" ", "_")
+		var files: Dictionary[String, PackedByteArray] = {}
+		files.assign(cases[what])
+		if files.has("pack.jsonc"):
+			files["pack.jsonc"] = _pack_manifest(refused).to_utf8_buffer()
+		pack = PackLoader.mount(_packed(refused, files))
+		if pack.problem.is_empty() or (what.contains("uid") and not pack.problem.contains("uid")):
+			return "a pack's .pck with %s was mounted: %s" % [what, pack.problem]
+		if FileAccess.file_exists("res://packs/%s/pack.jsonc" % refused):
+			return "a refused pack's .pck with %s was mounted anyway" % what
 	return ""
+
+
+## A binary scene whose texture names one of the game's by its uid. Godot loads such a texture by
+## its uid first, whatever path stands beside it, so the uid is written in after saving: the saver
+## leaves it out.
+func _textured_scene() -> PackedByteArray:
+	var game: ResourcePack = ResourcePacks.loaded()[0]
+	var texture: String = game.root + str(game.textures.values()[0])
+	var scene: PackedScene = PackedScene.new()
+	var sprite: Sprite3D = Sprite3D.new()
+	sprite.texture = load(texture)
+	var _packed_scene: Error = scene.pack(sprite)
+	sprite.free()
+	var binary: String = "user://pack_loading/textured.scn"
+	var _made: Error = DirAccess.make_dir_recursive_absolute(binary.get_base_dir())
+	var _saved: Error = ResourceSaver.save(scene, binary)
+	var bytes: PackedByteArray = FileAccess.get_file_as_bytes(binary)
+	# The external texture's path, its ending zero, then its uid.
+	var path_at: int = bytes.hex_encode().find(texture.to_utf8_buffer().hex_encode()) >> 1
+	bytes.encode_s64(path_at + texture.length() + 1, ResourceLoader.get_resource_uid(texture))
+	return bytes
+
+
+## A binary scene, compressed as Godot imports one, that holds a script of its own.
+func _scripted_scene() -> PackedByteArray:
+	var text: String = "user://pack_loading/scripted.tscn"
+	var _made: Error = DirAccess.make_dir_recursive_absolute(text.get_base_dir())
+	var file: FileAccess = FileAccess.open(text, FileAccess.WRITE)
+	var _stored: bool = file.store_string(
+		"[gd_scene format=3]\n\n[sub_resource type=\"GDScript\" id=\"s\"]\n"
+		+ "script/source = \"extends Node\n\"\n\n[node name=\"N\" type=\"Node\"]\n"
+		+ "script = SubResource(\"s\")\n"
+	)
+	file.close()
+	var binary: String = "user://pack_loading/scripted.scn"
+	var _saved: Error = ResourceSaver.save(load(text), binary, ResourceSaver.FLAG_COMPRESS)
+	return FileAccess.get_file_as_bytes(binary)
+
+
+## Writes `bytes` to the file `path`.
+func _write_bytes(path: String, bytes: PackedByteArray) -> void:
+	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
+	var _stored: bool = file.store_buffer(bytes)
+	file.close()
+
+
+## A pack manifest for the pack `pack_id`, with one region and nothing else.
+func _pack_manifest(pack_id: String) -> String:
+	return (
+		"{\"id\": \"%s\", \"name\": \"n\", \"version\": \"1.0.0\", \"game_version\": \"0.1.0\","
+		+ " \"textures\": {}, \"models\": {}, \"regions\": {\"r\": \"regions/r.md\"},"
+		+ " \"region_pieces\": {}, \"realms\": {}}"
+	) % pack_id
+
+
+## The .pck of the pack `pack_id` holding `files` (their bytes by their paths in its folder,
+## packs/<id>/, or from the pack's root when they start with a slash), written to user:// as the
+## pack builder writes one.
+func _packed(pack_id: String, files: Dictionary[String, PackedByteArray]) -> String:
+	var folder: String = "user://pack_loading/" + pack_id
+	var _made: Error = DirAccess.make_dir_recursive_absolute(folder)
+	var target: String = folder + ".pck"
+	var packer: PCKPacker = PCKPacker.new()
+	var _started: Error = packer.pck_start(target)
+	for path: String in files:
+		var source: String = "%s/%d" % [folder, files.keys().find(path)]
+		_write_bytes(source, files[path])
+		var in_pack: String = "packs/%s/%s" % [pack_id, path]
+		if path.begins_with("/"):
+			in_pack = path.substr(1)
+		var _added: Error = packer.add_file(in_pack, source)
+	var _flushed: Error = packer.flush()
+	return target
