@@ -465,7 +465,8 @@ prop's own, and never another grey stone. A prop's script only maps its parts on
 A new material goes into the set (`prop_textures.py`'s `SET` and `textures/SOURCE.md`), for
 every prop. **Any FOSS texture is permitted** (owner, #1825) under a licence AGENTS.md allows for
 assets (#1511: CC0, or CC BY with credit): its source and licence go into `textures/SOURCE.md`,
-its licence file beside it, so the generated `CREDITS.md` credits it where the licence asks. **When the set falls short**, a prop is textured in Meshy after all (10 credits
+its licence file beside it, so the generated `CREDITS.md` credits it where the licence asks.
+**When the set falls short**, a prop is textured in Meshy after all (10 credits
 more): painted detail the set can't place (a sign's lettering, a banner's pattern, a face), or the
 owner preferring Meshy's look for it. No runes or carvings by script: they come from the rune set
 (#1855) and the engraving work (#1856).
