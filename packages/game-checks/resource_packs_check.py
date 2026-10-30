@@ -14,7 +14,8 @@ will have (#1858), and looked up only through ResourcePacks. It fails when
   path instead of its id, so it would get around the resolver, and a pack could never override it;
   or a script loads one by its uid://, or builds a path under assets/, regions/ or realms/ at
   runtime (#1865; the tools, which list the assets for the credits, may).
-An id named only in the tests counts as unreferenced (#1865): they name ids to check them.
+An id named only in the tests counts as unreferenced (#1865): they name ids to check them. The models
+the boot flow lists as built before what uses them are the exception.
 The images a listed model uses (a glTF's own files, or the textures Godot extracted from a model,
 as unused_assets.py finds them) come with their model's entry, not through the manifest. What a schema can
 check (the fields and their types) is content_schemas_check.py's, and what a pack is checked for
@@ -87,6 +88,12 @@ WHOLE_FILE = re.compile(r"[\"']res://[A-Za-z0-9._/-]+\.[A-Za-z0-9]+[\"']")
 TOOLS = "tools/"
 # The tests name ids to check them, so an id only they name is unreferenced (#1865)...
 TESTS = "tests/"
+# ...but for the models built before what uses them, which the boot flow lists to check each
+# until it's used (#1476, #1634, #1635).
+WAITING = Path("tests/e2e/test_boot_flow.gd")
+WAITING_LISTS = re.compile(
+    r"^const (?:UNWORN_MODELS|UNPLACED_PROPS|UNPLACED_MODELS)\b.*?(?=^\S)", re.MULTILINE | re.DOTALL
+)
 
 type Problems = list[tuple[str, str | None]]
 # A kind's entries: each id's files (one, but for a kind of lists).
@@ -194,6 +201,12 @@ def manifest_sections() -> tuple[dict[str, Entries], Problems]:
     return entries, problems
 
 
+def waiting() -> set[str]:
+    """The models the boot flow checks before anything uses them (WAITING)."""
+    code = WAITING.read_text(encoding="utf-8") if WAITING.is_file() else ""
+    return {match for block in WAITING_LISTS.findall(code) for match in STRING.findall(block)}
+
+
 def around_resolver(file: str, code: str) -> Problems:
     """Where the file's `code` reaches a resource around the resolver: by its path, by its
     uid://, or by a path built at runtime."""
@@ -244,6 +257,7 @@ def main() -> int:
         if not file.startswith(TESTS)
         for match in STRING.findall(code_of(file))
     }
+    named |= waiting()
     for name, kind in KINDS.items():
         files = sorted(
             path
