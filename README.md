@@ -70,7 +70,11 @@ CI builds the web version on every pull request and every push to `main`, as the
 
 ## Cutting a release
 
-The dev releases (`v<next>-dev.<run number>`, prereleases) are made by CI on its own. A version
+The dev releases (`v<next>-dev.<run number>`, prereleases) are made by CI on its own. A nightly
+(`v<next>-nightly.<date>`, a kept prerelease with the same files) is made by
+`.github/workflows/nightly.yml` every night at 02:00 UTC, or with its "Run workflow" button on the
+Actions tab: it runs every check on `main` and publishes a passing build, and it skips a night when
+`main` hasn't changed since the last nightly, or when today's is out already. A version
 release is a GitHub release with the desktop and web builds attached, made by
 `.github/workflows/release.yml`:
 1. Set the new version in `packages/game/project.godot` (`config/version="0.2.0"` under `[application]`), in a pull request like any change.
