@@ -1689,7 +1689,8 @@ func _decoration_problem(
 	var model: Node3D = null
 	if view.figures.has(tile):
 		model = view.figures[tile].get_child(0) as Node3D
-	if model == null or model.scene_file_path != blueprint.model:
+	var wanted: String = ResourcePacks.model(blueprint.model).resource_path
+	if model == null or model.scene_file_path != wanted:
 		return "the %s on %s has no model, or another one" % [id, tile]
 	if model.scale != size * view.risen[tile]:
 		return "the %s on %s has another size: %s" % [id, tile, model.scale]
