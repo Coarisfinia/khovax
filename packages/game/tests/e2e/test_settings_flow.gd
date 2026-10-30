@@ -182,6 +182,7 @@ func _open_menu(menu: GameMenu) -> String:
 		HostSettings.DIFFICULTY,
 		HostSettings.DROP_RATE,
 		HostSettings.RESET_DELAY,
+		HostSettings.REVIVE_ON_WAYSTONES,
 	]
 	# Every setting, whatever order their owners added their rows in (#1614): each row's submenu,
 	# and so where it shows, is checked on its own (_menu_submenus).
@@ -190,15 +191,17 @@ func _open_menu(menu: GameMenu) -> String:
 	listed.sort()
 	if listed != every:
 		return "the Settings tab lists %s, not every setting" % [listed]
-	# The world's settings have no Auto: the world starts at Standard (#1315, #1316).
+	# The world's settings have no Auto: the world starts at Standard (#1315, #1316), with revive on
+	# waystones off (#1891).
 	var hosts: Array[String] = [
 		shown[HostSettings.DIFFICULTY],
 		shown[HostSettings.DROP_RATE],
 		shown[HostSettings.RESET_DELAY],
+		shown[HostSettings.REVIVE_ON_WAYSTONES],
 	]
-	if hosts != ["Standard", "Standard (100%)", "Standard (1 hour)"]:
+	if hosts != ["Standard", "Standard (100%)", "Standard (1 hour)", "Off"]:
 		return "the world's settings aren't Standard at first: %s" % [hosts]
-	for setting: String in settings.slice(0, -3):
+	for setting: String in settings.slice(0, -4):
 		if not shown[setting].begins_with("Auto ("):
 			return "%s isn't on Auto at first: %s" % [setting, shown[setting]]
 	return _menu_submenus(menu)
@@ -1032,6 +1035,7 @@ func _menu_submenus(menu: GameMenu) -> String:
 		HostSettings.DIFFICULTY: SettingsTab.DIFFICULTY,
 		HostSettings.DROP_RATE: SettingsTab.WORLD,
 		HostSettings.RESET_DELAY: SettingsTab.WORLD,
+		HostSettings.REVIVE_ON_WAYSTONES: SettingsTab.WORLD,
 	}
 	for setting: String in homes:
 		if tab.submenu_of(setting) != homes[setting]:
