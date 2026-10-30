@@ -4,7 +4,8 @@ each creature model, neither a flat black oval nor a painted glowing eye, next t
 for a mirrored pair as lib/marked_eyes.py's `find` does on import, with `DARK`, with `GLOW` and
 with the beast's own way its eyes are marked, if marked_eyes.BEASTS lists it (#1719); and for
 fragments the repaint left beyond a pair, spots much darker than the head's median
-(marked_eyes.fragments, #1756), which `scrub` paints out.
+(marked_eyes.fragments, #1756) among every texel the head's faces touch, not only the samples
+(#1764), which `scrub` paints out.
 
     uv run --locked packages/game-models/blender.py --background --factory-startup \
         --python packages/game-models/check_painted_eyes.py -- <model.glb> [<model.glb> ...]
@@ -69,7 +70,7 @@ def found(objects, path):
         left = sorted(marked_eyes.fragments(skin, weight=weight), key=lambda mark: -mark.count)
         if left:
             lines.append("%s: %d dark fragments, the largest at %s" % (skin.name, len(left), ", ".join(
-                "%s (%d samples)" % (tuple(round(float(v), 3) for v in mark.middle), mark.count)
+                "%s (%d texels)" % (tuple(round(float(v), 3) for v in mark.middle), mark.count)
                 for mark in left[:SHOWN])))
     return lines
 
