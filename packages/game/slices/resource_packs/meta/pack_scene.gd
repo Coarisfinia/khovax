@@ -12,11 +12,15 @@ const BINARY: String = "RSRC"
 const COMPRESSED_HEADER: int = 16
 ## The largest scene, packed or unpacked, the check reads, so a pack can't make it read without end.
 const MAX_SIZE: int = 256 * 1024 * 1024
+## The fewest bytes a scene's header takes.
+const HEADER_SIZE: int = 100
 ## The only type a scene may be.
 const SCENE_TYPE: String = "PackedScene"
 ## The header's flags: a uid after each external resource's path, and a script class named.
 const FLAG_UIDS: int = 2
 const FLAG_SCRIPT_CLASS: int = 8
+## The binary format this Godot writes, after its version.
+const FORMAT: int = 6
 ## The unused 32-bit words after the header.
 const RESERVED_FIELDS: int = 11
 ## A uid that names nothing, as an external resource stores it.
@@ -45,16 +49,23 @@ static func problem(bytes: PackedByteArray, files: Dictionary, own: String) -> S
 		return "holds a script"
 	for _index: int in _count(body):
 		var _name: String = _string(body)
-	return _external_problem(body, files, own)
+	refused = _external_problem(body, files, own)
+	# A broken string or count reads on to the end, and the internal resources always follow.
+	if refused.is_empty() and body.get_position() >= body.get_size():
+		return "isn't a binary scene"
+	return refused
 
 
 ## Why the header doesn't read as a binary scene's, leaving `body` after it. Or "".
 static func _header_problem(body: StreamPeerBuffer) -> String:
 	# Its endianness (little), number size, version and format.
-	if body.get_size() == 0 or body.get_u32() != 0:
+	if body.get_size() < HEADER_SIZE or body.get_u32() != 0:
 		return "isn't a binary scene"
-	for _word: int in 4:
-		var _skipped: int = body.get_u32()
+	var _real64: int = body.get_u32()
+	var engine: Dictionary = Engine.get_version_info()
+	var version: Array[int] = [body.get_u32(), body.get_u32(), body.get_u32()]
+	if version != [engine["major"], engine["minor"], FORMAT]:
+		return "is in a binary format this game doesn't read"
 	if _string(body) != SCENE_TYPE:
 		return "isn't a binary scene"
 	var _import_metadata: int = body.get_u64()
@@ -92,11 +103,14 @@ static func _external_problem(body: StreamPeerBuffer, files: Dictionary, own: St
 	return ""
 
 
-## A count at the body's position, or 0 when the bytes left can't hold that many entries, each
-## at least a 32-bit word: a broken count can't make the check loop without end.
+## A count at the body's position, or 0 at the end of the body when the bytes left can't hold that
+## many entries, each at least a 32-bit word: a broken count can't make the check loop without end.
 static func _count(body: StreamPeerBuffer) -> int:
 	var count: int = body.get_u32()
-	return count if count * 4 <= body.get_size() - body.get_position() else 0
+	if count * 4 <= body.get_size() - body.get_position():
+		return count
+	body.seek(body.get_size())
+	return 0
 
 
 ## The string at the body's position: its length with the ending zero, then its bytes.

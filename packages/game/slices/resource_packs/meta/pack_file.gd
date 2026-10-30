@@ -17,6 +17,8 @@ const RELATIVE_FILE_BASE: int = 2
 ## can't hang the reading or ask for a huge buffer.
 const MAX_FILES: int = 100_000
 const MAX_PATH: int = 4096
+## What follows a file's path in its entry: offset, size, MD5 and flags.
+const ENTRY_TAIL: int = 8 + 8 + 16 + 4
 
 ## Why the file can't be read as a pack, or "" when it can.
 var problem: String = ""
@@ -87,6 +89,9 @@ func _read_entry(file: FileAccess) -> bool:
 	if length > MAX_PATH:
 		return false
 	var name_bytes: PackedByteArray = file.get_buffer(length)
+	# The offset and size (64-bit), the MD5 (16 bytes) and the flags (32-bit) follow.
+	if name_bytes.size() != length or file.get_length() - file.get_position() < ENTRY_TAIL:
+		return false
 	var offset: int = file.get_64()
 	var size: int = file.get_64()
 	var _md5: PackedByteArray = file.get_buffer(16)
