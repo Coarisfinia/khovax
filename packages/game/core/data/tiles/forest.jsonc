@@ -4,6 +4,6 @@
 	"id": "forest",
 	"color": "#3d6b38",
 	"symbol": "T", // tells it apart without its color (#68)
-	"model": "res://assets/kaykit-hexagon/trees_A_large.gltf",
+	"model": "model_trees_a_large",
 	"traits": { "walkable": true, "hides": true }
 }

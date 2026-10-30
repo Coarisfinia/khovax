@@ -13,6 +13,8 @@ extends HexPiece
 ## How fast the character turns toward where it walks, in radians per second: quick enough to
 ## follow a zigzag, never a snap.
 const TURN_SPEED: float = 10.0
+## The character model's id in the resource packs (#1864): the placeholder character.
+const MODEL: String = "model_rogue"
 const IDLE: StringName = &"Idle"
 const MOVE: StringName = &"Running_A"
 ## The clip a knocked-down player plays (#479, #488): down on the ground until revived.
@@ -40,9 +42,10 @@ const SPOT_SPEED: float = 1.2
 
 @export var driver: Session
 @export_range(0, GameState.MAX_PLAYERS - 1) var slot: int = 0
-## The character model, a child of this piece: it turns and animates; the piece moves.
-@export var model: Node3D
 
+## The character model (MODEL), a child of this piece it adds when ready: it turns and animates;
+## the piece moves.
+var model: Node3D
 ## The yaw the character turns toward, in radians: where it last walked.
 var facing: float = 0.0
 ## Where the player stands inside its tile, from the center: easing toward its slot's spot while
@@ -64,8 +67,8 @@ var circle: PlayerCircle
 
 func _ready() -> void:
 	super()
-	if model == null:
-		return
+	model = ResourcePacks.model(MODEL).instantiate() as Node3D
+	add_child(model)
 	# Only in the game: in the editor, the copies would be saved into the scene.
 	if not Engine.is_editor_hint():
 		Toon.apply_to_model(model)

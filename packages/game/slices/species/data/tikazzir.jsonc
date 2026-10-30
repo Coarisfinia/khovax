@@ -19,5 +19,5 @@
 	/* Its sharp eyes hunt by day, darting after prey with others of its kind (#1200). Quick and
 	   frail, it sleeps lightly: a player stepping next to it wakes it (#1230). */
 	"behaviour": ["diurnal", "predator", "pack_species", "light_sleeper"],
-	"model": "res://assets/mana-wolf/mana_wolf.glb" // the mana wolf stands in until it has its own model (#1223)
+	"model": "model_mana_wolf" // the mana wolf stands in until it has its own model (#1223)
 }

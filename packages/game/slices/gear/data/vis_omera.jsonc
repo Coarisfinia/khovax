@@ -12,5 +12,5 @@
 		"entry": "A ward charm that binds itself to whoever holds it. Worn in the ward slot, it keeps every monster its bearer carries close, so their passives help even while they wait in reserve, as long as they still stand. The name is Rune-speech, the tongue of unique things: the ward rune Vis, then omera, the charm's own name.",
 		"gloss": "the ward that keeps them near"
 	},
-	"model": "res://assets/quaternius-items/necklace.glb"
+	"model": "model_necklace"
 }

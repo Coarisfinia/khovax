@@ -11,21 +11,16 @@ extends RefCounted
 const SLICES: String = "res://slices/"
 ## Creature models built before the species that wears them (#1476): checked like the models the
 ## species name, so each is ready to wear, until its species names it and it leaves this list.
-const UNWORN_MODELS: Array[String] = [
-	"res://assets/drakkudor/drakkudor.glb",
-	"res://assets/fohossa/fohossa.glb",
-]
+## Each is named by its id in the resource packs (#1864), like every model below.
+const UNWORN_MODELS: Array[String] = ["model_drakkudor", "model_fohossa"]
 ## Animated props built before the view that places them (#1634), with the clips each plays:
 ## checked like a view's model, until a view names it and it leaves this list.
 const UNPLACED_PROPS: Dictionary[String, Array] = {
-	"res://assets/tentacle_gate/tentacle_gate.glb": [&"Idle"],
+	"model_tentacle_gate": [&"Idle"],
 }
 ## Static models built before anything places them in the world (#1635): each must load and show
 ## a mesh, until what places it names it and it leaves this list.
-const UNPLACED_MODELS: Array[String] = [
-	"res://assets/starry-egg/starry_egg.glb",
-	"res://assets/standing-stone/standing_stone.glb",
-]
+const UNPLACED_MODELS: Array[String] = ["model_starry_egg", "model_standing_stone"]
 
 
 func run(tree: SceneTree) -> String:
@@ -314,8 +309,9 @@ func _check_player_model(main: Node) -> String:
 	return ""
 
 
-## Every model a view uses (#992): the one it preloads (its MODEL), the player's, which the main
-## scene places, or, for a view whose figures wear their species' models (its WEARS_SPECIES_MODELS,
+## Every model a view uses (#992): the one its MODEL names by id in the resource packs (#1864), the
+## player's, which its view adds, or, for a view whose figures wear their species' models (its
+## WEARS_SPECIES_MODELS,
 ## #1223), every model a species names. A view that plays clips (its CLIPS) needs a model with a
 ## skeleton that has bones,
 ## every skinned mesh bound to it, and each of those clips: a model swap that drops a clip or
@@ -338,9 +334,8 @@ func _check_view_models(main: Node) -> String:
 			var result: String = ""
 			if view == PlayerView:
 				result = _check_rig(player.model, clips, attacks)
-			elif constants.get("MODEL") is PackedScene:
-				var scene: PackedScene = constants["MODEL"]
-				result = _check_scene(scene, clips, attacks)
+			elif constants.get("MODEL") is String:
+				result = _check_model(str(constants["MODEL"]), clips, attacks)
 			elif constants.get("WEARS_SPECIES_MODELS", false):
 				result = _check_species_models(clips, attacks)
 			elif not clips.is_empty():
@@ -348,7 +343,7 @@ func _check_view_models(main: Node) -> String:
 			if not result.is_empty():
 				return "%s's model: %s" % [file, result]
 	for path: String in UNPLACED_PROPS:
-		var prop: PackedScene = load(path) as PackedScene
+		var prop: PackedScene = ResourcePacks.model(path)
 		var checked: String = (
 			_check_scene(prop, UNPLACED_PROPS[path], false) if prop != null else "it doesn't load"
 		)
@@ -360,7 +355,7 @@ func _check_view_models(main: Node) -> String:
 ## Whether every model waiting for its place (UNPLACED_MODELS) loads and shows a mesh.
 func _check_unplaced_models() -> String:
 	for path: String in UNPLACED_MODELS:
-		var unplaced: PackedScene = load(path) as PackedScene
+		var unplaced: PackedScene = ResourcePacks.model(path)
 		if unplaced == null:
 			return "%s doesn't load" % path
 		var shown: Node = unplaced.instantiate()
@@ -372,6 +367,13 @@ func _check_unplaced_models() -> String:
 		if meshes == 0:
 			return "%s shows no mesh" % path
 	return ""
+
+
+## Whether the model `model_id` (an id in the resource packs, #1864) loads and has what
+## _check_scene asks of it.
+func _check_model(model_id: String, clips: Array, attacks: bool) -> String:
+	var scene: PackedScene = ResourcePacks.model(model_id)
+	return _check_scene(scene, clips, attacks) if scene != null else "it doesn't load"
 
 
 ## Whether `scene` loads and, when the view plays `clips`, its model has them (_check_rig).
@@ -396,7 +398,7 @@ func _check_species_models(clips: Array, attacks: bool) -> String:
 		if not result.is_empty():
 			return "%s's model: %s" % [species_id, result]
 	for path: String in UNWORN_MODELS:
-		var unworn: PackedScene = load(path) as PackedScene
+		var unworn: PackedScene = ResourcePacks.model(path)
 		var checked: String = (
 			_check_scene(unworn, clips, attacks) if unworn != null else "it doesn't load"
 		)
@@ -1687,7 +1689,8 @@ func _decoration_problem(
 	var model: Node3D = null
 	if view.figures.has(tile):
 		model = view.figures[tile].get_child(0) as Node3D
-	if model == null or model.scene_file_path != blueprint.model:
+	var wanted: String = ResourcePacks.model(blueprint.model).resource_path
+	if model == null or model.scene_file_path != wanted:
 		return "the %s on %s has no model, or another one" % [id, tile]
 	if model.scale != size * view.risen[tile]:
 		return "the %s on %s has another size: %s" % [id, tile, model.scale]

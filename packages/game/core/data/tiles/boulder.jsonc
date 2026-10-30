@@ -3,6 +3,6 @@
 	"id": "boulder",
 	"color": "#5c8c52",
 	"symbol": "O", // tells it apart without its color (#68)
-	"model": "res://assets/kaykit-hexagon/mountain_C.gltf",
+	"model": "model_mountain_c",
 	"traits": { "walkable": false }
 }

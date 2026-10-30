@@ -73,7 +73,7 @@ func _check_content() -> String:
 			return "%s can't be harvested by hand" % kind
 	if not MaterialContent.load_materials().ids.has("stone"):
 		return "stone isn't a material that loads with its model"
-	var no_model: String = '{ "id": "stone", "name": "Stone", "model": "res://assets/none.glb" }'
+	var no_model: String = '{ "id": "stone", "name": "Stone", "model": "model_none" }'
 	if MaterialContent.new().add("stone", no_model).is_empty():
 		return "a material whose model doesn't exist loaded"
 	return ""

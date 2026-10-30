@@ -3,25 +3,27 @@ check_footprint.py: a pack's model (the players' and people's figure, the chest)
 packages/game-models/, and its .glb isn't at the size the game shows it, since the view that puts it
 on a tile sizes it.
 
-A **view** of a model is a script in a slice's `look/` that preloads its .glb
-(`preload("res://…/chest.glb")`), or the script on the node a scene instances it under (main.tscn's
-player): CI reruns the check when either changes. From it come, each from a
-constant of that name in the view, or the one of another script it uses as `Class.NAME` (a value
-may name another constant too, in the view or as `Class.NAME`):
+A **view** of a model is a script in a slice's `look/` whose `MODEL` constant is the model's id in
+the default resource pack (#1864: `const MODEL: String = "model_chest"`, or another view's
+`PlayerView.MODEL`), the pack's manifest mapping the id to its .glb: CI reruns the check when
+either changes. From it come, each from a constant of that name in the view, or the one of another
+script it uses as `Class.NAME` (a value may name another constant too, in the view or as
+`Class.NAME`):
 
-- `MODEL_SCALE`: the scale it draws the model at (1 without one), times the scale a scene draws the
-  instance at (its own and its ancestors');
+- `MODEL_SCALE`: the scale it draws the model at (1 without one);
 - `CLIPS`: the clips it plays (every clip without one, an empty list for none);
 - `IDLE`: the clip it stands in, measured in place of the rest pose (a figure's is a T-pose);
 - `HIDDEN_PARTS`: the parts it hides (the figure's weapons), left out of the measure.
 
-A model no view preloads or instances isn't put on the board (the items, shown only in the gear
+A model no view names isn't put on the board (the items, shown only in the gear
 panel's pictures) and has no views."""
 
 import glob
-import math
 import os
 import re
+from pathlib import Path
+
+from game_shared.resource_packs import MANIFEST, models, read_manifest
 
 # A constant: its name and the text after its `=`, which may run on over lines until its brackets
 # close.
@@ -105,11 +107,11 @@ class Scripts:
                 return self._named(self.classes[found.group(1)], name)
         return default
 
-    def view(self, path, scale=1.0):
-        """How the script at `path` shows its model, times `scale` from the scene it's in."""
+    def view(self, path):
+        """How the script at `path` shows its model."""
         return View(
             os.path.splitext(os.path.basename(path))[0],
-            scale * self.setting(path, "MODEL_SCALE", 1.0),
+            self.setting(path, "MODEL_SCALE", 1.0),
             self.setting(path, "CLIPS"),
             self.setting(path, "IDLE"),
             self.setting(path, "HIDDEN_PARTS", []))
@@ -119,74 +121,23 @@ def find(game, model, scripts=None):
     """Every distinct view that shows the .glb named `model` (without its extension) on the board,
     in the Godot project at `game`. Raises ValueError where a view can't be read."""
     scripts = scripts or Scripts(game)
-    glb = re.escape(model) + r"\.glb"
-    preload = re.compile(r'preload\("res://(?:[^"]*/)?' + glb + r'"\)')
+    ids = model_ids(game, model)
     looks = os.path.join(game, "slices", "*", "look", "**", "*.gd")
     views = [
         scripts.view(path) for path in sorted(glob.glob(looks, recursive=True))
-        if preload.search(scripts.text(path))]
-    for scene in sorted(glob.glob(os.path.join(game, "**", "*.tscn"), recursive=True)):
-        if not _skipped(game, scene):
-            views += _instanced(game, scripts, scene, glb)
+        if scripts.const(path, "MODEL") in ids]
     distinct = {}
     for view in views:
         distinct.setdefault(view.key(), view)
     return list(distinct.values())
 
 
-def _instanced(game, scripts, scene, glb):
-    """The views of the nodes in `scene` that instance the .glb matched by `glb`: the script on each
-    one's parent node, at the instance's own scale."""
-    with open(scene, encoding="utf-8") as source:
-        text = source.read()
-    resources = {
-        found.group("id"): found.group("path")
-        for found in re.finditer(r'\[ext_resource [^\]]*path="(?P<path>[^"]+)"[^\]]*id="(?P<id>[^"]+)"', text)}
-    models = {key for key, path in resources.items() if re.search("(^res://|/)" + glb + "$", path)}
-    if not models:
-        return []
-    nodes = {}
-    for found in re.finditer(r"^\[node ([^\]]*)\]\n((?:(?!\[).*\n?)*)", text, re.M):
-        head, body = found.group(1), found.group(2)
-        name = re.search(r'name="([^"]+)"', head).group(1)
-        parent = re.search(r'parent="([^"]+)"', head)
-        # The root is ".", its children their bare names, as scenes name their parents.
-        path = "." if parent is None else (name if parent.group(1) == "." else parent.group(1) + "/" + name)
-        nodes[path] = (head, body)
-    views = []
-    for path, (head, body) in nodes.items():
-        instance = re.search(r'instance=ExtResource\("([^"]+)"\)', head)
-        if instance is None or instance.group(1) not in models:
-            continue
-        parent = None if path == "." else nodes.get(path.rpartition("/")[0] if "/" in path else ".")
-        script = re.search(r'^script = ExtResource\("([^"]+)"\)', parent[1], re.M) if parent else None
-        if script is None:
-            raise ValueError("%s: %s has no view script on its parent" % (_short(game, scene), path))
-        res = resources[script.group(1)]
-        views.append(scripts.view(os.path.join(game, res[len("res://"):]), _drawn(nodes, path)))
-    return views
-
-
-def _drawn(nodes, path):
-    """The scale the scene draws node `path` at: its own times every ancestor's, up to the first
-    node that is `top_level` (it ignores its parents' transforms)."""
-    scale = 1.0
-    while path in nodes:
-        body = nodes[path][1]
-        scale *= _scale(body)
-        if path == "." or re.search(r"^top_level = true$", body, re.M):
-            break
-        path = path.rpartition("/")[0] if "/" in path else "."
-    return scale
-
-
-def _scale(body):
-    """The largest scale of a scene node's `transform`, 1 without one."""
-    found = re.search(r"^transform = Transform3D\(([^)]*)\)", body, re.M)
-    if found is None:
-        return 1.0
-    basis = [float(value) for value in found.group(1).split(",")[:9]]
-    return max(math.sqrt(sum(basis[row * 3 + column] ** 2 for row in range(3))) for column in range(3))
+def model_ids(game, model):
+    """The ids the default resource pack gives the .glb named `model` (without its extension)."""
+    path = os.path.join(game, MANIFEST)
+    return {
+        model_id for model_id, file in models(read_manifest(Path(path))).items()
+        if os.path.splitext(os.path.basename(file))[0] == model}
 
 
 def _expression(text, start):

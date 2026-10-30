@@ -990,7 +990,8 @@ func _roster_shown(main: Node, roster: RosterHud) -> String:
 		]
 	for id: String in carried:
 		var picture: SpeciesStage = roster.picture_of(id)
-		var model: String = SpeciesContent.cached().species[id].model
+		var model_id: String = SpeciesContent.cached().species[id].model
+		var model: String = ResourcePacks.model(model_id).resource_path
 		if picture == null or picture.model.scene_file_path != model:
 			return "the %s's square doesn't show its picture, %s" % [id, model]
 	if RosterHud.letters_of("Tikazzir") != "Ti":

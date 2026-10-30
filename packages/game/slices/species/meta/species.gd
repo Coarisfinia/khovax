@@ -35,8 +35,8 @@ var sight: int = 0
 var _codex: Array[String] = ["", ""]
 ## Its behaviour traits (SpeciesBehaviour, #1200), which its monsters' daily schedule is made from.
 var behaviour: Array[String] = []
-## The model its monsters wear (#1223), wild or a companion: a res:// path to a glTF model under
-## assets/ (SpeciesModels loads it).
+## The model its monsters wear (#1223), wild or a companion: its id in the resource packs (#1864;
+## SpeciesModels loads it).
 var model: String = ""
 ## Why the species couldn't be read, or "" when it could.
 var problem: String = ""
@@ -145,10 +145,10 @@ func _read_codex_behaviour_and_model(data: Dictionary) -> String:
 	return wrong if not wrong.is_empty() else _read_model(data.get("model"))
 
 
-## Reads the model its monsters wear from `raw`; returns why it can't, or "": a glTF model under
-## assets/ that exists.
+## Reads the model its monsters wear from `raw`; returns why it can't, or "": the id of a model a
+## resource pack has (#1864).
 func _read_model(raw: Variant) -> String:
 	model = Content.text_of(raw)
-	if not Content.is_model(model):
-		return "it needs a model: a glTF model under %s that exists (#1223)" % Content.MODELS
+	if not ResourcePacks.has_model(model):
+		return "it needs a model: the id of a model a resource pack has (#1223, #1864)"
 	return ""

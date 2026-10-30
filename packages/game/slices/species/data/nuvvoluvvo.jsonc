@@ -18,5 +18,5 @@
 	"self_passive": "nuvvoluvvo_novvi_lovvi",
 	// Nearly always asleep, it wakes in short bouts to graze before it settles again (#1200).
 	"behaviour": ["cathemeral", "grazer"],
-	"model": "res://assets/nuvvoluvvo/nuvvoluvvo.glb"
+	"model": "model_nuvvoluvvo"
 }

@@ -41,8 +41,8 @@ func add(file_id: String, text: String) -> String:
 		why = "it needs a name"
 	if (why.is_empty()
 			and data.has("model")
-			and not Content.is_model(Content.text_of(data["model"]))):
-		why = "its model is no glTF model under %s that exists (#1579)" % Content.MODELS
+			and not ResourcePacks.has_model(Content.text_of(data["model"]))):
+		why = "its model is no model a resource pack has (#1579, #1864)"
 	if why.is_empty():
 		ids.append(id)
 		names[id] = name

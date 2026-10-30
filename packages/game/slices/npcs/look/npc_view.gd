@@ -6,8 +6,9 @@ extends Node3D
 ## them, a shape and not a color (#68). A guide who walks (EscortFeature, #1588) glides from tile to
 ## tile like a companion, running and turning toward where they walk. It only reads the state.
 
-## The placeholder person until the game's own people exist: the players' character, unarmed.
-const MODEL: PackedScene = preload("res://assets/kaykit-adventurers/Rogue.glb")
+## The placeholder person until the game's own people exist: the players' character, unarmed. Its
+## id in the resource packs (#1864).
+const MODEL: String = PlayerView.MODEL
 const IDLE: StringName = &"Idle"
 const MOVE: StringName = PlayerView.MOVE
 ## Every clip the view plays, which the boot flow checks its model has (#992).
@@ -76,7 +77,7 @@ func _place(person: int) -> void:
 func _add_figure(tile: Vector2i) -> HexPiece:
 	var piece: HexPiece = HexPiece.new()
 	piece.base_offset = 0.0
-	var model: Node3D = MODEL.instantiate() as Node3D
+	var model: Node3D = ResourcePacks.model(MODEL).instantiate() as Node3D
 	Toon.apply_to_model(model)
 	for part: String in PlayerView.HIDDEN_PARTS:
 		var held: Node3D = model.find_child(part) as Node3D

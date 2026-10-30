@@ -223,8 +223,10 @@ func _page_problem(species: Species, expected: Array[String]) -> String:
 	var seen: bool = expected.front() != BestiaryEntry.not_seen_text()
 	if (picture != null) != seen:
 		return "its picture was %s, seen: %s" % ["shown" if picture != null else "missing", seen]
-	if seen and picture.model.scene_file_path != species.model:
-		return "its picture showed %s, not %s" % [picture.model.scene_file_path, species.model]
+	# The model by its id in the resource packs (#1864), as the picture loaded it.
+	var wanted: String = ResourcePacks.model(species.model).resource_path if seen else ""
+	if seen and picture.model.scene_file_path != wanted:
+		return "its picture showed %s, not %s" % [picture.model.scene_file_path, wanted]
 	if (_page.heading.text != CodexPage.heading_of(TextTags.MONSTER)
 			or _page.title.text != species.name
 			or gloss != "%s: %s" % [species.name, species.codex_gloss()]):

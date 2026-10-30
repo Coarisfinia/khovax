@@ -18,6 +18,6 @@
 	"self_passive": "ombuwomo_bowmo_mowmo",
 	// A bud of the shallows, awake by night with its elders: it nibbles weed and keeps near water (#1200).
 	"behaviour": ["nocturnal", "grazer", "drinker"],
-	"model": "res://assets/ombuwomo/ombuwomo.glb",
+	"model": "model_ombuwomo",
 	"ascension": { "into": "ombulumo", "level": 30, "material": "dew" }
 }

@@ -2,10 +2,10 @@
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://github.com/Coarisfinia/khovax/slices/resource_packs/data/resource_packs.schema.json",
 	"title": "Resource pack",
-	"description": "A resource pack's manifest (#1860): its id, its name, its own version, the game version it targets, and the resources it provides, each file by its id. The game's own resources are the default pack; a player's pack (#1858) shares this format. One file per pack, named after its id.",
+	"description": "A resource pack's manifest (#1860): its id, its name, its own version, the game version it targets, and the resources it provides (textures and models), each file by its id. The game's own resources are the default pack; a player's pack (#1858) shares this format. One file per pack, named after its id.",
 	"type": "object",
 	"additionalProperties": false,
-	"required": ["id", "name", "version", "game_version", "textures"],
+	"required": ["id", "name", "version", "game_version", "textures", "models"],
 	"properties": {
 		"id": {
 			"description": "Stable: lowercase words joined by underscores.",
@@ -30,6 +30,15 @@
 			"additionalProperties": {
 				"type": "string",
 				"pattern": "^[A-Za-z0-9_-][A-Za-z0-9._/-]*\\.(svg|png|jpg|jpeg|webp)$"
+			}
+		},
+		"models": {
+			"description": "Each model's file (#1864), a .glb or .gltf, by its id, relative to the pack's root, never climbing out of it. The images a model uses come with it.",
+			"type": "object",
+			"propertyNames": { "pattern": "^[a-z][a-z0-9_]*$" },
+			"additionalProperties": {
+				"type": "string",
+				"pattern": "^[A-Za-z0-9_-][A-Za-z0-9._/-]*\\.(glb|gltf)$"
 			}
 		}
 	}

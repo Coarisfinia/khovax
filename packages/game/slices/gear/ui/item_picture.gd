@@ -26,12 +26,12 @@ func _process(_delta: float) -> void:
 		custom_minimum_size = Vector2(side, side)
 
 
-## Shows the model at `model`, a glTF model under assets/, or nothing for "".
+## Shows the model `model`, an id in the resource packs (#1864), or nothing for "".
 func show_model(model: String) -> void:
 	if model == shown:
 		return
 	shown = model
-	var scene: PackedScene = load(model) as PackedScene if not model.is_empty() else null
+	var scene: PackedScene = ResourcePacks.model(model) if not model.is_empty() else null
 	stage.show_model(scene.instantiate() as Node3D if scene != null else null)
 	# The space stays, so the slots' buttons line up whether they hold gear or not.
 	modulate.a = 1.0 if scene != null else 0.0

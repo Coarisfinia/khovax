@@ -20,6 +20,6 @@
 	// A sprite of its elder's flock: it keeps to its own kind by day and sleeps lightly like them,
 	// but it's too small to hunt, and flutters down to sip at the water instead (#1200, #1230).
 	"behaviour": ["diurnal", "drinker", "pack_species", "light_sleeper"],
-	"model": "res://assets/tikazzelu/tikazzelu.glb",
+	"model": "model_tikazzelu",
 	"ascension": { "into": "tikazzir", "level": 20, "material": "wind_ribbon" }
 }

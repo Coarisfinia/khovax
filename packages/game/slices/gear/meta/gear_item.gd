@@ -35,7 +35,7 @@ var keeps_passives: bool = false
 ## A unique item's codex entry (#1449), as Content.codex_of reads it: its entry, then what its name
 ## means; empty for other gear.
 var codex: Array[String] = []
-## Its model: a glTF model under assets/ (Content.is_model).
+## Its model: a model id a resource pack has (ResourcePacks, #1864).
 var model: String = ""
 ## Why the gear couldn't be read, or "" when it could.
 var problem: String = ""
@@ -123,6 +123,6 @@ func _check(file_id: String) -> String:
 		return "only unique ward gear, of rarity %s, keeps the passives on" % UNIQUE
 	if codex.is_empty() == is_unique():
 		return "a unique item (rarity %s) needs a codex entry, and no other gear has one" % UNIQUE
-	if not Content.is_model(model):
-		return "it needs a model: a glTF model under %s that exists (#1581)" % Content.MODELS
+	if not ResourcePacks.has_model(model):
+		return "it needs a model: the id of a model a resource pack has (#1581, #1864)"
 	return ""

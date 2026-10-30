@@ -18,6 +18,6 @@
 	"player_passive": "vynnimu_mynu_vynu",
 	"self_passive": "vynnimu_nivvu_mivvu",
 	"behaviour": ["nocturnal", "predator", "pack_species"], // a wolf pup: up at night with its pack, learning to hunt (#1200)
-	"model": "res://assets/mana-pup/mana_pup.glb",
+	"model": "model_mana_pup",
 	"ascension": { "into": "vynakiir", "level": 43, "material": "arcane_crystal" }
 }

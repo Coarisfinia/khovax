@@ -28,9 +28,9 @@
 			"maximum": 1000000000
 		},
 		"model": {
-			"description": "Its model (#1581), which its gear slot shows: a res:// path to a glTF model under assets/. Every item has one. The game checks it exists.",
+			"description": "Its model (#1581), which its gear slot shows: a model id in the resource packs (#1864). Every item has one. The game checks a pack has it.",
 			"type": "string",
-			"pattern": "^res://assets/([A-Za-z0-9_-][A-Za-z0-9._-]*/)*[A-Za-z0-9_-][A-Za-z0-9._-]*\\.(glb|gltf)$"
+			"pattern": "^[a-z][a-z0-9_]*$"
 		},
 		"keeps_passives": {
 			"description": "Unique ward gear only, of rarity bound (#617): while it's in the ward slot, the passives of every monster the player carries that hasn't fainted work, out or not, instead of only the out companion's.",

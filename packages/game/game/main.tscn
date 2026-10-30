@@ -8,7 +8,6 @@
 [ext_resource type="Script" path="res://slices/controls/input/touch_stick.gd" id="6_stick"]
 [ext_resource type="Script" path="res://slices/trail/look/trail_view.gd" id="7_trail"]
 [ext_resource type="Script" path="res://slices/wild_monsters/look/wild_monster_view.gd" id="8_wild"]
-[ext_resource type="PackedScene" path="res://assets/kaykit-adventurers/Rogue.glb" id="9_rogue"]
 [ext_resource type="Script" path="res://slices/music/look/music.gd" id="10_music"]
 [ext_resource type="Script" path="res://slices/profile/meta/profile_holder.gd" id="11_profile"]
 [ext_resource type="Script" path="res://slices/profile/look/profile_tie.gd" id="46_profile_tie"]
@@ -287,14 +286,11 @@ driver = NodePath("../../Driver")
 keeper = NodePath("../../QuestKeeper")
 input = NodePath("../../LocalInput")
 
-[node name="Player" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver", "model") unique_id=1715359208]
+[node name="Player" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver") unique_id=1715359208]
 script = ExtResource("4_player")
 driver = NodePath("../../Driver")
-model = NodePath("Model")
 base_offset = 0.0
 tile = Vector2i(1, -1)
-
-[node name="Model" parent="Instance/Player" instance=ExtResource("9_rogue")]
 
 [node name="TrailView" type="Node" parent="." node_paths=PackedStringArray("driver", "grid") unique_id=1735204871]
 script = ExtResource("7_trail")

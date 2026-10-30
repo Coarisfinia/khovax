@@ -5,7 +5,7 @@
 	"id": "gems",
 	"color": "#4a4f7a",
 	"symbol": "&", // tells it apart without its color (#68)
-	"model": "res://assets/mana-gems/mana_gems.glb",
+	"model": "model_mana_gems",
 	"harvest": { "yields": "gem_crystals", "becomes": "bare_rock", "takes": "hands" },
 	"traits": { "walkable": false }
 }
