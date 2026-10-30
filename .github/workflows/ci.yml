@@ -51,6 +51,75 @@ env:
   PLAYWRIGHT_FFMPEG_SHA256: ee986434d158f74fb5d9c5ff1092026ceedb63f324fe90b5be89460926b7b679
 
 jobs:
+  stale-approval:
+    # Fails while the reviewer app's approval sits on a commit other than a pull request's head
+    # (#1877). approve-cleared.yml withdraws that approval when the commits or the base change, but
+    # if the withdrawal fails, the stale approval would still let the merge queue merge the changed
+    # pull request ("main approval" keeps approvals across pushes). A person's approval doesn't
+    # count here. On a pull request it checks that one; in the merge queue, every pull request in
+    # the group, read from the squash commits between the group's base and head ("Title (#n)").
+    # It only reads, with the workflow's token, and checks out nothing.
+    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: "🔏 Check that no reviewer-app approval is on an older commit"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          REVIEWER_LOGIN: coarisfinia-ai-reviewer[bot]
+          PR: ${{ github.event.pull_request.number }}
+          GROUP_BASE: ${{ github.event.merge_group.base_sha }}
+          GROUP_HEAD: ${{ github.event.merge_group.head_sha }}
+        run: |
+          # Matched by the app's user id, never its login text.
+          REVIEWER=$(gh api "users/$(jq -rn --arg l "$REVIEWER_LOGIN" '$l | @uri')" --jq .id)
+          export REVIEWER
+          if [ -n "$PR" ]; then
+            prs=$PR
+          else
+            # Every commit in the group is one queued pull request's squash commit; one without a
+            # number can't be checked, so it fails.
+            subjects=$(gh api --paginate "repos/$REPO/compare/$GROUP_BASE...$GROUP_HEAD" \
+              --jq '.commits[].commit.message | split("\n")[0]')
+            prs=$(printf '%s\n' "$subjects" | sed -nE 's/.*\(#([0-9]+)\)$/\1/p')
+            if [ -z "$subjects" ] ||
+              [ "$(printf '%s\n' "$prs" | grep -c .)" -ne "$(printf '%s\n' "$subjects" | wc -l)" ]; then
+              echo "::error::Couldn't read the pull request of every commit in the merge group:"
+              printf '%s\n' "$subjects"
+              exit 1
+            fi
+          fi
+          # Each call is checked: errexit doesn't reach into the command substitution that runs it.
+          stale() {
+            HEAD_SHA=$(gh api "repos/$REPO/pulls/$1" --jq .head.sha) && [ -n "$HEAD_SHA" ] || return 1
+            HEAD_SHA=$HEAD_SHA gh api --paginate "repos/$REPO/pulls/$1/reviews" --jq '.[] |
+                select(.user.id == (env.REVIEWER | tonumber) and .state == "APPROVED"
+                  and .commit_id != env.HEAD_SHA) | "review \(.id) on \(.commit_id)"'
+          }
+          # A push starts this run and approve-cleared's withdrawal at once, so a stale approval
+          # gets a few minutes to be withdrawn before it fails the check.
+          failed=0
+          for pr in $prs; do
+            for attempt in 1 2 3 4 5 6 7; do
+              found=$(stale "$pr") || { echo "::error::Couldn't read #$pr's head or reviews."; exit 1; }
+              [ -z "$found" ] && break
+              [ "$attempt" -lt 7 ] && sleep 30
+            done
+            if [ -n "$found" ]; then
+              echo "::error::#$pr has an approval from $REVIEWER_LOGIN on a commit other than its head:" \
+                "$found. Dismiss it (a new push retries the withdrawal), then clear the pull request" \
+                "again (#1877)."
+              failed=1
+            else
+              echo "#$pr: no approval from $REVIEWER_LOGIN on an older commit."
+            fi
+          done
+          exit "$failed"
+
   headless:
     runs-on: ubuntu-26.04
     timeout-minutes: 10

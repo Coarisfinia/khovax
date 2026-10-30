@@ -313,6 +313,10 @@ background; only wait in the foreground for a result the very next step needs.
     (`.github/workflows/`): any workflow could reach the guard's environment, so **a change to the
     guard, or to any workflow, always needs the owner**. A push or a new base withdraws that approval,
     never a person's; clear it again (label off and on).
+    If that withdrawal fails, CI's `stale-approval` job (#1877) fails while the reviewer app's
+    approval sits on a commit other than the head, on the pull request and in the merge queue (a
+    required check once it's in the ruleset): dismiss it (a new push retries the withdrawal), then
+    clear the pull request again.
     Queue it once that approval is there.
 
   **CodeRabbit reviews at most once per pull request** (owner's ground rule, #1783): its automatic
