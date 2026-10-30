@@ -10,4 +10,4 @@
   `standing_stone.glb` by `packages/game-models/standing_stone.py`
 - **License:** Unlicense, the repository's own license, see `LICENSE.md` next to this file; its
   textures are CC0 1.0 (`packages/game-models/textures/LICENSE.md`).
-- **Used for:** the savepoint (#1854).
+- **Used for:** the waystone (#1854, #1890).
