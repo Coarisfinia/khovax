@@ -9,6 +9,11 @@ extends RefCounted
 const FIELDS: Array[String] = ["id", "name", "version", "game_version", "textures", "models"]
 ## Each section of resources the manifest lists, with the type its files load as.
 const KINDS: Dictionary[String, String] = { "textures": "Texture2D", "models": "PackedScene" }
+## The file endings each section takes, as resource_packs.schema.json lists them.
+const ENDINGS: Dictionary[String, Array] = {
+	"textures": ["svg", "png", "jpg", "jpeg", "webp"],
+	"models": ["glb", "gltf"],
+}
 ## A version: major.minor.patch.
 const VERSION: String = "\\A[0-9]+\\.[0-9]+\\.[0-9]+\\z"
 
@@ -98,6 +103,8 @@ func _entry_problem(kind: String, resource_id: String, path: String) -> String:
 	var inside: bool = path.simplify_path() == path and path.is_relative_path()
 	if not inside or path.begins_with("..") or path.contains("://"):
 		return "%s %s's file %s must lie inside the pack" % [noun, resource_id, path]
+	if not ENDINGS[kind].has(path.get_extension()):
+		return "%s %s's file %s must end in one of %s" % [noun, resource_id, path, ENDINGS[kind]]
 	if not ResourceLoader.exists(root + path, KINDS[kind]):
 		return "%s %s's file %s doesn't exist" % [noun, resource_id, path]
 	return ""
