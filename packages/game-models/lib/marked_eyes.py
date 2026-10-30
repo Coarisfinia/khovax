@@ -202,8 +202,10 @@ class Head:
         normals = numpy.array([triangle.normal[:] for triangle in mine])
         weights = numpy.array([(i, j, STEPS - i - j) for i in range(STEPS + 1) for j in range(STEPS + 1 - i)],
                               dtype=float) / STEPS
+        # Every triangle takes the same samples, `per_triangle` of them, one after another.
+        self.per_triangle = len(weights)
         self.points = numpy.einsum("ws,tsk->twk", weights, self.spots).reshape(-1, 3)
-        self.normals = numpy.repeat(normals, len(weights), axis=0)
+        self.normals = numpy.repeat(normals, self.per_triangle, axis=0)
         # Each sample's texel (rows, columns), which its colour is read from.
         self.texels = self.texel(numpy.einsum("ws,tsk->twk", weights, self.uvs).reshape(-1, 2))
         self.colours = self.pixels[self.texels[0], self.texels[1], :3].astype(float)
@@ -442,7 +444,7 @@ def fragments(skin, bone="head", weight=HEAD_WEIGHT):
     if len(dark) == 0:
         return []
     # Each triangle's normal: the one its samples carry.
-    normals = head.normals[::len(head.points) // len(head.spots)][triangles[dark]]
+    normals = head.normals[::head.per_triangle][triangles[dark]]
     points, texels = spots[dark], texels[dark]
     cell = numpy.ptp(head.points, axis=0).max() / CELLS
     marks = []
