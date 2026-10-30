@@ -9,7 +9,9 @@ browsers are never installed). The flow must end in the state hash the headless 
 commit ended in (#876), from the EXPECTED_HASH variable. At its end the flow saves the error log
 with a controller's press alone (#1598): the run checks that the browser let it through as a
 download named errors.log holding the web build's log, while the page never had user activation,
-as for a player who only ever pressed a controller.
+as for a player who only ever pressed a controller. The flow presses A on a save button it adds and
+focuses itself, so this proves the browser lets a controller's press save the log, not that a
+controller can reach the button in the Credits tab.
 
     CHROME=<chrome-headless-shell> EXPECTED_HASH=<hash> \
         uv run --locked --package khovax-game-web-e2e packages/game-web-e2e/web_e2e.py [build/web-test]
@@ -194,6 +196,12 @@ async def quietly(cdp: CDPSession, expression: str) -> object:
     evaluate passes the DevTools protocol's userGesture, which would count as a click for the
     browser and spoil the controller-only save (#1598)."""
     answer = await cdp.send("Runtime.evaluate", {"expression": expression, "returnByValue": True})
+    # A script that throws answers with the exception instead of a value: a check fails on it,
+    # never reads it as an answer of None.
+    thrown = answer.get("exceptionDetails")
+    if thrown:
+        why = thrown.get("exception", {}).get("description") or thrown.get("text")
+        raise RuntimeError(f"the page's script {expression!r} threw: {why}")
     return answer["result"].get("value")
 
 
@@ -218,17 +226,32 @@ async def check_saved_log(cdp: CDPSession, run: Run) -> None:
     """Checks that the flow's controller press saved the error log (#1598): a download named
     SAVED_NAME holding the web build's log arrived, and the page never had user activation."""
     await first(run.download, run.stopped, timeout=SAVE_S)
+    # Checked first, so a missing download doesn't hide it. Only an answer of exactly false
+    # passes: one that throws or is missing proves nothing.
+    try:
+        asked = quietly(cdp, "navigator.userActivation.hasBeenActive")
+        active = await asyncio.wait_for(asked, ANSWER_S)
+    except Exception as error:
+        active = f"an error ({error})"
+    if active is not False:
+        run.errors.append(
+            f"the page's user activation was {active}, not false,"
+            " so the controller's save proves nothing"
+        )
     if not run.download.done():
         run.errors.append(f"the error log saved by a controller never arrived within {SAVE_S} s")
         return
     download = run.download.result()
-    if await quietly(cdp, "navigator.userActivation.hasBeenActive"):
-        run.errors.append("the page had user activation, so the controller's save proves nothing")
     if download.suggested_filename != SAVED_NAME:
         name = download.suggested_filename
         run.errors.append(f"the error log was saved as {name}, not {SAVED_NAME}")
         return
-    lines = Path(await download.path()).read_text(encoding="utf-8").splitlines()
+    try:
+        saved = await asyncio.wait_for(download.path(), SAVE_S)
+        lines = Path(saved).read_text(encoding="utf-8").splitlines()
+    except Exception as error:
+        run.errors.append(f"the error log's download failed or took over {SAVE_S} s: {error!r}")
+        return
     if len(lines) < 2 or not lines[1].startswith(SAVED_PLATFORM):
         run.errors.append(f"the saved error log doesn't start with the web's header: {lines[:2]}")
 
