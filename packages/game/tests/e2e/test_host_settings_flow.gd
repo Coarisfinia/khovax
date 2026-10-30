@@ -116,7 +116,7 @@ func _check_presets() -> String:
 
 
 ## Picking `preset` in `world` sets the factor and revive on waystones to `revive`; changing either
-## shows Custom, and picking `preset` again leaves it.
+## so no preset matches shows Custom, and picking `preset` again leaves it.
 func _check_preset(world: World, preset: int, revive: int) -> String:
 	var host: PlayerStore = world.stores[HostSettings.HOST]
 	_pick(world, preset)
@@ -127,10 +127,14 @@ func _check_preset(world: World, preset: int, revive: int) -> String:
 	}
 	if HostSettings.preset_of(values) != preset or values != wanted:
 		return "picking preset %d sets %s" % [preset, values]
-	for setting: String in values:
-		var choices: Array = HostSettings.CHOICES[setting]
-		var other: int = choices[posmod(choices.find(values[setting]) + 1, choices.size())]
-		world.step([_command_for(0, setting, other)])
+	# A change that matches no preset: a factor that matches another preset's with this toggle
+	# (Standard to Hard, both off) shows that preset instead.
+	var others: Dictionary[String, int] = {
+		HostSettings.DIFFICULTY: HostSettings.STANDARD if preset == 0 else HostSettings.EASY,
+		HostSettings.REVIVE_ON_WAYSTONES: HostSettings.ON - revive,
+	}
+	for setting: String in others:
+		world.step([_command_for(0, setting, others[setting])])
 		var custom: int = HostSettings.preset_of(_preset_values(host))
 		_pick(world, preset)
 		var again: int = HostSettings.preset_of(_preset_values(host))
