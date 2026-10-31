@@ -765,6 +765,8 @@ jobs:
           GODOT=~/godot/godot timeout 600 uv run --locked --package khovax-game-pack-builder \
             ../game-pack-builder/build_pack.py "$RUNNER_TEMP/default-pack" "$RUNNER_TEMP/default-pck"
           mkdir -p packs
+          # The .pck carries the pack's files, so the exports leave them out (#1965).
+          uv run --locked --package khovax-game-pack-builder ../game-pack-builder/exclude_default_pack.py
 
       - name: "🤖 Android: export the debug APK and the test APK"
         env:

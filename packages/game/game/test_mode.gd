@@ -55,7 +55,26 @@ func _ready() -> void:
 	# A build carries the default pack as a .pck, mounted like any pack (#1941), not its files.
 	if result.is_empty() and ResourcePacks.loaded()[-1].root != PackLoader.ROOT % "default":
 		result = "the build's default resource pack wasn't mounted from its .pck"
+	if result.is_empty():
+		result = _pack_file_left()
 	_report(result, str(flow.get("final_hash")))
+
+
+## Why the build carries one of the default pack's own files beside its .pck, which holds them all
+## (#1965), or "".
+static func _pack_file_left() -> String:
+	var parsed: Variant = Content.object_of(Content.text_in(ResourcePacks.DEFAULT))
+	var manifest: Dictionary = parsed if parsed is Dictionary else {}
+	for section: Variant in manifest.values():
+		if not section is Dictionary:
+			continue
+		var entries: Dictionary = section
+		for listed: Variant in entries.values():
+			for file: Variant in (listed if listed is Array else [listed]):
+				var path: String = "res://" + str(file)
+				if ResourceLoader.exists(path) or FileAccess.file_exists(path):
+					return "the build carries the default pack's file %s beside its .pck" % path
+	return ""
 
 
 ## The flow to play: the environment's, or else the one the project setting names.
