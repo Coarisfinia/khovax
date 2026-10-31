@@ -2302,16 +2302,21 @@ func _check_player_packs() -> String:
 	var tree: SceneTree = Engine.get_main_loop() as SceneTree
 	tree.call("expect_warning", "b_scripted.pck")
 	tree.call("expect_warning", "c_nameless.pck")
-	ResourcePacks.reload()
+	ResourcePacks.refresh()
 	var ids: Array[String] = []
 	for pack: ResourcePack in ResourcePacks.loaded():
 		ids.append(pack.id)
 	var found: String = ResourcePacks.region_file(region_id)
+	# Read again, a pack keeps its mount: Godot can't mount it twice (#1963).
+	ResourcePacks.refresh()
+	var kept: bool = ResourcePacks.loaded()[0].id == "pack_player"
 	for file: String in made:
 		var _removed: Error = DirAccess.remove_absolute(ResourcePacks.PLAYER_PACKS + file)
-	ResourcePacks.reload()
+	ResourcePacks.refresh()
 	if ResourcePacks.loaded().size() != 1:
 		return "a player's pack taken out of the folder was still loaded"
+	if not kept:
+		return "a player's pack read again lost its mount"
 	if ids != ["pack_player", "default"]:
 		return "the player's packs weren't loaded before the default pack, alone: %s" % [ids]
 	if found != "res://packs/pack_player/regions/r.md":
