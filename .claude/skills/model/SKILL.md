@@ -465,6 +465,10 @@ body**, as a clip library of their own, so a later body plays the same clips:
    skeleton differs** from the skeleton's (a bone missing or extra, another parent, another rest
    pose; `lib/skeleton.py`, read from the .glb as Godot reads it), naming each difference in a
    `SKELETON` line. CI builds it with every model (step 14), so a clip from another rig fails there.
+   **The standing clips get planted feet** (`GROUNDED` in `player_clips.py`, `lib/planted_feet.py`,
+   #1980): the build lowers or raises the body so the lower ankle is at its rest height and lays
+   every foot that close to the ground flat, then fails, in `GROUND` lines, when a frame has no
+   foot flat on the floor or a toe below it. A new clip played standing joins `GROUNDED`.
 3. **Godot maps the rig to its humanoid profile:** the library's `.import` gives its skeleton a
    `BoneMap` with `SkeletonProfileHumanoid` (Meshy's Mixamo names, as Godot imports them, to the
    profile's bones), so its tracks turn `%GeneralSkeleton:<profile bone>`. Any body imported with
