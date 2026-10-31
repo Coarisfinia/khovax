@@ -84,17 +84,17 @@ func _process(_delta: float) -> bool:
 	_measure()
 	if _errors.count > 0:
 		printerr("FAIL: errors were logged during the walk: ", _errors.count)
-		quit(1)
-		return true
+		_finish(1)
+		return false
 	if _end != null:
-		quit(_verdict())
-		return true
+		_finish(_verdict())
+		return false
 	if _frames >= MOST_FRAMES:
 		printerr("FAIL: the walk didn't explore its instance and come back in %.0f s" % [
 			MOST_FRAMES / float(Simulation.TICKS_PER_SECOND),
 		])
-		quit(1)
-		return true
+		_finish(1)
+		return false
 	# The reference's own time is left out of the frame too.
 	_last_usec = Time.get_ticks_usec()
 	# Held again every frame: the game may let the driver run again itself (GameDriver.pause), which
@@ -132,6 +132,13 @@ func _initialize() -> void:
 	_driver.set_process(false)
 	_explorer = SoakExplorer.new()
 	_driver.sources.assign([_explorer])
+
+
+## Ends the soak with `code`: it stops stepping the game, and quits once the game's music has
+## stopped (QuietQuit), since quitting while it plays could leak it (#1906).
+func _finish(code: int) -> void:
+	_driver = null
+	QuietQuit.quit(self, code)
 
 
 ## Starts and closes the windows: a progress report every WINDOW frames, the start window while the

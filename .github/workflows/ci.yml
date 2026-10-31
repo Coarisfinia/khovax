@@ -245,8 +245,17 @@ jobs:
         run: GODOT=~/godot/godot uv run --locked --package khovax-game-checks ../game-checks/script_check.py
 
       - name: "🧪 Run the headless e2e tests"
-        # timeout guards against a script error in the runner leaving the SceneTree running forever
-        run: timeout 300 ~/godot/godot --headless --path . -s res://tests/e2e/run_e2e.gd -- --seed=0
+        # timeout guards against a script error in the runner leaving the SceneTree running forever.
+        # Godot names what leaked only once it exits, after the runner's own verdict, so its log is
+        # read for that (#1906).
+        run: |
+          set -o pipefail
+          timeout 300 ~/godot/godot --headless --path . -s res://tests/e2e/run_e2e.gd -- --seed=0 2>&1 \
+            | tee /tmp/e2e.log
+          if grep -E "leaked at exit|still in use at exit" /tmp/e2e.log; then
+            echo "::error::Godot leaked objects at exit: run it with --verbose to name them (#1906)"
+            exit 1
+          fi
 
       - name: "⏱️ Load test: a tick is within its budget and no slower than the base's"
         # The load test (tools/godot/load_test.gd, #101) times every tick and every feature headless. On a
@@ -538,6 +547,11 @@ jobs:
           timeout 900 xvfb-run -a -s "-screen 0 1280x720x24" ~/godot/godot --path . \
             --rendering-driver opengl3 --audio-driver Dummy -s res://tests/soak/run_soak.gd 2>&1 \
             | tee soak.log
+          # Godot names what leaked only once it exits, after the soak's verdict (#1906).
+          if grep -E "leaked at exit|still in use at exit" soak.log; then
+            echo "::error::Godot leaked objects at exit: run it with --verbose to name them (#1906)"
+            exit 1
+          fi
 
       - name: "📋 Soak test: its measures into the run's summary"
         if: always()
@@ -589,12 +603,18 @@ jobs:
             uv-x86_64-unknown-linux-gnu/uv
 
       - name: "🎲 Play this commit"
-        # The import's script errors are the headless job's to report.
+        # The import's script errors are the headless job's to report. Godot names what leaked only
+        # once it exits, after the report is written (#1906); the parent's play isn't read for it.
         run: |
+          set -o pipefail
           mkdir -p /tmp/outcomes
           timeout 120 ~/godot/godot --headless --path . --import > /dev/null
           timeout 300 ~/godot/godot --headless --path . -s res://tests/replays/outcomes.gd \
-            -- out=/tmp/outcomes/outcomes.json
+            -- out=/tmp/outcomes/outcomes.json 2>&1 | tee /tmp/outcomes.log
+          if grep -E "leaked at exit|still in use at exit" /tmp/outcomes.log; then
+            echo "::error::Godot leaked objects at exit: run it with --verbose to name them (#1906)"
+            exit 1
+          fi
 
       - name: "⬆️ 🎲 Outcome report: upload (khovax-outcomes)"
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

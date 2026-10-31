@@ -60,7 +60,8 @@ func _initialize() -> void:
 	await process_frame
 	var failed: int = await _run_from(tests, 0)
 	print("%d passed, %d failed" % [tests.size() - failed, failed])
-	quit(1 if failed > 0 else 0)
+	# The last flow's music may still be stopping; quitting at once could leak it (#1906).
+	QuietQuit.quit(self, 1 if failed > 0 else 0)
 
 
 ## Runs the tests from `index` on, one after another, and returns how many failed.

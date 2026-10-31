@@ -46,7 +46,8 @@ func _initialize() -> void:
 	# The main scene needs a running tree (see run_e2e.gd).
 	await process_frame
 	var ok: bool = await _report(out)
-	quit(0 if ok else 1)
+	# The game's music may still be stopping; quitting at once could leak it (#1906).
+	QuietQuit.quit(self, 0 if ok else 1)
 
 
 ## Writes the report to `out` and returns true when everything played, twice the same, without
