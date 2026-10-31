@@ -27,8 +27,11 @@ The assets this game uses, with their authors and licenses. Generated from each 
 `assets/<pack>/SOURCE.md` by `tools/godot/credits.gd`; don't edit it by hand.
 """
 
-## The QAL by its name or its short name, in a license line or a license file.
-var _qal: RegEx = RegEx.create_from_string("(?i)quaternius\\s+asset\\s+licen[cs]e|\\bQAL\\b")
+## The author's own license by any of its names ("Quaternius Asset License", "Quaternius's own
+## licence", "Quaternius License"), in any case, or its short name QAL in capitals only.
+var _qal: RegEx = RegEx.create_from_string(
+	"(?i:quaternius(?:'s)?\\s+(?:own\\s+)?(?:asset\\s+)?licen[cs]e)|\\bQAL\\b"
+)
 
 
 func _init() -> void:
@@ -83,8 +86,11 @@ func _qal_refusals(pack: String) -> Array[String]:
 	var lines: PackedStringArray = _note_lines(pack)
 	if not _field(lines, OWNERS_OK).is_empty():
 		return found
-	if _every_field(lines, SOURCE).containsn("quaternius.com"):
-		found.append("its source is quaternius.com, whose files are under the QAL")
+	# The author's own downloads (their site, or another store) are under the QAL; only Poly
+	# Pizza's CC0 pages are not.
+	var source: String = _every_field(lines, SOURCE)
+	if source.containsn("quaternius") and not source.containsn("poly.pizza"):
+		found.append("its source is the author's own, whose files are under the QAL")
 	if _qal.search(_every_field(lines, LICENSE)) != null:
 		found.append("its license is the Quaternius Asset License (QAL)")
 	for path: String in _license_files(ASSETS + pack):
@@ -102,11 +108,12 @@ func _every_field(lines: PackedStringArray, field: String) -> String:
 	return found
 
 
-## The license files (LICENSE*) in the folder and every folder below it.
+## The license files (LICENSE* or LICENCE*, in any case, not Godot's .import files) in the folder
+## and every folder below it.
 func _license_files(folder: String) -> Array[String]:
 	var found: Array[String] = []
 	for file: String in DirAccess.get_files_at(folder):
-		if file.begins_with("LICENSE"):
+		if file.to_upper().begins_with("LICEN") and not file.ends_with(".import"):
 			found.append(folder + "/" + file)
 	for below: String in DirAccess.get_directories_at(folder):
 		found.append_array(_license_files(folder + "/" + below))
