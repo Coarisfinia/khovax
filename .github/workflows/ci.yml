@@ -763,11 +763,13 @@ jobs:
           GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
           mkdir -p build
-          timeout 300 ~/godot/godot --headless --path . --export-debug "Android" build/khovax.apk
-          test -s build/khovax.apk
-          # The test APK for the emulator: x86_64, with the APK's e2e flow (tests/apk/) inside.
-          timeout 300 ~/godot/godot --headless --path . --export-debug "Android Test" build/khovax-test.apk
+          # DIAGNOSTIC (#1955), never merged: the test APK first, both verbose.
+          timeout 300 ~/godot/godot --headless --verbose --path . --export-debug "Android Test" build/khovax-test.apk 2>&1 \
+            | grep -v "^ADDING:" | tail -150
           test -s build/khovax-test.apk
+          timeout 300 ~/godot/godot --headless --verbose --path . --export-debug "Android" build/khovax.apk 2>&1 \
+            | grep -v "^ADDING:" | tail -150
+          test -s build/khovax.apk
 
       - name: "⬆️ 🤖 Android debug APK: upload (khovax-debug-apk)"
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
