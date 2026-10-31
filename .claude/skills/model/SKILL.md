@@ -47,14 +47,19 @@ Two small, plain, flat black oval eyes.
 **Every prop prompt ends with this fixed block** (owner, #1824, #1825): a non-monster asset (the
 world-asset list's props, scenery) is asked for with the first line, its own description, then the
 block word for word. **No single-hex asset has a door, doorway or entrance** (AGENTS.md, #1825):
-never describe one.
+never describe one. **Runes go on only as our own engravings** (owner, #1856, #1908), added to the model later and
+never drawn by the image generator, so the block says "no runes, no writing", and **the ground is ours** (owner, #1908): the ground texture comes
+from the game, so the block forbids a base plate, ground or grass. **A wall or other edge piece
+never asks for clean-cut or flat ends** (owner, #1908): "both ends are cut clean and flat so
+sections line up end to end" makes the image generator draw tiles at the edges; the importer lines
+the pieces up instead.
 
 ```text
 Generate a brand-new image of a game prop for a stylized fantasy world.
 <the asset, as one or two plain sentences>
 
-One single object, centred and alone, in a front three-quarter view from slightly above, the whole object in frame with space all around it. The background is plain, flat light grey and continues unbroken beneath it; no ground, grass or base under it unless described above.
-Style: a stylized game asset with large, readable shapes and flat matte colours, smooth like a clay 3D render and ready for cel shading: plain flat colour areas without drawn outlines, painted highlights or painted shadows. Soft, even, shadowless light. No text, no people, no creatures, no effects such as sparks, steam or smoke.
+One single object, centred and alone, in a front three-quarter view from slightly above, the whole object in frame with space all around it. The background is plain, flat light grey and continues unbroken beneath it; no base plate, no ground or grass under it: the ground is ours.
+Style: a stylized game asset with large, readable shapes and flat matte colours, smooth like a clay 3D render and ready for cel shading: plain flat colour areas without drawn outlines, painted highlights or painted shadows. Soft, even, shadowless light. No text, no runes, no writing, no people, no creatures, no effects such as sparks, steam or smoke.
 ```
 
 Every model is **built by a committed Blender script**, so it can be rebuilt, reviewed and changed
