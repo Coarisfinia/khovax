@@ -6,4 +6,4 @@ const PLANT_UID := "uid://b1919plantuid"
 
 func plant() -> void:
 	ResourceLoader.load_threaded_request("uid://c1919plantthreaded")
-	print(PLANT_UID)
+	ResourceLoader.load_threaded_request(PLANT_UID)
