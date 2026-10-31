@@ -150,8 +150,10 @@ static func _default_pack() -> ResourcePack:
 
 ## Reads the packs again on the next lookup, and forgets every resource looked up, so packs added
 ## to the player's folder since come in and packs taken out of it are left out. A file read before
-## keeps what it was read as (_mounted), and so does the default pack.
-static func reload() -> void:
+## keeps what it was read as (_mounted), and so does the default pack. Not named `reload`:
+## ResourcePacks.reload() would call the class script's own Script.reload, which resets every static
+## here (#1963).
+static func refresh() -> void:
 	_packs.clear()
 	_textures.clear()
 	_models.clear()
