@@ -1,6 +1,7 @@
 """Builds a resource pack (#1869): a folder holding its manifest, pack.jsonc, and its raw files
-(images, glTF models, Markdown and JSONC) becomes <id>.desktop.pck and <id>.mobile.pck, imported
-with the game's import settings by the Godot version the game is built with.
+(images, glTF models, Markdown, JSONC and gettext .po translation catalogues) becomes
+<id>.desktop.pck and <id>.mobile.pck, imported with the game's import settings by the Godot version
+the game is built with.
 
     uv run --locked --package khovax-game-pack-builder packages/game-pack-builder/build_pack.py <pack> <out>
 
@@ -43,8 +44,9 @@ SETUP_GODOT = HERE.parents[1] / ".github" / "actions" / "setup-godot" / "action.
 RELEASED_GODOT = HERE / "godot.json"
 MANIFEST = "pack.jsonc"
 PRESETS = ("desktop", "mobile")
-# What a pack may hold: images, models (a glTF's buffers too), text, and Godot's .import files.
-ALLOWED = (".png", ".jpg", ".jpeg", ".webp", ".svg", ".glb", ".gltf", ".bin", ".md", ".jsonc")
+# What a pack may hold: images, models (a glTF's buffers too), text, translation catalogues (#1969)
+# and Godot's .import files.
+ALLOWED = (".png", ".jpg", ".jpeg", ".webp", ".svg", ".glb", ".gltf", ".bin", ".md", ".jsonc", ".po")
 IMPORT = ".import"
 # The importers a .import may name, each with the type it imports as and the files it imports.
 IMPORTERS = {

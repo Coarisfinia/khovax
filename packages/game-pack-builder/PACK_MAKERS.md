@@ -1,8 +1,8 @@
 # The pack builder
 
-Builds a resource pack for the game: textures, models, regions, realms, quests, species and tile
-kinds that add to or replace the game's own. A pack is data, never code. The builder refuses
-anything else, and the game checks every pack again before it loads it.
+Builds a resource pack for the game: textures, models, regions, realms, quests, species, tile kinds
+and translations that add to or replace the game's own. A pack is data, never code. The builder
+refuses anything else, and the game checks every pack again before it loads it.
 
 ## What you need
 
@@ -25,6 +25,7 @@ my_pack/
   quests/...        quests: .jsonc, in the game's quest format
   species/...       species: .jsonc, in the game's species format
   tiles/...         tile kinds: .jsonc, in the game's tile blueprint format
+  translations/...  translation catalogues: gettext .po, one per language
 ```
 
 Only those file types are allowed, plus `.jsonc` and Godot's `.import` files. A `.import` file may
@@ -46,12 +47,15 @@ at plain files inside the pack. Anything else gets the whole pack refused.
 	"realms": { "my_realm": "realms/my_realm.md" },
 	"quests": { "my_quest": "quests/my_quest.jsonc" },
 	"species": { "my_species": "species/my_species.jsonc" },
-	"translations": {},
+	"translations": { "de": "translations/de.po" },
 	"tiles": { "my_tile": "tiles/my_tile.jsonc" }
 }
 ```
 
-`translations` stays empty for now: a pack can't bring its own languages yet (#1969).
+`translations` names one gettext catalogue per language, by its locale (`de`, `pt_br`). Its
+`msgid`s are the game's own English texts, as in the game's `khovax.pot` template. A text the
+catalogue leaves out shows in English. A pack's catalogue for a language the game has too replaces the
+game's whole catalogue for it.
 
 Paths are relative to the pack's folder. An id the game already uses replaces the game's resource
 with yours. A tile kind's traits are rules: a pack that adds a tile kind or changes one changes how
