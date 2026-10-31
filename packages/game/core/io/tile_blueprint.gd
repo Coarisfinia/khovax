@@ -1,7 +1,8 @@
 class_name TileBlueprint
 extends RefCounted
-## A kind of tile a region is made of (#116), read from content data (core/data/tiles/, #72,
-## #506): its ground color and decoration for the view, and its traits for the rules. A region's
+## A kind of tile a region is made of (#116), read from content data (a resource pack's tile
+## blueprint, #72, #1901, in the core's format, #506): its ground color and decoration for the view,
+## and its traits for the rules. A region's
 ## legend places it by its id, named after its file (#802); the rules see only its id and traits
 ## (TileKinds).
 

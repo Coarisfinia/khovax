@@ -19,12 +19,13 @@ const FIELDS: Array[String] = [
 	"quests",
 	"species",
 	"translations",
+	"tiles",
 ]
 ## Each section of resources the manifest lists, one file per id, with the type its files load as;
-## "" for a file read as text (a region file or a realm, #1861, a quest, #1888, or a species,
-## #1903), which isn't checked to exist here: a build may leave a test-only region out
-## (export_presets.cfg), and RegionFiles and Realms read only the files there are; a missing quest
-## or species is QuestContent's or SpeciesContent's to report.
+## "" for a file read as text (a region file or a realm, #1861, a quest, #1888, a species, #1903, or
+## a tile blueprint, #1901), which isn't checked to exist here: a build may leave a test-only region
+## out (export_presets.cfg), and RegionFiles and Realms read only the files there are; a missing
+## quest, species or tile blueprint is QuestContent's, SpeciesContent's or TileContent's to report.
 const KINDS: Dictionary[String, String] = {
 	"textures": "Texture2D",
 	"models": "PackedScene",
@@ -33,6 +34,7 @@ const KINDS: Dictionary[String, String] = {
 	"quests": "",
 	"species": "",
 	"translations": "Translation",
+	"tiles": "",
 }
 ## The section of regions arranged from pieces (#1861): each region's piece files by its id, read as
 ## text like the region files.
@@ -46,6 +48,7 @@ const ENDINGS: Dictionary[String, Array] = {
 	"quests": ["jsonc"],
 	"species": ["jsonc"],
 	"translations": ["po"],
+	"tiles": ["jsonc"],
 }
 ## A version: major.minor.patch.
 const VERSION: String = "\\A[0-9]+\\.[0-9]+\\.[0-9]+\\z"
@@ -73,6 +76,8 @@ var species: Dictionary[String, String] = {}
 ## Each language's translation catalogue (#1902), a gettext .po, by its locale (`de`, `pt_br`),
 ## relative to `root`.
 var translations: Dictionary[String, String] = {}
+## Each tile kind's blueprint file (#1901) by its id, relative to `root`.
+var tiles: Dictionary[String, String] = {}
 ## Where the pack's files are named from: res:// for the default pack.
 var root: String = ""
 ## Why the pack can't be used, or "" when it can.
@@ -81,8 +86,8 @@ var problem: String = ""
 
 ## The pack the manifest `text` describes, its files under `root`, with `problem` saying why it
 ## can't be used: a field missing or unknown, an id that isn't one, or a texture, model, region,
-## region piece, realm, quest, species or translation catalogue whose file climbs out of `root`, has
-## another kind's ending or (for a texture, model or catalogue) doesn't exist.
+## region piece, realm, quest, species, translation catalogue or tile blueprint whose file climbs
+## out of `root`, has another kind's ending or (for a texture, model or catalogue) doesn't exist.
 static func parse(text: String, files_root: String) -> ResourcePack:
 	var pack: ResourcePack = ResourcePack.new()
 	pack.root = files_root
@@ -157,6 +162,7 @@ func _read(data: Dictionary) -> String:
 	quests.assign(found["quests"])
 	species.assign(found["species"])
 	translations.assign(found["translations"])
+	tiles.assign(found["tiles"])
 	region_pieces = pieces
 	return ""
 

@@ -1,7 +1,9 @@
 """Checks the content data against its schemas (#72). Godot's data_to_json.gd strips the JSONC
 comments with the game's own stripper, then jv checks each kind's files against its schema: the
 core's (#506), core/data/<kind>/, against core/data/schemas/<kind>.schema.json, and a kind a slice
-owns (#412), slices/<slice>/data/<kind>/, against the <kind>.schema.json beside it. The slice's own
+owns (#412), slices/<slice>/data/<kind>/, against the <kind>.schema.json beside it. A core kind a
+resource pack holds (the tile blueprints, #1901) lies in the default pack's PACK_DATA/<kind>/,
+checked against the core's schema, which is the format every pack's files share. The slice's own
 kind sits directly in its data/, beside <slice>.schema.json, so no folder repeats the slice's name
 (#442). A folder without its schema fails, so a slice's data never borrows another's schema; so
 does a schema without its data, which would sit unchecked, and a kind with two schemas.
@@ -21,6 +23,8 @@ from pathlib import Path
 from game_shared import log
 
 TARGET = Path("build/data-json")
+# The default resource pack's folder, where it keeps the core kinds it holds (#1901).
+PACK_DATA = Path("slices/resource_packs/data")
 # A script error can leave Godot running forever.
 TIMEOUT_SECONDS = 60
 
@@ -32,7 +36,10 @@ def schema_problems() -> tuple[dict[str, str], list[tuple[str, str | None]]]:
     for folder in sorted(Path("core/data").glob("*/")) + sorted(Path("slices").glob("*/data/*/")):
         if folder.as_posix() == "core/data/schemas":
             continue
-        if folder.parts[0] == "slices":
+        core_schema = Path(f"core/data/schemas/{folder.name}.schema.json")
+        if folder.parent == PACK_DATA and core_schema.is_file():
+            schema = core_schema
+        elif folder.parts[0] == "slices":
             schema = folder.with_name(f"{folder.name}.schema.json")
         else:
             schema = Path(f"core/data/schemas/{folder.name}.schema.json")
@@ -46,6 +53,8 @@ def schema_problems() -> tuple[dict[str, str], list[tuple[str, str | None]]]:
         path = schema.as_posix()
         if schema.parts[0] != "slices":
             folder = Path(f"core/data/{name}")
+            if not folder.is_dir():
+                folder = PACK_DATA / name
         else:
             folder = schema.parent / name
         if folder == Path(f"slices/{name}/data/{name}"):

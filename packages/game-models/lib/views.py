@@ -23,7 +23,7 @@ import os
 import re
 from pathlib import Path
 
-from game_shared.resource_packs import MANIFEST, models, read_manifest
+from game_shared.resource_packs import MANIFEST, models, read_manifest, section
 
 # A constant: its name and the text after its `=`, which may run on over lines until its brackets
 # close.
@@ -136,19 +136,21 @@ def decorations(game):
     """The names (.glb or .gltf without the extension) of the models the tile blueprints of the
     Godot project at `game` name as their decoration (TileDecorations shows it): the tile's own
     look, sized to its tile, not a thing standing on it."""
-    # A tile names its model's id in the default resource pack, whose manifest gives its file (#1864).
-    pack_models = models(read_manifest(Path(game) / MANIFEST))
-    tiles = os.path.join(game, "core", "data", "tiles", "*.jsonc")
+    # A tile names its model's id in the default resource pack, whose manifest gives its file
+    # (#1864), and the tiles' own files too (#1901).
+    manifest = read_manifest(Path(game) / MANIFEST)
+    pack_models = models(manifest)
+    tiles = sorted(section(manifest, "tiles").values())
     names = set()
-    for path in glob.glob(tiles):
-        with open(path, encoding="utf-8") as text:
+    for path in tiles:
+        with open(os.path.join(game, path), encoding="utf-8") as text:
             # JSONC: a commented-out model names no decoration. A comment starts after a space or
             # at a line's start, never in a path's `res://`.
             body = re.sub(r"(?m)(^|\s)//.*$", "", re.sub(r"/\*.*?\*/", "", text.read(), flags=re.S))
             for found in re.finditer(r'"model"\s*:\s*"([^"]+)"', body):
                 names.add(os.path.splitext(os.path.basename(pack_models[found.group(1)]))[0])
     if not names:
-        raise ValueError("no tile blueprint names a model in %s: the path moved?" % tiles)
+        raise ValueError("no tile blueprint the default pack lists names a model: %s" % tiles)
     return names
 
 
