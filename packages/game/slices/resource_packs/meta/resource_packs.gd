@@ -4,7 +4,7 @@ extends RefCounted
 ## walking the loaded packs in order, the first that has the id giving it. The game's own resources
 ## are the default pack, last in the order; a player's packs (#1858) come before it, and override
 ## what they provide. Nothing looks up a built-in texture, model, region, realm, quest (#1888) or
-## species (#1903) any other way (resource_packs_check.py in CI).
+## species (#1903) or translation catalogue any other way (resource_packs_check.py in CI).
 
 ## The default pack's manifest; its files are named from res://.
 const DEFAULT: String = "res://slices/resource_packs/data/default.jsonc"
@@ -136,6 +136,31 @@ static func quests() -> Dictionary[String, String]:
 			if not found.has(quest_id):
 				found[quest_id] = pack.root + pack.quests[quest_id]
 	found.sort()
+	return found
+
+
+## Every language's translation catalogue (#1902) the loaded packs have, in locale order: the first
+## pack that has a locale gives its catalogue. One whose file doesn't load is warned about and left
+## out, so its texts fall back to the source text.
+static func translations() -> Array[Translation]:
+	return translations_of(loaded())
+
+
+## The translation catalogues of `packs`, walked in their order, as translations() reads them.
+static func translations_of(packs: Array[ResourcePack]) -> Array[Translation]:
+	var givers: Dictionary[String, ResourcePack] = {}
+	for pack: ResourcePack in packs:
+		for locale: String in pack.translations:
+			if not givers.has(locale):
+				givers[locale] = pack
+	givers.sort()
+	var found: Array[Translation] = []
+	for locale: String in givers:
+		var catalogue: Translation = givers[locale].translation(locale)
+		if catalogue == null:
+			push_warning("the translation %s in %s doesn't load" % [locale, givers[locale].id])
+		else:
+			found.append(catalogue)
 	return found
 
 

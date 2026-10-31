@@ -151,7 +151,9 @@ every script with `godot --headless --path packages/game --check-only -s res://<
 
 The game's texts are translated with gettext, the English text being the key (#1608).
 `packages/game/translations/khovax.pot`, the template every language's `.po` starts from, is
-written from the texts the player reads; CI fails when it's out of date. After changing a text,
+written from the texts the player reads; CI fails when it's out of date. A language's catalogue,
+`translations/<locale>.po`, is listed under `translations` in the default resource pack's manifest
+(`slices/resource_packs/data/default.jsonc`), and the game registers it at start (#1902). After changing a text,
 write it again and commit it:
 
 ```sh

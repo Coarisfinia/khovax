@@ -23,6 +23,7 @@ LaunchMode="*res://game/launch_mode.gd"
 ErrorLogging="*res://game/error_logging.gd"
 TestMode="*res://game/test_mode.gd"
 TextNamesWiring="*res://game/text_names_wiring.gd"
+TranslationsWiring="*res://game/translations_wiring.gd"
 
 [debug]
 

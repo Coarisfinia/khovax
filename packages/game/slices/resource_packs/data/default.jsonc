@@ -1,7 +1,8 @@
 // The default resource pack (#1860): the game's own resources, in the manifest format a player's
 // pack shares (#1858). Every lookup goes through ResourcePacks, which walks the loaded packs in
 // order, this one last. Its files are named from res://, its root: its textures and models load as
-// Godot imported them, its region files, pieces, realms, quests and species are read as text.
+// Godot imported them, its region files, pieces, realms, quests and species are read as text, and
+// its translation catalogues load as gettext .po files.
 {
 	"id": "default",
 	"name": "Default",
@@ -197,5 +198,9 @@
 		"vynakiir": "slices/species/data/vynakiir.jsonc",
 		"vynnimu": "slices/species/data/vynnimu.jsonc",
 		"wobulumu": "slices/species/data/wobulumu.jsonc"
-	}
+	},
+	// Each language's catalogue (#1902), translations/<locale>.po, registered at start; none yet,
+	// so every text shows as its English source. The template they start from, khovax.pot, stays
+	// in translations/, where its tool writes it.
+	"translations": {}
 }

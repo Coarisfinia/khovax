@@ -44,9 +44,12 @@ at plain files inside the pack. Anything else gets the whole pack refused.
 	"region_pieces": { "my_region_parts": ["regions/my_region_parts/start.md"] },
 	"realms": { "my_realm": "realms/my_realm.md" },
 	"quests": { "my_quest": "quests/my_quest.jsonc" },
-	"species": { "my_species": "species/my_species.jsonc" }
+	"species": { "my_species": "species/my_species.jsonc" },
+	"translations": {}
 }
 ```
+
+`translations` stays empty for now: a pack can't bring its own languages yet (#1969).
 
 Paths are relative to the pack's folder. An id the game already uses replaces the game's resource
 with yours.

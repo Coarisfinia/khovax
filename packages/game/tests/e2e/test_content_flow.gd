@@ -2126,10 +2126,10 @@ func _check_prefetched() -> String:
 
 
 ## The default resource pack reads as the pack `default`, and every texture, model, region, realm,
-## quest and species it lists resolves through ResourcePacks (#1860, #1864, #1861, #1888, #1903). A
-## manifest with an unknown field, a bad id or version, or a resource whose file is missing (a
-## region's, realm's, quest's or species' is read as text and found when it's read), of another kind
-## or outside the pack is refused, as a player's pack will be (#1858).
+## quest, species and translation catalogue it lists resolves through ResourcePacks (#1860, #1864,
+## #1861, #1888, #1903, #1902). A manifest with an unknown field, a bad id or version, or a resource
+## whose file is missing (a region's, realm's, quest's or species' is read as text and found when
+## it's read), of another kind or outside the pack is refused, as a player's pack will be (#1858).
 func _check_resource_packs() -> String:
 	var packs: Array[ResourcePack] = ResourcePacks.loaded()
 	if packs.size() != 1:
@@ -2152,6 +2152,8 @@ func _check_resource_packs() -> String:
 	listed.sort()
 	if realms.keys() != listed or not realms.values().all(FileAccess.file_exists):
 		return "the default pack's realms don't resolve: %s" % realms
+	if ResourcePacks.translations().size() != packs[0].translations.size():
+		return "the default pack's translation catalogues don't all resolve"
 	var quests: Dictionary[String, String] = ResourcePacks.quests()
 	if quests.size() != packs[0].quests.size() or not quests.values().all(FileAccess.file_exists):
 		return "the default pack's quests don't resolve: %s" % quests
@@ -2210,7 +2212,8 @@ func _check_pack_manifests() -> String:
 		+ " \"models\": {\"m\": \"%s\"}, \"regions\": {\"r\": \"regions/r.md\"},"
 		+ " \"region_pieces\": {\"q\": [\"regions/q/start.md\"]},"
 		+ " \"realms\": {\"w\": \"realms/w.md\"}, \"quests\": {\"u\": \"quests/u.jsonc\"},"
-		+ " \"species\": {\"s\": \"species/s.jsonc\"}%s}"
+		+ " \"species\": {\"s\": \"species/s.jsonc\"},"
+		+ " \"translations\": {}%s}"
 	)
 	var cog: String = "assets/game-icons/cog.svg"
 	var wolf: String = "assets/mana-wolf/mana_wolf.glb"
@@ -2243,6 +2246,7 @@ func _check_pack_manifests() -> String:
 	cases["no quests"] = regions.replace(", \"quests\": {\"u\": \"quests/u.jsonc\"}", "")
 	cases["a species that isn't JSONC"] = regions.replace("species/s.jsonc", cog)
 	cases["no species"] = regions.replace(", \"species\": {\"s\": \"species/s.jsonc\"}", "")
+	cases["no translations"] = regions.replace(", \"translations\": {}", "")
 	cases["a region both whole and in pieces"] = regions.replace("{\"q\": [", "{\"r\": [")
 	# `regions` is the valid manifest, which every case above changes in one place.
 	if not ResourcePack.parse(regions, "res://").problem.is_empty():
@@ -2250,6 +2254,37 @@ func _check_pack_manifests() -> String:
 	for what: String in cases:
 		if ResourcePack.parse(cases[what], "res://").problem.is_empty():
 			return "a resource pack manifest with %s wasn't refused" % what
+	return _check_pack_translations()
+
+
+## A pack's translation catalogue loads for the locale the pack names it by and is registered
+## (#1902), and a missing catalogue or one that isn't a .po is refused: a text shows translated in
+## that language, as its source text where the catalogue lacks it, and as its source text in
+## English. Registering the loaded packs' catalogues again takes it out. The texts are the game's
+## own, named through variables so the template doesn't list the test.
+func _check_pack_translations() -> String:
+	var pack: ResourcePack = _words_pack("{\"de\": \"words.po\"}")
+	if not pack.problem.is_empty():
+		return "a pack with a translation catalogue was refused: " + pack.problem
+	for refused: String in ["{\"de\": \"none.po\"}", "{\"de\": \"words.md\"}"]:
+		if _words_pack(refused).problem.is_empty():
+			return "a pack with the translation catalogues %s wasn't refused" % refused
+	var packs: Array[ResourcePack] = [pack]
+	packs.append_array(ResourcePacks.loaded())
+	var taken: String = "Taken"
+	var other: String = "Development"
+	var before: String = TranslationServer.get_locale()
+	PackTranslations.register(ResourcePacks.translations_of(packs))
+	TranslationServer.set_locale("de")
+	var shown: Array[String] = [TranslationServer.tr(taken), TranslationServer.tr(other)]
+	TranslationServer.set_locale("en")
+	shown.append(TranslationServer.tr(taken))
+	PackTranslations.register(ResourcePacks.translations())
+	TranslationServer.set_locale("de")
+	shown.append(TranslationServer.tr(taken))
+	TranslationServer.set_locale(before)
+	if shown != ["Genommen", other, taken, taken]:
+		return "a pack's catalogue didn't translate, fall back or come out again: %s" % [shown]
 	return _check_pack_loading()
 
 
@@ -2400,12 +2435,32 @@ func _write_bytes(path: String, bytes: PackedByteArray) -> void:
 	file.close()
 
 
+## A pack under user:// whose translation catalogues are `catalogues` (a manifest's object), beside
+## words.po, a German catalogue translating one of the game's texts, and words.md.
+func _words_pack(catalogues: String) -> ResourcePack:
+	var folder: String = "user://pack_translations/"
+	var _made: Error = DirAccess.make_dir_recursive_absolute(folder)
+	var file: FileAccess = FileAccess.open(folder + "words.po", FileAccess.WRITE)
+	var _stored: bool = file.store_string(
+		"msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n"
+		+ "msgid \"Taken\"\nmsgstr \"Genommen\"\n"
+	)
+	file.close()
+	_write_bytes(folder + "words.md", "# W".to_utf8_buffer())
+	var manifest: String = _pack_manifest("pack_words").replace(
+		"\"translations\": {}",
+		"\"translations\": " + catalogues,
+	)
+	return ResourcePack.parse(manifest, folder)
+
+
 ## A pack manifest for the pack `pack_id`, with one region and nothing else.
 func _pack_manifest(pack_id: String) -> String:
 	return (
 		"{\"id\": \"%s\", \"name\": \"n\", \"version\": \"1.0.0\", \"game_version\": \"0.1.0\","
 		+ " \"textures\": {}, \"models\": {}, \"regions\": {\"r\": \"regions/r.md\"},"
-		+ " \"region_pieces\": {}, \"realms\": {}, \"quests\": {}, \"species\": {}}"
+		+ " \"region_pieces\": {}, \"realms\": {}, \"quests\": {}, \"species\": {},"
+		+ " \"translations\": {}}"
 	) % pack_id
 
 
