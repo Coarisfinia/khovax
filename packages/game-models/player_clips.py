@@ -56,8 +56,8 @@ def build(out):
         clip_sources.stash(rig, action, name)
         # Its rig was only the clip's carrier: the clip now plays on the library's.
         armature = other.data
-        bpy.data.objects.remove(other)
-        bpy.data.armatures.remove(armature)
+        bpy.data.objects.remove(other, do_unlink=True)
+        bpy.data.armatures.remove(armature, do_unlink=True)
         print("CLIP %s: frames %d-%d" % (name, *action.frame_range))
     print("PLAYER CLIPS: %d clips on %d bones" % (len(clips), len(rig.data.bones)))
     clip_sources.write(rig, out)

@@ -29,10 +29,10 @@ def load(path):
     rig = rigs[0]
     for obj in added:
         if obj is not rig:
-            bpy.data.objects.remove(obj)
+            bpy.data.objects.remove(obj, do_unlink=True)
     # The importer draws bones with shapes in a collection of its own.
     for collection in [c for c in bpy.data.collections if not c.objects and not c.children]:
-        bpy.data.collections.remove(collection)
+        bpy.data.collections.remove(collection, do_unlink=True)
     data = rig.animation_data
     actions = [strip.action for track in data.nla_tracks for strip in track.strips] if data else []
     if data and data.action and data.action not in actions:

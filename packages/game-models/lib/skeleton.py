@@ -33,6 +33,10 @@ def read(path):
     bones = {}
     for joint in sorted(joints):
         node = nodes[joint]
+        if "matrix" in node:
+            # glTF may give a node's rest as a matrix; Blender's exporter never does, so such a
+            # file didn't come from import_clip.py.
+            raise ValueError("%s: the bone %s gives its rest as a matrix, not TRS" % (path, node["name"]))
         parent = parents.get(joint)
         bones[node["name"]] = (
             nodes[parent]["name"] if parent in joints else None,
