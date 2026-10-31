@@ -1,22 +1,26 @@
 """Validates the default resource pack (#1860): the game's own resources, its textures, its models
-(#1864), its region files, region pieces and realms (#1861) and its quests (#1888), described by the
-same manifest a player's pack will have (#1858), and looked up only through ResourcePacks. It fails when
+(#1864), its region files, region pieces and realms (#1861), its quests (#1888) and its species
+(#1903), described by the same manifest a player's pack will have (#1858), and looked up only
+through ResourcePacks. It fails when
 - the manifest (game_shared.resource_packs.MANIFEST) is missing or isn't a JSON object;
 - an id doesn't resolve: it isn't an id (Ids), or its file isn't tracked, isn't imported by Godot
   (a .import beside it, for the kinds Godot imports) or isn't of its kind (an image, a .glb or
-  .gltf model, a Markdown region file, piece or realm, a JSONC quest);
+  .gltf model, a Markdown region file, piece or realm, a JSONC quest or species);
 - a resource is unreferenced: the manifest lists it but no script (outside its comments), scene,
-  resource or content file of the game's names its id as a string (but for the realms and the
-  quests, which the game finds by listing the pack), or a file of its kind (an image or model
-  under assets/, a region file or piece under regions/, a realm under realms/, a quest in the
-  quests slice's data/) is in the repository but not in the manifest;
-- a quest's entry isn't slices/quests/data/<id>.jsonc, so it's named after its file (#72);
-- a script, scene, resource or content file names a texture's, model's, region's, realm's or
-  quest's res:// path instead of its id, so it would get around the resolver, and a pack could
+  resource or content file of the game's names its id as a string (but for the realms, the quests
+  and the species, which the game finds by listing the pack), or a file of its kind (an image or
+  model under assets/, a region file or piece under regions/, a realm under realms/, a quest in the
+  quests slice's data/, a species directly in slices/species/data/) is in the repository but not in
+  the manifest;
+- a quest's or species' entry isn't its own file (slices/quests/data/<id>.jsonc,
+  slices/species/data/<id>.jsonc), so it's named after its file (#72);
+- a script, scene, resource or content file names a texture's, model's, region's, realm's, quest's
+  or species' res:// path instead of its id, so it would get around the resolver, and a pack could
   never override it;
   or a script names anything by its uid://, loaded or kept for later (stricter than the pack needs:
-  scripts never do; #1865, #1919), or builds a path under assets/, regions/ or realms/ at runtime
-  or the quests' folder (#1865; the tools, which list the assets for the credits, may). A path may hold spaces (#1919).
+  scripts never do; #1865, #1919), or builds a path under assets/, regions/, realms/, the quests'
+  or the species' folder at runtime (#1865; the tools, which list the assets for the credits, may).
+  A path may hold spaces (#1919).
 An id named only in the tests (any tests/ folder, or a test_*.gd anywhere; #1865, #1919) counts as
 unreferenced: they name ids to check them. The models the boot flow lists as built before what uses
 them are the exception.
@@ -63,6 +67,9 @@ class Kind:
 # Where the default pack's quests lie (#1888): in the quests slice, which owns the kind and its
 # schema (#412).
 QUESTS = "slices/quests/data"
+# Where the species lie (#1903): each directly in the species slice's data/, beside its schema and
+# its abilities' folder, which aren't species.
+SPECIES = "slices/species/data"
 # Each kind of resource the manifest lists, by its section.
 KINDS: dict[str, Kind] = {
     "textures": Kind("texture", IMAGES, True, "assets"),
@@ -75,6 +82,8 @@ KINDS: dict[str, Kind] = {
     "realms": Kind("realm", (".md",), False, "realms/*.md", listed=True),
     # Every quest the pack has is one the players can take, so nothing names one (#1888).
     "quests": Kind("quest", (".jsonc",), False, f"{QUESTS}/*.jsonc", listed=True),
+    # Every species the packs have is in the game, so nothing names one to look it up (#1903).
+    "species": Kind("species", (".jsonc",), False, f"{SPECIES}/*.jsonc", listed=True),
 }
 # What names a resource: the scripts, scenes and resources, and the content files (#1864).
 NAMING = ("*.gd", "*.tscn", "*.tres", "*.jsonc")
@@ -85,10 +94,13 @@ STRING = re.compile(r"\"([a-z][a-z0-9_]*)\"")
 # between, so a file name with spaces or the other quote counts too (#1919), and prose outside
 # a string never does.
 PATH_CHAR = r"(?:(?!\1).)"
+# The same, but within one folder: a species' file, never its abilities' (#1903).
+NAME_CHAR = r"(?:(?!\1)[^/])"
 PATH = re.compile(
     rf"([\"'])res://(?P<path>assets/{PATH_CHAR}+?\.(?:"
     + "|".join(ending[1:] for ending in IMAGES + MODELS)
-    + rf")|regions/{PATH_CHAR}+|realms/{PATH_CHAR}+|{QUESTS}/{PATH_CHAR}+?\.jsonc)\1"
+    + rf")|regions/{PATH_CHAR}+|realms/{PATH_CHAR}+|{QUESTS}/{PATH_CHAR}+?\.jsonc"
+    + rf"|{SPECIES}/{NAME_CHAR}+\.jsonc)\1"
 )
 
 # Lookups around the resolver that name no path the check above could read (#1865): a uid://
@@ -97,8 +109,11 @@ PATH = re.compile(
 # Any uid:// string, not only a load()'s or preload()'s argument: a threaded load, or a uid kept
 # in a constant and loaded later, gets around the resolver too (#1919).
 UID_STRING = re.compile(rf"([\"'])(?P<uid>uid://{PATH_CHAR}*)\1")
-# The quests' folder also holds their schema, a whole file, which names no quest.
-PACK_STRING = re.compile(rf"([\"'])res://(?:assets|regions|realms|{QUESTS})(?:/{PATH_CHAR}*)?\1")
+# The quests' folder also holds their schema, a whole file, which names no quest; the species'
+# folder also holds the abilities' folder, which isn't theirs.
+PACK_STRING = re.compile(
+    rf"([\"'])res://(?:(?:assets|regions|realms|{QUESTS})(?:/{PATH_CHAR}*)?|{SPECIES}(?:/{NAME_CHAR}*)?)\1"
+)
 WHOLE_FILE = re.compile(rf"([\"'])res://{PATH_CHAR}+\.[A-Za-z0-9]+\1")
 # The tools list the assets as files (the credits), never looking one up for the game.
 TOOLS = "tools/"
@@ -277,7 +292,12 @@ def main() -> int:
         for quest_id, paths in entries["quests"].items()
         if paths != [f"{QUESTS}/{quest_id}.jsonc"]
     ]
-    tracked = set(git_files("assets", "regions", "realms", QUESTS))
+    problems += [
+        (f"species {species_id}'s file is {paths}, not {SPECIES}/{species_id}.jsonc", MANIFEST.as_posix())
+        for species_id, paths in entries["species"].items()
+        if paths != [f"{SPECIES}/{species_id}.jsonc"]
+    ]
+    tracked = set(git_files("assets", "regions", "realms", QUESTS, SPECIES))
     models = {path for paths in entries["models"].values() for path in paths}
     used_by_models = model_images(sorted(models & tracked))
     named = {
@@ -293,6 +313,7 @@ def main() -> int:
             for path in git_files(kind.files)
             if path.endswith(kind.endings) and path not in used_by_models
             and (kind.files != "regions/*.md" or path.count("/") == 1)
+            and (name != "species" or os.path.dirname(path) == SPECIES)
         )
         problems += unresolved(kind, entries[name], tracked)
         problems += unreferenced(kind, entries[name], named, files)
