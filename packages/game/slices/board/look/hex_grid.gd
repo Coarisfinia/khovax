@@ -42,7 +42,9 @@ const CHANGE_SECONDS: float = 0.8
 var fixed_region: Region
 var _material: StandardMaterial3D = StandardMaterial3D.new()
 var _mesh: CylinderMesh = CylinderMesh.new()
-var _tiles: MultiMeshInstance3D = MultiMeshInstance3D.new()
+## Made in `_ready`, where it joins the grid: a grid freed without ever entering the tree (the
+## editor makes such, #1955) would otherwise leave it behind, unparented and never freed.
+var _tiles: MultiMeshInstance3D
 ## The region the tiles show.
 var _region: Region
 ## The colors each layer last painted onto tiles, by PaintLayer.
@@ -73,6 +75,7 @@ func _ready() -> void:
 	_mesh.bottom_radius = HexLayout.SIZE * TILE_SCALE
 	_mesh.height = TILE_HEIGHT
 	_mesh.material = _material
+	_tiles = MultiMeshInstance3D.new()
 	_tiles.name = TILES_NODE
 	_tiles.multimesh = MultiMesh.new()
 	_tiles.multimesh.transform_format = MultiMesh.TRANSFORM_3D
