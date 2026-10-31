@@ -203,8 +203,10 @@ jobs:
         # Every pack is a .pck from our own pack builder (#1868, #1869), the default one too, so
         # each push builds it, with the builder zipped as each release ships it to pack makers
         # (#1871), run by a plain Python outside the workspace. A pack is data, never code: the
-        # builder must refuse its planted pack.
+        # builder must refuse its planted pack. Its own test runs first: a Godot run that reports
+        # objects leaked at exit fails the build (#1974).
         run: |
+          uv run --locked --package khovax-game-pack-builder ../game-pack-builder/test_build_pack.py
           uv run --locked --package khovax-game-pack-builder \
             ../game-pack-builder/release_zip.py "$RUNNER_TEMP/packs/pack-builder.zip"
           unzip -q "$RUNNER_TEMP/packs/pack-builder.zip" -d "$RUNNER_TEMP/packs"
