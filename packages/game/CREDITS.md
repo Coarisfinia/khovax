@@ -193,6 +193,16 @@ The assets this game uses, with their authors and licenses. Generated from each 
 - **License:** Unlicense, the repository's own license, see `LICENSE.md` next to this file; its
   textures are CC0 1.0 (`packages/game-models/textures/LICENSE.md`).
 
+## Player clips
+
+- **Files:** `assets/player/`
+- **Author:** the project (generated with Meshy AI, paid plan, Private licence)
+- **Source:** the baseline body (#1827) rigged and animated with Meshy AI by the owner, one clip per
+  export (#1934); each export's rig and clip taken by `packages/game-models/import_clip.py` into
+  `packages/game-models/sources/player/`, then merged into `player_clips.glb` by
+  `packages/game-models/player_clips.py` (#1935)
+- **License:** Unlicense, the repository's own license, see `LICENSE.md` next to this file.
+
 ## Quaternius items
 
 - **Files:** `assets/quaternius-items/`

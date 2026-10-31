@@ -40,7 +40,7 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "game-shared"))
 
 from game_shared import log  # noqa: E402
-from lib import footprint, imported, known, views  # noqa: E402
+from lib import footprint, imported, known, views, world_scale  # noqa: E402
 
 # The Godot project, whose views show the packs' models.
 GAME = os.path.join(os.path.dirname(HERE), "game")
@@ -114,6 +114,10 @@ def main():
         if model in tile_looks:
             # The tile's own look, sized to its tile by TileDecorations, not a thing on the hex.
             log.info("FOOTPRINT %s a tile's decoration: the tile's own look" % model)
+            continue
+        if world_scale.clip_library(os.path.join(HERE, model + ".py")):
+            # Its stand-in rig has no body: the clips' root motion alone isn't a reach.
+            log.info("FOOTPRINT %s a clip library: no body to measure" % model)
             continue
         fps, _loops = imported.settings(glb)
         lines = measure(model, glb, fps, scripts)

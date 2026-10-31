@@ -13,6 +13,8 @@ against the player's height, from lib/world_scale.py, where the numbers and the 
   stays true to the figure.
 - **Any other pack's model a view stands on the board** (the chest) is measured as each view shows
   it, in the clip it stands in, as a prop.
+- A clip library (#1935, its script's kind `clip_library`) holds clips on a stand-in rig, with no
+  body to measure.
 - A tile's decoration is the tile's own look, and a pack's model no view shows is an item's
   picture: neither is measured, as in check_footprint.py.
 
@@ -20,7 +22,6 @@ It prints a line per measure and `WORLD SCALE CHECK: PASS` or `FAIL` (and exits 
 through game_shared.log (#1115): a failing line is an error on the .glb. A model that fails today
 waits in KNOWN with the issue that fixes it, and the list only shrinks (lib/known.py)."""
 
-import ast
 import os
 import sys
 
@@ -38,8 +39,6 @@ from lib import footprint, imported, known, views, world_scale  # noqa: E402
 GAME = os.path.join(os.path.dirname(HERE), "game")
 # The view that shows the players' figure, whose height is the player's.
 FIGURE_VIEW = "PlayerView"
-# The constant a model script names its kind in.
-KIND = "WORLD_SCALE"
 
 # (model, measure: "height" or "length") that fails today, with the issue that fixes it; that
 # issue takes its entries off.
@@ -47,17 +46,6 @@ KNOWN = {
     # The gate the player walks through stands below the player (#1907).
     ("tentacle_gate", "height"): 1907,
 }
-
-
-def script_kind(path):
-    """The kind the model script at `path` names in its module-level `KIND` constant, or None."""
-    with open(path, encoding="utf-8") as source:
-        tree = ast.parse(source.read(), path)
-    for node in tree.body:
-        if isinstance(node, ast.Assign) and any(
-                isinstance(target, ast.Name) and target.id == KIND for target in node.targets):
-            return node.value.value if isinstance(node.value, ast.Constant) else None
-    return None
 
 
 def size(rig, meshes, standing=None):
@@ -83,10 +71,10 @@ def scripted(script, glb, fps):
     rig = imported.load_view(glb, fps)
     if footprint.limits(rig, False) != footprint.PROP:
         return None
-    kind = script_kind(script)
+    kind = world_scale.script_kind(script)
     if kind is None:
         return ["FAIL kind: %s names no %s kind (lib/world_scale.py's KINDS)" % (
-            os.path.basename(script), KIND)]
+            os.path.basename(script), world_scale.KIND)]
     length, height = size(rig, footprint.meshes(rig, bpy.data.objects))
     return world_scale.judge(kind, length, height)[0]
 
@@ -128,6 +116,9 @@ def main():
             continue
         fps, _loops = imported.settings(glb)
         script = os.path.join(HERE, model + ".py")
+        if world_scale.clip_library(script):
+            log.info("WORLD SCALE %s a clip library: no body to measure" % model)
+            continue
         if os.path.exists(script):
             lines = scripted(script, glb, fps)
             if lines is None:

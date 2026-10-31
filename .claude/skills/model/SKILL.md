@@ -443,6 +443,31 @@ short chain whose part the body holds isn't regrown (`WEIGHTLESS`): rig it by ha
   swinging leg thinned the chest (the volume check): give the shoulders', haunches', belly's and
   brisket's skin to the trunk, as Fohossa's `keep_trunk` does.
 
+## The player's clips: one Meshy export per clip, merged into a library (#1935)
+Meshy rigs one clip per export (#1934): the owner exports each clip from the same rigged baseline
+body into `Coarisfinia/khovax-sources` (`1827-baseline-body/`). The clips are kept **apart from the
+body**, as a clip library of their own, so a later body plays the same clips:
+
+1. **Each export becomes a clip source:** `uv run --locked packages/game-models/blender.py
+   --background --factory-startup --python packages/game-models/import_clip.py -- <export.glb>
+   <Clip> packages/game-models/sources/player/clips/<Clip>.glb`, named after the clip the game
+   plays. It keeps the rig and its one clip, without the body (`lib/clip_sources.py`: a stand-in
+   triangle carries the rig as a skin). `rest` instead of a clip name writes the rig alone, the
+   library's skeleton (`sources/player/skeleton.glb`), which every clip must share.
+2. **The library's build merges them:** `player_clips.py` puts every clip source onto the one rig
+   and exports `packages/game/assets/player/player_clips.glb`. It **fails when a clip source's
+   skeleton differs** from the skeleton's (a bone missing or extra, another parent, another rest
+   pose; `lib/skeleton.py`, read from the .glb as Godot reads it), naming each difference in a
+   `SKELETON` line. CI builds it with every model (step 14), so a clip from another rig fails there.
+3. **Godot maps the rig to its humanoid profile:** the library's `.import` gives its skeleton a
+   `BoneMap` with `SkeletonProfileHumanoid` (Meshy's Mixamo names, as Godot imports them, to the
+   profile's bones), so its tracks turn `%GeneralSkeleton:<profile bone>`. Any body imported with
+   such a map, Meshy's or not, plays the same clips. The boot flow checks the library loads with
+   its clips on the profile's bones (`UNWORN_CLIPS`) until the body's view plays it.
+
+A new body still needs its contacts and clearances checked against the clips, since its
+proportions differ.
+
 ## Props from a bare shape: the shared texture set (#1853)
 World props are generated as **shapes only** (5 credits, the owner's pick on #1846) and textured
 by us; creatures and the player keep Meshy's texture (15). **There is one small texture set for
