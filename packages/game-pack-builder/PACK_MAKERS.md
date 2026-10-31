@@ -1,6 +1,6 @@
 # The pack builder
 
-Builds a resource pack for the game: textures, models, regions and realms that add to or
+Builds a resource pack for the game: textures, models, regions, realms and quests that add to or
 replace the game's own. A pack is data, never code. The builder refuses anything else, and the game
 checks every pack again before it loads it.
 
@@ -22,6 +22,7 @@ my_pack/
   models/...        models: .glb, or .gltf with its .bin
   regions/...       regions and region pieces: .md
   realms/...        realms: .md
+  quests/...        quests: .jsonc, in the game's quest format
 ```
 
 Only those file types are allowed, plus `.jsonc` and Godot's `.import` files. A `.import` file may
@@ -40,7 +41,8 @@ at plain files inside the pack. Anything else gets the whole pack refused.
 	"models": { "my_model": "models/rock.glb" },
 	"regions": { "my_region": "regions/my_region.md" },
 	"region_pieces": { "my_region_parts": ["regions/my_region_parts/start.md"] },
-	"realms": { "my_realm": "realms/my_realm.md" }
+	"realms": { "my_realm": "realms/my_realm.md" },
+	"quests": { "my_quest": "quests/my_quest.jsonc" }
 }
 ```
 

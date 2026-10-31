@@ -28,7 +28,7 @@ extends RefCounted
 ## name, and broken tags are refused; tags whose content can't be read are warned about (#949). No
 ## two things share an id or a name, whatever their kinds, in any case (#909). Every content kind is
 ## read ahead in the background (#816). The default resource pack (#1860) reads with every texture
-## resolving, and broken pack manifests are refused.
+## resolving, and broken pack manifests are refused; the quests are read from it (#1888).
 
 ## A model a species can wear (#1223), by its id in the resource packs (#1864).
 const MODEL: String = "model_mana_wolf"
@@ -2124,11 +2124,11 @@ func _check_prefetched() -> String:
 	return _check_resource_packs()
 
 
-## The default resource pack reads as the pack `default`, and every texture, model, region and
-## realm it lists resolves through ResourcePacks (#1860, #1864, #1861). A manifest with an unknown
-## field, a bad id or version, or a texture, model, region or realm whose file is missing (a
-## region's or realm's is read as text and found when it's read), of another kind or lies outside
-## the pack is refused, as a player's pack will be (#1858).
+## The default resource pack reads as the pack `default`, and every texture, model, region, realm
+## and quest it lists resolves through ResourcePacks (#1860, #1864, #1861, #1888). A manifest with
+## an unknown field, a bad id or version, or a texture, model, region, realm or quest whose file is
+## missing (a region's, realm's or quest's is read as text and found when it's read), of another
+## kind or lies outside the pack is refused, as a player's pack will be (#1858).
 func _check_resource_packs() -> String:
 	var packs: Array[ResourcePack] = ResourcePacks.loaded()
 	if packs.size() != 1:
@@ -2151,6 +2151,26 @@ func _check_resource_packs() -> String:
 	listed.sort()
 	if realms.keys() != listed or not realms.values().all(FileAccess.file_exists):
 		return "the default pack's realms don't resolve: %s" % realms
+	var quests: Dictionary[String, String] = ResourcePacks.quests()
+	if quests.size() != packs[0].quests.size() or not quests.values().all(FileAccess.file_exists):
+		return "the default pack's quests don't resolve: %s" % quests
+	return _check_pack_quests()
+
+
+## The quests read are exactly the ones the resource packs list (#1888), and a quest whose file is
+## missing is reported, naming the file.
+func _check_pack_quests() -> String:
+	var content: QuestContent = QuestContent.load_quests()
+	var listed: Array = ResourcePacks.quests().keys()
+	var read: Array = content.quests.keys()
+	read.sort()
+	if listed.is_empty() or read != listed:
+		return "the quests aren't the packs' %s: %s" % [listed, read]
+	var missing_file: String = "res://nowhere/nowhere.jsonc"
+	var nowhere: Dictionary[String, String] = { "nowhere": missing_file }
+	var missing: QuestContent = QuestContent.load_quests(nowhere)
+	if not missing.problem.begins_with(missing_file) or not missing.quests.is_empty():
+		return "a missing quest wasn't reported: " + missing.problem
 	return _check_pack_misses()
 
 
@@ -2175,7 +2195,7 @@ func _check_pack_manifests() -> String:
 		start + " \"game_version\": \"0.1.0\", \"textures\": {\"%s\": \"%s\"},"
 		+ " \"models\": {\"m\": \"%s\"}, \"regions\": {\"r\": \"regions/r.md\"},"
 		+ " \"region_pieces\": {\"q\": [\"regions/q/start.md\"]},"
-		+ " \"realms\": {\"w\": \"realms/w.md\"}%s}"
+		+ " \"realms\": {\"w\": \"realms/w.md\"}, \"quests\": {\"u\": \"quests/u.jsonc\"}%s}"
 	)
 	var cog: String = "assets/game-icons/cog.svg"
 	var wolf: String = "assets/mana-wolf/mana_wolf.glb"
@@ -2204,6 +2224,8 @@ func _check_pack_manifests() -> String:
 	)
 	cases["a realm that isn't Markdown"] = regions.replace("realms/w.md", cog)
 	cases["no realms"] = regions.replace(", \"realms\": {\"w\": \"realms/w.md\"}", "")
+	cases["a quest that isn't JSONC"] = regions.replace("quests/u.jsonc", "quests/u.md")
+	cases["no quests"] = regions.replace(", \"quests\": {\"u\": \"quests/u.jsonc\"}", "")
 	cases["a region both whole and in pieces"] = regions.replace("{\"q\": [", "{\"r\": [")
 	if not ResourcePack.parse(
 		valid % ["p", "1.0.0", "a", cog, wolf, ""],
@@ -2363,7 +2385,7 @@ func _pack_manifest(pack_id: String) -> String:
 	return (
 		"{\"id\": \"%s\", \"name\": \"n\", \"version\": \"1.0.0\", \"game_version\": \"0.1.0\","
 		+ " \"textures\": {}, \"models\": {}, \"regions\": {\"r\": \"regions/r.md\"},"
-		+ " \"region_pieces\": {}, \"realms\": {}}"
+		+ " \"region_pieces\": {}, \"realms\": {}, \"quests\": {}}"
 	) % pack_id
 
 

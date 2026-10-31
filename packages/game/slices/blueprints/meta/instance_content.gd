@@ -21,7 +21,7 @@ static func kinds() -> Dictionary[String, Callable]:
 		FactionContent.DIR: FactionContent.cached,
 		PeopleContent.DIR: PeopleContent.cached,
 		DialogContent.DIR: DialogContent.cached,
-		QuestContent.DIR: QuestContent.cached,
+		QuestContent.KEY: QuestContent.cached,
 		RuleSetContent.DIR: RuleSetContent.cached,
 		BlueprintContent.DIR: BlueprintContent.cached,
 	}

@@ -28,6 +28,20 @@ func read(directory: String) -> void:
 			return
 
 
+## Reads every file of `files` (each res:// path by its entry's id, as a resource pack lists them,
+## #1888) into this through `add`, in id order, and stops at the first one that can't be: `problem`
+## then names that file and why. A file that can't be read is refused like any broken one.
+func read_files(files: Dictionary[String, String]) -> void:
+	var ids: Array[String] = []
+	ids.assign(files.keys())
+	ids.sort()
+	for file_id: String in ids:
+		var why: String = add(file_id, text_in(files[file_id]))
+		if not why.is_empty():
+			problem = files[file_id] + ": " + why
+			return
+
+
 ## Reads one file's text, named `file_id`, and adds its entry; returns why it can't, or "". Each
 ## `<Kind>Content` gives its own.
 func add(file_id: String, _text: String) -> String:

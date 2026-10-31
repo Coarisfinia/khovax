@@ -491,8 +491,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   rules** (`TileKinds`): changing one (e.g. `walkable`) is a rule change, like any other (see the
   golden replays below).
 - **Our resources are the default resource pack** (owner, #1860): textures, models, regions,
-  region pieces and realms are listed in `slices/resource_packs/data/default.jsonc` and reached
-  only through `ResourcePacks` by id, never by a `res://` path (`resource_packs_check.py` in CI).
+  region pieces, realms and quests (#1888) are listed in
+  `slices/resource_packs/data/default.jsonc` and reached only through `ResourcePacks` by id, never
+  by a `res://` path (`resource_packs_check.py` in CI).
   **Whatever new is built, consider whether it belongs in the default pack** (owner's ground rule,
   on #1887), and say in the pull request which you chose and why: content a player's pack could
   add or replace (quests, #1888) does.
