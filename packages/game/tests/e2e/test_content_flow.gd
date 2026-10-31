@@ -2125,12 +2125,11 @@ func _check_prefetched() -> String:
 	return _check_resource_packs()
 
 
-## The default resource pack reads as the pack `default`, and every texture, model, region, realm
-## quest and species it lists resolves through ResourcePacks (#1860, #1864, #1861, #1888, #1903).
-## A manifest with an unknown field, a bad id or version, or a texture, model, region, realm, quest
-## or species whose file is missing (a region's, realm's, quest's or species' is read as text and
-## found when it's read), of another
-## kind or lies outside the pack is refused, as a player's pack will be (#1858).
+## The default resource pack reads as the pack `default`, and every texture, model, region, realm,
+## quest and species it lists resolves through ResourcePacks (#1860, #1864, #1861, #1888, #1903). A
+## manifest with an unknown field, a bad id or version, or a resource whose file is missing (a
+## region's, realm's, quest's or species' is read as text and found when it's read), of another kind
+## or outside the pack is refused, as a player's pack will be (#1858).
 func _check_resource_packs() -> String:
 	var packs: Array[ResourcePack] = ResourcePacks.loaded()
 	if packs.size() != 1:
@@ -2173,7 +2172,7 @@ func _check_pack_quests() -> String:
 	var missing: QuestContent = QuestContent.load_quests(nowhere)
 	if not missing.problem.begins_with(missing_file) or not missing.quests.is_empty():
 		return "a missing quest wasn't reported: " + missing.problem
-	return _check_pack_species(ResourcePacks.loaded().back())
+	return _check_pack_species(ResourcePacks.loaded()[0])
 
 
 ## The species are the ones the default pack lists (#1903), each read from its file there, and a
@@ -2245,10 +2244,8 @@ func _check_pack_manifests() -> String:
 	cases["a species that isn't JSONC"] = regions.replace("species/s.jsonc", cog)
 	cases["no species"] = regions.replace(", \"species\": {\"s\": \"species/s.jsonc\"}", "")
 	cases["a region both whole and in pieces"] = regions.replace("{\"q\": [", "{\"r\": [")
-	if not ResourcePack.parse(
-		valid % ["p", "1.0.0", "a", cog, wolf, ""],
-		"res://",
-	).problem.is_empty():
+	# `regions` is the valid manifest, which every case above changes in one place.
+	if not ResourcePack.parse(regions, "res://").problem.is_empty():
 		return "a valid resource pack manifest was refused"
 	for what: String in cases:
 		if ResourcePack.parse(cases[what], "res://").problem.is_empty():

@@ -8,8 +8,8 @@ extends RefCounted
 ## read by its own `<Kind>Content` (#816), which extends this: it reads its kind's files through
 ## `read`, adds each entry in its own `add`, and holds the entries, so this never names a slice's
 ## kind (#506); a kind a resource pack holds is read from the files the packs list (`read_files`,
-## #1903). The tile blueprints, which the core's TileKinds reads first, live in the core and
-## are read by TileContent. Here too: the field helpers they all use.
+## #1903). The tile blueprints, which the core's TileKinds reads first, live in the core and are
+## read by TileContent. Here too: the field helpers they all use.
 
 ## What a content file's reader says when object_of finds no JSON object in it.
 const NOT_AN_OBJECT: String = "not a JSON object"
