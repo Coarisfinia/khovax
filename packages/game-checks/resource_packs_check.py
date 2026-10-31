@@ -74,14 +74,14 @@ NAMING = ("*.gd", "*.tscn", "*.tres", "*.jsonc")
 # The resolver's own slice reads the manifest; it never names a resource.
 RESOLVER = "slices/resource_packs/"
 STRING = re.compile(r"\"([a-z][a-z0-9_]*)\"")
-# A path is a string's: it starts at the string's quote and its characters are anything up to the
-# same quote, so a file name with spaces or the other quote counts too (#1919), and prose outside
+# A path is a whole string: it runs from the string's quote to the same quote again, anything in
+# between, so a file name with spaces or the other quote counts too (#1919), and prose outside
 # a string never does.
 PATH_CHAR = r"(?:(?!\1).)"
 PATH = re.compile(
     rf"([\"'])res://(?P<path>assets/{PATH_CHAR}+?\.(?:"
     + "|".join(ending[1:] for ending in IMAGES + MODELS)
-    + rf")\b|regions/{PATH_CHAR}+|realms/{PATH_CHAR}+)"
+    + rf")|regions/{PATH_CHAR}+|realms/{PATH_CHAR}+)\1"
 )
 
 # Lookups around the resolver that name no path the check above could read (#1865): a uid://
@@ -89,7 +89,7 @@ PATH = re.compile(
 # pack's folders but isn't a whole file's). A relative path is import_rules.py's to refuse.
 # Any uid:// string, not only a load()'s or preload()'s argument: a threaded load, or a uid kept
 # in a constant and loaded later, gets around the resolver too (#1919).
-UID_STRING = re.compile(r"[\"'](uid://[^\"'\n]*)")
+UID_STRING = re.compile(rf"([\"'])(?P<uid>uid://{PATH_CHAR}*)\1")
 PACK_STRING = re.compile(rf"([\"'])res://(?:assets|regions|realms)(?:/{PATH_CHAR}*)?\1")
 WHOLE_FILE = re.compile(rf"([\"'])res://{PATH_CHAR}+\.[A-Za-z0-9]+\1")
 # The tools list the assets as files (the credits), never looking one up for the game.
@@ -233,7 +233,7 @@ def around_resolver(file: str, code: str) -> Problems:
     if file.endswith(".gd"):
         problems += [
             (f"names {found} by its uid://: scripts never load by uid:// (a resource by its id, ResourcePacks)", file)
-            for found in UID_STRING.findall(code)
+            for found in (match["uid"] for match in UID_STRING.finditer(code))
         ]  # fmt: skip
     if not file.startswith(TOOLS):
         problems += [
