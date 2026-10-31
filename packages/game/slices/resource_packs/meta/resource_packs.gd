@@ -8,6 +8,9 @@ extends RefCounted
 
 ## The default pack's manifest; its files are named from res://.
 const DEFAULT: String = "res://slices/resource_packs/data/default.jsonc"
+## The folder a player's packs are found in, each a .pck the pack builder made (#1869); the folders
+## per platform are #1942's.
+const PLAYER_PACKS: String = "user://packs/"
 
 ## The loaded packs, in lookup order, the default pack last; read on the first lookup.
 static var _packs: Array[ResourcePack] = []
@@ -109,8 +112,8 @@ static func _with_region(region_id: String) -> ResourcePack:
 	return null
 
 
-## The loaded packs, in lookup order: for now only the default pack. One that can't be read is
-## reported once and provides nothing.
+## The loaded packs, in lookup order: the player's usable packs, in their files' name order, then
+## the default pack. A pack that can't be used is reported once and provides nothing.
 static func loaded() -> Array[ResourcePack]:
 	if _packs.is_empty():
 		var pack: ResourcePack = ResourcePack.parse(Content.text_in(DEFAULT), "res://")
@@ -118,3 +121,12 @@ static func loaded() -> Array[ResourcePack]:
 			push_error("the default resource pack can't be read: " + pack.problem)
 		_packs.append(pack)
 	return _packs
+
+
+## Reads the packs again on the next lookup, and forgets every resource looked up, so packs added
+## to the player's folder since come in. A pack mounted before stays mounted (Godot can't unmount
+## one), so it can't be mounted again under its id.
+static func reload() -> void:
+	_packs.clear()
+	_textures.clear()
+	_models.clear()
