@@ -47,11 +47,11 @@ Two small, plain, flat black oval eyes.
 **Every prop prompt ends with this fixed block** (owner, #1824, #1825): a non-monster asset (the
 world-asset list's props, scenery) is asked for with the first line, its own description, then the
 block word for word. **No single-hex asset has a door, doorway or entrance** (AGENTS.md, #1825):
-never describe one. **Runes go on only as our own engravings** (owner, #1856, #1908), so the block
-says "no runes, no writing", and **the ground is ours** (owner, #1908): the ground texture comes
+never describe one. **Runes go on only as our own engravings** (owner, #1856, #1908), added to the model later and
+never drawn by the image generator, so the block says "no runes, no writing", and **the ground is ours** (owner, #1908): the ground texture comes
 from the game, so the block forbids a base plate, ground or grass. **A wall or other edge piece
 never asks for clean-cut or flat ends** (owner, #1908): "both ends are cut clean and flat so
-sections line up end to end" makes the image generator draw tiles at the edges; the import lines
+sections line up end to end" makes the image generator draw tiles at the edges; the importer lines
 the pieces up instead.
 
 ```text
