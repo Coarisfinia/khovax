@@ -2007,7 +2007,8 @@ func _check_dialog_ids() -> String:
 
 ## The quests read from a directory holding `files`, quest text by id; the directory is gone after.
 static func _load_written(files: Dictionary[String, String]) -> QuestContent:
-	var ids: Array[String] = files.keys()
+	var ids: Array[String] = []
+	ids.assign(files.keys())
 	var loader: Callable = func(directory: String) -> Content: return _quests_in(directory, ids)
 	return FlowSteps.written_content(loader, files) as QuestContent
 
