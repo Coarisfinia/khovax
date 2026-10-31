@@ -15,7 +15,7 @@ on the head, pass: neither is a spot of FRAGMENT_TEXELS.
 A two-tone head whose right half is dark basalt, as the Kavrikka's, passes: that half is a tone of
 its own paint (#1782); a dim fragment on its pale half or a black one on its basalt fails, and so
 does a dim fragment on the pale side of a head mostly basalt, or a dim patch across the border
-between its tones (#1799).
+between its tones (#1799), also one only a few texels across (#1811).
 `fit` sets our eyes where the marks it was given are, mirrored across the middle they were found
 across (#1735): on a ball centred on x = 0 with `DARK`'s ovals, and on one off the middle with the
 hound's.
@@ -82,6 +82,10 @@ MOSTLY = 0.05
 # Where the patches go: by the left eye, by the right one (on the basalt), and on the border at x =
 # 0, level with the eyes.
 RIGHT_EYE, ON_BORDER = Vector((-EYE.x, EYE.y, EYE.z)), Vector((-MOSTLY, EYE.y, EYE.z)).normalized() * RADIUS
+# A small fragment touching the basalt of the head split at x = 0 (#1811): a dim patch this wide
+# (about 4 texels across and 7 up), its middle half its radius off the border on the pale side.
+SMALL = EYE_RADIUS / 4.0
+BY_BORDER = Vector((SMALL / 2.0, EYE.y, EYE.z)).normalized() * RADIUS
 # Name: (the border's x, the patches painted on it, each (its colour, its middle, its radius), and
 # whether the check passes it).
 TWO_TONES = {
@@ -93,6 +97,8 @@ TWO_TONES = {
     "mostly_basalt_dim_fragment": (MOSTLY, [(DIM, EYE, EYE_RADIUS / 2.0)], False),
     # A dim patch touching the basalt is one spot with it (#1799).
     "two_tone_dim_across": (-MOSTLY, [(DIM, ON_BORDER, EYE_RADIUS)], False),
+    # Too small to outlast marked_eyes.EDGE's thinning, but one flat colour, as no blend is (#1811).
+    "two_tone_dim_small": (0.0, [(DIM, BY_BORDER, SMALL)], False),
 }
 # A beast's own small dark marking (#1765): a dim spot of this radius on the middle of the forehead,
 # and the box named around it, a little wider. Name: (whether the box is named, whether a dim
