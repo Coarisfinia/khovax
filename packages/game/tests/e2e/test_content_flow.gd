@@ -28,8 +28,8 @@ extends RefCounted
 ## name, and broken tags are refused; tags whose content can't be read are warned about (#949). No
 ## two things share an id or a name, whatever their kinds, in any case (#909). Every content kind is
 ## read ahead in the background (#816). The default resource pack (#1860) reads with every texture
-## resolving, and broken pack manifests are refused; the quests (#1888) and the tile blueprints
-## (#1901) are read from it.
+## resolving, and broken pack manifests are refused; the quests (#1888), the tile blueprints
+## (#1901), the loot tables and the materials (#1953) are read from it.
 
 ## A model a species can wear (#1223), by its id in the resource packs (#1864).
 const MODEL: String = "model_mana_wolf"
@@ -1126,8 +1126,8 @@ func _check_behaviour_refused() -> String:
 ## drops it, and it's a material (MaterialContent, #774), not a piece of gear.
 func _check_ascensions(content: SpeciesContent) -> String:
 	var dropped: Array[String] = []
-	for directory: String in [LootContent.DIR, LootContent.HARVEST_DIR]:
-		for table: LootTable in LootContent.load_loot_tables(directory).loot_tables.values():
+	for source: String in [LootContent.KEY, LootContent.HARVEST_DIR]:
+		for table: LootTable in LootContent.load_loot_tables(source).loot_tables.values():
 			dropped.append_array(table.items)
 	var materials: Array[String] = MaterialContent.load_materials().ids
 	for species_id: String in content.ascensions:
@@ -1544,8 +1544,8 @@ func _check_loot_items() -> String:
 		return "the materials didn't load: " + materials.problem
 	var gear: GearContent = GearContent.load_gear()
 	var tables: Array[LootTable] = []
-	for directory: String in [LootContent.DIR, LootContent.HARVEST_DIR]:
-		tables.append_array(LootContent.load_loot_tables(directory).loot_tables.values())
+	for source: String in [LootContent.KEY, LootContent.HARVEST_DIR]:
+		tables.append_array(LootContent.load_loot_tables(source).loot_tables.values())
 	var problem: String = _unknown_item(tables, gear, materials)
 	if not problem.is_empty():
 		return problem
@@ -2137,11 +2137,11 @@ func _check_prefetched() -> String:
 
 
 ## The default resource pack reads as the pack `default`, and every texture, model, region, realm,
-## quest, species, translation catalogue and tile blueprint it lists resolves through ResourcePacks
-## (#1860, #1864, #1861, #1888, #1903, #1902, #1901). A manifest with an unknown field, a bad id or
-## version, or a resource whose file is missing (a region's, realm's, quest's, species' or tile
-## blueprint's is read as text and found when it's read), of another kind or outside the pack is
-## refused, as a player's pack will be (#1858).
+## quest, species, translation catalogue, tile blueprint, loot table and material it lists resolves
+## through ResourcePacks (#1860, #1864, #1861, #1888, #1903, #1902, #1901, #1953). A manifest with
+## an unknown field, a bad id or version, or a resource whose file is missing (one read as text is
+## found when it's read), of another kind or outside the pack is refused, as a player's pack will
+## be (#1858).
 func _check_resource_packs() -> String:
 	var packs: Array[ResourcePack] = ResourcePacks.loaded()
 	if packs.size() != 1:
@@ -2160,12 +2160,13 @@ func _check_resource_packs() -> String:
 		if not RegionFiles.exists(region_id):
 			return "the default pack's region %s doesn't resolve" % region_id
 	var realms: Dictionary[String, String] = ResourcePacks.realms()
-	var listed: Array = packs[0].realms.keys()
+	var listed: Array = packs[0].files_of("realms").keys()
 	listed.sort()
 	if realms.keys() != listed or not realms.values().all(FileAccess.file_exists):
 		return "the default pack's realms don't resolve: %s" % realms
 	var tiles: Dictionary[String, String] = ResourcePacks.tiles()
-	if tiles.size() != packs[0].tiles.size() or not tiles.values().all(FileAccess.file_exists):
+	var tile_files: int = packs[0].files_of("tiles").size()
+	if tiles.size() != tile_files or not tiles.values().all(FileAccess.file_exists):
 		return "the default pack's tile blueprints don't resolve: %s" % tiles
 	return _check_pack_quests(packs[0])
 
@@ -2174,7 +2175,8 @@ func _check_resource_packs() -> String:
 ## (#1888), and a quest whose file is missing is reported, naming the file.
 func _check_pack_quests(pack: ResourcePack) -> String:
 	var quests: Dictionary[String, String] = ResourcePacks.quests()
-	if quests.size() != pack.quests.size() or not quests.values().all(FileAccess.file_exists):
+	var quest_files: int = pack.files_of("quests").size()
+	if quests.size() != quest_files or not quests.values().all(FileAccess.file_exists):
 		return "the default pack's quests don't resolve: %s" % quests
 	var content: QuestContent = QuestContent.load_quests()
 	var listed: Array = ResourcePacks.quests().keys()
@@ -2193,13 +2195,32 @@ func _check_pack_quests(pack: ResourcePack) -> String:
 ## The species are the ones the default pack lists (#1903), each read from its file there, and a
 ## species whose file is missing is refused.
 func _check_pack_species(pack: ResourcePack) -> String:
-	var listed: Array = pack.species.keys()
+	var listed: Array = pack.files_of("species").keys()
 	listed.sort()
 	if SpeciesContent.load_species().species.keys() != listed:
 		return "the species aren't the default pack's: %s" % [listed]
 	var missing: SpeciesContent = SpeciesContent.load_files({ "ombulumo": "res://no_such.jsonc" })
 	if missing.problem.is_empty():
 		return "a species whose file is missing was read"
+	return _check_pack_loot(pack)
+
+
+## The loot tables and materials are the ones the default pack lists (#1953), each read from its
+## file there, and one whose file is missing is refused.
+func _check_pack_loot(pack: ResourcePack) -> String:
+	var tables: Array = pack.files_of("loot_tables").keys()
+	tables.sort()
+	if tables.is_empty() or LootContent.load_loot_tables().loot_tables.keys() != tables:
+		return "the loot tables aren't the default pack's: %s" % [tables]
+	var materials: Array = pack.files_of("materials").keys()
+	materials.sort()
+	if materials.is_empty() or MaterialContent.load_materials().ids != materials:
+		return "the materials aren't the default pack's: %s" % [materials]
+	var nowhere: Dictionary[String, String] = { "glade": "res://no_such.jsonc" }
+	if LootContent.load_files(nowhere).problem.is_empty():
+		return "a loot table whose file is missing was read"
+	if MaterialContent.load_files(nowhere).problem.is_empty():
+		return "a material whose file is missing was read"
 	return _check_pack_misses()
 
 
@@ -2226,6 +2247,7 @@ func _check_pack_manifests() -> String:
 		+ " \"region_pieces\": {\"q\": [\"regions/q/start.md\"]},"
 		+ " \"realms\": {\"w\": \"realms/w.md\"}, \"quests\": {\"u\": \"quests/u.jsonc\"},"
 		+ " \"species\": {\"s\": \"species/s.jsonc\"}, \"tiles\": {\"t\": \"tiles/t.jsonc\"},"
+		+ " \"loot_tables\": {\"l\": \"loot/l.jsonc\"}, \"materials\": {\"x\": \"loot/x.jsonc\"},"
 		+ " \"translations\": {}%s}"
 	)
 	var cog: String = "assets/game-icons/cog.svg"
@@ -2303,9 +2325,9 @@ func _check_pack_translations() -> String:
 	return _check_pack_loading()
 
 
-## The broken manifests made from `valid` whose realm, quest, species or tile blueprint (each read
-## as text) is of another kind or missing, by what's wrong with them; `other` is a file of another
-## kind.
+## The broken manifests made from `valid` whose realm, quest, species, tile blueprint, loot table or
+## material (each read as text) is of another kind or missing, by what's wrong with them; `other`
+## is a file of another kind.
 func _text_section_cases(valid: String, other: String) -> Dictionary[String, String]:
 	return {
 		"a realm that isn't Markdown": valid.replace("realms/w.md", other),
@@ -2316,6 +2338,10 @@ func _text_section_cases(valid: String, other: String) -> Dictionary[String, Str
 		"no species": valid.replace(", \"species\": {\"s\": \"species/s.jsonc\"}", ""),
 		"a tile blueprint that isn't JSONC": valid.replace("tiles/t.jsonc", "tiles/t.md"),
 		"no tiles": valid.replace(", \"tiles\": {\"t\": \"tiles/t.jsonc\"}", ""),
+		"a loot table that isn't JSONC": valid.replace("loot/l.jsonc", other),
+		"no loot tables": valid.replace(", \"loot_tables\": {\"l\": \"loot/l.jsonc\"}", ""),
+		"a material that isn't JSONC": valid.replace("loot/x.jsonc", "loot/x.md"),
+		"no materials": valid.replace(", \"materials\": {\"x\": \"loot/x.jsonc\"}", ""),
 	}
 
 
@@ -2517,7 +2543,7 @@ func _pack_manifest(pack_id: String) -> String:
 		"{\"id\": \"%s\", \"name\": \"n\", \"version\": \"1.0.0\", \"game_version\": \"0.1.0\","
 		+ " \"textures\": {}, \"models\": {}, \"regions\": {\"r\": \"regions/r.md\"},"
 		+ " \"region_pieces\": {}, \"realms\": {}, \"quests\": {}, \"species\": {},"
-		+ " \"translations\": {}, \"tiles\": {}}"
+		+ " \"translations\": {}, \"tiles\": {}, \"loot_tables\": {}, \"materials\": {}}"
 	) % pack_id
 
 

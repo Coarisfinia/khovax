@@ -1,8 +1,9 @@
 # The pack builder
 
-Builds a resource pack for the game: textures, models, regions, realms, quests, species, tile kinds
-and translations that add to or replace the game's own. A pack is data, never code. The builder
-refuses anything else, and the game checks every pack again before it loads it.
+Builds a resource pack for the game: textures, models, regions, realms, quests, species, tile kinds,
+translations, loot tables and materials that add to or replace the game's own. A pack is data,
+never code. The builder refuses anything else, and the game checks every pack again before it
+loads it.
 
 ## What you need
 
@@ -26,6 +27,8 @@ my_pack/
   species/...       species: .jsonc, in the game's species format
   tiles/...         tile kinds: .jsonc, in the game's tile blueprint format
   translations/...  translation catalogues: gettext .po, one per language
+  loot_tables/...   loot tables: .jsonc, in the game's loot table format
+  materials/...     materials: .jsonc, in the game's material format
 ```
 
 Only those file types are allowed, plus `.jsonc` and Godot's `.import` files. A `.import` file may
@@ -48,7 +51,9 @@ at plain files inside the pack. Anything else gets the whole pack refused.
 	"quests": { "my_quest": "quests/my_quest.jsonc" },
 	"species": { "my_species": "species/my_species.jsonc" },
 	"translations": { "de": "translations/de.po" },
-	"tiles": { "my_tile": "tiles/my_tile.jsonc" }
+	"tiles": { "my_tile": "tiles/my_tile.jsonc" },
+	"loot_tables": { "my_loot": "loot_tables/my_loot.jsonc" },
+	"materials": { "my_material": "materials/my_material.jsonc" }
 }
 ```
 

@@ -3,9 +3,9 @@ extends RefCounted
 ## The one resolver of the game's resources (#1860): it turns a resource id into the resource by
 ## walking the loaded packs in order, the first that has the id giving it. The game's own resources
 ## are the default pack, last in the order; a player's packs (#1858) come before it, and override
-## what they provide. Nothing looks up a built-in texture, model, region, realm, quest (#1888) or
-## species (#1903), translation catalogue (#1902) or tile blueprint (#1901) any other way
-## (resource_packs_check.py in CI).
+## what they provide. Nothing looks up a built-in texture, model, region, realm, quest (#1888),
+## species (#1903), translation catalogue (#1902), tile blueprint (#1901), loot table or material
+## (#1953) any other way (resource_packs_check.py in CI).
 
 ## The default pack's manifest; its files are named from res://.
 const DEFAULT: String = "res://slices/resource_packs/data/default.jsonc"
@@ -113,14 +113,24 @@ static func species() -> Dictionary[String, String]:
 	return _every("species")
 
 
-## Every resource of `kind` (realms or species) the loaded packs have, its file as a res:// path by
-## its id, in id order: the first pack that has an id gives its file.
+## Every loot table (#1953) the loaded packs have, its file as a res:// path by its id, in id order:
+## the first pack that has an id gives its file, so a player's pack can add or replace one.
+static func loot_tables() -> Dictionary[String, String]:
+	return _every("loot_tables")
+
+
+## Every material (#1953) the loaded packs have, its file as a res:// path by its id, in id order:
+## the first pack that has an id gives its file, so a player's pack can add or replace one.
+static func materials() -> Dictionary[String, String]:
+	return _every("materials")
+
+
+## Every resource of the ResourcePack.LISTED section `kind` the loaded packs have, its file as a
+## res:// path by its id, in id order: the first pack that has an id gives its file.
 static func _every(kind: String) -> Dictionary[String, String]:
 	var found: Dictionary[String, String] = {}
 	for pack: ResourcePack in loaded():
-		var raw: Dictionary = pack.get(kind)
-		var listed: Dictionary[String, String] = {}
-		listed.assign(raw)
+		var listed: Dictionary[String, String] = pack.files_of(kind)
 		for resource_id: String in listed:
 			if not found.has(resource_id):
 				found[resource_id] = pack.root + listed[resource_id]
@@ -131,13 +141,7 @@ static func _every(kind: String) -> Dictionary[String, String]:
 ## Every quest (#1888) the loaded packs have, its file as a res:// path by its id, in id order: the
 ## first pack that has an id gives its file. QuestContent reads them.
 static func quests() -> Dictionary[String, String]:
-	var found: Dictionary[String, String] = {}
-	for pack: ResourcePack in loaded():
-		for quest_id: String in pack.quests:
-			if not found.has(quest_id):
-				found[quest_id] = pack.root + pack.quests[quest_id]
-	found.sort()
-	return found
+	return _every("quests")
 
 
 ## Every language's translation catalogue (#1902) the loaded packs have, in locale order: the first
@@ -169,13 +173,7 @@ static func translations_of(packs: Array[ResourcePack]) -> Array[Translation]:
 ## in id order: the first pack that has an id gives its file. The core reads them through
 ## TileContent, which is handed this at start (game/), since the core never names a slice.
 static func tiles() -> Dictionary[String, String]:
-	var found: Dictionary[String, String] = {}
-	for pack: ResourcePack in loaded():
-		for tile_id: String in pack.tiles:
-			if not found.has(tile_id):
-				found[tile_id] = pack.root + pack.tiles[tile_id]
-	found.sort()
-	return found
+	return _every("tiles")
 
 
 ## The first loaded pack that has the region `region_id`, drawn whole or in pieces, or null.

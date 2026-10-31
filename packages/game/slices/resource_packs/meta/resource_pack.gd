@@ -20,12 +20,14 @@ const FIELDS: Array[String] = [
 	"species",
 	"translations",
 	"tiles",
+	"loot_tables",
+	"materials",
 ]
 ## Each section of resources the manifest lists, one file per id, with the type its files load as;
-## "" for a file read as text (a region file or a realm, #1861, a quest, #1888, a species, #1903, or
-## a tile blueprint, #1901), which isn't checked to exist here: a build may leave a test-only region
-## out (export_presets.cfg), and RegionFiles and Realms read only the files there are; a missing
-## quest, species or tile blueprint is QuestContent's, SpeciesContent's or TileContent's to report.
+## "" for a file read as text (a region file or a realm, #1861, a quest, #1888, a species, #1903, a
+## tile blueprint, #1901, or a loot table or material, #1953), which isn't checked to exist here: a
+## build may leave a test-only region out (export_presets.cfg), and RegionFiles and Realms read only
+## the files there are; any other missing file is its kind's Content's to report.
 const KINDS: Dictionary[String, String] = {
 	"textures": "Texture2D",
 	"models": "PackedScene",
@@ -35,6 +37,8 @@ const KINDS: Dictionary[String, String] = {
 	"species": "",
 	"translations": "Translation",
 	"tiles": "",
+	"loot_tables": "",
+	"materials": "",
 }
 ## The section of regions arranged from pieces (#1861): each region's piece files by its id, read as
 ## text like the region files.
@@ -49,7 +53,13 @@ const ENDINGS: Dictionary[String, Array] = {
 	"species": ["jsonc"],
 	"translations": ["po"],
 	"tiles": ["jsonc"],
+	"loot_tables": ["jsonc"],
+	"materials": ["jsonc"],
 }
+## The sections read whole by their Content from the files files_of gives, never looked up by one
+## id: each realm (#1861), quest (#1888), species (#1903), tile blueprint (#1901), loot table and
+## material (#1953).
+const LISTED: Array[String] = ["realms", "quests", "species", "tiles", "loot_tables", "materials"]
 ## A version: major.minor.patch.
 const VERSION: String = "\\A[0-9]+\\.[0-9]+\\.[0-9]+\\z"
 
@@ -67,17 +77,12 @@ var models: Dictionary[String, String] = {}
 var regions: Dictionary[String, String] = {}
 ## Each region arranged from pieces (#1861): its piece files by its id, relative to `root`.
 var region_pieces: Dictionary[String, PackedStringArray] = {}
-## Each realm's file (#1861) by its id, relative to `root`.
-var realms: Dictionary[String, String] = {}
-## Each quest's file (#1888) by its id, relative to `root`.
-var quests: Dictionary[String, String] = {}
-## Each species' file (#1903) by its id, relative to `root`.
-var species: Dictionary[String, String] = {}
 ## Each language's translation catalogue (#1902), a gettext .po, by its locale (`de`, `pt_br`),
 ## relative to `root`.
 var translations: Dictionary[String, String] = {}
-## Each tile kind's blueprint file (#1901) by its id, relative to `root`.
-var tiles: Dictionary[String, String] = {}
+## Each LISTED section's files, each relative to `root` by its id; empty while the pack has a
+## problem.
+var _listed: Dictionary[String, Dictionary] = {}
 ## Where the pack's files are named from: res:// for the default pack.
 var root: String = ""
 ## Why the pack can't be used, or "" when it can.
@@ -86,8 +91,9 @@ var problem: String = ""
 
 ## The pack the manifest `text` describes, its files under `root`, with `problem` saying why it
 ## can't be used: a field missing or unknown, an id that isn't one, or a texture, model, region,
-## region piece, realm, quest, species, translation catalogue or tile blueprint whose file climbs
-## out of `root`, has another kind's ending or (for a texture, model or catalogue) doesn't exist.
+## region piece, realm, quest, species, translation catalogue, tile blueprint, loot table or
+## material whose file climbs out of `root`, has another kind's ending or (for a texture, model or
+## catalogue) doesn't exist.
 static func parse(text: String, files_root: String) -> ResourcePack:
 	var pack: ResourcePack = ResourcePack.new()
 	pack.root = files_root
@@ -101,6 +107,15 @@ static func parse(text: String, files_root: String) -> ResourcePack:
 
 
 ## The texture `texture_id`, which the pack must have. The default pack's files load as Godot
+## The files of the LISTED section `kind`, each relative to `root` by its id: empty while the pack
+## has a problem.
+func files_of(kind: String) -> Dictionary[String, String]:
+	var files: Dictionary[String, String] = {}
+	var listed: Dictionary = _listed.get(kind, {})
+	files.assign(listed)
+	return files
+
+
 ## imported them, compressed for the GPU; reading a player's raw files is #1858's.
 func texture(texture_id: String) -> Texture2D:
 	return load(root + textures[texture_id]) as Texture2D
@@ -158,11 +173,9 @@ func _read(data: Dictionary) -> String:
 	textures.assign(found["textures"])
 	models.assign(found["models"])
 	regions.assign(found["regions"])
-	realms.assign(found["realms"])
-	quests.assign(found["quests"])
-	species.assign(found["species"])
 	translations.assign(found["translations"])
-	tiles.assign(found["tiles"])
+	for kind: String in LISTED:
+		_listed[kind] = found[kind]
 	region_pieces = pieces
 	return ""
 

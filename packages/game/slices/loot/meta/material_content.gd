@@ -1,11 +1,13 @@
 class_name MaterialContent
 extends Content
 ## The materials' content data (#774), which the loot slice owns (#412): one JSONC file per
-## material in its data/materials/, checked against materials.schema.json beside them in CI. A
-## material is an item a table gives that isn't a piece of gear (GearContent); every item a table
-## names is one of the two, which the content flow checks.
+## material, checked against materials.schema.json in CI. They're the resource packs' (#1953): the
+## ones the packs list, so a player's pack can add or replace one; the default pack's lie in the
+## slice's data/materials/. A material is an item a table gives that isn't a piece of gear
+## (GearContent); every item a table names is one of the two, which the content flow checks.
 
-const DIR: String = "res://slices/loot/data/materials/"
+## The materials' key in the content cache (ContentCatalog).
+const KEY: String = "materials"
 ## Its schema, which says the fields a material file may have (SchemaFields, #825).
 const SCHEMA: String = "res://slices/loot/data/materials.schema.json"
 
@@ -15,16 +17,22 @@ var ids: Array[String] = []
 var names: Dictionary[String, String] = {}
 
 
-## Every material file in `directory`, read and checked.
-static func load_materials(directory: String = DIR) -> MaterialContent:
+## Every material the resource packs list (ResourcePacks.materials), read and checked.
+static func load_materials() -> MaterialContent:
+	return load_files(ResourcePacks.materials())
+
+
+## Every material in `files` (each res:// path by its id), read and checked: a file that's missing
+## or broken is the problem.
+static func load_files(files: Dictionary[String, String]) -> MaterialContent:
 	var content: MaterialContent = MaterialContent.new()
-	content.read(directory)
+	content.read_files(files)
 	return content
 
 
 ## The materials, read once per session (ContentCatalog).
 static func cached() -> MaterialContent:
-	return ContentCatalog.kept(DIR, load_materials)
+	return ContentCatalog.kept(KEY, load_materials)
 
 
 func add(file_id: String, text: String) -> String:
