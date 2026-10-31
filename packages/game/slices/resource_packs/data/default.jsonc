@@ -91,6 +91,7 @@
 		"model_ore_outcrop": "assets/ore-outcrop/ore_outcrop.glb",
 		"model_pearl_bracelet": "assets/armory3d-pearl-bracelet/pearl_bracelet.glb",
 		"model_pebble": "assets/quaternius-items/pebble.glb",
+		"model_player_clips": "assets/player/player_clips.glb",
 		"model_rock_single_a": "assets/kaykit-hexagon/rock_single_A.gltf",
 		"model_rock_single_e": "assets/kaykit-hexagon/rock_single_E.gltf",
 		"model_rogue": "assets/kaykit-adventurers/Rogue.glb",

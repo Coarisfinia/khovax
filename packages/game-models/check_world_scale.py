@@ -13,6 +13,8 @@ against the player's height, from lib/world_scale.py, where the numbers and the 
   stays true to the figure.
 - **Any other pack's model a view stands on the board** (the chest) is measured as each view shows
   it, in the clip it stands in, as a prop.
+- A clip library (#1935, its script's kind `clip_library`) holds clips on a stand-in rig, with no
+  body to measure.
 - A tile's decoration is the tile's own look, and a pack's model no view shows is an item's
   picture: neither is measured, as in check_footprint.py.
 
@@ -128,6 +130,9 @@ def main():
             continue
         fps, _loops = imported.settings(glb)
         script = os.path.join(HERE, model + ".py")
+        if os.path.exists(script) and script_kind(script) == world_scale.CLIP_LIBRARY:
+            log.info("WORLD SCALE %s a clip library: no body to measure" % model)
+            continue
         if os.path.exists(script):
             lines = scripted(script, glb, fps)
             if lines is None:

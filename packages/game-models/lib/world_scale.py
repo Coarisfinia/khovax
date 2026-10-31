@@ -33,6 +33,9 @@ PLAYER_TOLERANCE = 0.03
 WALL_HEIGHT = 1.25 * PLAYER_HEIGHT
 # How far an edge piece's length may stray from the edge's (a share), so pieces still meet.
 EDGE_TOLERANCE = 0.03
+# The kind a clip library names (#1935): its clips on a stand-in rig without a body, which has no
+# size to measure.
+CLIP_LIBRARY = "clip_library"
 
 
 class Kind:

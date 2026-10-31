@@ -100,10 +100,10 @@ TEST_FILE = re.compile(r"(?:^|/)tests/|(?:^|/)test_[^/]*\.gd$")
 # ...but for the test builds' mode, game code that only shares the name...
 NOT_TESTS = frozenset({"game/test_mode.gd"})
 # ...but for the models built before what uses them, which the boot flow lists to check each
-# until it's used (#1476, #1634, #1635).
+# until it's used (#1476, #1634, #1635), and the clip libraries built before their body (#1935).
 WAITING = Path("tests/e2e/test_boot_flow.gd")
 WAITING_LISTS = re.compile(
-    r"^const (?:UNWORN_MODELS|UNPLACED_PROPS|UNPLACED_MODELS)\b.*?(?=^\S|\Z)", re.MULTILINE | re.DOTALL
+    r"^const (?:UNWORN_MODELS|UNPLACED_PROPS|UNPLACED_MODELS|UNWORN_CLIPS)\b.*?(?=^\S|\Z)", re.MULTILINE | re.DOTALL
 )
 
 type Problems = list[tuple[str, str | None]]

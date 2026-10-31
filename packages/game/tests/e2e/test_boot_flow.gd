@@ -21,6 +21,14 @@ const UNPLACED_PROPS: Dictionary[String, Array] = {
 ## Static models built before anything places them in the world (#1635): each must load and show
 ## a mesh, until what places it names it and it leaves this list.
 const UNPLACED_MODELS: Array[String] = ["model_starry_egg"]
+## Clip libraries built before the body that plays them (#1935), with the clips each holds: each
+## loads with its clips on Godot's humanoid skeleton profile (the BoneMap in its .import), so any
+## body mapped to that profile plays them, until a view names it and it leaves this list.
+const UNWORN_CLIPS: Dictionary[String, Array] = {
+	"model_player_clips": [&"Wave"],
+}
+## The skeleton every humanoid clip library's tracks name, as Godot's retargeting calls it.
+const HUMANOID_SKELETON: String = "%GeneralSkeleton"
 
 
 func run(tree: SceneTree) -> String:
@@ -349,7 +357,8 @@ func _check_view_models(main: Node) -> String:
 		)
 		if not checked.is_empty():
 			return "%s: %s" % [path, checked]
-	return _check_unplaced_models()
+	var unplaced: String = _check_unplaced_models()
+	return unplaced if not unplaced.is_empty() else _check_clip_libraries()
 
 
 ## Whether every model waiting for its place (UNPLACED_MODELS) loads and shows a mesh.
@@ -366,6 +375,39 @@ func _check_unplaced_models() -> String:
 		shown.free()
 		if meshes == 0:
 			return "%s shows no mesh" % path
+	return ""
+
+
+## Whether every clip library waiting for its body (UNWORN_CLIPS) loads with its clips, every
+## track of them turning a bone of Godot's humanoid skeleton profile.
+func _check_clip_libraries() -> String:
+	for library_id: String in UNWORN_CLIPS:
+		var scene: PackedScene = ResourcePacks.model(library_id)
+		if scene == null:
+			return "%s doesn't load" % library_id
+		var shown: Node = scene.instantiate()
+		var result: String = _check_rig(shown, UNWORN_CLIPS[library_id], false)
+		if result.is_empty():
+			result = _check_humanoid_tracks(shown, UNWORN_CLIPS[library_id])
+		shown.free()
+		if not result.is_empty():
+			return "%s: %s" % [library_id, result]
+	return ""
+
+
+## Whether every track of each of `clips` in `model` turns a bone of the humanoid profile.
+func _check_humanoid_tracks(model: Node, clips: Array) -> String:
+	var profile: SkeletonProfileHumanoid = SkeletonProfileHumanoid.new()
+	var animations: AnimationPlayer = model.find_child("AnimationPlayer") as AnimationPlayer
+	for clip: StringName in clips:
+		var animation: Animation = animations.get_animation(clip)
+		for track: int in animation.get_track_count():
+			var path: NodePath = animation.track_get_path(track)
+			if (
+				str(path.get_concatenated_names()) != HUMANOID_SKELETON
+				or profile.find_bone(path.get_concatenated_subnames()) < 0
+			):
+				return "%s turns %s, not a bone of the humanoid profile" % [clip, path]
 	return ""
 
 
