@@ -2275,6 +2275,8 @@ func _check_player_packs() -> String:
 	for file: String in made:
 		var _removed: Error = DirAccess.remove_absolute(ResourcePacks.PLAYER_PACKS + file)
 	ResourcePacks.reload()
+	if ResourcePacks.loaded().size() != 1:
+		return "a player's pack taken out of the folder was still loaded"
 	if ids != ["pack_player", "default"]:
 		return "the player's packs weren't loaded before the default pack, alone: %s" % [ids]
 	if found != "res://packs/pack_player/regions/r.md":
