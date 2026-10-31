@@ -7,7 +7,8 @@ extends RefCounted
 ## in CI and here for what a schema can't check: ids unique and matching their file. Every kind is
 ## read by its own `<Kind>Content` (#816), which extends this: it reads its kind's files through
 ## `read`, adds each entry in its own `add`, and holds the entries, so this never names a slice's
-## kind (#506). The tile blueprints, which the core's TileKinds reads first, live in the core and
+## kind (#506); a kind a resource pack holds is read from the files the packs list (`read_files`,
+## #1903). The tile blueprints, which the core's TileKinds reads first, live in the core and
 ## are read by TileContent. Here too: the field helpers they all use.
 
 ## What a content file's reader says when object_of finds no JSON object in it.
@@ -29,7 +30,7 @@ func read(directory: String) -> void:
 
 
 ## Reads every file of `files` (each res:// path by its entry's id, as a resource pack lists them,
-## #1888) into this through `add`, in id order, and stops at the first one that can't be: `problem`
+## #1888, #1903) into this through `add`, in id order, and stops at the first one that can't be:
 ## then names that file and why. A file that can't be read is refused like any broken one.
 func read_files(files: Dictionary[String, String]) -> void:
 	var ids: Array[String] = []

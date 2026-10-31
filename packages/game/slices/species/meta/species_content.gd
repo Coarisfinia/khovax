@@ -1,12 +1,17 @@
 class_name SpeciesContent
 extends Content
 ## The species' content data (#279), which the species slice owns (#412): one JSONC file per
-## species directly in its data/ (its own kind, so no folder repeats the slice's name, #442),
-## checked against its schema there in CI. Everything else reads them through this; their abilities
-## are AbilityContent's. It also holds what each species ascends into (#1252), a link between two
-## species that only the whole content can check.
+## species, in its format (species.schema.json beside the default pack's, checked in CI). They're
+## the
+## resource packs' (#1903): the species the packs list, so a player's pack can add or replace one;
+## the default pack's lie directly in the slice's data/ (its own kind, so no folder repeats the
+## slice's name, #442). Everything else reads them through this; their abilities are
+## AbilityContent's. It also holds what each species ascends into (#1252), a link between two
+## species
+## that only the whole content can check.
 
-const DIR: String = "res://slices/species/data/"
+## The species' key in the content cache (ContentCatalog).
+const KEY: String = "species"
 
 ## Every species, by id.
 var species: Dictionary[String, Species] = {}
@@ -16,16 +21,22 @@ var _specials: Dictionary[String, Ability] = {}
 var _specials_read: bool = false
 
 
-## Every species file in `directory`, read and checked.
-static func load_species(directory: String = DIR) -> SpeciesContent:
+## Every species the resource packs list (ResourcePacks.species), read and checked.
+static func load_species() -> SpeciesContent:
+	return load_files(ResourcePacks.species())
+
+
+## Every species in `files` (each res:// path by its id), read and checked: a file that's missing or
+## broken is the problem.
+static func load_files(files: Dictionary[String, String]) -> SpeciesContent:
 	var content: SpeciesContent = SpeciesContent.new()
-	content.read(directory)
+	content.read_files(files)
 	return content
 
 
 ## The species, read once per session (ContentCatalog); species that don't load are an error.
 static func cached() -> SpeciesContent:
-	return ContentCatalog.kept(DIR, _checked)
+	return ContentCatalog.kept(KEY, _checked)
 
 
 static func _checked() -> SpeciesContent:
@@ -75,9 +86,9 @@ func _ascends_from(species_id: String) -> String:
 	return found
 
 
-## Reads every species file in `directory`, then checks their ascensions against each other.
-func read(directory: String) -> void:
-	super.read(directory)
+## Reads every species file in `files`, then checks their ascensions against each other.
+func read_files(files: Dictionary[String, String]) -> void:
+	super.read_files(files)
 	if problem.is_empty():
 		problem = ascension_problem()
 

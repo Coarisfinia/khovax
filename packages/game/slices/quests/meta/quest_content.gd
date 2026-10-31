@@ -27,19 +27,18 @@ var _tables: Array[LootContent] = []
 
 ## Every quest file in `files` (each res:// path by its quest's id; by default the resource packs'
 ## quests), read and checked: a file that's missing or broken is the problem. The species its steps
-## name must be in `species_directory`, the faction whose standing it moves (#532), or that it hands
-## its territory to (#638), in `faction_directory`, and the dialogs and answers its answered steps
-## and choices name (#636) in `dialog_directory`. The item an obtained step asks for (#766) must
-## drop from a loot or harvest table.
+## name must be ones the resource packs have (#1903), the faction whose standing it moves (#532), or
+## that it hands its territory to (#638), in `faction_directory`, and the dialogs and answers its
+## answered steps and choices name (#636) in `dialog_directory`. The item an obtained step asks for
+## (#766) must drop from a loot or harvest table.
 static func load_quests(
 	files: Dictionary[String, String] = ResourcePacks.quests(),
-	species_directory: String = SpeciesContent.DIR,
 	faction_directory: String = FactionContent.DIR,
 	dialog_directory: String = DialogContent.DIR,
 ) -> QuestContent:
 	return _checked_against(
 		files,
-		SpeciesContent.load_species(species_directory),
+		SpeciesContent.load_species(),
 		FactionContent.load_factions(faction_directory),
 		DialogContent.load_dialogs(dialog_directory),
 		[LootContent.load_loot_tables(), LootContent.load_loot_tables(LootContent.HARVEST_DIR)],

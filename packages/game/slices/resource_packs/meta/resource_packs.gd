@@ -3,8 +3,8 @@ extends RefCounted
 ## The one resolver of the game's resources (#1860): it turns a resource id into the resource by
 ## walking the loaded packs in order, the first that has the id giving it. The game's own resources
 ## are the default pack, last in the order; a player's packs (#1858) come before it, and override
-## what they provide. Nothing looks up a built-in texture, model, region, realm or quest (#1888) any
-## other way (resource_packs_check.py in CI).
+## what they provide. Nothing looks up a built-in texture, model, region, realm, quest (#1888) or
+## species (#1903) any other way (resource_packs_check.py in CI).
 
 ## The default pack's manifest; its files are named from res://.
 const DEFAULT: String = "res://slices/resource_packs/data/default.jsonc"
@@ -103,11 +103,27 @@ static func region_pieces(region_id: String) -> Array[String]:
 ## Every realm (#1861) the loaded packs have, its file as a res:// path by its id, in id order: the
 ## first pack that has an id gives its file.
 static func realms() -> Dictionary[String, String]:
+	return _every("realms")
+
+
+## Every species (#1903) the loaded packs have, its file as a res:// path by its id, in id order:
+## the first pack that has an id gives its file, so a player's pack can add a species or replace
+## one.
+static func species() -> Dictionary[String, String]:
+	return _every("species")
+
+
+## Every resource of `kind` (realms or species) the loaded packs have, its file as a res:// path by
+## its id, in id order: the first pack that has an id gives its file.
+static func _every(kind: String) -> Dictionary[String, String]:
 	var found: Dictionary[String, String] = {}
 	for pack: ResourcePack in loaded():
-		for realm_id: String in pack.realms:
-			if not found.has(realm_id):
-				found[realm_id] = pack.root + pack.realms[realm_id]
+		var raw: Dictionary = pack.get(kind)
+		var listed: Dictionary[String, String] = {}
+		listed.assign(raw)
+		for resource_id: String in listed:
+			if not found.has(resource_id):
+				found[resource_id] = pack.root + listed[resource_id]
 	found.sort()
 	return found
 

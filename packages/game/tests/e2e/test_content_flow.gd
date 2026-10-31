@@ -2035,8 +2035,8 @@ static func _check_nested_tag(tags: TextTags) -> String:
 
 ## Text tags whose content can't be read are warned about, and show as written (#949).
 func _check_text_tags_unread(tree: SceneTree) -> String:
-	# The factions' files, read as species, are a species directory that can't be read.
-	TextTags.read_names_with(func() -> TextTags: return TextNames.load_tags(FactionContent.DIR))
+	# The gear's files, read as factions, are a faction directory that can't be read.
+	TextTags.read_names_with(func() -> TextTags: return TextNames.load_tags(GearContent.DIR))
 	tree.call("expect_warning", "the text tags' names can't be read")
 	var unread: String = TextTags.shown("${MONSTER:ombulumo}")
 	TextNames.wire()
@@ -2105,7 +2105,8 @@ func _check_name_rules() -> String:
 
 
 ## Every content kind is read ahead in the background (#816, InstanceContent.kinds): each directory
-## a `<Kind>Content` reads (its constants ending in DIR) is one of the kinds' keys. Region files
+## a `<Kind>Content` reads (its constants ending in DIR), or the KEY of one the resource packs list
+## (#1903), is one of the kinds' keys. Region files
 ## are read per region (RegionFiles), so they're not a kind. Then the resource packs, which aren't
 ## content kinds (_check_resource_packs).
 func _check_prefetched() -> String:
@@ -2116,7 +2117,8 @@ func _check_prefetched() -> String:
 		var path: String = named["path"]
 		var constants: Dictionary = (load(path) as Script).get_script_constant_map()
 		for constant: String in constants:
-			if constant.ends_with("DIR") and not keys.has(constants[constant]):
+			var keyed: bool = constant.ends_with("DIR") or constant == "KEY"
+			if keyed and not keys.has(constants[constant]):
 				return "%s's %s isn't read ahead (InstanceContent.kinds)" % [
 					named["class"],
 					constant,
@@ -2125,9 +2127,10 @@ func _check_prefetched() -> String:
 
 
 ## The default resource pack reads as the pack `default`, and every texture, model, region, realm
-## and quest it lists resolves through ResourcePacks (#1860, #1864, #1861, #1888). A manifest with
-## an unknown field, a bad id or version, or a texture, model, region, realm or quest whose file is
-## missing (a region's, realm's or quest's is read as text and found when it's read), of another
+## quest and species it lists resolves through ResourcePacks (#1860, #1864, #1861, #1888, #1903).
+## A manifest with an unknown field, a bad id or version, or a texture, model, region, realm, quest
+## or species whose file is missing (a region's, realm's, quest's or species' is read as text and
+## found when it's read), of another
 ## kind or lies outside the pack is refused, as a player's pack will be (#1858).
 func _check_resource_packs() -> String:
 	var packs: Array[ResourcePack] = ResourcePacks.loaded()
@@ -2171,6 +2174,19 @@ func _check_pack_quests() -> String:
 	var missing: QuestContent = QuestContent.load_quests(nowhere)
 	if not missing.problem.begins_with(missing_file) or not missing.quests.is_empty():
 		return "a missing quest wasn't reported: " + missing.problem
+	return _check_pack_species(ResourcePacks.loaded().back())
+
+
+## The species are the ones the default pack lists (#1903), each read from its file there, and a
+## species whose file is missing is refused.
+func _check_pack_species(pack: ResourcePack) -> String:
+	var listed: Array = pack.species.keys()
+	listed.sort()
+	if SpeciesContent.load_species().species.keys() != listed:
+		return "the species aren't the default pack's: %s" % [listed]
+	var missing: SpeciesContent = SpeciesContent.load_files({ "ombulumo": "res://no_such.jsonc" })
+	if missing.problem.is_empty():
+		return "a species whose file is missing was read"
 	return _check_pack_misses()
 
 
@@ -2195,7 +2211,8 @@ func _check_pack_manifests() -> String:
 		start + " \"game_version\": \"0.1.0\", \"textures\": {\"%s\": \"%s\"},"
 		+ " \"models\": {\"m\": \"%s\"}, \"regions\": {\"r\": \"regions/r.md\"},"
 		+ " \"region_pieces\": {\"q\": [\"regions/q/start.md\"]},"
-		+ " \"realms\": {\"w\": \"realms/w.md\"}, \"quests\": {\"u\": \"quests/u.jsonc\"}%s}"
+		+ " \"realms\": {\"w\": \"realms/w.md\"}, \"quests\": {\"u\": \"quests/u.jsonc\"},"
+		+ " \"species\": {\"s\": \"species/s.jsonc\"}%s}"
 	)
 	var cog: String = "assets/game-icons/cog.svg"
 	var wolf: String = "assets/mana-wolf/mana_wolf.glb"
@@ -2226,6 +2243,8 @@ func _check_pack_manifests() -> String:
 	cases["no realms"] = regions.replace(", \"realms\": {\"w\": \"realms/w.md\"}", "")
 	cases["a quest that isn't JSONC"] = regions.replace("quests/u.jsonc", "quests/u.md")
 	cases["no quests"] = regions.replace(", \"quests\": {\"u\": \"quests/u.jsonc\"}", "")
+	cases["a species that isn't JSONC"] = regions.replace("species/s.jsonc", cog)
+	cases["no species"] = regions.replace(", \"species\": {\"s\": \"species/s.jsonc\"}", "")
 	cases["a region both whole and in pieces"] = regions.replace("{\"q\": [", "{\"r\": [")
 	if not ResourcePack.parse(
 		valid % ["p", "1.0.0", "a", cog, wolf, ""],
@@ -2385,7 +2404,7 @@ func _pack_manifest(pack_id: String) -> String:
 	return (
 		"{\"id\": \"%s\", \"name\": \"n\", \"version\": \"1.0.0\", \"game_version\": \"0.1.0\","
 		+ " \"textures\": {}, \"models\": {}, \"regions\": {\"r\": \"regions/r.md\"},"
-		+ " \"region_pieces\": {}, \"realms\": {}, \"quests\": {}}"
+		+ " \"region_pieces\": {}, \"realms\": {}, \"quests\": {}, \"species\": {}}"
 	) % pack_id
 
 

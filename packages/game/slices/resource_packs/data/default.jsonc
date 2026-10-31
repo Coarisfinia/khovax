@@ -1,7 +1,7 @@
 // The default resource pack (#1860): the game's own resources, in the manifest format a player's
 // pack shares (#1858). Every lookup goes through ResourcePacks, which walks the loaded packs in
 // order, this one last. Its files are named from res://, its root: its textures and models load as
-// Godot imported them, its region files, pieces, realms and quests are read as text.
+// Godot imported them, its region files, pieces, realms, quests and species are read as text.
 {
 	"id": "default",
 	"name": "Default",
@@ -183,5 +183,19 @@
 		"tadpole_pondweed": "slices/quests/data/tadpole_pondweed.jsonc",
 		"three_ombulumo": "slices/quests/data/three_ombulumo.jsonc",
 		"tormaesk_escort": "slices/quests/data/tormaesk_escort.jsonc"
+	},
+	// Each species (#1903), every one of which is in the game: its stats, moves, ascension and the
+	// ids it names (abilities, loot, model), read as text.
+	"species": {
+		"kalvrakkor": "slices/species/data/kalvrakkor.jsonc",
+		"kavrikka": "slices/species/data/kavrikka.jsonc",
+		"nuvvoluvvo": "slices/species/data/nuvvoluvvo.jsonc",
+		"ombulumo": "slices/species/data/ombulumo.jsonc",
+		"ombuwomo": "slices/species/data/ombuwomo.jsonc",
+		"tikazzelu": "slices/species/data/tikazzelu.jsonc",
+		"tikazzir": "slices/species/data/tikazzir.jsonc",
+		"vynakiir": "slices/species/data/vynakiir.jsonc",
+		"vynnimu": "slices/species/data/vynnimu.jsonc",
+		"wobulumu": "slices/species/data/wobulumu.jsonc"
 	}
 }
