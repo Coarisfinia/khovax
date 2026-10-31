@@ -14,8 +14,9 @@ inputs:
     default: "true"
   templates:
     description: >-
-      "true" also installs the export templates export_presets.cfg needs. Downloading them needs uv,
-      pinned by the job's UV_VERSION and UV_SHA256.
+      "true" also installs the export templates export_presets.cfg needs, and uv, pinned by the
+      job's UV_VERSION and UV_SHA256: downloading the templates needs it, and so does building the
+      default pack the builds carry (#1941), even when the templates come from the cache (#1975).
     default: "false"
   import:
     description: >-
@@ -68,9 +69,9 @@ runs:
         key: godot-templates-${{ env.GODOT_VERSION }}-${{ env.GODOT_TEMPLATES_SHA512 }}-${{ hashFiles(format('{0}/export_presets.cfg', inputs.project)) }}
 
     - name: "🧰 Install uv (the Python tooling's runner)"
-      # Only when the templates are downloaded, and not again when the job installed it already.
-      # An unpinned uv the runner image might bring doesn't count.
-      if: inputs.templates == 'true' && steps.cache-templates.outputs.cache-hit != 'true'
+      # Whenever the templates are set up, cached or not (#1975), and not again when the job
+      # installed it already. An unpinned uv the runner image might bring doesn't count.
+      if: inputs.templates == 'true'
       shell: bash
       run: |
         if [ -z "${UV_VERSION:-}" ] || [ -z "${UV_SHA256:-}" ]; then
