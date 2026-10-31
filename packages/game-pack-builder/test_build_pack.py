@@ -1,7 +1,8 @@
 """Tests build_pack.py's run() (#1974) against a stand-in for Godot: a run that exits fine but
 reports, as Godot does at exit, objects it leaked fails the build, like one reporting an error; a
-clean run passes. Godot names leaked objects only in a warning once it exits, which the builder's
-callers never see, since it keeps Godot's output to itself unless the run fails.
+clean run passes, and so does one that merely says the words. Godot names leaked objects only in
+a warning once it exits, which the builder's callers never see, since it keeps Godot's output to
+itself unless the run fails.
 
     uv run --locked --package khovax-game-pack-builder packages/game-pack-builder/test_build_pack.py
 """
@@ -36,6 +37,11 @@ class RunTest(unittest.TestCase):
     def test_a_leak_at_exit_fails(self) -> None:
         with self.assertRaises(RuntimeError):
             run(stand_in(self.folder, f"Godot Engine v4.7.2.stable\n{LEAKED}\n"), self.folder, "--import")
+
+    def test_the_words_alone_pass(self) -> None:
+        # Only Godot's own line counts, not a file or a message that merely says the words.
+        said = "Godot Engine v4.7.2.stable\nimported res://packs/notes/leaked at exit.md\n"
+        run(stand_in(self.folder, said), self.folder, "--import")
 
     def test_an_error_fails(self) -> None:
         with self.assertRaises(RuntimeError):

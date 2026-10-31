@@ -203,8 +203,9 @@ def is_version(editor: str, version: str) -> bool:
 
 
 def run(editor: str, project: Path, *arguments: str) -> None:
-    """Runs Godot headless on the project; RuntimeError with its output when it fails or reports
-    an error."""
+    """Runs Godot headless on the project; RuntimeError with its output when it fails, reports an
+    error or reports objects it leaked at exit (#1974): Godot names those only in a warning once
+    it exits, and its output is kept here."""
     try:
         done = subprocess.run(
             [editor, "--headless", "--path", str(project), *arguments],
@@ -215,7 +216,11 @@ def run(editor: str, project: Path, *arguments: str) -> None:
     except subprocess.TimeoutExpired as late:
         raise RuntimeError(f"godot {' '.join(arguments)} took over {TIMEOUT} s:\n{late.output}") from late
     output = done.stdout + done.stderr
-    if done.returncode != 0 or re.search(r"^(SCRIPT )?ERROR:", output, re.MULTILINE):
+    if (
+        done.returncode != 0
+        or re.search(r"^(SCRIPT )?ERROR:", output, re.MULTILINE)
+        or re.search(r"^(WARNING|ERROR): \d+ .*(leaked|still in use) at exit", output, re.MULTILINE)
+    ):
         raise RuntimeError(f"godot {' '.join(arguments)} failed:\n{output}")
 
 
