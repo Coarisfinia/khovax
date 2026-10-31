@@ -1,8 +1,8 @@
 # The pack builder
 
-Builds a resource pack for the game: textures, models, regions, realms, quests and species that add to or
-replace the game's own. A pack is data, never code. The builder refuses anything else, and the game
-checks every pack again before it loads it.
+Builds a resource pack for the game: textures, models, regions, realms, quests, species and tile
+kinds that add to or replace the game's own. A pack is data, never code. The builder refuses
+anything else, and the game checks every pack again before it loads it.
 
 ## What you need
 
@@ -24,6 +24,7 @@ my_pack/
   realms/...        realms: .md
   quests/...        quests: .jsonc, in the game's quest format
   species/...       species: .jsonc, in the game's species format
+  tiles/...         tile kinds: .jsonc, in the game's tile blueprint format
 ```
 
 Only those file types are allowed, plus `.jsonc` and Godot's `.import` files. A `.import` file may
@@ -45,14 +46,16 @@ at plain files inside the pack. Anything else gets the whole pack refused.
 	"realms": { "my_realm": "realms/my_realm.md" },
 	"quests": { "my_quest": "quests/my_quest.jsonc" },
 	"species": { "my_species": "species/my_species.jsonc" },
-	"translations": {}
+	"translations": {},
+	"tiles": { "my_tile": "tiles/my_tile.jsonc" }
 }
 ```
 
 `translations` stays empty for now: a pack can't bring its own languages yet (#1969).
 
 Paths are relative to the pack's folder. An id the game already uses replaces the game's resource
-with yours.
+with yours. A tile kind's traits are rules: a pack that adds a tile kind or changes one changes how
+the game plays, so replays and co-op hold only between games with the same packs.
 
 ## Building
 

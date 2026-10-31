@@ -9,7 +9,7 @@ extends RefCounted
 ## Every content kind, by its key, each read through its own `cached`.
 static func kinds() -> Dictionary[String, Callable]:
 	return {
-		TileContent.DIR: TileContent.cached,
+		TileContent.KEY: TileContent.cached,
 		AbilityContent.DIR: AbilityContent.cached,
 		SpeciesContent.KEY: SpeciesContent.cached,
 		DevelopmentContent.DIR: DevelopmentContent.cached,

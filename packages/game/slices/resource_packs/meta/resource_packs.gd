@@ -4,7 +4,8 @@ extends RefCounted
 ## walking the loaded packs in order, the first that has the id giving it. The game's own resources
 ## are the default pack, last in the order; a player's packs (#1858) come before it, and override
 ## what they provide. Nothing looks up a built-in texture, model, region, realm, quest (#1888) or
-## species (#1903) or translation catalogue any other way (resource_packs_check.py in CI).
+## species (#1903), translation catalogue (#1902) or tile blueprint (#1901) any other way
+## (resource_packs_check.py in CI).
 
 ## The default pack's manifest; its files are named from res://.
 const DEFAULT: String = "res://slices/resource_packs/data/default.jsonc"
@@ -161,6 +162,19 @@ static func translations_of(packs: Array[ResourcePack]) -> Array[Translation]:
 			push_warning("the translation %s in %s doesn't load" % [locale, givers[locale].id])
 		else:
 			found.append(catalogue)
+	return found
+
+
+## Every tile kind's blueprint (#1901) the loaded packs have, its file as a res:// path by its id,
+## in id order: the first pack that has an id gives its file. The core reads them through
+## TileContent, which is handed this at start (game/), since the core never names a slice.
+static func tiles() -> Dictionary[String, String]:
+	var found: Dictionary[String, String] = {}
+	for pack: ResourcePack in loaded():
+		for tile_id: String in pack.tiles:
+			if not found.has(tile_id):
+				found[tile_id] = pack.root + pack.tiles[tile_id]
+	found.sort()
 	return found
 
 

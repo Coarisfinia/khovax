@@ -292,6 +292,11 @@ def schema_of(data_file: str) -> str:
     parts = Path(data_file).parts
     if parts[0] == "core":
         return f"core/data/schemas/{parts[2]}.schema.json"
+    # A core kind the default resource pack holds (#1901) shares the core's schema.
+    if parts[:3] == ("slices", "resource_packs", "data") and len(parts) == 5:
+        core = f"core/data/schemas/{parts[3]}.schema.json"
+        if Path(core).is_file():
+            return core
     # slices/<slice>/data/<file> belongs to the slice's own kind, named for the slice.
     kind = parts[1] if len(parts) == 4 else parts[3]
     return f"slices/{parts[1]}/data/{kind}.schema.json"

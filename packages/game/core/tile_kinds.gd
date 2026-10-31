@@ -8,11 +8,14 @@ extends RefCounted
 ## core/io/ (TileContent).
 ##
 ## Tile rules are rules: changing a blueprint's traits (e.g. walkable) changes what the game does,
-## so it adds a file to core/rules_changes/, like any rule change.
+## so it adds a file to core/rules_changes/, like any rule change. The blueprints are the resource
+## packs' (#1901): a player's pack (#1858) that adds a kind or gives one other traits changes the
+## rules too, so replays and co-op hold only between games with the same packs; how such a pack
+## declares its rule change is #1858's.
 ##
-## Read here at first use rather than handed over from outside the core: the kinds are fixed data
-## of the build, never state, so they need no hash of their own: a region hashes its tiles' kinds,
-## each as its id's code (StateHash.name_code).
+## Read here at first use (TileContent, from the files game/ hands it at start): the kinds are fixed
+## data of the packs, never state, so they need no hash of their own: a region hashes its tiles'
+## kinds, each as its id's code (StateHash.name_code).
 
 
 ## Whether a tile blueprint has the id `kind`.

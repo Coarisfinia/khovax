@@ -28,7 +28,8 @@ extends RefCounted
 ## name, and broken tags are refused; tags whose content can't be read are warned about (#949). No
 ## two things share an id or a name, whatever their kinds, in any case (#909). Every content kind is
 ## read ahead in the background (#816). The default resource pack (#1860) reads with every texture
-## resolving, and broken pack manifests are refused; the quests are read from it (#1888).
+## resolving, and broken pack manifests are refused; the quests (#1888) and the tile blueprints
+## (#1901) are read from it.
 
 ## A model a species can wear (#1223), by its id in the resource packs (#1864).
 const MODEL: String = "model_mana_wolf"
@@ -659,17 +660,27 @@ func _check_target_steps(content: QuestContent) -> String:
 	return _unrefused(cases, content)
 
 
-## Every tile blueprint file reads, its id matching its file; ground, water and rock are the
-## built-in kinds and keep their walkability; the rules know every kind by its file's name (#802);
-## forest, shrubs and a stump are walkable and a boulder isn't (#205), each with its model, and sand
-## is plain and walkable (#321); every model a blueprint names is in a resource pack (#1864); the
-## stump is drawn at 400
-## hundredths of its size (#588), every other kind at 100, the default; no two kinds share a symbol
-## (#68). Broken blueprints are refused.
+## Every tile blueprint the resource packs list reads (#1901), its id matching its file, and a
+## missing one is reported; ground, water and rock are the built-in kinds and keep their
+## walkability; the rules know every kind by its file's name (#802); forest, shrubs and a stump are
+## walkable and a boulder isn't (#205), each with its model, and sand is plain and walkable (#321);
+## every model a blueprint names is in a resource pack (#1864); the kinds in SCALED are drawn at
+## their scale in hundredths (#588), every other kind at 100, the default; no two kinds share a
+## symbol (#68). Broken blueprints are refused.
 func _check_tiles() -> String:
 	var content: TileContent = TileContent.load_tiles()
 	if not content.problem.is_empty():
 		return "the tile blueprints didn't load: " + content.problem
+	var listed: Array = ResourcePacks.tiles().keys()
+	var read: Array = content.tiles.keys()
+	read.sort()
+	if listed.is_empty() or read != listed:
+		return "the tile blueprints aren't the packs' %s: %s" % [listed, read]
+	var missing_file: String = "res://nowhere/nowhere.jsonc"
+	var nowhere: Dictionary[String, String] = { "nowhere": missing_file }
+	var missing_kind: TileContent = TileContent.load_files(nowhere)
+	if not missing_kind.problem.begins_with(missing_file) or not missing_kind.tiles.is_empty():
+		return "a missing tile blueprint wasn't reported: " + missing_kind.problem
 	var walkable: Dictionary[String, bool] = {
 		"ground": true,
 		"water": false,
@@ -2126,10 +2137,11 @@ func _check_prefetched() -> String:
 
 
 ## The default resource pack reads as the pack `default`, and every texture, model, region, realm,
-## quest, species and translation catalogue it lists resolves through ResourcePacks (#1860, #1864,
-## #1861, #1888, #1903, #1902). A manifest with an unknown field, a bad id or version, or a resource
-## whose file is missing (a region's, realm's, quest's or species' is read as text and found when
-## it's read), of another kind or outside the pack is refused, as a player's pack will be (#1858).
+## quest, species, translation catalogue and tile blueprint it lists resolves through ResourcePacks
+## (#1860, #1864, #1861, #1888, #1903, #1902, #1901). A manifest with an unknown field, a bad id or
+## version, or a resource whose file is missing (a region's, realm's, quest's, species' or tile
+## blueprint's is read as text and found when it's read), of another kind or outside the pack is
+## refused, as a player's pack will be (#1858).
 func _check_resource_packs() -> String:
 	var packs: Array[ResourcePack] = ResourcePacks.loaded()
 	if packs.size() != 1:
@@ -2152,15 +2164,18 @@ func _check_resource_packs() -> String:
 	listed.sort()
 	if realms.keys() != listed or not realms.values().all(FileAccess.file_exists):
 		return "the default pack's realms don't resolve: %s" % realms
+	var tiles: Dictionary[String, String] = ResourcePacks.tiles()
+	if tiles.size() != packs[0].tiles.size() or not tiles.values().all(FileAccess.file_exists):
+		return "the default pack's tile blueprints don't resolve: %s" % tiles
+	return _check_pack_quests(packs[0])
+
+
+## The default pack's quests resolve, the quests read are exactly the ones the resource packs list
+## (#1888), and a quest whose file is missing is reported, naming the file.
+func _check_pack_quests(pack: ResourcePack) -> String:
 	var quests: Dictionary[String, String] = ResourcePacks.quests()
-	if quests.size() != packs[0].quests.size() or not quests.values().all(FileAccess.file_exists):
+	if quests.size() != pack.quests.size() or not quests.values().all(FileAccess.file_exists):
 		return "the default pack's quests don't resolve: %s" % quests
-	return _check_pack_quests()
-
-
-## The quests read are exactly the ones the resource packs list (#1888), and a quest whose file is
-## missing is reported, naming the file.
-func _check_pack_quests() -> String:
 	var content: QuestContent = QuestContent.load_quests()
 	var listed: Array = ResourcePacks.quests().keys()
 	var read: Array = content.quests.keys()
@@ -2210,7 +2225,7 @@ func _check_pack_manifests() -> String:
 		+ " \"models\": {\"m\": \"%s\"}, \"regions\": {\"r\": \"regions/r.md\"},"
 		+ " \"region_pieces\": {\"q\": [\"regions/q/start.md\"]},"
 		+ " \"realms\": {\"w\": \"realms/w.md\"}, \"quests\": {\"u\": \"quests/u.jsonc\"},"
-		+ " \"species\": {\"s\": \"species/s.jsonc\"},"
+		+ " \"species\": {\"s\": \"species/s.jsonc\"}, \"tiles\": {\"t\": \"tiles/t.jsonc\"},"
 		+ " \"translations\": {}%s}"
 	)
 	var cog: String = "assets/game-icons/cog.svg"
@@ -2238,12 +2253,7 @@ func _check_pack_manifests() -> String:
 		", \"region_pieces\": {\"q\": [\"regions/q/start.md\"]}",
 		"",
 	)
-	cases["a realm that isn't Markdown"] = regions.replace("realms/w.md", cog)
-	cases["no realms"] = regions.replace(", \"realms\": {\"w\": \"realms/w.md\"}", "")
-	cases["a quest that isn't JSONC"] = regions.replace("quests/u.jsonc", "quests/u.md")
-	cases["no quests"] = regions.replace(", \"quests\": {\"u\": \"quests/u.jsonc\"}", "")
-	cases["a species that isn't JSONC"] = regions.replace("species/s.jsonc", cog)
-	cases["no species"] = regions.replace(", \"species\": {\"s\": \"species/s.jsonc\"}", "")
+	cases.merge(_text_section_cases(regions, cog))
 	cases["a region both whole and in pieces"] = regions.replace("{\"q\": [", "{\"r\": [")
 	# `regions` is the valid manifest, which every case above changes in one place.
 	if not ResourcePack.parse(regions, "res://").problem.is_empty():
@@ -2291,6 +2301,22 @@ func _check_pack_translations() -> String:
 	if shown != ["Genommen", other, taken, taken]:
 		return "a pack's catalogue didn't translate, fall back or come out again: %s" % [shown]
 	return _check_pack_loading()
+
+
+## The broken manifests made from `valid` whose realm, quest, species or tile blueprint (each read
+## as text) is of another kind or missing, by what's wrong with them; `other` is a file of another
+## kind.
+func _text_section_cases(valid: String, other: String) -> Dictionary[String, String]:
+	return {
+		"a realm that isn't Markdown": valid.replace("realms/w.md", other),
+		"no realms": valid.replace(", \"realms\": {\"w\": \"realms/w.md\"}", ""),
+		"a quest that isn't JSONC": valid.replace("quests/u.jsonc", "quests/u.md"),
+		"no quests": valid.replace(", \"quests\": {\"u\": \"quests/u.jsonc\"}", ""),
+		"a species that isn't JSONC": valid.replace("species/s.jsonc", other),
+		"no species": valid.replace(", \"species\": {\"s\": \"species/s.jsonc\"}", ""),
+		"a tile blueprint that isn't JSONC": valid.replace("tiles/t.jsonc", "tiles/t.md"),
+		"no tiles": valid.replace(", \"tiles\": {\"t\": \"tiles/t.jsonc\"}", ""),
+	}
 
 
 ## A pack's .pck mounts under res://packs/<id>/ once it's all data, and one that holds code, a
@@ -2465,7 +2491,7 @@ func _pack_manifest(pack_id: String) -> String:
 		"{\"id\": \"%s\", \"name\": \"n\", \"version\": \"1.0.0\", \"game_version\": \"0.1.0\","
 		+ " \"textures\": {}, \"models\": {}, \"regions\": {\"r\": \"regions/r.md\"},"
 		+ " \"region_pieces\": {}, \"realms\": {}, \"quests\": {}, \"species\": {},"
-		+ " \"translations\": {}}"
+		+ " \"translations\": {}, \"tiles\": {}}"
 	) % pack_id
 
 
