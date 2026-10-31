@@ -78,6 +78,12 @@ def glow(name, colour):
     """A part that glows once the game turns it on (a savepoint's hole, #1854): a flat `colour`
     (sRGB, as the set's tones) with no emission in the file. The game finds it by `name` and sets
     its emission."""
+    return flat(name, colour)
+
+
+def flat(name, colour):
+    """A part of one flat `colour` (sRGB, as the set's tones), matte and single-sided, with no
+    texture: an ore's veins (#1929), so another ore is the same shape with another colour."""
     mat = bpy.data.materials.new(name)
     mat.use_backface_culling = True
     shader = mat.node_tree.nodes["Principled BSDF"]

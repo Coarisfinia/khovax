@@ -39,6 +39,7 @@ const SCALED: Dictionary[String, int] = {
 	"cracked_rock": 350,
 	"rubble": 400,
 	"waystone": 125,
+	"copper_ore": 125,
 }
 ## A species file's speed, abilities (#222), name (#351), strike type (#626), codex entry (#1173),
 ## behaviour traits (#1200) and model (#1223), as a valid species ends.

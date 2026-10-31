@@ -1,6 +1,6 @@
-// Rubble: the broken stone left once a player harvested cracked rock by hand (#1546). Nobody walks
-// it, and sight passes over it, like the cracked rock was. It lasts until its instance is purged
-// (#212), which brings the cracked rock back.
+// Rubble: the broken stone left once a player harvested cracked rock (#1546) or copper ore (#1929) by
+// hand. Nobody walks it, and sight passes over it, like the rock was. It lasts until its instance is
+// purged (#212), which brings the rock back.
 {
 	"id": "rubble",
 	"color": "#ada393",

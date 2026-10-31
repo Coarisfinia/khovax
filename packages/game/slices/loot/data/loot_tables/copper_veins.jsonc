@@ -1,0 +1,9 @@
+// What harvesting copper ore by hand drops (#1929): the copper in its veins. A placeholder, to
+// tune (#960).
+{
+	"id": "copper_veins",
+	"kind": "tile",
+	"entries": [
+		{ "item": "copper", "chance": 1000, "min": 1, "max": 2 } // 100 %
+	]
+}
