@@ -2221,13 +2221,25 @@ func _check_pack_manifests() -> String:
 func _check_pack_loading() -> String:
 	var valid: PackedByteArray = _pack_manifest("pack_valid").to_utf8_buffer()
 	var region: PackedByteArray = "# R".to_utf8_buffer()
+	var uid: String = ResourceUID.id_to_text(ResourceUID.create_id())
+	var texture_import: PackedByteArray = (
+		"[remap]\nimporter=\"texture\"\nuid=\"%s\"\npath=\"res://.godot/imported/t.ctex\"\n" % uid
+	).to_utf8_buffer()
 	var pack: ResourcePack = PackLoader.mount(
-		_packed("pack_valid", { "pack.jsonc": valid, "regions/r.md": region })
+		_packed("pack_valid", {
+			"pack.jsonc": valid,
+			"regions/r.md": region,
+			"t.png.import": texture_import,
+			"/.godot/imported/t.ctex": "GST2".to_utf8_buffer(),
+		})
 	)
 	if not pack.problem.is_empty() or pack.id != "pack_valid":
 		return "a valid pack's .pck wasn't mounted: " + pack.problem
 	if FileAccess.get_file_as_string(pack.root + "regions/r.md") != "# R":
 		return "a mounted pack's file can't be read under " + pack.root
+	# A model in a pack names the textures extracted beside it by their uids (#1940).
+	if ResourceUID.uid_to_path(uid) != pack.root + "t.png":
+		return "a mounted pack's uid %s isn't its file's: %s" % [uid, ResourceUID.uid_to_path(uid)]
 	var cases: Dictionary[String, Dictionary] = {
 		"a script": { "pack.jsonc": valid, "code.gd": "extends Node".to_utf8_buffer() },
 		"a scene with a script": {
