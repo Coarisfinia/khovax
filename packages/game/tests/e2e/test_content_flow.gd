@@ -2435,8 +2435,8 @@ func _write_bytes(path: String, bytes: PackedByteArray) -> void:
 	file.close()
 
 
-## A pack under user:// whose translation catalogues are `catalogues` (a manifest's object), beside
-## words.po, a German catalogue translating one of the game's texts, and words.md.
+## A pack under user:// whose translation catalogues are `catalogues`, a manifest's object. Beside
+## it lie words.po, a German catalogue translating one of the game's texts, and words.md.
 func _words_pack(catalogues: String) -> ResourcePack:
 	var folder: String = "user://pack_translations/"
 	var _made: Error = DirAccess.make_dir_recursive_absolute(folder)
