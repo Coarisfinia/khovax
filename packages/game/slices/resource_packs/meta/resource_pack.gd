@@ -18,6 +18,7 @@ const FIELDS: Array[String] = [
 	"realms",
 	"quests",
 	"species",
+	"translations",
 ]
 ## Each section of resources the manifest lists, one file per id, with the type its files load as;
 ## "" for a file read as text (a region file or a realm, #1861, a quest, #1888, or a species,
@@ -31,6 +32,7 @@ const KINDS: Dictionary[String, String] = {
 	"realms": "",
 	"quests": "",
 	"species": "",
+	"translations": "Translation",
 }
 ## The section of regions arranged from pieces (#1861): each region's piece files by its id, read as
 ## text like the region files.
@@ -43,6 +45,7 @@ const ENDINGS: Dictionary[String, Array] = {
 	"realms": ["md"],
 	"quests": ["jsonc"],
 	"species": ["jsonc"],
+	"translations": ["po"],
 }
 ## A version: major.minor.patch.
 const VERSION: String = "\\A[0-9]+\\.[0-9]+\\.[0-9]+\\z"
@@ -67,6 +70,9 @@ var realms: Dictionary[String, String] = {}
 var quests: Dictionary[String, String] = {}
 ## Each species' file (#1903) by its id, relative to `root`.
 var species: Dictionary[String, String] = {}
+## Each language's translation catalogue (#1902), a gettext .po, by its locale (`de`, `pt_br`),
+## relative to `root`.
+var translations: Dictionary[String, String] = {}
 ## Where the pack's files are named from: res:// for the default pack.
 var root: String = ""
 ## Why the pack can't be used, or "" when it can.
@@ -75,8 +81,8 @@ var problem: String = ""
 
 ## The pack the manifest `text` describes, its files under `root`, with `problem` saying why it
 ## can't be used: a field missing or unknown, an id that isn't one, or a texture, model, region,
-## region piece, realm, quest or species whose file climbs out of `root`, has another kind's ending
-## or (for a texture or model) doesn't exist.
+## region piece, realm, quest, species or translation catalogue whose file climbs out of `root`, has
+## another kind's ending or (for a texture, model or catalogue) doesn't exist.
 static func parse(text: String, files_root: String) -> ResourcePack:
 	var pack: ResourcePack = ResourcePack.new()
 	pack.root = files_root
@@ -98,6 +104,15 @@ func texture(texture_id: String) -> Texture2D:
 ## The model `model_id`, which the pack must have, loaded as Godot imported it (texture).
 func model(model_id: String) -> PackedScene:
 	return load(root + models[model_id]) as PackedScene
+
+
+## The translation catalogue of `locale` (#1902), which the pack must have, for that locale
+## whatever its own header says, or null when its file doesn't load as one.
+func translation(locale: String) -> Translation:
+	var found: Translation = load(root + translations[locale]) as Translation
+	if found != null:
+		found.locale = locale
+	return found
 
 
 ## Reads the manifest's `data` into this; returns why it can't, or "".
@@ -141,6 +156,7 @@ func _read(data: Dictionary) -> String:
 	realms.assign(found["realms"])
 	quests.assign(found["quests"])
 	species.assign(found["species"])
+	translations.assign(found["translations"])
 	region_pieces = pieces
 	return ""
 

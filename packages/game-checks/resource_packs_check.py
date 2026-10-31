@@ -1,25 +1,28 @@
 """Validates the default resource pack (#1860): the game's own resources, its textures, its models
-(#1864), its region files, region pieces and realms (#1861), its quests (#1888) and its species
-(#1903), described by the same manifest a player's pack will have (#1858), and looked up only
-through ResourcePacks. It fails when
+(#1864), its region files, region pieces and realms (#1861), its quests (#1888), its species
+(#1903) and its translation catalogues (#1902), described by the same manifest a player's pack will
+have (#1858), and looked up only through ResourcePacks. It fails when
 - the manifest (game_shared.resource_packs.MANIFEST) is missing or isn't a JSON object;
 - an id doesn't resolve: it isn't an id (Ids), or its file isn't tracked, isn't imported by Godot
   (a .import beside it, for the kinds Godot imports) or isn't of its kind (an image, a .glb or
-  .gltf model, a Markdown region file, piece or realm, a JSONC quest or species);
+  .gltf model, a Markdown region file, piece or realm, a JSONC quest or species, a .po catalogue
+  named after its locale);
 - a resource is unreferenced: the manifest lists it but no script (outside its comments), scene,
-  resource or content file of the game's names its id as a string (but for the realms, the quests
-  and the species, which the game finds by listing the pack), or a file of its kind (an image or
-  model under assets/, a region file or piece under regions/, a realm under realms/, a quest in the
-  quests slice's data/, a species directly in slices/species/data/) is in the repository but not in
-  the manifest;
+  resource or content file of the game's names its id as a string (but for the realms, the
+  quests, the species and the catalogues, which the game finds by listing the pack), or a file of
+  its kind (an image or model under assets/, a region file or piece under regions/, a realm under
+  realms/, a quest in the quests slice's data/, a species directly in slices/species/data/, a
+  catalogue under translations/) is in the repository but not in the manifest;
 - a quest's or species' entry isn't its own file (slices/quests/data/<id>.jsonc,
   slices/species/data/<id>.jsonc), so it's named after its file (#72);
-- a script, scene, resource or content file names a texture's, model's, region's, realm's, quest's
-  or species' res:// path instead of its id, so it would get around the resolver, and a pack could
-  never override it;
+- a script, scene, resource or content file names a texture's, model's, region's, realm's, quest's,
+  species' or catalogue's res:// path instead of its id, so it would get around the resolver, and a
+  pack could never override it (project.godot naming a catalogue for Godot to load gets around it
+  too, #1902);
   or a script names anything by its uid://, loaded or kept for later (stricter than the pack needs:
-  scripts never do; #1865, #1919), or builds a path under assets/, regions/, realms/, the quests'
-  or the species' folder at runtime (#1865; the tools, which list the assets for the credits, may).
+  scripts never do; #1865, #1919), or builds a path under assets/, regions/, realms/,
+  translations/, the quests' or the species' folder at runtime (#1865; the tools, which list the
+  assets for the credits, may).
   A path may hold spaces (#1919).
 An id named only in the tests (any tests/ folder, or a test_*.gd anywhere; #1865, #1919) counts as
 unreferenced: they name ids to check them. The models the boot flow lists as built before what uses
@@ -84,7 +87,13 @@ KINDS: dict[str, Kind] = {
     "quests": Kind("quest", (".jsonc",), False, f"{QUESTS}/*.jsonc", listed=True),
     # Every species the packs have is in the game, so nothing names one to look it up (#1903).
     "species": Kind("species", (".jsonc",), False, f"{SPECIES}/*.jsonc", listed=True),
+    # Every language's catalogue, translations/<locale>.po, registered at start, so nothing names
+    # one either (#1902). The template, khovax.pot, stays beside them, where its tool writes it.
+    "translations": Kind("translation", (".po",), False, "translations/*.po", listed=True),
 }
+# The project setting through which Godot would load catalogues itself, around the pack (#1902).
+PROJECT = Path("project.godot")
+PROJECT_TRANSLATIONS = re.compile(r"^locale/translations=", re.MULTILINE)
 # What names a resource: the scripts, scenes and resources, and the content files (#1864).
 NAMING = ("*.gd", "*.tscn", "*.tres", "*.jsonc")
 # The resolver's own slice reads the manifest; it never names a resource.
@@ -100,7 +109,8 @@ PATH = re.compile(
     rf"([\"'])res://(?P<path>assets/{PATH_CHAR}+?\.(?:"
     + "|".join(ending[1:] for ending in IMAGES + MODELS)
     + rf")|regions/{PATH_CHAR}+|realms/{PATH_CHAR}+|{QUESTS}/{PATH_CHAR}+?\.jsonc"
-    + rf"|{SPECIES}/{NAME_CHAR}+\.jsonc)\1"
+    + rf"|{SPECIES}/{NAME_CHAR}+\.jsonc"
+    + rf"|translations/{PATH_CHAR}+?\.po)\1"
 )
 
 # Lookups around the resolver that name no path the check above could read (#1865): a uid://
@@ -112,7 +122,7 @@ UID_STRING = re.compile(rf"([\"'])(?P<uid>uid://{PATH_CHAR}*)\1")
 # The quests' folder also holds their schema, a whole file, which names no quest; the species'
 # folder also holds the abilities' folder, which isn't theirs.
 PACK_STRING = re.compile(
-    rf"([\"'])res://(?:(?:assets|regions|realms|{QUESTS})(?:/{PATH_CHAR}*)?|{SPECIES}(?:/{NAME_CHAR}*)?)\1"
+    rf"([\"'])res://(?:(?:assets|regions|realms|translations|{QUESTS})(?:/{PATH_CHAR}*)?|{SPECIES}(?:/{NAME_CHAR}*)?)\1"
 )
 WHOLE_FILE = re.compile(rf"([\"'])res://{PATH_CHAR}+\.[A-Za-z0-9]+\1")
 # The tools list the assets as files (the credits), never looking one up for the game.
@@ -297,7 +307,16 @@ def main() -> int:
         for species_id, paths in entries["species"].items()
         if paths != [f"{SPECIES}/{species_id}.jsonc"]
     ]
-    tracked = set(git_files("assets", "regions", "realms", QUESTS, SPECIES))
+    problems += [
+        (f"translation {locale}'s file is {paths}, not translations/{locale}.po", MANIFEST.as_posix())
+        for locale, paths in entries["translations"].items()
+        if paths != [f"translations/{locale}.po"]
+    ]
+    if PROJECT.is_file() and PROJECT_TRANSLATIONS.search(PROJECT.read_text(encoding="utf-8")):
+        problems.append(
+            ("loads translation catalogues itself: list them in the default pack (ResourcePacks)", PROJECT.as_posix())
+        )
+    tracked = set(git_files("assets", "regions", "realms", "translations", QUESTS, SPECIES))
     models = {path for paths in entries["models"].values() for path in paths}
     used_by_models = model_images(sorted(models & tracked))
     named = {
