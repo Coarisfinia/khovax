@@ -8,9 +8,9 @@ blue head off the middle. And each predicate picks the colours it should, and no
 A fragment left beyond a pair (#1756), a dim spot by one eye only, fails too
 (marked_eyes.fragments), while a shade only a little darker than the skin passes; so does a dim
 speck a few texels across that lies between the head's samples, where no sample reads it (#1764),
-while a single dim texel passes; and a dim patch two texels square on a coarse texture over a
-low ball, whose texels lie farther apart on the surface than `fragments` groups by, fails as one
-spot (#1781), while two dim texels on each of two islands side by side on the texture, far apart
+while a single dim texel passes, and so does that speck once `scrub` has painted it out (#1785);
+and a dim patch two texels square on a coarse texture over a low ball, whose texels lie farther
+apart on the surface than `fragments` groups by, fails as one spot (#1781), while two dim texels on each of two islands side by side on the texture, far apart
 on the head, pass: neither is a spot of FRAGMENT_TEXELS.
 A two-tone head whose right half is dark basalt, as the Kavrikka's, passes: that half is a tone of
 its own paint (#1782); a dim fragment on its pale half or a black one on its basalt fails, and so
@@ -59,9 +59,10 @@ FOHOSSA = "assets/fohossa/fohossa.glb"
 HOUND = "assets/frostfire_hound/frostfire_hound.glb"
 # A texture this many texels square, whose texels the ball's triangles cover far more of than the
 # head samples (#1764), and the dim specks laid between those samples, each this many texels
-# square, with whether the check passes it.
+# square, with whether the check passes it and whether `scrub` runs first (#1785: it paints out a
+# speck no sample reads, far from any dark sample, so the check passes after it).
 SPECK_SIZE = 2048
-SPECKS = {"dim_speck": (3, False), "dim_texel": (1, True)}
+SPECKS = {"dim_speck": (3, False, False), "dim_texel": (1, True, False), "dim_speck_scrubbed": (3, True, True)}
 # A coarse texture this many texels square on a low ball of this many segments around and up, each
 # texel wider on the surface than two of the cells `fragments` groups by, and the dim patch this many
 # texels square on it, which must fail.
@@ -221,9 +222,9 @@ def build(paint, ours, weight, colour, middle, size=SIZE, segments=(64, 32)):
     return skin
 
 
-def speck(name, across, passes):
+def speck(name, across, passes, scrubbed):
     """Whether the check passes a plain ball as it should with a dim speck `across` texels square
-    by the left eye, where no head sample reads it (#1764)."""
+    by the left eye, where no head sample reads it (#1764), once `scrub` has run if `scrubbed`."""
     skin = build(None, False, 1.0, SKIN, 0.0, SPECK_SIZE)
     head = marked_eyes.Head(skin, "head")
     rows, columns, texels = marked_eyes._texels(head, numpy.ones(len(head.spots), dtype=bool))
@@ -241,6 +242,8 @@ def speck(name, across, passes):
     row, column = min(zip(rows[free].tolist(), columns[free].tolist()))
     head.pixels[row:row + across, column:column + across, :3] = DIM
     head.image.pixels.foreach_set(head.pixels.ravel())
+    if scrubbed:
+        marked_eyes.scrub(skin)
     found = sorted(marked_eyes.painted(skin)) + (["FRAGMENTS"] if marked_eyes.fragments(skin) else [])
     ok = (not found) == passes
     (log.info if ok else log.error)("%s %s: %s at texel (%d, %d), %s" % (
@@ -383,8 +386,8 @@ def main():
         line = "%s %s: %s, %s" % ("ok" if ok else "FAIL", name, "found " + ", ".join(sorted(found)) if found
                                   else "nothing found", "should pass" if passes else "should fail")
         (log.info if ok else log.error)(line)
-    for name, (across, passes) in SPECKS.items():
-        passed = speck(name, across, passes) and passed
+    for name, (across, passes, scrubbed) in SPECKS.items():
+        passed = speck(name, across, passes, scrubbed) and passed
     passed = coarse("coarse_patch", COARSE_SIZE) and passed
     passed = coarse("tiny_patch", TINY_SIZE) and passed
     passed = islands() and passed
