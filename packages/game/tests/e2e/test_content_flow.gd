@@ -2244,7 +2244,6 @@ func _check_pack_manifests() -> String:
 	cases["no quests"] = regions.replace(", \"quests\": {\"u\": \"quests/u.jsonc\"}", "")
 	cases["a species that isn't JSONC"] = regions.replace("species/s.jsonc", cog)
 	cases["no species"] = regions.replace(", \"species\": {\"s\": \"species/s.jsonc\"}", "")
-	cases["no translations"] = regions.replace(", \"translations\": {}", "")
 	cases["a region both whole and in pieces"] = regions.replace("{\"q\": [", "{\"r\": [")
 	# `regions` is the valid manifest, which every case above changes in one place.
 	if not ResourcePack.parse(regions, "res://").problem.is_empty():
@@ -2255,11 +2254,12 @@ func _check_pack_manifests() -> String:
 	return _check_pack_translations()
 
 
-## A pack's translation catalogue loads for the locale the pack names it by and is registered
-## (#1902), and a missing catalogue or one that isn't a .po is refused: a text shows translated in
-## that language, as its source text where the catalogue lacks it, and as its source text in
-## English. Registering the loaded packs' catalogues again takes it out. The texts are the game's
-## own, named through variables so the template doesn't list the test.
+## The default pack's catalogues resolve, and a pack's translation catalogue loads for the locale
+## the pack names it by and is registered (#1902); a missing catalogue, one that isn't a .po, or a
+## manifest without the section is refused. A text shows translated in that language, as its source
+## text where the catalogue lacks it, and as its source text in English. Registering the loaded
+## packs' catalogues again takes it out. The texts are the game's own, named through variables so
+## the template doesn't list the test.
 func _check_pack_translations() -> String:
 	if ResourcePacks.translations().size() != ResourcePacks.loaded()[-1].translations.size():
 		return "the default pack's translation catalogues don't all resolve"
@@ -2269,6 +2269,11 @@ func _check_pack_translations() -> String:
 	for refused: String in ["{\"de\": \"none.po\"}", "{\"de\": \"words.md\"}"]:
 		if _words_pack(refused).problem.is_empty():
 			return "a pack with the translation catalogues %s wasn't refused" % refused
+	if ResourcePack.parse(
+		_pack_manifest("pack_words").replace(", \"translations\": {}", ""),
+		"res://",
+	).problem.is_empty():
+		return "a pack manifest with no translations wasn't refused"
 	var packs: Array[ResourcePack] = [pack]
 	packs.append_array(ResourcePacks.loaded())
 	var taken: String = "Taken"
