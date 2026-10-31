@@ -7,6 +7,7 @@
 	"color": "#8a6a52",
 	"symbol": "$", // tells it apart without its color (#68)
 	"model": "model_ore_outcrop",
+	"scale": 125, // in hundredths: the outcrop is sized to fill its hex, which the decorations shrink
 	"harvest": { "yields": "copper_veins", "becomes": "rubble", "takes": "hands" },
 	"traits": { "walkable": false }
 }

@@ -34,7 +34,7 @@ WORLD_SCALE = "prop"
 # Edges sharper than this stay sharp in the shading: the chunks' broken facets.
 SHARP = math.radians(40.0)
 # The veins' colour: copper, as a flat tint (sRGB).
-VEIN_COLOUR = (0.78, 0.45, 0.20)
+VEIN_COLOUR = (0.86, 0.50, 0.22)
 # The materials, in their slots.
 STONE, SHADED, VEINS = range(3)
 # How far a crack's darkness looks, in metres once sized: short, so only the narrow cracks between
@@ -86,6 +86,8 @@ def main():
     size = place(rock)
     bpy.ops.object.shade_smooth_by_angle(angle=SHARP)
     mesh = rock.data
+    # Only the set's materials, in their slots, whatever the download carried.
+    mesh.materials.clear()
     mesh.materials.append(prop_paint.material("stone", "stone"))
     mesh.materials.append(prop_paint.material("stone_shaded", "stone", prop_paint.Weathering.shade))
     mesh.materials.append(prop_paint.flat("veins", VEIN_COLOUR))
