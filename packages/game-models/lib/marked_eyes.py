@@ -681,7 +681,9 @@ def scrub(skin, bone="head", below=DARK_VALUE, ratio=0.75, reach=6, grow=3, weig
     texture's islands, and fragments `repaint` misses (a sliver across an island's seam, a pupil
     on an island of its own, a dark smudge under the eye) still show where the old eyes were.
     Every near-black texel (its brightest channel under `below`, sRGB) goes, and so does every
-    texel within `reach` of a sample of the head darker than `ratio` of the head's median, if it
+    texel within `reach` of a sample of the head darker than `ratio` of the samples' median, if it
+    is that dark too, and of a texel the head's triangles touch darker than `ratio` of those
+    texels' median, as `fragments` reads them (#1785: a speck between the samples goes too), if it
     is that dark too; with `grow` texels around each, they take the colour of the texels around
     them, filled in from the edges inward. The head is the faces weighted at least `weight` to
     `bone`, as `fragments` takes it. Returns how many texels it painted."""
@@ -689,13 +691,18 @@ def scrub(skin, bone="head", below=DARK_VALUE, ratio=0.75, reach=6, grow=3, weig
     pixels = head.pixels
     height, width = pixels.shape[:2]
     value = pixels[:, :, :3].max(axis=2)
-    dim = ratio * float(numpy.median(head.colours.max(axis=1)))
-    near = numpy.zeros((height, width), dtype=bool)
-    darker = head.colours.max(axis=1) < dim
-    near[head.texels[0][darker], head.texels[1][darker]] = True
-    for _ in range(reach):
-        near = _spread(near)
-    hole = (value < below) | (near & (value < dim))
+    rows, columns = _cover(head, numpy.ones(len(head.spots), dtype=bool), touching=True)[:2]
+    # A texel two triangles touch counts once, as in `fragments`.
+    touched = numpy.unique(rows * width + columns)
+    hole = value < below
+    # The samples' seeds, as before #1785, and the touched texels' seeds, each with its own median.
+    seeds = [(head.texels[0] * width + head.texels[1], head.colours.max(axis=1)), (touched, value.flat[touched])]
+    for texels, values in seeds:
+        dim = ratio * float(numpy.median(values))
+        near = _mask(texels[values < dim], (height, width))
+        for _ in range(reach):
+            near = _spread(near)
+        hole |= near & (value < dim)
     for _ in range(grow):
         hole = _spread(hole)
     painted = int(hole.sum())
