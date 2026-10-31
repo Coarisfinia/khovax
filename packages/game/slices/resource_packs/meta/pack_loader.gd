@@ -24,6 +24,7 @@ static func mount(pck_path: String) -> ResourcePack:
 		problem = "Godot couldn't mount it"
 	if not problem.is_empty():
 		return _refused("%s: %s" % [pck_path, problem])
+	_register_uids(file, root)
 	var pack: ResourcePack = ResourcePack.parse(
 		FileAccess.get_file_as_string(root + PackCheck.MANIFEST), root
 	)
@@ -44,6 +45,24 @@ static func _manifest_problem(file: PackFile, root: String) -> String:
 	if FileAccess.file_exists(root + PackCheck.MANIFEST):
 		return "a pack is mounted under %s already" % root
 	return ""
+
+
+## Makes the uid each of the mounted pack's .import files gives its resource known, as the game's
+## own are from its uid cache, which a mounted pack can't add to: a model the pack holds names the
+## textures extracted beside it by their uids (#1940). A uid known already, the game's or another
+## pack's, is left as it is: a pack's scene that names one is refused (PackScene), and the file
+## still loads by its path.
+static func _register_uids(file: PackFile, root: String) -> void:
+	var own: String = root.trim_prefix("res://")
+	for path: String in file.files:
+		if not path.begins_with(own) or path.get_extension() != "import":
+			continue
+		for line: String in file.read(path).get_string_from_utf8().split("\n"):
+			if not line.begins_with('uid="uid://'):
+				continue
+			var uid: int = ResourceUID.text_to_id(line.get_slice('"', 1))
+			if uid != ResourceUID.INVALID_ID and not ResourceUID.has_id(uid):
+				ResourceUID.add_id(uid, "res://" + path.trim_suffix(".import"))
 
 
 ## A pack that wasn't mounted, for `problem`.
