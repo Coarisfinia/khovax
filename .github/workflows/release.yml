@@ -208,6 +208,16 @@ jobs:
           cache: "false"
           templates: "true"
 
+      - name: "📦 Build the default pack the builds carry"
+        # Every build carries our default pack as the pack builder's .pck and mounts it like any
+        # pack (#1868, #1941): the mobile one goes into the APK, the desktop one into the rest.
+        run: |
+          uv run --locked --package khovax-game-pack-builder \
+            ../game-pack-builder/default_pack.py "$RUNNER_TEMP/default-pack"
+          GODOT=~/godot/godot timeout 600 uv run --locked --package khovax-game-pack-builder \
+            ../game-pack-builder/build_pack.py "$RUNNER_TEMP/default-pack" "$RUNNER_TEMP/default-pck"
+          mkdir -p packs
+
       - name: "📦 Windows + Linux + web: export the release builds"
         # Files are named after the game's display name, so renaming the game needs no change here;
         # only letters, digits, dots, dashes and underscores are kept, and never a leading dash. The
@@ -218,6 +228,7 @@ jobs:
           name=${name:-khovax}
           echo "NAME=${name}" >> "$GITHUB_ENV"
           mkdir -p build/release build/web
+          cp "$RUNNER_TEMP/default-pck/default.desktop.pck" packs/default.pck
           timeout 300 ~/godot/godot --headless --path . --export-release "Windows Desktop" build/khovax.exe
           test -s build/khovax.exe
           cp build/khovax.exe "build/release/${name}-${TAG}-windows-x86_64.exe"
@@ -265,6 +276,7 @@ jobs:
             echo "apk=none" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          cp "$RUNNER_TEMP/default-pck/default.mobile.pck" packs/default.pck
           GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$keystore" GODOT_ANDROID_KEYSTORE_RELEASE_USER="$KEY_ALIAS" \
             GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="$KEYSTORE_PASSWORD" \
             timeout 300 ~/godot/godot --headless --path . --export-release "Android" build/khovax.apk

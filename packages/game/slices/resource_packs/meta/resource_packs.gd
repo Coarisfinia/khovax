@@ -2,12 +2,15 @@ class_name ResourcePacks
 extends RefCounted
 ## The one resolver of the game's resources (#1860): it turns a resource id into the resource by
 ## walking the loaded packs in order, the first that has the id giving it. The game's own resources
-## are the default pack, last in the order; a player's packs (#1858) will come before it, and
-## override what they provide. Nothing looks up a built-in texture, model, region or realm any
+## are the default pack, last in the order; a player's packs (#1858) come before it, and override
+## what they provide. Nothing looks up a built-in texture, model, region or realm any
 ## other way (resource_packs_check.py in CI).
 
 ## The default pack's manifest; its files are named from res://.
 const DEFAULT: String = "res://slices/resource_packs/data/default.jsonc"
+## The default pack's .pck, built by the pack builder like any pack, which every build carries and
+## mounts like one (#1941). A run from the project has none and reads the files DEFAULT names.
+const BUILT_DEFAULT: String = "res://packs/default.pck"
 ## The folder a player's packs are found in, each a .pck the pack builder made (#1869); the folders
 ## per platform are #1942's.
 const PLAYER_PACKS: String = "user://packs/"
@@ -22,6 +25,8 @@ static var _models: Dictionary[String, PackedScene] = {}
 ## What PackLoader made of each player's pack file so far, by its path, usable or not: Godot can't
 ## unmount a pack, so a reload reuses it rather than mounting it again.
 static var _mounted: Dictionary[String, ResourcePack] = {}
+## The default pack, read once: mounted from BUILT_DEFAULT, it can't be mounted again on a reload.
+static var _default: ResourcePack = null
 
 
 ## The texture `texture_id` from the first loaded pack that has it, or null when none does or its
@@ -119,17 +124,33 @@ static func _with_region(region_id: String) -> ResourcePack:
 ## the default pack. A pack that can't be used is reported once and provides nothing.
 static func loaded() -> Array[ResourcePack]:
 	if _packs.is_empty():
+		# The default pack first, so a player's pack can't take its place under
+		# res://packs/default/.
+		var game: ResourcePack = _default_pack()
 		_packs = _player_packs()
-		var pack: ResourcePack = ResourcePack.parse(Content.text_in(DEFAULT), "res://")
-		if not pack.problem.is_empty():
-			push_error("the default resource pack can't be read: " + pack.problem)
-		_packs.append(pack)
+		_packs.append(game)
 	return _packs
+
+
+## The default pack: mounted from its .pck when the build carries one (BUILT_DEFAULT), else read
+## from the files DEFAULT names. One that can't be read is reported.
+static func _default_pack() -> ResourcePack:
+	if _default == null:
+		if FileAccess.file_exists(BUILT_DEFAULT):
+			_default = PackLoader.mount(BUILT_DEFAULT)
+			if not _default.problem.is_empty():
+				push_error("the build's default resource pack can't be used: " + _default.problem)
+				_default = null
+		if _default == null:
+			_default = ResourcePack.parse(Content.text_in(DEFAULT), "res://")
+			if not _default.problem.is_empty():
+				push_error("the default resource pack can't be read: " + _default.problem)
+	return _default
 
 
 ## Reads the packs again on the next lookup, and forgets every resource looked up, so packs added
 ## to the player's folder since come in and packs taken out of it are left out. A file read before
-## keeps what it was read as (_mounted).
+## keeps what it was read as (_mounted), and so does the default pack.
 static func reload() -> void:
 	_packs.clear()
 	_textures.clear()

@@ -52,6 +52,9 @@ func _ready() -> void:
 	OS.remove_logger(errors)
 	if result.is_empty() and errors.count > 0:
 		result = "%d error(s) logged during the flow" % errors.count
+	# A build carries the default pack as a .pck, mounted like any pack (#1941), not its files.
+	if result.is_empty() and ResourcePacks.loaded()[-1].root != PackLoader.ROOT % "default":
+		result = "the build's default resource pack wasn't mounted from its .pck"
 	_report(result, str(flow.get("final_hash")))
 
 

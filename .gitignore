@@ -21,3 +21,6 @@ Thumbs.db
 .venv/
 # Python bytecode from the Blender model scripts (packages/game-models/lib/).
 __pycache__/
+
+# The default pack's .pck a build carries (#1941): CI builds it before exporting.
+/packages/game/packs/

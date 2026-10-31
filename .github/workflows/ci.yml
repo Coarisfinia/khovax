@@ -756,6 +756,16 @@ jobs:
         with:
           templates: "true"
 
+      - name: "📦 Build the default pack the builds carry"
+        # Every build carries our default pack as the pack builder's .pck and mounts it like any
+        # pack (#1868, #1941): the mobile one goes into the APKs, the desktop one into the rest.
+        run: |
+          uv run --locked --package khovax-game-pack-builder \
+            ../game-pack-builder/default_pack.py "$RUNNER_TEMP/default-pack"
+          GODOT=~/godot/godot timeout 600 uv run --locked --package khovax-game-pack-builder \
+            ../game-pack-builder/build_pack.py "$RUNNER_TEMP/default-pack" "$RUNNER_TEMP/default-pck"
+          mkdir -p packs
+
       - name: "🤖 Android: export the debug APK and the test APK"
         env:
           GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /tmp/debug.keystore
@@ -763,6 +773,7 @@ jobs:
           GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
           mkdir -p build
+          cp "$RUNNER_TEMP/default-pck/default.mobile.pck" packs/default.pck
           timeout 300 ~/godot/godot --headless --path . --export-debug "Android" build/khovax.apk
           test -s build/khovax.apk
           # The test APK for the emulator: x86_64, with the APK's e2e flow (tests/apk/) inside.
@@ -780,6 +791,7 @@ jobs:
         # The release's build (#21), exported on every push too, so the preset can't break unseen.
         # One .exe with the game embedded; release.yml exports it the same way for a version tag.
         run: |
+          cp "$RUNNER_TEMP/default-pck/default.desktop.pck" packs/default.pck
           timeout 300 ~/godot/godot --headless --path . --export-release "Windows Desktop" build/khovax.exe
           test -s build/khovax.exe
 
