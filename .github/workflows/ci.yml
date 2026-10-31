@@ -772,12 +772,15 @@ jobs:
           GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
           GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
+          set -o pipefail
           mkdir -p build
           cp "$RUNNER_TEMP/default-pck/default.mobile.pck" packs/default.pck
-          timeout 300 ~/godot/godot --headless --path . --export-debug "Android" build/khovax.apk
+          timeout 300 ~/godot/godot --headless --path . --export-debug "Android" build/khovax.apk 2>&1 \
+            | tee -a /tmp/export.log
           test -s build/khovax.apk
           # The test APK for the emulator: x86_64, with the APK's e2e flow (tests/apk/) inside.
-          timeout 300 ~/godot/godot --headless --path . --export-debug "Android Test" build/khovax-test.apk
+          timeout 300 ~/godot/godot --headless --path . --export-debug "Android Test" build/khovax-test.apk 2>&1 \
+            | tee -a /tmp/export.log
           test -s build/khovax-test.apk
 
       - name: "⬆️ 🤖 Android debug APK: upload (khovax-debug-apk)"
@@ -791,14 +794,18 @@ jobs:
         # The release's build (#21), exported on every push too, so the preset can't break unseen.
         # One .exe with the game embedded; release.yml exports it the same way for a version tag.
         run: |
+          set -o pipefail
           cp "$RUNNER_TEMP/default-pck/default.desktop.pck" packs/default.pck
-          timeout 300 ~/godot/godot --headless --path . --export-release "Windows Desktop" build/khovax.exe
+          timeout 300 ~/godot/godot --headless --path . --export-release "Windows Desktop" build/khovax.exe 2>&1 \
+            | tee -a /tmp/export.log
           test -s build/khovax.exe
 
       - name: "🐧 Linux: export the release build"
         # One x86_64 executable with the game embedded (#92); release.yml exports it the same way.
         run: |
-          timeout 300 ~/godot/godot --headless --path . --export-release "Linux" build/khovax.x86_64
+          set -o pipefail
+          timeout 300 ~/godot/godot --headless --path . --export-release "Linux" build/khovax.x86_64 2>&1 \
+            | tee -a /tmp/export.log
           test -s build/khovax.x86_64
 
       - name: "⬆️ 🐧 Linux build: upload (khovax-linux)"
@@ -811,7 +818,9 @@ jobs:
       - name: "🧪 🐧 Linux: export the test build"
         # The Linux build with the device e2e flow in it (#113), for the linux-e2e job.
         run: |
-          timeout 300 ~/godot/godot --headless --path . --export-release "Linux Test" build/khovax-test.x86_64
+          set -o pipefail
+          timeout 300 ~/godot/godot --headless --path . --export-release "Linux Test" build/khovax-test.x86_64 2>&1 \
+            | tee -a /tmp/export.log
           test -s build/khovax-test.x86_64
 
       - name: "⬆️ 🧪 🐧 Linux test build: upload (khovax-linux-test)"
@@ -825,8 +834,10 @@ jobs:
         # Single-threaded (#22): it runs without SharedArrayBuffer, so static hosts that can't send
         # cross-origin isolation headers (GitHub Pages) serve it as is.
         run: |
+          set -o pipefail
           mkdir -p build/web
-          timeout 300 ~/godot/godot --headless --path . --export-release "Web" build/web/index.html
+          timeout 300 ~/godot/godot --headless --path . --export-release "Web" build/web/index.html 2>&1 \
+            | tee -a /tmp/export.log
           test -s build/web/index.html && test -s build/web/index.wasm && test -s build/web/index.pck
 
       - name: "⬆️ 🌐 Web build: upload (khovax-web)"
@@ -839,8 +850,10 @@ jobs:
       - name: "🧪 🌐 Web: export the test build"
         # The web build with the device e2e flow in it (#102), for the web-e2e job.
         run: |
+          set -o pipefail
           mkdir -p build/web-test
-          timeout 300 ~/godot/godot --headless --path . --export-release "Web Test" build/web-test/index.html
+          timeout 300 ~/godot/godot --headless --path . --export-release "Web Test" build/web-test/index.html 2>&1 \
+            | tee -a /tmp/export.log
           test -s build/web-test/index.html && test -s build/web-test/index.pck
 
       - name: "⬆️ 🧪 🌐 Web test build: upload (khovax-web-test)"
@@ -863,6 +876,15 @@ jobs:
           name: khovax-test-apk
           path: packages/game/build/khovax-test.apk
           retention-days: 3
+
+      - name: "🔎 Check no export leaked objects at exit"
+        # Godot names what leaked only once it exits, after the export succeeded (#1955, as #1906
+        # does for the test runs).
+        run: |
+          if grep -E "leaked at exit|still in use at exit" /tmp/export.log; then
+            echo "::error::Godot leaked objects at exit while exporting: run it with --verbose to name them (#1955)"
+            exit 1
+          fi
 
   apk-e2e:
     # The one e2e flow on the APK (#61), on an Android emulator: the test APK's flow walks the player
