@@ -1,31 +1,35 @@
 """Validates the default resource pack (#1860): the game's own resources, its textures, its models
 (#1864), its region files, region pieces and realms (#1861), its quests (#1888), its species
-(#1903), its translation catalogues (#1902) and its tile blueprints (#1901), described by the same
-manifest a player's pack will have (#1858), and looked up only through ResourcePacks. It fails when
+(#1903), its translation catalogues (#1902), its tile blueprints (#1901) and its loot tables and
+materials (#1953), described by the same manifest a player's pack will have (#1858), and looked up
+only through ResourcePacks. It fails when
 - the manifest (game_shared.resource_packs.MANIFEST) is missing or isn't a JSON object;
 - an id doesn't resolve: it isn't an id (Ids), or its file isn't tracked, isn't imported by Godot
   (a .import beside it, for the kinds Godot imports) or isn't of its kind (an image, a .glb or
-  .gltf model, a Markdown region file, piece or realm, a JSONC quest, species or tile blueprint, a
-  .po catalogue named after its locale);
+  .gltf model, a Markdown region file, piece or realm, a JSONC quest, species, tile blueprint, loot
+  table or material, a .po catalogue named after its locale);
 - a resource is unreferenced: the manifest lists it but no script (outside its comments), scene,
   resource or content file of the game's names its id as a string (but for the realms, the
-  quests, the species, the catalogues and the tile blueprints, which the game finds by listing the
-  pack), or a file of its kind (an image or model under assets/, a region file or piece under
-  regions/, a realm under realms/, a quest in the quests slice's data/, a species directly in
-  slices/species/data/, a catalogue under translations/, a tile blueprint in
-  slices/resource_packs/data/tiles/) is in the repository but not in the manifest;
-- a quest's or species' entry isn't its own file (slices/quests/data/<id>.jsonc,
-  slices/species/data/<id>.jsonc), so it's named after its file (#72);
+  quests, the species, the catalogues, the tile blueprints, the loot tables and the materials,
+  which the game finds by listing the pack), or a file of its kind (an image or model under
+  assets/, a region file or piece under regions/, a realm under realms/, a quest in the quests
+  slice's data/, a species directly in slices/species/data/, a catalogue under translations/, a
+  tile blueprint in slices/resource_packs/data/tiles/, a loot table or material in the loot slice's
+  data/loot_tables/ or data/materials/) is in the repository but not in the manifest;
+- a quest's, species', loot table's or material's entry isn't its own file
+  (slices/quests/data/<id>.jsonc, slices/species/data/<id>.jsonc,
+  slices/loot/data/loot_tables/<id>.jsonc, slices/loot/data/materials/<id>.jsonc), so it's named
+  after its file (#72);
 - a tile blueprint lies outside the pack (in the core's old core/data/tiles/), or its entry isn't
   slices/resource_packs/data/tiles/<id>.jsonc, so it's named after its file (#802);
 - a script, scene, resource or content file names a texture's, model's, region's, realm's, quest's,
-  species', catalogue's or tile blueprint's res:// path instead of its id, so it would get around
-  the resolver, and a pack could never override it (project.godot naming a catalogue for Godot to
-  load gets around it too, #1902); or a script names anything by its uid://, loaded or kept for
-  later (stricter than the pack needs: scripts never do; #1865, #1919), or builds a path under
-  assets/, regions/, realms/, translations/, the quests', the species' or the tile blueprints'
-  folder at runtime (#1865; the tools, which list the assets for the credits, may). A path may hold
-  spaces (#1919).
+  species', catalogue's, tile blueprint's, loot table's or material's res:// path instead of its
+  id, so it would get around the resolver, and a pack could never override it (project.godot
+  naming a catalogue for Godot to load gets around it too, #1902); or a script names anything by
+  its uid://, loaded or kept for later (stricter than the pack needs: scripts never do; #1865,
+  #1919), or builds a path under assets/, regions/, realms/, translations/, the quests', the
+  species', the tile blueprints', the loot tables' or the materials' folder at runtime (#1865; the
+  tools, which list the assets for the credits, may). A path may hold spaces (#1919).
 A catalogue the pack lists that leaves texts of the template untranslated, or holds texts the
 template no longer has, is only warned about (catalogue_gaps.py, #1968).
 An id named only in the tests (any tests/ folder, or a test_*.gd anywhere; #1865, #1919) counts as
@@ -82,6 +86,10 @@ SPECIES = "slices/species/data"
 # Where the default pack's tile blueprints lie (#1901), and where they lay in the core before.
 TILES = "slices/resource_packs/data/tiles"
 OLD_TILES = "core/data/tiles"
+# Where the default pack's loot tables and materials lie (#1953): in the loot slice, which owns the
+# kinds and their schemas (#412), each in its own folder.
+LOOT_TABLES = "slices/loot/data/loot_tables"
+MATERIALS = "slices/loot/data/materials"
 # Each kind of resource the manifest lists, by its section.
 KINDS: dict[str, Kind] = {
     "textures": Kind("texture", IMAGES, True, "assets"),
@@ -101,6 +109,10 @@ KINDS: dict[str, Kind] = {
     "translations": Kind("translation", (".po",), False, "translations/*.po", listed=True),
     # Every tile kind the pack has is one the rules know, so nothing names one (#1901).
     "tiles": Kind("tile", (".jsonc",), False, f"{TILES}/*.jsonc", listed=True),
+    # Every loot table and material the packs have is read whole, so nothing names one to look it
+    # up through the pack (#1953); what names them by id is checked by the content flow.
+    "loot_tables": Kind("loot table", (".jsonc",), False, f"{LOOT_TABLES}/*.jsonc", listed=True),
+    "materials": Kind("material", (".jsonc",), False, f"{MATERIALS}/*.jsonc", listed=True),
 }
 # The project setting through which Godot would load catalogues itself, around the pack (#1902).
 PROJECT = Path("project.godot")
@@ -123,7 +135,8 @@ PATH = re.compile(
     + rf")|regions/{PATH_CHAR}+|realms/{PATH_CHAR}+|{QUESTS}/{PATH_CHAR}+?\.jsonc"
     + rf"|{SPECIES}/{NAME_CHAR}+\.jsonc"
     + rf"|translations/{PATH_CHAR}+?\.po"
-    + rf"|{TILES}/{PATH_CHAR}+|{OLD_TILES}(?:/{PATH_CHAR}*)?)\1"
+    + rf"|{TILES}/{PATH_CHAR}+|{OLD_TILES}(?:/{PATH_CHAR}*)?"
+    + rf"|{LOOT_TABLES}/{PATH_CHAR}+?\.jsonc|{MATERIALS}/{PATH_CHAR}+?\.jsonc)\1"
 )
 
 # Lookups around the resolver that name no path the check above could read (#1865): a uid://
@@ -135,7 +148,8 @@ UID_STRING = re.compile(rf"([\"'])(?P<uid>uid://{PATH_CHAR}*)\1")
 # The quests' folder also holds their schema, a whole file, which names no quest; the species'
 # folder also holds the abilities' folder, which isn't theirs.
 PACK_STRING = re.compile(
-    rf"([\"'])res://(?:(?:assets|regions|realms|translations|{QUESTS}|{TILES}|{OLD_TILES})"
+    rf"([\"'])res://(?:(?:assets|regions|realms|translations|{QUESTS}|{TILES}|{OLD_TILES}"
+    + rf"|{LOOT_TABLES}|{MATERIALS})"
     + rf"(?:/{PATH_CHAR}*)?|{SPECIES}(?:/{NAME_CHAR}*)?)\1"
 )
 WHOLE_FILE = re.compile(rf"([\"'])res://{PATH_CHAR}+\.[A-Za-z0-9]+\1")
@@ -343,7 +357,18 @@ def main() -> int:
         (f"is a tile blueprint outside the default pack: move it to {TILES}/ and list it", file)
         for file in git_files(OLD_TILES)
     ]
-    tracked = set(git_files("assets", "regions", "realms", "translations", QUESTS, SPECIES, TILES))
+    for section, folder, noun in (
+        ("loot_tables", LOOT_TABLES, "loot table"),
+        ("materials", MATERIALS, "material"),
+    ):
+        problems += [
+            (f"{noun} {entry_id}'s file is {paths}, not {folder}/{entry_id}.jsonc", MANIFEST.as_posix())
+            for entry_id, paths in entries[section].items()
+            if paths != [f"{folder}/{entry_id}.jsonc"]
+        ]
+    tracked = set(
+        git_files("assets", "regions", "realms", "translations", QUESTS, SPECIES, TILES, LOOT_TABLES, MATERIALS)
+    )
     models = {path for paths in entries["models"].values() for path in paths}
     used_by_models = model_images(sorted(models & tracked))
     named = {

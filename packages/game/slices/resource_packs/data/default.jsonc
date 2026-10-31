@@ -1,8 +1,8 @@
 // The default resource pack (#1860): the game's own resources, in the manifest format a player's
 // pack shares (#1858). Every lookup goes through ResourcePacks, which walks the loaded packs in
 // order, this one last. Its files are named from res://, its root: its textures and models load as
-// Godot imported them, its region files, pieces, realms, quests, species and tile blueprints are
-// read as text, and its translation catalogues load as gettext .po files.
+// Godot imported them, its region files, pieces, realms, quests, species, tile blueprints, loot
+// tables and materials are read as text, and its translation catalogues load as gettext .po files.
 {
 	"id": "default",
 	"name": "Default",
@@ -222,5 +222,47 @@
 		"stump": "slices/resource_packs/data/tiles/stump.jsonc",
 		"water": "slices/resource_packs/data/tiles/water.jsonc",
 		"waystone": "slices/resource_packs/data/tiles/waystone.jsonc"
+	},
+	// Each loot table (#1953), all read: what a beast, an instance, a chest or a tile gives, named
+	// by id from the content that rolls on it.
+	"loot_tables": {
+		"copper_veins": "slices/loot/data/loot_tables/copper_veins.jsonc",
+		"gem_crystals": "slices/loot/data/loot_tables/gem_crystals.jsonc",
+		"glade": "slices/loot/data/loot_tables/glade.jsonc",
+		"glade_chest": "slices/loot/data/loot_tables/glade_chest.jsonc",
+		"kalvrakkor": "slices/loot/data/loot_tables/kalvrakkor.jsonc",
+		"kavrikka": "slices/loot/data/loot_tables/kavrikka.jsonc",
+		"loose_stones": "slices/loot/data/loot_tables/loose_stones.jsonc",
+		"mana_wood": "slices/loot/data/loot_tables/mana_wood.jsonc",
+		"mana_wood_chest": "slices/loot/data/loot_tables/mana_wood_chest.jsonc",
+		"moss_tufts": "slices/loot/data/loot_tables/moss_tufts.jsonc",
+		"nuvvoluvvo": "slices/loot/data/loot_tables/nuvvoluvvo.jsonc",
+		"ombulumo": "slices/loot/data/loot_tables/ombulumo.jsonc",
+		"ombuwomo": "slices/loot/data/loot_tables/ombuwomo.jsonc",
+		"pass_chest": "slices/loot/data/loot_tables/pass_chest.jsonc",
+		"pass_ground": "slices/loot/data/loot_tables/pass_ground.jsonc",
+		"tikazzelu": "slices/loot/data/loot_tables/tikazzelu.jsonc",
+		"tikazzir": "slices/loot/data/loot_tables/tikazzir.jsonc",
+		"vynakiir": "slices/loot/data/loot_tables/vynakiir.jsonc",
+		"vynnimu": "slices/loot/data/loot_tables/vynnimu.jsonc",
+		"wild_ground": "slices/loot/data/loot_tables/wild_ground.jsonc",
+		"wobulumu": "slices/loot/data/loot_tables/wobulumu.jsonc"
+	},
+	// Each material (#1953), all read: an item a loot table gives that isn't gear.
+	"materials": {
+		"arcane_crystal": "slices/loot/data/materials/arcane_crystal.jsonc",
+		"berry": "slices/loot/data/materials/berry.jsonc",
+		"bone": "slices/loot/data/materials/bone.jsonc",
+		"copper": "slices/loot/data/materials/copper.jsonc",
+		"crystal": "slices/loot/data/materials/crystal.jsonc",
+		"dew": "slices/loot/data/materials/dew.jsonc",
+		"feather": "slices/loot/data/materials/feather.jsonc",
+		"hide": "slices/loot/data/materials/hide.jsonc",
+		"moss": "slices/loot/data/materials/moss.jsonc",
+		"pondweed": "slices/loot/data/materials/pondweed.jsonc",
+		"revive_herb": "slices/loot/data/materials/revive_herb.jsonc",
+		"rime_shard": "slices/loot/data/materials/rime_shard.jsonc",
+		"stone": "slices/loot/data/materials/stone.jsonc",
+		"wind_ribbon": "slices/loot/data/materials/wind_ribbon.jsonc"
 	}
 }
