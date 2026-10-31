@@ -753,6 +753,10 @@ msgstr ""
 msgid "Bone"
 msgstr ""
 
+#: slices/loot/data/materials/copper.jsonc
+msgid "Copper"
+msgstr ""
+
 #: slices/loot/data/materials/crystal.jsonc
 msgid "Crystal"
 msgstr ""

@@ -1,17 +1,17 @@
 # Brekhal Varn: saddle
 
-The saddle at the top of the pass (#689): a wide hollow between the peaks, with boulders, a few shrubs and two wild monsters. Joins the pass on its east and west edges.
+The saddle at the top of the pass (#689): a wide hollow between the peaks, with boulders, a few shrubs, two wild monsters and two outcrops of copper ore, where players break out copper by hand (#1929). Joins the pass on its east and west edges.
 
 ## Tiles
 
 ```
      ⬛⬛⬛⬛🟫🟫
-    ⬛⬛⬛⬛🟫🟫🟫
+    ⬛⬛⬛🟧🟫🟫🟫
    ⬛⬛⬛🪨🟫🟫🟫🧷
   ⬛⬛⬛🪨🟫🟫🟫🟫🟫
  🟫⬛🟫🟫🟫🟫🟫🟫🟫🟫
 🟫🟫🟫🟫🟫👾🌳🟫🟫🟫🟫
- 🟫🟫🟫🟫🟫🟫🪨🌳⬛🟫
+ 🟫🟫🟫🟫🟫🟫🪨🌳🟧🟫
   🟫🟫🟫🟫🪨🌳⬛⬛⬛
    🔗🟫🐸🟫🪨⬛⬛⬛
     🟫🟫🟫⬛⬛⬛⬛
@@ -28,3 +28,4 @@ The saddle at the top of the pass (#689): a wide hollow between the peaks, with 
 - `🌳`: shrubs
 - `🪨`: boulder
 - `🐸`: a wild monster, always ombulumo
+- `🟧`: copper_ore
