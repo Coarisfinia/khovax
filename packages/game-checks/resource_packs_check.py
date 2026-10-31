@@ -12,11 +12,12 @@ will have (#1858), and looked up only through ResourcePacks. It fails when
   manifest;
 - a script, scene, resource or content file names a texture's, model's, region's or realm's res://
   path instead of its id, so it would get around the resolver, and a pack could never override it;
-  or a script loads anything by its uid:// (stricter than the pack needs: scripts never do), or
-  builds a path under assets/, regions/ or realms/ at runtime (#1865; the tools, which list the
-  assets for the credits, may).
-An id named only in the tests counts as unreferenced (#1865): they name ids to check them. The models
-the boot flow lists as built before what uses them are the exception.
+  or a script names anything by its uid://, loaded or kept for later (stricter than the pack needs:
+  scripts never do; #1865, #1919), or builds a path under assets/, regions/ or realms/ at runtime
+  (#1865; the tools, which list the assets for the credits, may). A path may hold spaces (#1919).
+An id named only in the tests (any tests/ folder, or a test_*.gd anywhere; #1865, #1919) counts as
+unreferenced: they name ids to check them. The models the boot flow lists as built before what uses
+them are the exception.
 The images a listed model uses (a glTF's own files, or the textures Godot extracted from a model,
 as unused_assets.py finds them) come with their model's entry, not through the manifest. What a schema can
 check (the fields and their types) is content_schemas_check.py's, and what a pack is checked for
@@ -73,22 +74,31 @@ NAMING = ("*.gd", "*.tscn", "*.tres", "*.jsonc")
 # The resolver's own slice reads the manifest; it never names a resource.
 RESOLVER = "slices/resource_packs/"
 STRING = re.compile(r"\"([a-z][a-z0-9_]*)\"")
+# A path is a whole string: it runs from the string's quote to the same quote again, anything in
+# between, so a file name with spaces or the other quote counts too (#1919), and prose outside
+# a string never does.
+PATH_CHAR = r"(?:(?!\1).)"
 PATH = re.compile(
-    r"res://(assets/[A-Za-z0-9._/-]+\.(?:"
+    rf"([\"'])res://(?P<path>assets/{PATH_CHAR}+?\.(?:"
     + "|".join(ending[1:] for ending in IMAGES + MODELS)
-    + r")\b|regions/[A-Za-z0-9._/-]+|realms/[A-Za-z0-9._/-]+)"
+    + rf")|regions/{PATH_CHAR}+|realms/{PATH_CHAR}+)\1"
 )
 
 # Lookups around the resolver that name no path the check above could read (#1865): a uid://
 # reference, or a path built from parts at runtime (a string that starts a path under one of the
 # pack's folders but isn't a whole file's). A relative path is import_rules.py's to refuse.
-UID_LOAD = re.compile(r"\b(?:pre)?load\(\s*[\"'](uid://[^\"']*)")
-PACK_STRING = re.compile(r"[\"']res://(?:assets|regions|realms)(?:/[^\"'\n]*)?[\"']")
-WHOLE_FILE = re.compile(r"[\"']res://[A-Za-z0-9._/-]+\.[A-Za-z0-9]+[\"']")
+# Any uid:// string, not only a load()'s or preload()'s argument: a threaded load, or a uid kept
+# in a constant and loaded later, gets around the resolver too (#1919).
+UID_STRING = re.compile(rf"([\"'])(?P<uid>uid://{PATH_CHAR}*)\1")
+PACK_STRING = re.compile(rf"([\"'])res://(?:assets|regions|realms)(?:/{PATH_CHAR}*)?\1")
+WHOLE_FILE = re.compile(rf"([\"'])res://{PATH_CHAR}+\.[A-Za-z0-9]+\1")
 # The tools list the assets as files (the credits), never looking one up for the game.
 TOOLS = "tools/"
-# The tests name ids to check them, so an id only they name is unreferenced (#1865)...
-TESTS = "tests/"
+# The tests name ids to check them, so an id only they name is unreferenced (#1865): any file in
+# a tests/ folder, the top-level one or a slice's, or named test_*.gd anywhere (#1919)...
+TEST_FILE = re.compile(r"(?:^|/)tests/|(?:^|/)test_[^/]*\.gd$")
+# ...but for the test builds' mode, game code that only shares the name...
+NOT_TESTS = frozenset({"game/test_mode.gd"})
 # ...but for the models built before what uses them, which the boot flow lists to check each
 # until it's used (#1476, #1634, #1635).
 WAITING = Path("tests/e2e/test_boot_flow.gd")
@@ -208,22 +218,27 @@ def waiting() -> set[str]:
     return {match for block in WAITING_LISTS.findall(code) for match in STRING.findall(block)}
 
 
+def is_test(file: str) -> bool:
+    """Whether the file is a test's (TEST_FILE), so the ids it names don't count as looked up."""
+    return bool(TEST_FILE.search(file)) and file not in NOT_TESTS
+
+
 def around_resolver(file: str, code: str) -> Problems:
     """Where the file's `code` reaches a resource around the resolver: by its path, by its
     uid://, or by a path built at runtime."""
     problems: Problems = [
-        (f"names {path} directly: look it up by its id (ResourcePacks)", file)
-        for path in PATH.findall(code)
+        (f"names {match['path']} directly: look it up by its id (ResourcePacks)", file)
+        for match in PATH.finditer(code)
     ]
     if file.endswith(".gd"):
         problems += [
-            (f"loads {found} by its uid://: scripts never load by uid:// (a resource by its id, ResourcePacks)", file)
-            for found in UID_LOAD.findall(code)
+            (f"names {found} by its uid://: scripts never load by uid:// (a resource by its id, ResourcePacks)", file)
+            for found in (match["uid"] for match in UID_STRING.finditer(code))
         ]  # fmt: skip
     if not file.startswith(TOOLS):
         problems += [
             (f"builds a path from {found} at runtime: look it up by its id (ResourcePacks)", file)
-            for found in PACK_STRING.findall(code)
+            for found in (match[0] for match in PACK_STRING.finditer(code))
             if not WHOLE_FILE.fullmatch(found) and not PATH.search(found)
         ]  # fmt: skip
     return problems
@@ -255,7 +270,7 @@ def main() -> int:
     named = {
         match
         for file in naming
-        if not file.startswith(TESTS)
+        if not is_test(file)
         for match in STRING.findall(code_of(file))
     }
     named |= waiting()
