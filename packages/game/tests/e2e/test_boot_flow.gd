@@ -25,7 +25,20 @@ const UNPLACED_MODELS: Array[String] = ["model_starry_egg"]
 ## loads with its clips on Godot's humanoid skeleton profile (the BoneMap in its .import), so any
 ## body mapped to that profile plays them, until a view names it and it leaves this list.
 const UNWORN_CLIPS: Dictionary[String, Array] = {
-	"model_player_clips": [&"Wave"],
+	"model_player_clips":
+	[
+		&"GetUp",
+		&"HarvestBush",
+		&"Hit",
+		&"Idle",
+		&"KnockedDown",
+		&"PickUp",
+		&"Run",
+		&"SitFloor",
+		&"Talk",
+		&"Walk",
+		&"Wave",
+	],
 }
 ## The skeleton every humanoid clip library's tracks name, as Godot's retargeting calls it.
 const HUMANOID_SKELETON: String = "%GeneralSkeleton"
