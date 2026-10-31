@@ -1,7 +1,7 @@
 """A translation catalogue's gaps against the template (#1968): the texts of translations/khovax.pot
-a language's .po leaves untranslated, which the game shows in English, and the texts it translates
-that the template no longer has. resource_packs_check.py warns about both for every catalogue the
-default pack lists; neither fails CI, since a language may well be incomplete.
+a language's .po leaves untranslated, which the game shows in English, and the texts it holds that
+the template no longer has, translated or not. resource_packs_check.py warns about both for every
+catalogue the default pack lists; neither fails CI, since a language may well be incomplete.
 
 A text is its context (msgctxt, or None) and its msgid. It counts as translated, as Godot reads a
 catalogue, only when every msgstr is filled and the entry isn't fuzzy. The header (the empty msgid)
@@ -48,6 +48,7 @@ def entries(source: str) -> list[Entry]:
         if fields.get("msgid"):
             strings = [value for name, value in fields.items() if name.startswith("msgstr")]
             done = not fuzzy and bool(strings) and all(strings)
+            # An empty context is no context, as Godot reads a catalogue.
             found.append(Entry(fields.get("msgctxt") or None, fields["msgid"], done))
         fields, fuzzy, key = {}, False, ""
 
@@ -72,7 +73,7 @@ def entries(source: str) -> list[Entry]:
 
 def gaps(template: list[Entry], catalogue: list[Entry]) -> tuple[list[Text], list[Text]]:
     """The template's texts the catalogue leaves untranslated, in the template's order, and the
-    catalogue's texts the template doesn't have, in the catalogue's order."""
+    catalogue's texts the template doesn't have, translated or not, in the catalogue's order."""
     wanted = {(entry.context, entry.text) for entry in template}
     done = {(entry.context, entry.text) for entry in catalogue if entry.translated}
     missing = [(entry.context, entry.text) for entry in template if (entry.context, entry.text) not in done]
@@ -99,6 +100,6 @@ def report(locale: str, template: str, catalogue: str) -> list[str]:
         )
     if stale:
         warnings.append(
-            f"translation {locale} translates {len(stale)} texts the template no longer has: {named(stale)}"
+            f"translation {locale} holds {len(stale)} texts the template no longer has: {named(stale)}"
         )
     return warnings

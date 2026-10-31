@@ -56,6 +56,9 @@ msgstr[1] ""
 msgid "Gone"
 msgstr "Weg"
 
+msgid "Dropped"
+msgstr ""
+
 #~ msgid "Long gone"
 #~ msgstr "Lange weg"
 """
@@ -81,6 +84,7 @@ class CatalogueGapsTest(unittest.TestCase):
                 Entry("gear rarity", "Rare", False),
                 Entry(None, "Nodes to take: {count}", False),
                 Entry(None, "Gone", True),
+                Entry(None, "Dropped", False),
             ],
         )
 
@@ -90,14 +94,15 @@ class CatalogueGapsTest(unittest.TestCase):
             missing,
             [("gear rarity", "Rare"), (None, "Nodes to take: {count}"), (None, 'Two "lines"\n')],
         )
-        self.assertEqual(stale, [(None, "Gone")])
+        self.assertEqual(stale, [(None, "Gone"), (None, "Dropped")])
 
     def test_reports_gaps(self) -> None:
         warnings = report("de", TEMPLATE, CATALOGUE)
         self.assertEqual(len(warnings), 2)
         self.assertIn("3 of 4", warnings[0])
         self.assertIn("Rare (gear rarity)", warnings[0])
-        self.assertIn("Gone", warnings[1])
+        self.assertIn("2 texts", warnings[1])
+        self.assertIn("Gone; Dropped", warnings[1])
         complete = CATALOGUE.replace('msgstr[1] ""', 'msgstr[1] "{count} Knoten"')
         self.assertEqual(len(report("de", TEMPLATE.split("#: b.gd")[0], complete)), 1)
 
