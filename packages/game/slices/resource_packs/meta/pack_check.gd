@@ -2,8 +2,10 @@ class_name PackCheck
 extends RefCounted
 ## Whether a resource pack's .pck (#1870) is data, never code (#1859), read before it's mounted:
 ## the same allow-list the pack builder holds packs to (#1869), on what the builder writes. A pack's
-## own files lie under packs/<id>/ (its manifest, Markdown, JSONC and the .import files that point
-## at its imported resources), its imported textures and scenes under .godot/imported/, and only
+## own files lie under packs/<id>/ (its manifest, Markdown, JSONC, its translation catalogues,
+## #1969,
+## and the .import files that point at its imported resources), its imported textures and scenes
+## under .godot/imported/, and only
 ## the project files every export carries besides, which never replace the game's own.
 
 ## The folder a pack's own files lie in, as packs/<id>/.
@@ -11,7 +13,7 @@ const PACKS: String = "packs/"
 ## A pack's manifest, in its folder.
 const MANIFEST: String = "pack.jsonc"
 ## The endings of a pack's own files.
-const OWN_ENDINGS: Array[String] = ["md", "jsonc", "import"]
+const OWN_ENDINGS: Array[String] = ["md", "jsonc", "po", "import"]
 ## Where Godot keeps what it imported, and the endings it may hold: textures and scenes.
 const IMPORTED: String = ".godot/imported/"
 const IMPORTED_ENDINGS: Array[String] = ["ctex", "scn"]
@@ -28,7 +30,7 @@ const IMPORTERS: Array[String] = ['importer="texture"', 'importer="scene"']
 const REMAP_TARGET: String = "res://" + IMPORTED
 ## An imported texture's magic.
 const TEXTURE: String = "GST2"
-## The largest own file (a manifest, Markdown, JSONC or .import) the check or the loader reads.
+## The largest own file (a manifest, Markdown, JSONC, .po or .import) the check or the loader reads.
 const MAX_TEXT: int = 4 * 1024 * 1024
 ## What a pack's id looks like, as a manifest names it.
 const ID: String = "\\A[a-z][a-z0-9_]*\\z"

@@ -2368,6 +2368,32 @@ func _check_pack_loading() -> String:
 			return "a pack's .pck with %s was mounted: %s" % [what, pack.problem]
 		if FileAccess.file_exists("res://packs/%s/pack.jsonc" % refused):
 			return "a refused pack's .pck with %s was mounted anyway" % what
+	return _check_pack_catalogue()
+
+
+## A player's pack brings its own translation catalogue (#1969): its .po in the .pck is data, so
+## the pack mounts, and the catalogue it lists translates for its locale.
+func _check_pack_catalogue() -> String:
+	var manifest: String = _pack_manifest("pack_catalogued").replace(
+		"\"translations\": {}",
+		"\"translations\": {\"de\": \"translations/de.po\"}",
+	)
+	var catalogue: String = (
+		"msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n"
+		+ "msgid \"Taken\"\nmsgstr \"Genommen\"\n"
+	)
+	var pack: ResourcePack = PackLoader.mount(
+		_packed("pack_catalogued", {
+			"pack.jsonc": manifest.to_utf8_buffer(),
+			"regions/r.md": "# R".to_utf8_buffer(),
+			"translations/de.po": catalogue.to_utf8_buffer(),
+		})
+	)
+	if not pack.problem.is_empty():
+		return "a pack's .pck with a translation catalogue wasn't mounted: " + pack.problem
+	var found: Array[Translation] = ResourcePacks.translations_of([pack])
+	if found.size() != 1 or found[0].locale != "de" or found[0].get_message("Taken") != "Genommen":
+		return "a mounted pack's translation catalogue doesn't translate: %s" % [found]
 	return _check_player_packs()
 
 

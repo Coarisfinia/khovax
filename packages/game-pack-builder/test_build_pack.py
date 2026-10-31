@@ -1,8 +1,8 @@
-"""Tests build_pack.py's run() (#1974) against a stand-in for Godot: a run that exits fine but
-reports, as Godot does at exit, objects it leaked fails the build, like one reporting an error; a
-clean run passes, and so does one that merely says the words. Godot names leaked objects only in
-a warning once it exits, which the builder's callers never see, since it keeps Godot's output to
-itself unless the run fails.
+"""Tests build_pack.py's refused() on a translation catalogue (#1969), and its run() (#1974) against
+a stand-in for Godot: a run that exits fine but reports, as Godot does at exit, objects it leaked
+fails the build, like one reporting an error; a clean run passes, and so does one that merely says
+the words. Godot names leaked objects only in a warning once it exits, which the builder's callers
+never see, since it keeps Godot's output to itself unless the run fails.
 
     uv run --locked --package khovax-game-pack-builder packages/game-pack-builder/test_build_pack.py
 """
@@ -13,7 +13,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from build_pack import run
+from build_pack import refused, run
 
 # What Godot 4.7 prints at exit when objects outlive it (#1906, #1955).
 LEAKED = "WARNING: 1 ObjectDB instance was leaked at exit (run with `--verbose` for details)."
@@ -46,6 +46,15 @@ class RunTest(unittest.TestCase):
     def test_an_error_fails(self) -> None:
         with self.assertRaises(RuntimeError):
             run(stand_in(self.folder, "ERROR: 2 resources still in use at exit.\n"), self.folder, "--import")
+
+
+class RefusedTest(unittest.TestCase):
+    def test_a_translation_catalogue_is_data(self) -> None:
+        # A player's pack brings its own languages as gettext catalogues (#1969).
+        pack = Path(tempfile.mkdtemp())
+        (pack / "translations").mkdir()
+        (pack / "translations" / "de.po").write_text('msgid "Taken"\nmsgstr "Genommen"\n', encoding="utf-8")
+        self.assertEqual(refused(pack), [])
 
 
 if __name__ == "__main__":
