@@ -107,8 +107,7 @@ static func realms() -> Dictionary[String, String]:
 
 
 ## Every species (#1903) the loaded packs have, its file as a res:// path by its id, in id order:
-## the first pack that has an id gives its file, so a player's pack can add a species or replace
-## one.
+## the first pack that has an id gives its file, so a player's pack can add or replace a species.
 static func species() -> Dictionary[String, String]:
 	return _every("species")
 
