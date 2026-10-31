@@ -190,7 +190,9 @@ The assets this game uses, with their authors and licenses. Generated from each 
   `Prop_CannonBall`, from the author's pirate kit, and its texture is that kit's atlas), each the
   site's `.glb` download, renamed
 - **License:** CC0 1.0, see `LICENSE.md` next to this file (the site names the license; the file is
-  its legal text). Credit is welcome, not required.
+  its legal text). Credit is welcome, not required. On 2026-10-31 all four pages above still showed
+  "Public Domain (CC0)", linked to the CC0 1.0 deed, with the author named and no credit asked
+  (#1954).
 
 ## Standing stone
 
