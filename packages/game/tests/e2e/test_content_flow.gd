@@ -2152,8 +2152,6 @@ func _check_resource_packs() -> String:
 	listed.sort()
 	if realms.keys() != listed or not realms.values().all(FileAccess.file_exists):
 		return "the default pack's realms don't resolve: %s" % realms
-	if ResourcePacks.translations().size() != packs[0].translations.size():
-		return "the default pack's translation catalogues don't all resolve"
 	var quests: Dictionary[String, String] = ResourcePacks.quests()
 	if quests.size() != packs[0].quests.size() or not quests.values().all(FileAccess.file_exists):
 		return "the default pack's quests don't resolve: %s" % quests
@@ -2263,6 +2261,8 @@ func _check_pack_manifests() -> String:
 ## English. Registering the loaded packs' catalogues again takes it out. The texts are the game's
 ## own, named through variables so the template doesn't list the test.
 func _check_pack_translations() -> String:
+	if ResourcePacks.translations().size() != ResourcePacks.loaded()[-1].translations.size():
+		return "the default pack's translation catalogues don't all resolve"
 	var pack: ResourcePack = _words_pack("{\"de\": \"words.po\"}")
 	if not pack.problem.is_empty():
 		return "a pack with a translation catalogue was refused: " + pack.problem
