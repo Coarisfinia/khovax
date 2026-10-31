@@ -2038,9 +2038,9 @@ func _check_text_tags_unread(tree: SceneTree) -> String:
 	# The gear's files, read as factions, are a faction directory that can't be read.
 	TextTags.read_names_with(func() -> TextTags: return TextNames.load_tags(GearContent.DIR))
 	tree.call("expect_warning", "the text tags' names can't be read")
-	var unread: String = TextTags.shown("${MONSTER:ombulumo}")
+	var unread: String = TextTags.shown("${FACTION:amvrel_velmarai}")
 	TextNames.wire()
-	if unread != "${MONSTER:ombulumo}":
+	if unread != "${FACTION:amvrel_velmarai}":
 		return "a tag shows %s when its content can't be read" % unread
 	return ""
 
