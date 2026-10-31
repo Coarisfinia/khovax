@@ -1,11 +1,13 @@
 class_name QuestContent
 extends Content
-## The quests' content data (#184), which the quests slice owns (#412): one JSONC file per quest
-## directly in its data/ (its own kind, so no folder repeats the slice's name, #442), checked
-## against quests.schema.json beside them in CI, and here against the species, the factions, the
-## dialogs, the loot and the people. Everything else reads the quests through this.
+## The quests' content data (#184), which the quests slice owns (#412): one JSONC file per quest,
+## checked against quests.schema.json in the slice's data/ in CI, and here against the species, the
+## factions, the dialogs, the loot and the people. The quests are the resource packs' (#1888), which
+## list each quest's file by its id (ResourcePacks.quests), so a player's pack can add or replace
+## one. Everything else reads the quests through this.
 
-const DIR: String = "res://slices/quests/data/"
+## The quests' key in the content cache (ContentCatalog).
+const KEY: String = "quests"
 
 ## Every species, by id, which the quests' steps were checked against.
 var species: Dictionary[String, Species] = {}
@@ -23,19 +25,21 @@ var _dialogs: DialogContent
 var _tables: Array[LootContent] = []
 
 
-## Every quest file in `directory`, read and checked; the species its steps name must be in
-## `species_directory`, the faction whose standing it moves (#532), or that it hands its territory
-## to (#638), in `faction_directory`, and the dialogs and answers its answered steps and choices
-## name (#636) in `dialog_directory`. The item an obtained step asks for (#766) must drop from a
+## Every quest file in `files` (each res:// path by its quest's id; by default the resource packs'
+## quests), read and checked: a file that's missing or broken is the problem. The species its steps
+## name must be in `species_directory`, the faction whose standing it moves (#532), or that it hands
+## its territory to (#638), in `faction_directory`, and the dialogs and answers its answered steps
+## and choices name (#636) in `dialog_directory`. The item an obtained step asks for (#766) must
+## drop from a
 ## loot or harvest table.
 static func load_quests(
-	directory: String = DIR,
+	files: Dictionary[String, String] = ResourcePacks.quests(),
 	species_directory: String = SpeciesContent.DIR,
 	faction_directory: String = FactionContent.DIR,
 	dialog_directory: String = DialogContent.DIR,
 ) -> QuestContent:
 	return _checked_against(
-		directory,
+		files,
 		SpeciesContent.load_species(species_directory),
 		FactionContent.load_factions(faction_directory),
 		DialogContent.load_dialogs(dialog_directory),
@@ -46,12 +50,12 @@ static func load_quests(
 ## The quests, read once per session (ContentCatalog), checked against the other kinds' cached
 ## content, so every reader sees the same species, factions, dialogs and loot.
 static func cached() -> QuestContent:
-	return ContentCatalog.kept(DIR, _from_cache)
+	return ContentCatalog.kept(KEY, _from_cache)
 
 
 static func _from_cache() -> QuestContent:
 	return _checked_against(
-		DIR,
+		ResourcePacks.quests(),
 		SpeciesContent.cached(),
 		FactionContent.cached(),
 		DialogContent.cached(),
@@ -59,11 +63,11 @@ static func _from_cache() -> QuestContent:
 	)
 
 
-## Every quest file in `directory`, read and checked against `known` species, `factions`,
+## Every quest file in `files`, read and checked against `known` species, `factions`,
 ## `dialogs` and `tables` (the loot tables, chests' included, and the harvest tables); none when
 ## one of those didn't load.
 static func _checked_against(
-	directory: String,
+	files: Dictionary[String, String],
 	known: SpeciesContent,
 	factions: FactionContent,
 	dialogs: DialogContent,
@@ -78,7 +82,7 @@ static func _checked_against(
 	for loot: LootContent in tables:
 		content.problem += loot.problem
 	if content.problem.is_empty():
-		content.read(directory)
+		content.read_files(files)
 	return content
 
 

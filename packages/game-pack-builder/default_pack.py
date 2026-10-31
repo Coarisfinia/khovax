@@ -19,7 +19,7 @@ from game_shared import log
 from game_shared.resource_packs import MANIFEST, file_lists, gltf_files, read_manifest, section
 
 GAME = Path(__file__).resolve().parents[1] / "game"
-SINGLE = ("textures", "models", "regions", "realms")
+SINGLE = ("textures", "models", "regions", "realms", "quests")
 LISTS = ("region_pieces",)
 # The .import lines that tie the file to the game's project: its uid and imported files.
 PROJECT_BOUND = re.compile(r"^(uid|path(\.[a-z0-9_]+)?|source_file|dest_files)=")

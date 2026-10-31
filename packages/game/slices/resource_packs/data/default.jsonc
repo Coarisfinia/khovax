@@ -1,7 +1,7 @@
 // The default resource pack (#1860): the game's own resources, in the manifest format a player's
 // pack shares (#1858). Every lookup goes through ResourcePacks, which walks the loaded packs in
 // order, this one last. Its files are named from res://, its root: its textures and models load as
-// Godot imported them, its region files, pieces and realms are read as text.
+// Godot imported them, its region files, pieces, realms and quests are read as text.
 {
 	"id": "default",
 	"name": "Default",
@@ -167,5 +167,21 @@
 	// Each realm (#1861), every one of which the game plays.
 	"realms": {
 		"ardvaun": "realms/ardvaun.md"
+	},
+	// Each quest (#1888), every one of which the players can take; its file stays in the quests
+	// slice, which owns the kind and its schema (#412).
+	"quests": {
+		"bud_dew": "slices/quests/data/bud_dew.jsonc",
+		"first_domination": "slices/quests/data/first_domination.jsonc",
+		"guild_charts_morwe_wudhen": "slices/quests/data/guild_charts_morwe_wudhen.jsonc",
+		"guild_holds_edhra_tewk": "slices/quests/data/guild_holds_edhra_tewk.jsonc",
+		"lumwen_hoal_fork": "slices/quests/data/lumwen_hoal_fork.jsonc",
+		"pond_chest": "slices/quests/data/pond_chest.jsonc",
+		"pup_crystal": "slices/quests/data/pup_crystal.jsonc",
+		"pup_rime": "slices/quests/data/pup_rime.jsonc",
+		"sprite_ribbon": "slices/quests/data/sprite_ribbon.jsonc",
+		"tadpole_pondweed": "slices/quests/data/tadpole_pondweed.jsonc",
+		"three_ombulumo": "slices/quests/data/three_ombulumo.jsonc",
+		"tormaesk_escort": "slices/quests/data/tormaesk_escort.jsonc"
 	}
 }
