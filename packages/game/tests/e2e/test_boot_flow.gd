@@ -36,6 +36,7 @@ const UNWORN_CLIPS: Dictionary[String, Array] = {
 		&"Run",
 		&"SitFloor",
 		&"Talk",
+		&"Throw",
 		&"Walk",
 		&"Wave",
 	],

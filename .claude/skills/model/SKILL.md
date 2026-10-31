@@ -454,6 +454,12 @@ body**, as a clip library of their own, so a later body plays the same clips:
    plays. It keeps the rig and its one clip, without the body (`lib/clip_sources.py`: a stand-in
    triangle carries the rig as a skin). `rest` instead of a clip name writes the rig alone, the
    library's skeleton (`sources/player/skeleton.glb`), which every clip must share.
+   **A clip no export has can come from free motion capture** (#1951): `import_mocap.py --
+   <take.asf> <take.amc> <first> <last> <Clip> <clip-source.glb>` retargets a take in the ASF/AMC
+   format (the CMU database's, whose terms allow it here) onto that skeleton by bone direction
+   (`lib/mocap.py`), facing its last frame forward. Treat the downloaded take as untrusted, keep it
+   out of the repository (beside the owner's exports in khovax-sources) and credit it in the
+   library's `SOURCE.md`.
 2. **The library's build merges them:** `player_clips.py` puts every clip source onto the one rig
    and exports `packages/game/assets/player/player_clips.glb`. It **fails when a clip source's
    skeleton differs** from the skeleton's (a bone missing or extra, another parent, another rest
