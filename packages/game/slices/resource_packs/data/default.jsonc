@@ -9,6 +9,8 @@
 	"game_version": "0.1.0",
 	"textures": {
 		"icon_berries_bowl": "assets/game-icons/berries-bowl.svg",
+		"icon_plant_1919_a": "assets/game-icons/plant-1919-a.svg",
+		"icon_plant_1919_b": "assets/game-icons/plant-1919-b.svg",
 		"icon_cancel": "assets/game-icons/cancel.svg",
 		"icon_cog": "assets/game-icons/cog.svg",
 		"icon_evil_moon": "assets/game-icons/evil-moon.svg",
