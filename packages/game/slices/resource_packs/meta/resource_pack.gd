@@ -17,17 +17,20 @@ const FIELDS: Array[String] = [
 	"region_pieces",
 	"realms",
 	"quests",
+	"species",
 ]
 ## Each section of resources the manifest lists, one file per id, with the type its files load as;
-## "" for a file read as text (a region file or a realm, #1861, a quest, #1888), which isn't checked
-## to exist here: a build may leave a test-only region out (export_presets.cfg), and RegionFiles and
-## Realms read only the files there are; a missing quest is QuestContent's to report.
+## "" for a file read as text (a region file or a realm, #1861, a quest, #1888, or a species,
+## #1903), which isn't checked to exist here: a build may leave a test-only region out
+## (export_presets.cfg), and RegionFiles and Realms read only the files there are; a missing quest
+## or species is QuestContent's or SpeciesContent's to report.
 const KINDS: Dictionary[String, String] = {
 	"textures": "Texture2D",
 	"models": "PackedScene",
 	"regions": "",
 	"realms": "",
 	"quests": "",
+	"species": "",
 }
 ## The section of regions arranged from pieces (#1861): each region's piece files by its id, read as
 ## text like the region files.
@@ -39,6 +42,7 @@ const ENDINGS: Dictionary[String, Array] = {
 	"regions": ["md"],
 	"realms": ["md"],
 	"quests": ["jsonc"],
+	"species": ["jsonc"],
 }
 ## A version: major.minor.patch.
 const VERSION: String = "\\A[0-9]+\\.[0-9]+\\.[0-9]+\\z"
@@ -61,6 +65,8 @@ var region_pieces: Dictionary[String, PackedStringArray] = {}
 var realms: Dictionary[String, String] = {}
 ## Each quest's file (#1888) by its id, relative to `root`.
 var quests: Dictionary[String, String] = {}
+## Each species' file (#1903) by its id, relative to `root`.
+var species: Dictionary[String, String] = {}
 ## Where the pack's files are named from: res:// for the default pack.
 var root: String = ""
 ## Why the pack can't be used, or "" when it can.
@@ -69,8 +75,8 @@ var problem: String = ""
 
 ## The pack the manifest `text` describes, its files under `root`, with `problem` saying why it
 ## can't be used: a field missing or unknown, an id that isn't one, or a texture, model, region,
-## region piece, realm or quest whose file climbs out of `root`, has another kind's ending or (for
-## a texture or model) doesn't exist.
+## region piece, realm, quest or species whose file climbs out of `root`, has another kind's ending
+## or (for a texture or model) doesn't exist.
 static func parse(text: String, files_root: String) -> ResourcePack:
 	var pack: ResourcePack = ResourcePack.new()
 	pack.root = files_root
@@ -134,6 +140,7 @@ func _read(data: Dictionary) -> String:
 	regions.assign(found["regions"])
 	realms.assign(found["realms"])
 	quests.assign(found["quests"])
+	species.assign(found["species"])
 	region_pieces = pieces
 	return ""
 

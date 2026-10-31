@@ -2,10 +2,10 @@
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://github.com/Coarisfinia/khovax/slices/resource_packs/data/resource_packs.schema.json",
 	"title": "Resource pack",
-	"description": "A resource pack's manifest (#1860): its id, its name, its own version, the game version it targets, and the resources it provides (textures, models, regions, region pieces, realms and quests), each by its id. The game's own resources are the default pack; a player's pack (#1858) shares this format. One file per pack, named after its id.",
+	"description": "A resource pack's manifest (#1860): its id, its name, its own version, the game version it targets, and the resources it provides (textures, models, regions, region pieces, realms, quests and species), each by its id. The game's own resources are the default pack; a player's pack (#1858) shares this format. One file per pack, named after its id.",
 	"type": "object",
 	"additionalProperties": false,
-	"required": ["id", "name", "version", "game_version", "textures", "models", "regions", "region_pieces", "realms", "quests"],
+	"required": ["id", "name", "version", "game_version", "textures", "models", "regions", "region_pieces", "realms", "quests", "species"],
 	"properties": {
 		"id": {
 			"description": "Stable: lowercase words joined by underscores.",
@@ -71,6 +71,15 @@
 		},
 		"quests": {
 			"description": "Each quest's JSONC file (#1888), in the quests slice's quest format (slices/quests/data/quests.schema.json), by its id, relative to the pack's root, never climbing out of it. The players can take every quest a pack has.",
+			"type": "object",
+			"propertyNames": { "pattern": "^[a-z][a-z0-9_]*$" },
+			"additionalProperties": {
+				"type": "string",
+				"pattern": "^[A-Za-z0-9_-][A-Za-z0-9._/-]*\\.jsonc$"
+			}
+		},
+		"species": {
+			"description": "Each species' JSONC file (#1903), in the species' format (species.schema.json in the species slice), by its id, relative to the pack's root, never climbing out of it. The game has every species a pack has.",
 			"type": "object",
 			"propertyNames": { "pattern": "^[a-z][a-z0-9_]*$" },
 			"additionalProperties": {

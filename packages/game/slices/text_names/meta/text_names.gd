@@ -12,15 +12,15 @@ static func wire() -> void:
 	TextTags.read_names_with(load_tags)
 
 
-## The names every kind of tag shows, read from the content in the given directories.
+## The names every kind of tag shows, read from the species the resource packs have (#1903) and the
+## content in the given directories.
 static func load_tags(
-	species_directory: String = SpeciesContent.DIR,
 	faction_directory: String = FactionContent.DIR,
 	gear_directory: String = GearContent.DIR,
 	people_directory: String = PeopleContent.DIR,
 ) -> TextTags:
 	var tags: TextTags = TextTags.new()
-	var species: SpeciesContent = SpeciesContent.load_species(species_directory)
+	var species: SpeciesContent = SpeciesContent.load_species()
 	var factions: FactionContent = FactionContent.load_factions(faction_directory)
 	var gear: GearContent = GearContent.load_gear(gear_directory)
 	var people: PeopleContent = PeopleContent.load_people(people_directory)
