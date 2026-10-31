@@ -338,7 +338,7 @@ jobs:
             git fetch -q --depth=1 origin "$base" || true
           fi
           if git diff --quiet "$base" -- ':(top)packages/game-models' ':(top)*.glb' ':(top)*.glb.import' \
-            ':(top).github/actions/setup-blender' ':(top)packages/game/core/data/tiles' \
+            ':(top).github/actions/setup-blender' \
             ':(top)packages/game/slices/*/look/*' ':(top)packages/game/*.tscn' \
             ':(top)packages/game/slices/resource_packs/data'; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
