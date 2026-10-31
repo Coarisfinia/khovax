@@ -196,8 +196,11 @@ jobs:
       - name: "🎨 Check the default resource pack"
         # Our own resources are the default pack (#1860): every id resolves, nothing is
         # unreferenced, the manifest matches the files, and nothing names a texture's path
-        # around the resolver.
-        run: uv run --locked --package khovax-game-checks ../game-checks/resource_packs_check.py
+        # around the resolver. A translation catalogue's gaps against the template are warned about
+        # (#1968): its reader's own test runs first.
+        run: |
+          uv run --locked --package khovax-game-checks ../game-checks/test_catalogue_gaps.py
+          uv run --locked --package khovax-game-checks ../game-checks/resource_packs_check.py
 
       - name: "📦 Build the default pack, and refuse a pack with code"
         # Every pack is a .pck from our own pack builder (#1868, #1869), the default one too, so

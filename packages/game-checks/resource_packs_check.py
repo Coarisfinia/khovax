@@ -26,6 +26,8 @@ manifest a player's pack will have (#1858), and looked up only through ResourceP
   assets/, regions/, realms/, translations/, the quests', the species' or the tile blueprints'
   folder at runtime (#1865; the tools, which list the assets for the credits, may). A path may hold
   spaces (#1919).
+A catalogue the pack lists that leaves texts of the template untranslated, or holds texts the
+template no longer has, is only warned about (catalogue_gaps.py, #1968).
 An id named only in the tests (any tests/ folder, or a test_*.gd anywhere; #1865, #1919) counts as
 unreferenced: they name ids to check them. The models the boot flow lists as built before what uses
 them are the exception.
@@ -43,10 +45,12 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from catalogue_gaps import report
 from game_shared import log
 from game_shared.gdscript_code import without_comments
 from game_shared.git_files import git_files
 from game_shared.resource_packs import MANIFEST, file_lists, read_manifest, section, strip_jsonc
+from translations_pot import TEMPLATE
 from unused_assets import extracted_textures, gltf_files
 
 ID = re.compile(r"[a-z][a-z0-9_]*")
@@ -361,6 +365,14 @@ def main() -> int:
         problems += unreferenced(kind, entries[name], named, files)
     for message, file in problems:
         log.error(message, file)
+    # A catalogue's gaps only warn: a language may well be incomplete (#1968).
+    if TEMPLATE.is_file():
+        template = TEMPLATE.read_text(encoding="utf-8")
+        for locale, paths in entries["translations"].items():
+            for path in paths:
+                if path in tracked:
+                    for message in report(locale, template, Path(path).read_text(encoding="utf-8")):
+                        log.warning(message, path)
     return 1 if problems else 0
 
 
