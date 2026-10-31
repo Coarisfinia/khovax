@@ -67,8 +67,11 @@ FRAGMENT_RATIO, FRAGMENT_TEXELS = 0.6, 4
 TONE_SHARE, TONE_TEXELS = 0.1, 1000
 # A dim spot touching a tone (#1799) is searched with the rest of the head, but first loses EDGE
 # texels from its every side: the thin blend along the tone's border and its cracks goes, a
-# fragment's blob stays.
-EDGE = 4
+# fragment's blob stays. Its flat patches stay too (#1811): paint laid on in one colour, three
+# texels square or more whose channels differ by at most FLAT, with the texels around them; a blend
+# changes from texel to texel (the Kavrikka's crack blend first holds such a patch at 0.03), so a
+# fragment a few texels across fails, not only one about nine across.
+EDGE, FLAT = 4, 0.01
 # The steps of value `_split` tells apart.
 LEVELS = 256
 # The repaint, in the oval's own radii (1 at its edge): every texel inside FILL is painted over,
@@ -469,7 +472,8 @@ def fragments(skin, bone="head", weight=HEAD_WEIGHT, keep=()):
     two clear tones (#1799, so a tone that is most of the head shows too); it is not reported but
     searched the same way against its own median, so eye paint left on it still shows, and the
     rest of the head is searched without it, a spot touching it only with what's left once EDGE
-    texels are taken off its every side (the blend along the tone's border and cracks). The ratio is below `scrub`'s, so a head `scrub` has cleaned,
+    texels are taken off its every side (the blend along the tone's border and cracks) and with
+    its flat patches (`_flat`, #1811). The ratio is below `scrub`'s, so a head `scrub` has cleaned,
     whose filled texels may sit a little under its own threshold, passes. Our own eyes are plain
     colours, not the texture, so they never count. The head is the faces weighted at least
     `weight` to `bone` (a beast's own `Marked`'s,
@@ -543,8 +547,10 @@ def fragments(skin, bone="head", weight=HEAD_WEIGHT, keep=()):
         groups = _touching(_spots(spots[dark], cell), texels[dark], islands[dark], shape[1])
         if near is not None:
             kept = _mask(texels[dark], shape)
+            flat = _flat(kept, head.pixels[:, :, :3])
             for _ in range(EDGE):
                 kept = _shrink(kept)
+            kept |= flat
         for group in groups:
             spot = dark[group]
             if near is not None and (near[0].flat[texels[spot]].any() or _by(spots[spot], cell, near[1])):
@@ -620,6 +626,29 @@ def _shrink(mask):
     kept[:, :-1] &= mask[:, 1:]
     kept[0, :] = kept[-1, :] = kept[:, 0] = kept[:, -1] = False
     return kept
+
+
+def _flat(mask, colours):
+    """The texels of `mask` in its flat patches (#1811): each texel whose block of three by three
+    lies in `mask` and whose `colours` (the texture's, rows and columns as `mask`, a channel each)
+    differ by at most FLAT across it in every channel, and the block around it."""
+    height, width = mask.shape
+    core = numpy.zeros_like(mask)
+    if height < 3 or width < 3:
+        return core
+    middle = (slice(1, height - 1), slice(1, width - 1))
+    inner = core[middle]
+    inner[...] = mask[middle]
+    low, high = colours[middle].copy(), colours[middle].copy()
+    # One neighbour at a time, so a large texture never holds all nine shifted copies at once.
+    for dy in (-1, 0, 1):
+        for dx in (-1, 0, 1):
+            block = (slice(1 + dy, height - 1 + dy), slice(1 + dx, width - 1 + dx))
+            inner &= mask[block]
+            numpy.minimum(low, colours[block], out=low)
+            numpy.maximum(high, colours[block], out=high)
+    inner &= ((high - low) <= FLAT).all(axis=2)
+    return _grow(core) & mask
 
 
 def _islands(head):
