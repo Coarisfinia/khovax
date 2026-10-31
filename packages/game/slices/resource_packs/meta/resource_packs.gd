@@ -8,6 +8,9 @@ extends RefCounted
 
 ## The default pack's manifest; its files are named from res://.
 const DEFAULT: String = "res://slices/resource_packs/data/default.jsonc"
+## The folder a player's packs are found in, each a .pck the pack builder made (#1869); the folders
+## per platform are #1942's.
+const PLAYER_PACKS: String = "user://packs/"
 
 ## The loaded packs, in lookup order, the default pack last; read on the first lookup.
 static var _packs: Array[ResourcePack] = []
@@ -16,6 +19,9 @@ static var _packs: Array[ResourcePack] = []
 static var _textures: Dictionary[String, Texture2D] = {}
 ## Each model looked up so far, by its id (#1864), null when no pack gives it.
 static var _models: Dictionary[String, PackedScene] = {}
+## What PackLoader made of each player's pack file so far, by its path, usable or not: Godot can't
+## unmount a pack, so a reload reuses it rather than mounting it again.
+static var _mounted: Dictionary[String, ResourcePack] = {}
 
 
 ## The texture `texture_id` from the first loaded pack that has it, or null when none does or its
@@ -109,12 +115,44 @@ static func _with_region(region_id: String) -> ResourcePack:
 	return null
 
 
-## The loaded packs, in lookup order: for now only the default pack. One that can't be read is
-## reported once and provides nothing.
+## The loaded packs, in lookup order: the player's usable packs, in their files' name order, then
+## the default pack. A pack that can't be used is reported once and provides nothing.
 static func loaded() -> Array[ResourcePack]:
 	if _packs.is_empty():
+		_packs = _player_packs()
 		var pack: ResourcePack = ResourcePack.parse(Content.text_in(DEFAULT), "res://")
 		if not pack.problem.is_empty():
 			push_error("the default resource pack can't be read: " + pack.problem)
 		_packs.append(pack)
 	return _packs
+
+
+## Reads the packs again on the next lookup, and forgets every resource looked up, so packs added
+## to the player's folder since come in and packs taken out of it are left out. A file read before
+## keeps what it was read as (_mounted).
+static func reload() -> void:
+	_packs.clear()
+	_textures.clear()
+	_models.clear()
+
+
+## Each pack in the player's folder (PLAYER_PACKS) that PackLoader mounts and reads without a
+## problem. One it refuses, or mounts but whose manifest has a problem (it stays mounted, unused),
+## is warned about the first time it's read.
+static func _player_packs() -> Array[ResourcePack]:
+	var usable: Array[ResourcePack] = []
+	if not DirAccess.dir_exists_absolute(PLAYER_PACKS):
+		return usable
+	var files: PackedStringArray = DirAccess.get_files_at(PLAYER_PACKS)
+	files.sort()
+	for file: String in files:
+		if file.get_extension() != "pck":
+			continue
+		var path: String = PLAYER_PACKS + file
+		if not _mounted.has(path):
+			_mounted[path] = PackLoader.mount(path)
+			if not _mounted[path].problem.is_empty():
+				push_warning("a resource pack can't be used: " + _mounted[path].problem)
+		if _mounted[path].problem.is_empty():
+			usable.append(_mounted[path])
+	return usable

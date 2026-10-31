@@ -2252,7 +2252,53 @@ func _check_pack_loading() -> String:
 			return "a pack's .pck with %s was mounted: %s" % [what, pack.problem]
 		if FileAccess.file_exists("res://packs/%s/pack.jsonc" % refused):
 			return "a refused pack's .pck with %s was mounted anyway" % what
+	return _check_player_packs()
+
+
+## The packs in the player's folder come before the default pack, so a region one gives wins, and
+## one that holds code, or is mounted but whose manifest has a problem, is warned about and left
+## out (#1939). The folder is emptied again after, and the packs read anew.
+func _check_player_packs() -> String:
+	var region_id: String = str(ResourcePacks.loaded()[-1].regions.keys()[0])
+	var made: Dictionary[String, String] = _player_pack_files(region_id)
+	var _folder: Error = DirAccess.make_dir_recursive_absolute(ResourcePacks.PLAYER_PACKS)
+	for file: String in made:
+		var _copied: Error = DirAccess.copy_absolute(made[file], ResourcePacks.PLAYER_PACKS + file)
+	var tree: SceneTree = Engine.get_main_loop() as SceneTree
+	tree.call("expect_warning", "b_scripted.pck")
+	tree.call("expect_warning", "c_nameless.pck")
+	ResourcePacks.reload()
+	var ids: Array[String] = []
+	for pack: ResourcePack in ResourcePacks.loaded():
+		ids.append(pack.id)
+	var found: String = ResourcePacks.region_file(region_id)
+	for file: String in made:
+		var _removed: Error = DirAccess.remove_absolute(ResourcePacks.PLAYER_PACKS + file)
+	ResourcePacks.reload()
+	if ResourcePacks.loaded().size() != 1:
+		return "a player's pack taken out of the folder was still loaded"
+	if ids != ["pack_player", "default"]:
+		return "the player's packs weren't loaded before the default pack, alone: %s" % [ids]
+	if found != "res://packs/pack_player/regions/r.md":
+		return "a player's pack didn't override the default pack's region: " + found
 	return ""
+
+
+## The .pck files for _check_player_packs, by the name each takes in the player's folder: a valid
+## pack giving the region `region_id`, one holding a script, and one whose manifest has no name.
+func _player_pack_files(region_id: String) -> Dictionary[String, String]:
+	var manifest: String = _pack_manifest("pack_player").replace("\"r\":", "\"%s\":" % region_id)
+	var nameless: String = _pack_manifest("pack_nameless").replace("\"n\"", "\"\"")
+	var region: PackedByteArray = "# R".to_utf8_buffer()
+	return {
+		"a_player.pck": _packed("pack_player", {
+			"pack.jsonc": manifest.to_utf8_buffer(), "regions/r.md": region }),
+		"b_scripted.pck": _packed("pack_scripted", {
+			"pack.jsonc": _pack_manifest("pack_scripted").to_utf8_buffer(),
+			"code.gd": "extends Node".to_utf8_buffer() }),
+		"c_nameless.pck": _packed("pack_nameless", {
+			"pack.jsonc": nameless.to_utf8_buffer(), "regions/r.md": region }),
+	}
 
 
 ## A binary scene whose texture names one of the game's by its uid. Godot loads such a texture by
