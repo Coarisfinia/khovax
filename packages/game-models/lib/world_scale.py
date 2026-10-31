@@ -19,7 +19,9 @@ one hex edge: Blender's X, centred on the origin at the edge's middle, `HEX_EDGE
 meet end to end at the hex's corners. A monster is sized against its hex instead (the footprint
 check) and has no kind."""
 
+import ast
 import math
+import os
 
 # The game's hex, centre to corner (HexLayout.SIZE), which is also one edge's length.
 HEX_SIZE = 1.0
@@ -33,6 +35,8 @@ PLAYER_TOLERANCE = 0.03
 WALL_HEIGHT = 1.25 * PLAYER_HEIGHT
 # How far an edge piece's length may stray from the edge's (a share), so pieces still meet.
 EDGE_TOLERANCE = 0.03
+# The constant a model script names its kind in.
+KIND = "WORLD_SCALE"
 # The kind a clip library names (#1935): its clips on a stand-in rig without a body, which has no
 # size to measure.
 CLIP_LIBRARY = "clip_library"
@@ -92,3 +96,20 @@ def judge_figure(height):
     player's height."""
     fits = abs(height - PLAYER_HEIGHT) <= PLAYER_TOLERANCE * PLAYER_HEIGHT
     return ["%s height: %.2f m (the player, %.2f m)" % ("ok" if fits else "FAIL", height, PLAYER_HEIGHT)], fits
+
+
+def script_kind(path):
+    """The kind the model script at `path` names in its module-level `KIND` constant, or None."""
+    with open(path, encoding="utf-8") as source:
+        tree = ast.parse(source.read(), path)
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(
+                isinstance(target, ast.Name) and target.id == KIND for target in node.targets):
+            return node.value.value if isinstance(node.value, ast.Constant) else None
+    return None
+
+
+def clip_library(script):
+    """Whether the model script at `script` builds a clip library (#1935): clips on a stand-in rig,
+    no body, so nothing to measure against the hex or the world."""
+    return os.path.exists(script) and script_kind(script) == CLIP_LIBRARY

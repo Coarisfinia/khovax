@@ -79,11 +79,18 @@ def stand_in(rig):
     return obj
 
 
-def write(rig, path):
-    """Exports `rig`, its clips and a stand-in triangle as the game takes it (scene.export_glb)."""
+def prepare(rig):
+    """Readies `rig` and its clips for scene.export_glb: the stand-in triangle on it, its pose at
+    rest."""
     stand_in(rig)
     for pose in rig.pose.bones:
         pose.location = (0.0, 0.0, 0.0)
         pose.rotation_quaternion = (1.0, 0.0, 0.0, 0.0)
         pose.scale = (1.0, 1.0, 1.0)
+
+
+def write(rig, path):
+    """Exports `rig` and its clips as a clip source (import_clip.py). A clip library's script calls
+    prepare and scene.export_glb itself, which is how check_rebuild.py --all finds it."""
+    prepare(rig)
     scene.export_glb(path)

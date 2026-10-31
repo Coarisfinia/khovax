@@ -60,7 +60,8 @@ def build(out):
         bpy.data.armatures.remove(armature, do_unlink=True)
         print("CLIP %s: frames %d-%d" % (name, *action.frame_range))
     print("PLAYER CLIPS: %d clips on %d bones" % (len(clips), len(rig.data.bones)))
-    clip_sources.write(rig, out)
+    clip_sources.prepare(rig)
+    scene.export_glb(out)
 
 
 build(sys.argv[sys.argv.index("--") + 1])
