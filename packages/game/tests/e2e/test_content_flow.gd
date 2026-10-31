@@ -2106,9 +2106,8 @@ func _check_name_rules() -> String:
 
 ## Every content kind is read ahead in the background (#816, InstanceContent.kinds): each directory
 ## a `<Kind>Content` reads (its constants ending in DIR), or the KEY of one the resource packs list
-## (#1903), is one of the kinds' keys. Region files
-## are read per region (RegionFiles), so they're not a kind. Then the resource packs, which aren't
-## content kinds (_check_resource_packs).
+## (#1903), is one of the kinds' keys. Region files are read per region (RegionFiles), so they're
+## not a kind. Then the resource packs, which aren't content kinds (_check_resource_packs).
 func _check_prefetched() -> String:
 	var keys: Array[String] = InstanceContent.kinds().keys()
 	for named: Dictionary in ProjectSettings.get_global_class_list():

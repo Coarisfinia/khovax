@@ -2,13 +2,11 @@ class_name SpeciesContent
 extends Content
 ## The species' content data (#279), which the species slice owns (#412): one JSONC file per
 ## species, in its format (species.schema.json beside the default pack's, checked in CI). They're
-## the
-## resource packs' (#1903): the species the packs list, so a player's pack can add or replace one;
-## the default pack's lie directly in the slice's data/ (its own kind, so no folder repeats the
+## the resource packs' (#1903): the species the packs list, so a player's pack can add or replace
+## one; the default pack's lie directly in the slice's data/ (its own kind, so no folder repeats the
 ## slice's name, #442). Everything else reads them through this; their abilities are
 ## AbilityContent's. It also holds what each species ascends into (#1252), a link between two
-## species
-## that only the whole content can check.
+## species that only the whole content can check.
 
 ## The species' key in the content cache (ContentCatalog).
 const KEY: String = "species"
