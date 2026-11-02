@@ -1,0 +1,4 @@
+// The core of living magma a Kalvrakkor needs to ascend into a Korvakkar (#1771). It lies in the
+// ground loot and chests of Brekhal Varn, where the Korvakkar live (#1260), finishing the hounds'
+// quest there hands one over (#1348), and it can be made from stone and crystals (#1349).
+{ "id": "magma_core", "name": "Magma Core" }

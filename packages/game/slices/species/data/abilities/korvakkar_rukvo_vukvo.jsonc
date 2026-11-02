@@ -1,0 +1,12 @@
+// The Korvakkar's self passive (#1771). Its haste is a placeholder to tune (#960).
+{
+	"id": "korvakkar_rukvo_vukvo",
+	"kind": "self_passive",
+	"name": "Rukvo-vukvo",
+	"description": "The ${MONSTER:korvakkar}'s cracks split wider when it's hurt, its magma runs free, and it strikes much faster.",
+	"hurt_haste": 500,
+	"codex": {
+		"entry": "The thick glug of magma breaking through a crust. Dominators said it of a beast whose wounds only let more of the fire out.",
+		"gloss": "every crack lets it out"
+	}
+}

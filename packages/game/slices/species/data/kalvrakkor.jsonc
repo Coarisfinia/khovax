@@ -20,5 +20,7 @@
 	// A hound: it hunts with its pack, and with heat on one side and cold on the other it never
 	// settles into day or night, sleeping in bouts (#1200).
 	"behaviour": ["cathemeral", "predator", "pack_species"],
-	"model": "model_frostfire_hound"
+	"model": "model_frostfire_hound",
+	// Its magma form so far; its ice and balanced forms branch from here by #1774.
+	"ascension": { "into": "korvakkar", "level": 40, "material": "magma_core" }
 }

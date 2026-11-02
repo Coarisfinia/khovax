@@ -1,0 +1,23 @@
+// The Kalvrakkor's magma form (#1771, named on it): its fire side has taken over the whole hound.
+// It wears its own model, from the owner's model, with nine tails of flowing magma. Titan alone: no
+// ice is left in it. Quicker and harder-hitting than the Kalvrakkor. Its stats are placeholders to
+// tune (#960).
+{
+	"id": "korvakkar",
+	"name": "Korvakkar",
+	"codex": {
+		"entry": "What a Kalvrakkor becomes when its molten side wins: a lean black hound of cracked basalt, magma running in every seam, and behind it nine long tails of living magma fanned out like a burning sunrise, each tipped with an ember crystal. Snow never settles where it has passed. Its name is a beast-call, the sound it makes: its elder's k, v and r, the ice's crack gone out of them and only the deep growl left.",
+		"gloss": "the growl with no frost left in it"
+	},
+	"types": ["titan"],
+	"strike_type": "titan", // its bite is all magma now
+	"hp": 130,
+	"strength": 85,
+	"speed": 70,
+	"special": "korvakkar_karvok_kurvik",
+	"player_passive": "korvakkar_vakru_rakru",
+	"self_passive": "korvakkar_rukvo_vukvo",
+	// A hound still: it hunts with its pack and sleeps in bouts, as its line does (#1200).
+	"behaviour": ["cathemeral", "predator", "pack_species"],
+	"model": "model_kalvrakkor_magma"
+}

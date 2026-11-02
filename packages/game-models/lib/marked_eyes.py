@@ -35,6 +35,8 @@ from . import repaint as _repaint
 
 # A marked eye's flat black: every channel at or below this (sRGB, 0..1).
 DARK_VALUE = 0.2
+# A flat black eye on a head that is itself nearly black (dark basalt): darker than DARK.
+BLACK_VALUE = 0.08
 # A painted glowing eye (as inspect_meshy.py finds them): bright and saturated.
 GLOW_VALUE, GLOW_SATURATION = 0.75, 0.3
 # A painted pale eye (Fohossa's lanterns, #1719): near white, barely tinted.
@@ -127,6 +129,10 @@ def _dark(colours):
     return colours.max(axis=1) <= DARK_VALUE
 
 
+def _black(colours):
+    return colours.max(axis=1) <= BLACK_VALUE
+
+
 def _glow(colours):
     value, saturation = _value_saturation(colours)
     return (value >= GLOW_VALUE) & (saturation >= GLOW_SATURATION)
@@ -164,6 +170,9 @@ BEASTS = {
     # Two eye pieces painted by frostfire_hound.py, MAGMA_EYE's amber and ICE_EYE's pale cyan on a
     # head of ice blue (hue about 210) and amber cracks. The generator set them off the middle, one
     # ahead of the other: they mirror each other only roughly, across x = 0.068.
+    # Black ovals on a head of dark basalt, which DARK takes for one big eye; ours replaced them on a
+    # head standing a little off the middle (kalvrakkor_magma.py).
+    "assets/kalvrakkor_magma/kalvrakkor_magma.glb": Marked("BLACK", _black, middle=0.0125),
     "assets/frostfire_hound/frostfire_hound.glb": Marked("AMBER/ICE", glow((36.0, 46.0), (180.0, 195.0)),
                                                          middle=0.068, mirror=1.0),
 }

@@ -773,6 +773,10 @@ msgstr ""
 msgid "Hide"
 msgstr ""
 
+#: slices/loot/data/materials/magma_core.jsonc
+msgid "Magma Core"
+msgstr ""
+
 #: slices/loot/data/materials/moss.jsonc
 msgid "Moss"
 msgstr ""
@@ -1045,6 +1049,10 @@ msgstr ""
 
 #: slices/quests/data/guild_holds_edhra_tewk.jsonc
 msgid "watch"
+msgstr ""
+
+#: slices/quests/data/hound_magma.jsonc
+msgid "A magma core for a ${MONSTER:kalvrakkor}"
 msgstr ""
 
 #: slices/quests/data/lumwen_hoal_fork.jsonc
@@ -1390,6 +1398,54 @@ msgstr ""
 
 #: slices/species/data/abilities/kavrikka_vakku_rakku.jsonc
 msgid "Vakku-rakku"
+msgstr ""
+
+#: slices/species/data/abilities/korvakkar_karvok_kurvik.jsonc
+msgid "The roar of a slope of magma letting go, then its slow crackle as it cools. Dominators called it to bring their beast's tails down on a foe."
+msgstr ""
+
+#: slices/species/data/abilities/korvakkar_karvok_kurvik.jsonc
+msgid "the fall, then the crackle"
+msgstr ""
+
+#: slices/species/data/abilities/korvakkar_karvok_kurvik.jsonc
+msgid "The ${MONSTER:korvakkar} throws all nine tails over its back and down on its target, one after another, in a rain of magma."
+msgstr ""
+
+#: slices/species/data/abilities/korvakkar_karvok_kurvik.jsonc
+msgid "Karvok-kurvik"
+msgstr ""
+
+#: slices/species/data/abilities/korvakkar_rukvo_vukvo.jsonc
+msgid "The thick glug of magma breaking through a crust. Dominators said it of a beast whose wounds only let more of the fire out."
+msgstr ""
+
+#: slices/species/data/abilities/korvakkar_rukvo_vukvo.jsonc
+msgid "every crack lets it out"
+msgstr ""
+
+#: slices/species/data/abilities/korvakkar_rukvo_vukvo.jsonc
+msgid "The ${MONSTER:korvakkar}'s cracks split wider when it's hurt, its magma runs free, and it strikes much faster."
+msgstr ""
+
+#: slices/species/data/abilities/korvakkar_rukvo_vukvo.jsonc
+msgid "Rukvo-vukvo"
+msgstr ""
+
+#: slices/species/data/abilities/korvakkar_vakru_rakru.jsonc
+msgid "The low steady rumble of a forge. Dominators said it of a guard that gives off too much heat to come near."
+msgstr ""
+
+#: slices/species/data/abilities/korvakkar_vakru_rakru.jsonc
+msgid "too hot to reach through"
+msgstr ""
+
+#: slices/species/data/abilities/korvakkar_vakru_rakru.jsonc
+msgid "While the ${MONSTER:korvakkar} is out, its tails fan out around the player, who takes less harm: no foe wants to reach through them."
+msgstr ""
+
+#: slices/species/data/abilities/korvakkar_vakru_rakru.jsonc
+msgid "Vakru-rakru"
 msgstr ""
 
 #: slices/species/data/abilities/nuvvoluvvo_nollu_vollu.jsonc
@@ -1862,6 +1918,18 @@ msgstr ""
 
 #: slices/species/data/kavrikka.jsonc
 msgid "Kavrikka"
+msgstr ""
+
+#: slices/species/data/korvakkar.jsonc
+msgid "What a Kalvrakkor becomes when its molten side wins: a lean black hound of cracked basalt, magma running in every seam, and behind it nine long tails of living magma fanned out like a burning sunrise, each tipped with an ember crystal. Snow never settles where it has passed. Its name is a beast-call, the sound it makes: its elder's k, v and r, the ice's crack gone out of them and only the deep growl left."
+msgstr ""
+
+#: slices/species/data/korvakkar.jsonc
+msgid "the growl with no frost left in it"
+msgstr ""
+
+#: slices/species/data/korvakkar.jsonc
+msgid "Korvakkar"
 msgstr ""
 
 #: slices/species/data/nuvvoluvvo.jsonc

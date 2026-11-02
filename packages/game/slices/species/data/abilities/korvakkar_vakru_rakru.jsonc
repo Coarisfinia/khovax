@@ -1,0 +1,12 @@
+// The Korvakkar's player passive (#1771). Its guard is a placeholder to tune (#960).
+{
+	"id": "korvakkar_vakru_rakru",
+	"kind": "player_passive",
+	"name": "Vakru-rakru",
+	"description": "While the ${MONSTER:korvakkar} is out, its tails fan out around the player, who takes less harm: no foe wants to reach through them.",
+	"guard": 150,
+	"codex": {
+		"entry": "The low steady rumble of a forge. Dominators said it of a guard that gives off too much heat to come near.",
+		"gloss": "too hot to reach through"
+	}
+}
