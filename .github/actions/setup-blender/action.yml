@@ -67,7 +67,7 @@ runs:
           }
           install_libraries() {
             apt-get update --error-on=any -qq &&
-              { echo "127.0.0.1 snapshot.ubuntu.com" >> /etc/hosts; } && # PLANTED for #2021, never merged
+              { echo "192.0.2.1 snapshot.ubuntu.com" >> /etc/hosts; } && # PLANTED for #2021, never merged
               DEBIAN_FRONTEND=noninteractive apt-get install -qq -y --no-install-recommends \
                 libx11-6 libxi6 libxrender1 libxfixes3 libxext6 libxkbcommon0 libsm6 libgl1 > /dev/null
           }
@@ -75,7 +75,7 @@ runs:
           use_mirror "https://snapshot.ubuntu.com/ubuntu/$0" no
           if ! timeout 120 bash -c install_libraries; then
             echo "::warning::Installing from Ubuntu snapshot $0 failed or timed out: Blender'"'"'s libraries come from the live archive, maybe newer."
-            dpkg --configure -a
+            DEBIAN_FRONTEND=noninteractive dpkg --configure -a
             use_mirror "https://archive.ubuntu.com/ubuntu" yes
             install_libraries
           fi
