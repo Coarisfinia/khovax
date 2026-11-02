@@ -202,6 +202,10 @@ jobs:
           uv run --locked --package khovax-game-checks ../game-checks/test_catalogue_gaps.py
           uv run --locked --package khovax-game-checks ../game-checks/resource_packs_check.py
 
+      - name: "🧪 Check the dev release against a stand-in for GitHub"
+        # The dev-release job only runs on main, so its failures would show only there (#1991).
+        run: uv run --locked --package khovax-game-checks ../game-checks/test_dev_release.py
+
       - name: "📦 Build the default pack, and refuse a pack with code"
         # Every pack is a .pck from our own pack builder (#1868, #1869), the default one too, so
         # each push builds it, with the builder zipped as each release ships it to pack makers
@@ -1229,9 +1233,10 @@ jobs:
           }
           retry() {
             local err try wait=15 pattern="$transient"
-            # Once, creating the release failed with a 403 "Resource not accessible by integration",
-            # with Contents: write granted and the runs around it creating theirs: the create and the
-            # uploads, the calls that write the release, take that 403 for GitHub's hiccup.
+            # Creating the release can fail with a 403 "Resource not accessible by integration", with
+            # Contents: write granted and the runs around it creating theirs. The create and the
+            # uploads, the calls that write the release, try again in case it passes, though on
+            # the create it hasn't yet (#1991, below).
             if [ -n "${retry_403:-}" ]; then
               pattern+='|Resource not accessible by integration'
             fi
@@ -1317,7 +1322,24 @@ jobs:
             gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
               --draft --prerelease --title "$tag" --notes "$notes" "${start[@]}"
           }
-          retry_403=1 retry create_draft
+          # GitHub has refused the create only for a commit that changed a workflow, once a later merge
+          # had changed the workflows again, and every try got the same answer (#1991). This token
+          # can't have the Workflows permission, so nothing here gets past that. Such a dev build
+          # gives way once main has moved past it: the newer commit's run should publish a newer one.
+          # A nightly has no such successor, and any other refusal is something else, so those fail.
+          if ! retry_403=1 retry create_draft; then
+            if [ "$channel" != dev ] || ! grep -q 'Resource not accessible by integration' "$RUNNER_TEMP/last-error"; then
+              exit 1
+            fi
+            head=$(retry gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)
+            workflows=$(retry gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}" \
+              --jq '[.files[].filename | select(startswith(".github/workflows/"))] | length')
+            if [ -z "$head" ] || [ "$head" = "$GITHUB_SHA" ] || [ "${workflows:-0}" = 0 ]; then
+              exit 1
+            fi
+            echo "::warning::GitHub refused to create ${tag}, a commit that changed a workflow; main has moved on to ${head}, whose run should publish a newer dev build (#1991)"
+            exit 0
+          fi
           # One file at a time, so a failed upload sends only that file again; --clobber replaces
           # what a broken upload left under its name.
           for file in "${files[@]}"; do
