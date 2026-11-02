@@ -1,0 +1,33 @@
+// Tolvakkor's development web (#677, #1770): a hound gone wholly to ice, it leans into its bulk and
+// its armoured weight, and may grow a little quicker at their cost. Its shifts and its stronger
+// special are placeholders to tune (#960); its bulwark's deepest node grants a stronger special.
+{
+	"species": "tolvakkor",
+	// Around the web: each direction sits beside the ones before and after it, the last beside the
+	// first.
+	"directions": [
+		{ "id": "armoured", "nodes": [
+			{ "leaning": { "hp": 60 } },
+			{ "leaning": { "hp": 70 } },
+			{ "leaning": { "hp": 100, "speed": -30 } }
+		] },
+		{ "id": "crushing", "nodes": [
+			{ "leaning": { "strength": 50 } },
+			{ "leaning": { "strength": 50, "hp": 20 } },
+			{ "leaning": { "strength": 80, "speed": -30 } }
+		] },
+		{ "id": "unbowed", "nodes": [
+			{ "leaning": { "speed": 40 } },
+			{ "leaning": { "speed": 50, "hp": -20 } },
+			{ "leaning": { "speed": 70, "strength": -30 } }
+		] },
+		{ "id": "bulwark", "nodes": [
+			{ "leaning": { "hp": 30, "strength": 30 } },
+			{ "leaning": { "hp": 40, "strength": 40, "speed": -20 } },
+			{ "leaning": { "hp": 60, "strength": 60, "speed": -40 } },
+			{ "special": 200 }
+		] }
+	],
+	"bridges": [["armoured_2", "crushing_2"], ["unbowed_1", "bulwark_1"]],
+	"portals": [["armoured_3", "unbowed_3"]]
+}

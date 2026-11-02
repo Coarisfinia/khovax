@@ -358,7 +358,7 @@ jobs:
         # Builds each model twice and compares the bytes with each other and the committed .glb
         # (#1085, #1161); a difference is an error annotation naming the model and what differs.
         if: steps.models.outputs.changed == 'true'
-        timeout-minutes: 5
+        timeout-minutes: 8
         run: uv run --locked --package khovax-game-models ../game-models/check_rebuild.py --all --keep /tmp/rebuilt
 
       - name: "🧪 Test the tails check on a stand-in beast"
@@ -480,9 +480,9 @@ jobs:
       - name: "💎 Check every attached part stays on the skin"
         # Every frame of every clip of every .glb, each part's gap to the piece it sits on against
         # its gap at rest (#1403, split off #1303), and how far it sinks in (#1458); a model of one
-        # piece passes.
+        # piece passes. It grows with each new model, as the rebuild check above does.
         if: steps.models.outputs.changed == 'true'
-        timeout-minutes: 5
+        timeout-minutes: 8
         run: |
           git ls-files -z ':(top)packages/game/*.glb' | xargs -0 -r uv run --locked --package khovax-game-models \
             ../game-models/blender.py --background --factory-startup \

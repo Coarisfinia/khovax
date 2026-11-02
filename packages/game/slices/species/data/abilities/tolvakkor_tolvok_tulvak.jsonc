@@ -1,0 +1,16 @@
+// The Tolvakkor's special (#1770): its helmet brought down on its target. Hits hardest of its line
+// and comes around slowest. Its power and cooldown are placeholders to tune (#960).
+{
+	"id": "tolvakkor_tolvok_tulvak",
+	"kind": "special",
+	"name": "Tolvok-tulvak",
+	"description": "The ${MONSTER:tolvakkor} rears its whole armoured weight back and brings its helmet down on its target.",
+	"codex": {
+		"entry": "The dull knock of a great weight of ice meeting the ground, and the groan after it. Dominators called it when they wanted a thing to stop being in the way.",
+		"gloss": "knock, then groan"
+	},
+	"power": 3600,
+	"cooldown_seconds": 14,
+	"strike_type": "tempest",
+	"path": "supremacy"
+}

@@ -1,0 +1,24 @@
+// The Kalvrakkor's ice form (#1770, named on it): its frost side has taken over the whole hound.
+// It wears its own model, from the owner's model: a frost hound in a suit of ice armour, built to
+// stand where it is. Tempest alone: no fire is left in it. The sturdiest of its line and the
+// slowest. Its stats are placeholders to tune (#960). No ascension leads here yet: the Kalvrakkor's
+// branch into its final forms is #1774.
+{
+	"id": "tolvakkor",
+	"name": "Tolvakkor",
+	"codex": {
+		"entry": "What a Kalvrakkor becomes when its frost wins: a broad hound armoured in plates of old blue ice, a helmet down over its muzzle and a crest of frozen feathers behind it. It walks slowly and it does not step aside. Its name keeps its line's crack and growl, with a heavy t and a round o for something that doesn't get out of the way.",
+		"gloss": "the crack of ice that holds"
+	},
+	"types": ["tempest"],
+	"strike_type": "tempest", // its blows are all ice now
+	"hp": 170,
+	"strength": 70,
+	"speed": 40,
+	"special": "tolvakkor_tolvok_tulvak",
+	"player_passive": "tolvakkor_kolvu_tolvu",
+	"self_passive": "tolvakkor_tovku_rovku",
+	// A hound still: it hunts with its pack and sleeps in bouts, as its line does (#1200).
+	"behaviour": ["cathemeral", "predator", "pack_species"],
+	"model": "model_tolvakkor"
+}

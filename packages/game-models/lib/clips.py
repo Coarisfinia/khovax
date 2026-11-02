@@ -604,7 +604,7 @@ LEGS = ([legs.Leg("scapula." + side, "upper_arm." + side, "front_paw." + side, f
 
 
 # How many times animate lifts a planted clip off the ground and plants its legs again at most.
-SETTLE_ROUNDS = 3
+SETTLE_ROUNDS = 5
 # A lift below this (metres) is rounding, not a pose sinking into the ground.
 SETTLED = 1e-4
 
