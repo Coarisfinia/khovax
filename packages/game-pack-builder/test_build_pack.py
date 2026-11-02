@@ -1,4 +1,4 @@
-"""Tests build_pack.py's refused() on a translation catalogue (#1969), and its run() (#1974) against
+"""Tests build_pack.py's refused() on a translation catalogue (#1969) and a sound (#2014), and its run() (#1974) against
 a stand-in for Godot: a run that exits fine but reports, as Godot does at exit, objects it leaked
 fails the build, like one reporting an error; a clean run passes, and so does one that merely says
 the words. Godot names leaked objects only in a warning once it exits, which the builder's callers
@@ -55,6 +55,25 @@ class RefusedTest(unittest.TestCase):
         (pack / "translations").mkdir()
         (pack / "translations" / "de.po").write_text('msgid "Taken"\nmsgstr "Genommen"\n', encoding="utf-8")
         self.assertEqual(refused(pack), [])
+
+    def test_a_sound_is_data(self) -> None:
+        # A pack's sound (#2014): an .ogg with the game's import settings, and nothing that makes
+        # the import load anything but the file beside it.
+        pack = Path(tempfile.mkdtemp())
+        (pack / "sound.ogg").write_bytes(b"OggS")
+        (pack / "sound.ogg.import").write_text(
+            '[remap]\n\nimporter="oggvorbisstr"\ntype="AudioStreamOggVorbis"\n\n[params]\n\nloop=true\n',
+            encoding="utf-8",
+        )
+        self.assertEqual(refused(pack), [])
+
+    def test_a_sound_imported_as_something_else_is_refused(self) -> None:
+        pack = Path(tempfile.mkdtemp())
+        (pack / "sound.ogg").write_bytes(b"OggS")
+        (pack / "sound.ogg.import").write_text(
+            '[remap]\n\nimporter="oggvorbisstr"\ntype="PackedScene"\n', encoding="utf-8"
+        )
+        self.assertNotEqual(refused(pack), [])
 
 
 if __name__ == "__main__":
