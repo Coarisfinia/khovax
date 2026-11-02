@@ -48,12 +48,14 @@ COLORS = {
     "dark": ((0.02, 0.03, 0.05, 1.0), 0.0),
     "glow": ((0.25, 0.7, 1.0, 1.0), 1.0),
 }
-EYE_SHAPE = {"pupil": (0.3, 0.45), "brow_size": 0.85, "rim": True}
+# Its helmet's cheeks fall away steeply, which would turn the eyes far outward, so they aim straight
+# ahead (the blind review measured them wall-eyed).
+EYE_SHAPE = {"pupil": (0.3, 0.45), "brow_size": 0.85, "rim": True, "forward": (0.1, -1.0, 0.0)}
 # The generator's dark ovals are a little lighter than the library's dark, and small: its eyes,
 # on either side of the head's midline once the head is straight (HEAD_TURN), are a little larger.
 EYE_DARK = 0.3
 HEAD_MIDDLE = -0.018
-EYE_GROW = 1.3
+EYE_GROW = 1.1
 # Faint's frames over which the lids shut (eyes.Lids): as it sinks.
 FAINT_LIDS = (18, 40)
 
@@ -164,7 +166,7 @@ TAIL_SHARE = 0.3
 FAINT_SHARE = 0.15
 # Its long neck and tall stance reach the ground with its chest low, its head tipped down and its
 # forepaws out in front (clips.feed).
-FEED = {"neck": 0.36, "head": 0.5, "crouch": 0.3, "forepaws": 0.2}
+FEED = {"neck": 0.36, "head": 0.6, "crouch": 0.3, "forepaws": 0.1}
 FAINT_FOREPAWS = 0.2
 SLEEP_PAWS = {"front_paw": (0.0, 0.0, 0.3), "hind_paw": (0.09, 0.0, -0.09)}
 

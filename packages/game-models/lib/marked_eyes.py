@@ -202,8 +202,10 @@ MARKINGS = {
     # The Tolvakkor's dark blue ice: its ears and its helmet's gem above its eyes, its nose and its
     # throat below them; and the thin shadow line inside each of its helmet's cheek guards.
     "assets/tolvakkor/tolvakkor.glb": [
-        Box((-0.4, -0.8, 0.905), (0.4, 0.0, 1.4)),
-        Box((-0.2, -0.8, 0.6), (0.2, -0.4, 0.84)),
+        Box((-0.4, -0.55, 0.93), (0.4, 0.0, 1.4)),
+        Box((-0.1, -0.7, 0.905), (0.06, -0.55, 1.0)),
+        Box((-0.1, -0.8, 0.7), (0.06, -0.6, 0.84)),
+        Box((-0.2, -0.6, 0.6), (0.2, -0.4, 0.79)),
         Box((0.07, -0.55, 0.86), (0.1, -0.5, 0.9)),
         Box((-0.12, -0.55, 0.83), (-0.09, -0.5, 0.87)),
     ],
