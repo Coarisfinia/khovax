@@ -1,7 +1,7 @@
 """Validates the default resource pack (#1860): the game's own resources, its textures, its models
 (#1864), its region files, region pieces and realms (#1861), its quests (#1888), its species
 (#1903), its translation catalogues (#1902), its tile blueprints (#1901) and its loot tables and
-materials (#1953), described by the same manifest a player's pack will have (#1858), and looked up
+materials (#1953), and its harvest tables (#1990), described by the same manifest a player's pack will have (#1858), and looked up
 only through ResourcePacks. It fails when
 - the manifest (game_shared.resource_packs.MANIFEST) is missing or isn't a JSON object;
 - an id doesn't resolve: it isn't an id (Ids), or its file isn't tracked, isn't imported by Godot
@@ -90,6 +90,8 @@ OLD_TILES = "core/data/tiles"
 # kinds and their schemas (#412), each in its own folder.
 LOOT_TABLES = "slices/loot/data/loot_tables"
 MATERIALS = "slices/loot/data/materials"
+# Harvest tables use the same format, one per species (#1990).
+HARVEST_TABLES = "slices/loot/data/harvest_tables"
 # Each kind of resource the manifest lists, by its section.
 KINDS: dict[str, Kind] = {
     "textures": Kind("texture", IMAGES, True, "assets"),
@@ -112,6 +114,7 @@ KINDS: dict[str, Kind] = {
     # Every loot table and material the packs have is read whole, so nothing names one to look it
     # up through the pack (#1953); what names them by id is checked by the content flow.
     "loot_tables": Kind("loot table", (".jsonc",), False, f"{LOOT_TABLES}/*.jsonc", listed=True),
+    "harvest_tables": Kind("harvest table", (".jsonc",), False, f"{HARVEST_TABLES}/*.jsonc", listed=True),
     "materials": Kind("material", (".jsonc",), False, f"{MATERIALS}/*.jsonc", listed=True),
 }
 # The project setting through which Godot would load catalogues itself, around the pack (#1902).
@@ -136,7 +139,8 @@ PATH = re.compile(
     + rf"|{SPECIES}/{NAME_CHAR}+\.jsonc"
     + rf"|translations/{PATH_CHAR}+?\.po"
     + rf"|{TILES}/{PATH_CHAR}+|{OLD_TILES}(?:/{PATH_CHAR}*)?"
-    + rf"|{LOOT_TABLES}/{PATH_CHAR}+?\.jsonc|{MATERIALS}/{PATH_CHAR}+?\.jsonc)\1"
+    + rf"|{LOOT_TABLES}/{PATH_CHAR}+?\.jsonc|{MATERIALS}/{PATH_CHAR}+?\.jsonc"
+    + rf"|{HARVEST_TABLES}/{PATH_CHAR}+?\.jsonc)\1"
 )
 
 # Lookups around the resolver that name no path the check above could read (#1865): a uid://
@@ -149,7 +153,7 @@ UID_STRING = re.compile(rf"([\"'])(?P<uid>uid://{PATH_CHAR}*)\1")
 # folder also holds the abilities' folder, which isn't theirs.
 PACK_STRING = re.compile(
     rf"([\"'])res://(?:(?:assets|regions|realms|translations|{QUESTS}|{TILES}|{OLD_TILES}"
-    + rf"|{LOOT_TABLES}|{MATERIALS})"
+    + rf"|{LOOT_TABLES}|{MATERIALS}|{HARVEST_TABLES})"
     + rf"(?:/{PATH_CHAR}*)?|{SPECIES}(?:/{NAME_CHAR}*)?)\1"
 )
 WHOLE_FILE = re.compile(rf"([\"'])res://{PATH_CHAR}+\.[A-Za-z0-9]+\1")
@@ -360,6 +364,7 @@ def main() -> int:
     for section, folder, noun in (
         ("loot_tables", LOOT_TABLES, "loot table"),
         ("materials", MATERIALS, "material"),
+        ("harvest_tables", HARVEST_TABLES, "harvest table"),
     ):
         problems += [
             (f"{noun} {entry_id}'s file is {paths}, not {folder}/{entry_id}.jsonc", MANIFEST.as_posix())
@@ -367,7 +372,7 @@ def main() -> int:
             if paths != [f"{folder}/{entry_id}.jsonc"]
         ]
     tracked = set(
-        git_files("assets", "regions", "realms", "translations", QUESTS, SPECIES, TILES, LOOT_TABLES, MATERIALS)
+        git_files("assets", "regions", "realms", "translations", QUESTS, SPECIES, TILES, LOOT_TABLES, MATERIALS, HARVEST_TABLES)
     )
     models = {path for paths in entries["models"].values() for path in paths}
     used_by_models = model_images(sorted(models & tracked))
