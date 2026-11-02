@@ -1,5 +1,5 @@
-"""Tests build_pack.py's refused() on a translation catalogue (#1969) and a sound (#2014), and its run() (#1974) against
-a stand-in for Godot: a run that exits fine but reports, as Godot does at exit, objects it leaked
+"""Tests build_pack.py's refused() on a translation catalogue (#1969) and a sound (#2014), and its
+run() (#1974) against a stand-in for Godot: a run that exits fine but reports, as Godot does at exit, objects it leaked
 fails the build, like one reporting an error; a clean run passes, and so does one that merely says
 the words. Godot names leaked objects only in a warning once it exits, which the builder's callers
 never see, since it keeps Godot's output to itself unless the run fails.

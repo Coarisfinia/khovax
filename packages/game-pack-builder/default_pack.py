@@ -20,7 +20,7 @@ from game_shared.resource_packs import MANIFEST, file_lists, gltf_files, read_ma
 
 GAME = Path(__file__).resolve().parents[1] / "game"
 SINGLE = (
-    "textures", "models", "regions", "realms", "quests", "species", "tiles", "translations", "loot_tables",
+    "textures", "models", "audio", "regions", "realms", "quests", "species", "tiles", "translations", "loot_tables",
     "materials", "harvest_tables",
 )
 LISTS = ("region_pieces",)

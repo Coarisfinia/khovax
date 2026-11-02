@@ -1281,17 +1281,36 @@ func _check_terrain_colors(main: Node) -> String:
 	return ""
 
 
-## The world's music (#126): the exploration track plays, loops and fades in rather than starting
-## loud. Booting took a few frames, far less than the fade.
+## The world's music (#126): the exploration track, the resource packs' (#2014), plays, loops and
+## fades in rather than starting loud. Booting took a few frames, far less than the fade. A track no
+## pack gives stays silent, warning once, and leaves the simulation as it was.
 func _check_music(main: Node) -> String:
 	var music: Music = main.get_node_or_null("Music") as Music
-	if music == null or not music.playing or music.stream != Music.EXPLORATION:
+	var expected: AudioStream = ResourcePacks.audio_stream(Music.EXPLORATION)
+	if expected == null or music == null or not music.playing or music.stream != expected:
 		return "the exploration track isn't playing"
 	var track: AudioStreamOggVorbis = music.stream as AudioStreamOggVorbis
 	if track == null or not track.loop:
 		return "the exploration track doesn't loop"
 	if music.volume_linear >= 1.0:
 		return "the music started at full volume instead of fading in"
+	return _check_music_missing(main)
+
+
+## A track no pack gives (#2014): the player stays silent and the simulation stays as it was.
+func _check_music_missing(main: Node) -> String:
+	var driver: GameDriver = main.get_node("Driver") as GameDriver
+	var before: int = driver.state.state_hash()
+	main.get_tree().call("expect_warning", "no_such_track")
+	var silent: Music = Music.new()
+	silent.track = "no_such_track"
+	main.add_child(silent)
+	var quiet: bool = silent.stream == null and not silent.playing and not silent.waiting
+	silent.free()
+	if not quiet:
+		return "a track no pack gives didn't stay silent"
+	if driver.state.state_hash() != before:
+		return "a track no pack gives changed the simulation"
 	return ""
 
 

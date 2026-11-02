@@ -1,6 +1,6 @@
 # The pack builder
 
-Builds a resource pack for the game: textures, models, regions, realms, quests, species, tile kinds,
+Builds a resource pack for the game: textures, models, sounds, regions, realms, quests, species, tile kinds,
 translations, loot tables, harvest tables and materials that add to or replace the game's own. A pack is data,
 never code. The builder refuses anything else, and the game checks every pack again before it
 loads it.
@@ -21,6 +21,7 @@ my_pack/
   pack.jsonc        the manifest
   textures/...      images: .png, .jpg, .jpeg, .webp, .svg
   models/...        models: .glb, or .gltf with its .bin
+  audio/...         sounds: .ogg
   regions/...       regions and region pieces: .md
   realms/...        realms: .md
   quests/...        quests: .jsonc, in the game's quest format
@@ -33,8 +34,8 @@ my_pack/
 ```
 
 Only those file types are allowed, plus `.jsonc` and Godot's `.import` files. A `.import` file may
-use only the texture or scene importer, and it may name no script and no path. A glTF may point only
-at plain files inside the pack. Anything else gets the whole pack refused.
+use only the texture, scene or Ogg Vorbis importer, and it may name no script and no path. A glTF
+may point only at plain files inside the pack. Anything else gets the whole pack refused.
 
 ## The manifest, `pack.jsonc`
 
@@ -46,6 +47,7 @@ at plain files inside the pack. Anything else gets the whole pack refused.
 	"game_version": "0.1.0",  // the game version it's made for
 	"textures": { "my_texture": "textures/stone.png" },
 	"models": { "my_model": "models/rock.glb" },
+	"audio": { "music_exploration": "audio/my_theme.ogg" },
 	"regions": { "my_region": "regions/my_region.md" },
 	"region_pieces": { "my_region_parts": ["regions/my_region_parts/start.md"] },
 	"realms": { "my_realm": "realms/my_realm.md" },

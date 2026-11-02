@@ -28,7 +28,8 @@ extends RefCounted
 ## name, and broken tags are refused; tags whose content can't be read are warned about (#949). No
 ## two things share an id or a name, whatever their kinds, in any case (#909). Every content kind is
 ## read ahead in the background (#816). The default resource pack (#1860) reads with every texture
-## resolving, and broken pack manifests are refused; the quests (#1888), the tile blueprints
+## and sound (#2014) resolving, and broken pack manifests are refused; the quests (#1888), the tile
+## blueprints
 ## (#1901), the loot tables and materials (#1953), and harvest tables (#1990) are read from it.
 
 ## A model a species can wear (#1223), by its id in the resource packs (#1864).
@@ -2168,7 +2169,17 @@ func _check_resource_packs() -> String:
 	var tile_files: int = packs[0].files_of("tiles").size()
 	if tiles.size() != tile_files or not tiles.values().all(FileAccess.file_exists):
 		return "the default pack's tile blueprints don't resolve: %s" % tiles
-	return _check_pack_quests(packs[0])
+	return _check_pack_sounds(packs[0])
+
+
+## Every sound of the default pack resolves (#2014).
+func _check_pack_sounds(pack: ResourcePack) -> String:
+	if pack.audio.is_empty():
+		return "the default resource pack lists no sounds"
+	for audio_id: String in pack.audio:
+		if ResourcePacks.audio_stream(audio_id) == null:
+			return "the default pack's sound %s doesn't resolve" % audio_id
+	return _check_pack_quests(pack)
 
 
 ## The default pack's quests resolve, the quests read are exactly the ones the resource packs list
@@ -2230,17 +2241,21 @@ func _check_pack_loot(pack: ResourcePack) -> String:
 	return _check_pack_misses()
 
 
-## A texture or model no pack gives is warned about once per id, and the miss is kept, so a view
+## A texture, model or sound no pack gives is warned about once per id, and the miss is kept, so a
+## view
 ## that asks for it every frame neither loads it again nor floods the log (#1866).
 func _check_pack_misses() -> String:
 	var tree: SceneTree = Engine.get_main_loop() as SceneTree
 	tree.call("expect_warning", "no_such_texture")
 	tree.call("expect_warning", "no_such_model")
+	tree.call("expect_warning", "no_such_sound")
 	for _frame: int in 2:
 		if ResourcePacks.texture("no_such_texture") != null:
 			return "a texture no pack has was found"
 		if ResourcePacks.model("no_such_model") != null:
 			return "a model no pack has was found"
+		if ResourcePacks.audio_stream("no_such_sound") != null:
+			return "a sound no pack has was found"
 	return _check_pack_manifests()
 
 
@@ -2250,6 +2265,7 @@ func _check_pack_manifests() -> String:
 	var valid: String = (
 		start + " \"game_version\": \"0.1.0\", \"textures\": {\"%s\": \"%s\"},"
 		+ " \"models\": {\"m\": \"%s\"}, \"regions\": {\"r\": \"regions/r.md\"},"
+		+ " \"audio\": {\"b\": \"assets/exploration-theme/exploration_theme.ogg\"},"
 		+ " \"region_pieces\": {\"q\": [\"regions/q/start.md\"]},"
 		+ " \"realms\": {\"w\": \"realms/w.md\"}, \"quests\": {\"u\": \"quests/u.jsonc\"},"
 		+ " \"species\": {\"s\": \"species/s.jsonc\"}, \"tiles\": {\"t\": \"tiles/t.jsonc\"},"
@@ -2283,6 +2299,7 @@ func _check_pack_manifests() -> String:
 		"",
 	)
 	cases.merge(_text_section_cases(regions, cog))
+	cases.merge(_sound_section_cases(regions, cog))
 	cases["a region both whole and in pieces"] = regions.replace("{\"q\": [", "{\"r\": [")
 	# `regions` is the valid manifest, which every case above changes in one place.
 	if not ResourcePack.parse(regions, "res://").problem.is_empty():
@@ -2330,6 +2347,17 @@ func _check_pack_translations() -> String:
 	if shown != ["Genommen", other, taken, taken]:
 		return "a pack's catalogue didn't translate, fall back or come out again: %s" % [shown]
 	return _check_pack_loading()
+
+
+## The broken manifests made from `valid` whose sound (#2014) is missing or of another kind, or
+## without the section, by what's wrong with them; `other` is a file of another kind.
+func _sound_section_cases(valid: String, other: String) -> Dictionary[String, String]:
+	var track: String = "assets/exploration-theme/exploration_theme.ogg"
+	return {
+		"a missing sound": valid.replace("exploration_theme.ogg", "no_theme.ogg"),
+		"an image as a sound": valid.replace(track, other),
+		"no sounds": valid.replace(" \"audio\": {\"b\": \"%s\"}," % track, ""),
+	}
 
 
 ## The broken manifests made from `valid` whose realm, quest, species, tile blueprint, loot or
@@ -2406,7 +2434,7 @@ func _check_pack_loading() -> String:
 			return "a pack's .pck with %s was mounted: %s" % [what, pack.problem]
 		if FileAccess.file_exists("res://packs/%s/pack.jsonc" % refused):
 			return "a refused pack's .pck with %s was mounted anyway" % what
-	return _check_pack_catalogue()
+	return _check_pack_sound()
 
 
 ## A player's pack brings its own translation catalogue (#1969): its .po in the .pck is data, so
@@ -2507,6 +2535,78 @@ func _textured_scene() -> PackedByteArray:
 	return bytes
 
 
+## A pack's sound (#2014) mounts and resolves by its id; one holding a script, or a script-free
+## scene passed off as a sound, is refused for just that.
+func _check_pack_sound() -> String:
+	var binary: String = "user://pack_loading/sound.oggvorbisstr"
+	var _made: Error = DirAccess.make_dir_recursive_absolute(binary.get_base_dir())
+	var _saved: Error = ResourceSaver.save(AudioStreamOggVorbis.new(), binary)
+	var sound_import: PackedByteArray = (
+		"[remap]\nimporter=\"oggvorbisstr\"\ntype=\"AudioStreamOggVorbis\"\n"
+		+ "path=\"res://.godot/imported/sound.oggvorbisstr\"\n"
+	).to_utf8_buffer()
+	var pack: ResourcePack = PackLoader.mount(
+		_packed("pack_sound", {
+			"pack.jsonc": _pack_manifest("pack_sound").replace(
+				"\"audio\": {}",
+				"\"audio\": {\"pack_music\": \"sound.ogg\"}",
+			).to_utf8_buffer(),
+			"regions/r.md": "# R".to_utf8_buffer(),
+			"sound.ogg.import": sound_import,
+			"/.godot/imported/sound.oggvorbisstr": FileAccess.get_file_as_bytes(binary),
+		})
+	)
+	if not pack.problem.is_empty():
+		return "a pack's .pck with a sound wasn't mounted: " + pack.problem
+	if not pack.audio_stream("pack_music") is AudioStreamOggVorbis:
+		return "a mounted pack's sound doesn't load"
+	var refusals: Dictionary[String, Array] = {
+		"pack_sound_scripted": ["holds a script", _scripted_sound()],
+		"pack_sound_scene": ["isn't a binary " + PackScene.SOUND_TYPE, _plain_scene()],
+	}
+	for refused: String in refusals:
+		var reason: String = refusals[refused][0]
+		var bytes: PackedByteArray = refusals[refused][1]
+		var mounted: ResourcePack = PackLoader.mount(
+			_packed(refused, {
+				"pack.jsonc": _pack_manifest(refused).to_utf8_buffer(),
+				"/.godot/imported/%s.oggvorbisstr" % refused: bytes,
+			})
+		)
+		if not mounted.problem.contains(reason):
+			return "%s wasn't refused as: %s, but: %s" % [refused, reason, mounted.problem]
+	return _check_pack_catalogue()
+
+
+## A binary scene that holds no script, as a pack could pass one off as a sound (#2014).
+func _plain_scene() -> PackedByteArray:
+	var scene: PackedScene = PackedScene.new()
+	var node: Node = Node.new()
+	var _packed_scene: Error = scene.pack(node)
+	node.free()
+	var binary: String = "user://pack_loading/plain.scn"
+	var _made: Error = DirAccess.make_dir_recursive_absolute(binary.get_base_dir())
+	var _saved: Error = ResourceSaver.save(scene, binary)
+	return FileAccess.get_file_as_bytes(binary)
+
+
+## A binary sound, as Godot imports one, that holds a script of its own (#2014).
+func _scripted_sound() -> PackedByteArray:
+	var text: String = "user://pack_loading/scripted_sound.tres"
+	var _made: Error = DirAccess.make_dir_recursive_absolute(text.get_base_dir())
+	var file: FileAccess = FileAccess.open(text, FileAccess.WRITE)
+	var _stored: bool = file.store_string(
+		"[gd_resource type=\"AudioStreamOggVorbis\" format=3]\n\n"
+		+ "[sub_resource type=\"GDScript\" id=\"s\"]\n"
+		+ "script/source = \"extends AudioStreamOggVorbis\n\"\n\n"
+		+ "[resource]\nscript = SubResource(\"s\")\n"
+	)
+	file.close()
+	var binary: String = "user://pack_loading/scripted.oggvorbisstr"
+	var _saved: Error = ResourceSaver.save(load(text), binary)
+	return FileAccess.get_file_as_bytes(binary)
+
+
 ## A binary scene, compressed as Godot imports one, that holds a script of its own.
 func _scripted_scene() -> PackedByteArray:
 	var text: String = "user://pack_loading/scripted.tscn"
@@ -2553,7 +2653,8 @@ func _words_pack(catalogues: String) -> ResourcePack:
 func _pack_manifest(pack_id: String) -> String:
 	return (
 		"{\"id\": \"%s\", \"name\": \"n\", \"version\": \"1.0.0\", \"game_version\": \"0.1.0\","
-		+ " \"textures\": {}, \"models\": {}, \"regions\": {\"r\": \"regions/r.md\"},"
+		+ " \"textures\": {}, \"models\": {}, \"audio\": {},"
+		+ " \"regions\": {\"r\": \"regions/r.md\"},"
 		+ " \"region_pieces\": {}, \"realms\": {}, \"quests\": {}, \"species\": {},"
 		+ " \"translations\": {}, \"tiles\": {}, \"loot_tables\": {},"
 		+ " \"materials\": {}, \"harvest_tables\": {}}"

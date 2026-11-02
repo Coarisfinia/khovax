@@ -1,13 +1,13 @@
 """Validates the default resource pack (#1860): the game's own resources, its textures, its models
-(#1864), its sounds (#2014), its region files, region pieces and realms (#1861), its quests (#1888), its species
-(#1903), its translation catalogues (#1902), its tile blueprints (#1901) and its loot tables and
+(#1864), its sounds (#2014), its region files, region pieces and realms (#1861), its quests
+(#1888), its species (#1903), its translation catalogues (#1902), its tile blueprints (#1901) and its loot tables and
 materials (#1953), and harvest tables (#1990), described by the same manifest a player's pack
 will have (#1858), and looked up only through ResourcePacks. It fails when
 - the manifest (game_shared.resource_packs.MANIFEST) is missing or isn't a JSON object;
 - an id doesn't resolve: it isn't an id (Ids), or its file isn't tracked, isn't imported by Godot
   (a .import beside it, for the kinds Godot imports) or isn't of its kind (an image, a .glb or
-  .gltf model, an .ogg sound, a Markdown region file, piece or realm, a JSONC quest, species, tile blueprint, loot
-  table, harvest table or material, a .po catalogue named after its locale);
+  .gltf model, an .ogg sound, a Markdown region file, piece or realm, a JSONC quest, species, tile
+  blueprint, loot table, harvest table or material, a .po catalogue named after its locale);
 - a resource is unreferenced: the manifest lists it but no script (outside its comments), scene,
   resource or content file of the game's names its id as a string (but for the realms, the
   quests, species, catalogues, tile blueprints, loot and harvest tables and materials, which the

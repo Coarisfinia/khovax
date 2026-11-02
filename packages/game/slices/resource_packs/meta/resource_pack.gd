@@ -13,6 +13,7 @@ const FIELDS: Array[String] = [
 	"game_version",
 	"textures",
 	"models",
+	"audio",
 	"regions",
 	"region_pieces",
 	"realms",
@@ -32,6 +33,7 @@ const FIELDS: Array[String] = [
 const KINDS: Dictionary[String, String] = {
 	"textures": "Texture2D",
 	"models": "PackedScene",
+	"audio": "AudioStream",
 	"regions": "",
 	"realms": "",
 	"quests": "",
@@ -49,6 +51,7 @@ const PIECES: String = "region_pieces"
 const ENDINGS: Dictionary[String, Array] = {
 	"textures": ["svg", "png", "jpg", "jpeg", "webp"],
 	"models": ["glb", "gltf"],
+	"audio": ["ogg"],
 	"regions": ["md"],
 	"realms": ["md"],
 	"quests": ["jsonc"],
@@ -78,6 +81,9 @@ var textures: Dictionary[String, String] = {}
 ## Each model's file (a .glb or .gltf, #1864) by its id, relative to `root`; empty while the pack
 ## has a problem.
 var models: Dictionary[String, String] = {}
+## Each sound's file (an .ogg, #2014) by its id, relative to `root`; empty while the pack has a
+## problem.
+var audio: Dictionary[String, String] = {}
 ## Each region drawn whole in one file (#1861) by its id, relative to `root`.
 var regions: Dictionary[String, String] = {}
 ## Each region arranged from pieces (#1861): its piece files by its id, relative to `root`.
@@ -95,10 +101,10 @@ var problem: String = ""
 
 
 ## The pack the manifest `text` describes, its files under `root`, with `problem` saying why it
-## can't be used: a field missing or unknown, an id that isn't one, or a texture, model, region,
-## region piece, realm, quest, species, translation catalogue, tile blueprint, loot table or
-## material whose file climbs out of `root`, has another kind's ending or (for a texture, model or
-## catalogue) doesn't exist.
+## can't be used: a field missing or unknown, an id that isn't one, or a texture, model, sound,
+## region, region piece, realm, quest, species, translation catalogue, tile blueprint, loot table or
+## material whose file climbs out of `root`, has another kind's ending or (for a texture, model,
+## sound or catalogue) doesn't exist.
 static func parse(text: String, files_root: String) -> ResourcePack:
 	var pack: ResourcePack = ResourcePack.new()
 	pack.root = files_root
@@ -129,6 +135,11 @@ func texture(texture_id: String) -> Texture2D:
 ## The model `model_id`, which the pack must have, loaded as Godot imported it (texture).
 func model(model_id: String) -> PackedScene:
 	return load(root + models[model_id]) as PackedScene
+
+
+## The sound `audio_id` (#2014), which the pack must have, loaded as Godot imported it (texture).
+func audio_stream(audio_id: String) -> AudioStream:
+	return load(root + audio[audio_id]) as AudioStream
 
 
 ## The translation catalogue of `locale` (#1902), which the pack must have, for that locale
@@ -177,6 +188,7 @@ func _read(data: Dictionary) -> String:
 	# Only a pack read whole provides anything.
 	textures.assign(found["textures"])
 	models.assign(found["models"])
+	audio.assign(found["audio"])
 	regions.assign(found["regions"])
 	translations.assign(found["translations"])
 	for kind: String in LISTED:
