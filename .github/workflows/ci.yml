@@ -1233,9 +1233,10 @@ jobs:
           }
           retry() {
             local err try wait=15 pattern="$transient"
-            # Once, creating the release failed with a 403 "Resource not accessible by integration",
-            # with Contents: write granted and the runs around it creating theirs: the create and the
-            # uploads, the calls that write the release, take that 403 for GitHub's hiccup.
+            # Creating the release can fail with a 403 "Resource not accessible by integration", with
+            # Contents: write granted and the runs around it creating theirs. The create and the
+            # uploads, the calls that write the release, try again in case it passes, though on
+            # the create it hasn't yet (#1991, below).
             if [ -n "${retry_403:-}" ]; then
               pattern+='|Resource not accessible by integration'
             fi
@@ -1321,7 +1322,22 @@ jobs:
             gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
               --draft --prerelease --title "$tag" --notes "$notes" "${start[@]}"
           }
-          retry_403=1 retry create_draft
+          # GitHub has refused the create only for a commit that changed a workflow, once a later merge
+          # had changed the workflows again, and every try got the same answer (#1991). This token
+          # can't have the Workflows permission, so nothing here gets past that. A dev build main has
+          # moved past gives way: the newer commit's run publishes a newer one. A nightly has no such
+          # successor, and a refusal of main's newest commit is something else, so those fail.
+          if ! retry_403=1 retry create_draft; then
+            if [ "$channel" != dev ] || ! grep -q 'Resource not accessible by integration' "$RUNNER_TEMP/last-error"; then
+              exit 1
+            fi
+            head=$(retry gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)
+            if [ "$head" = "$GITHUB_SHA" ]; then
+              exit 1
+            fi
+            echo "::warning::GitHub refused to create ${tag}; main has moved on to ${head}, whose run publishes a newer dev build (#1991)"
+            exit 0
+          fi
           # One file at a time, so a failed upload sends only that file again; --clobber replaces
           # what a broken upload left under its name.
           for file in "${files[@]}"; do
