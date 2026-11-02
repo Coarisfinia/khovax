@@ -1,0 +1,12 @@
+// The Tolvakkor's player passive (#1770). Its guard is a placeholder to tune (#960).
+{
+	"id": "tolvakkor_kolvu_tolvu",
+	"kind": "player_passive",
+	"name": "Kolvu-tolvu",
+	"description": "While the ${MONSTER:tolvakkor} is out, the player takes less harm: it plants itself between them and whatever is coming.",
+	"guard": 180,
+	"codex": {
+		"entry": "The creak of armoured ice settling as a heavy hound sits down in front of someone. Dominators said it of a guard that needs no teeth to do its work.",
+		"gloss": "it sits, and that is the wall"
+	}
+}

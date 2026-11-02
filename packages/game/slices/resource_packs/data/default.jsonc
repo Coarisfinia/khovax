@@ -102,6 +102,7 @@
 		"model_starry_egg": "assets/starry-egg/starry_egg.glb",
 		"model_tentacle_gate": "assets/tentacle_gate/tentacle_gate.glb",
 		"model_tikazzelu": "assets/tikazzelu/tikazzelu.glb",
+		"model_tolvakkor": "assets/tolvakkor/tolvakkor.glb",
 		"model_tree_single_b_cut": "assets/kaykit-hexagon/tree_single_B_cut.gltf",
 		"model_trees_a_large": "assets/kaykit-hexagon/trees_A_large.gltf",
 		"model_trees_b_small": "assets/kaykit-hexagon/trees_B_small.gltf",
@@ -202,6 +203,7 @@
 		"ombuwomo": "slices/species/data/ombuwomo.jsonc",
 		"tikazzelu": "slices/species/data/tikazzelu.jsonc",
 		"tikazzir": "slices/species/data/tikazzir.jsonc",
+		"tolvakkor": "slices/species/data/tolvakkor.jsonc",
 		"vynakiir": "slices/species/data/vynakiir.jsonc",
 		"vynnimu": "slices/species/data/vynnimu.jsonc",
 		"wobulumu": "slices/species/data/wobulumu.jsonc"
@@ -251,6 +253,7 @@
 		"pass_ground": "slices/loot/data/loot_tables/pass_ground.jsonc",
 		"tikazzelu": "slices/loot/data/loot_tables/tikazzelu.jsonc",
 		"tikazzir": "slices/loot/data/loot_tables/tikazzir.jsonc",
+		"tolvakkor": "slices/loot/data/loot_tables/tolvakkor.jsonc",
 		"vynakiir": "slices/loot/data/loot_tables/vynakiir.jsonc",
 		"vynnimu": "slices/loot/data/loot_tables/vynnimu.jsonc",
 		"wild_ground": "slices/loot/data/loot_tables/wild_ground.jsonc",
@@ -266,6 +269,7 @@
 		"ombuwomo": "slices/loot/data/harvest_tables/ombuwomo.jsonc",
 		"tikazzelu": "slices/loot/data/harvest_tables/tikazzelu.jsonc",
 		"tikazzir": "slices/loot/data/harvest_tables/tikazzir.jsonc",
+		"tolvakkor": "slices/loot/data/harvest_tables/tolvakkor.jsonc",
 		"vynakiir": "slices/loot/data/harvest_tables/vynakiir.jsonc",
 		"vynnimu": "slices/loot/data/harvest_tables/vynnimu.jsonc",
 		"wobulumu": "slices/loot/data/harvest_tables/wobulumu.jsonc"

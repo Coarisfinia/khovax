@@ -1720,6 +1720,54 @@ msgstr ""
 msgid "Zirki-kirki"
 msgstr ""
 
+#: slices/species/data/abilities/tolvakkor_kolvu_tolvu.jsonc
+msgid "The creak of armoured ice settling as a heavy hound sits down in front of someone. Dominators said it of a guard that needs no teeth to do its work."
+msgstr ""
+
+#: slices/species/data/abilities/tolvakkor_kolvu_tolvu.jsonc
+msgid "it sits, and that is the wall"
+msgstr ""
+
+#: slices/species/data/abilities/tolvakkor_kolvu_tolvu.jsonc
+msgid "While the ${MONSTER:tolvakkor} is out, the player takes less harm: it plants itself between them and whatever is coming."
+msgstr ""
+
+#: slices/species/data/abilities/tolvakkor_kolvu_tolvu.jsonc
+msgid "Kolvu-tolvu"
+msgstr ""
+
+#: slices/species/data/abilities/tolvakkor_tolvok_tulvak.jsonc
+msgid "The dull knock of a great weight of ice meeting the ground, and the groan after it. Dominators called it when they wanted a thing to stop being in the way."
+msgstr ""
+
+#: slices/species/data/abilities/tolvakkor_tolvok_tulvak.jsonc
+msgid "knock, then groan"
+msgstr ""
+
+#: slices/species/data/abilities/tolvakkor_tolvok_tulvak.jsonc
+msgid "The ${MONSTER:tolvakkor} rears its whole armoured weight back and brings its helmet down on its target."
+msgstr ""
+
+#: slices/species/data/abilities/tolvakkor_tolvok_tulvak.jsonc
+msgid "Tolvok-tulvak"
+msgstr ""
+
+#: slices/species/data/abilities/tolvakkor_tovku_rovku.jsonc
+msgid "The tick of a blow glancing off a plate of old ice. Dominators said it of a beast that had to be hit many times before it noticed."
+msgstr ""
+
+#: slices/species/data/abilities/tolvakkor_tovku_rovku.jsonc
+msgid "it ticks, and nothing more"
+msgstr ""
+
+#: slices/species/data/abilities/tolvakkor_tovku_rovku.jsonc
+msgid "The ${MONSTER:tolvakkor}'s armour of old ice turns aside part of every hit it takes."
+msgstr ""
+
+#: slices/species/data/abilities/tolvakkor_tovku_rovku.jsonc
+msgid "Tovku-rovku"
+msgstr ""
+
 #: slices/species/data/abilities/vynakiir_kynri_vynri.jsonc
 msgid "The whine a beast gives when its prey stands ringed and still. Dominators said it of a ring that closes before the beast inside can think to push."
 msgstr ""
@@ -1990,6 +2038,18 @@ msgstr ""
 
 #: slices/species/data/tikazzir.jsonc
 msgid "Tikazzir"
+msgstr ""
+
+#: slices/species/data/tolvakkor.jsonc
+msgid "What a Kalvrakkor becomes when its frost wins: a broad hound armoured in plates of old blue ice, a helmet down over its muzzle and a crest of frozen feathers behind it. It walks slowly and it does not step aside. Its name keeps its line's crack and growl, with a heavy t and a round o for something that doesn't get out of the way."
+msgstr ""
+
+#: slices/species/data/tolvakkor.jsonc
+msgid "the crack of ice that holds"
+msgstr ""
+
+#: slices/species/data/tolvakkor.jsonc
+msgid "Tolvakkor"
 msgstr ""
 
 #: slices/species/data/vynakiir.jsonc

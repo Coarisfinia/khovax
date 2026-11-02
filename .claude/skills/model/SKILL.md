@@ -429,6 +429,14 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
   can't tell a leg from the rib beside it. Weight by where each vertex lies instead, as
   `hexapod.bind` does.
 
+**The traps found on the Tolvakkor (#1770):**
+- **A generated pose can hide a yawed head:** eyes that aren't level across the midline mean the
+  generator turned the head. Turn it and its crest back about the skull (`straighten`) before
+  placing eyes.
+- **A near-straight leg fails the jitter check whatever the gait does:** its joint swings far for a
+  small move of its paw. Move the hip, knee or elbow joints so the leg stands bent, and walk more of
+  a tile per cycle for more frames, before sweeping duty and lift.
+
 **The traps found on the starry egg (#1635)**, a static prop the generator rigged anyway:
 - **A rig on a prop:** `import_source.py`'s `static` drops it, and the model script exports the
   mesh without a rig or clips (as `mana_gems.py`). `check_glb.gd` and `check_ground.py` expect a

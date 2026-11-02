@@ -1,9 +1,9 @@
 // Brekhal Varn, the mountain pass southwest of Edhra Tewk (#689), with a side passage sealed until
 // its guide, Ausvren vo Tormaesk, is led there and opens it, into Hrovumel Stolm (#1590, #1588).
 // The frost-and-fire hound's line lives here (#1692): a high, broken pass of frost and stone. Its
-// two grown forms, the Kalvrakkor and the Korvakkar, roll wild (#1771), and its ground loot and chest can hold what its
-// younger forms need to ascend: the Kavrikka's rime shard and the Kalvrakkor's magma core (#1733,
-// #1771, #1260).
+// grown forms, the Kalvrakkor, the Korvakkar (#1771) and the Tolvakkor (#1770), roll wild, and its
+// ground loot and chest can hold what its younger forms need to ascend: the Kavrikka's rime shard
+// and the Kalvrakkor's magma core (#1733, #1771, #1260).
 {
 	"id": "brekhal_varn",
 	"name": "Brekhal Varn",
@@ -14,7 +14,7 @@
 	"rules": "standard",
 	"loot_table": "pass_ground",
 	"chest_table": "pass_chest",
-	"wild_species": { "kalvrakkor": 1, "korvakkar": 1, "ombulumo": 1, "tikazzir": 2 },
+	"wild_species": { "kalvrakkor": 1, "korvakkar": 1, "ombulumo": 1, "tikazzir": 2, "tolvakkor": 1 },
 	"variants": [
 		// Once its guide has opened their seal (EscortFeature), the passage stays open: its region
 		// pieces are Brekhal Varn's own, but for the sealed passage, opened.

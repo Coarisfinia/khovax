@@ -1,0 +1,13 @@
+// A placeholder harvest table (#687, #1770): what a felled Tolvakkor drops, apart from what
+// dominating it gives. Mostly hide, sometimes a bone, now and then a piece of its armour, else a
+// blank, which rolls on the instance's table instead.
+{
+	"id": "tolvakkor",
+	"kind": "harvest",
+	"entries": [
+		{ "item": "hide", "chance": 500, "min": 1, "max": 2 }, // 50 %
+		{ "item": "bone", "chance": 200, "min": 1, "max": 1 }, // 20 %
+		{ "item": "crystal", "chance": 100, "min": 1, "max": 1 }, // 10 %
+		{ "blank": true, "chance": 200 }
+	]
+}
