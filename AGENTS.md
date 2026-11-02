@@ -761,6 +761,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   `assets/<pack>/`** with its license file and a `SOURCE.md` (title, then `- **Author:**`,
   `- **Source:**`, `- **License:**`); `CREDITS.md` is generated from those by
   `tools/godot/credits.gd`, and CI fails when it's out of date (owner, #69/#70). Commit only what the game uses, not whole packs.
+  Obtaining or importing any asset starts at the assets skill (`.claude/skills/assets/SKILL.md`, #2013).
 
 ### Testing and CI
 
