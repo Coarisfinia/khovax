@@ -1,6 +1,6 @@
 """Tests the dev-release step of ci.yml (#1991) by running it against a stand-in `gh` that refuses
-to create the release: a dev build a newer commit on main has replaced gives way with a warning, and
-every other refusal still fails the job. The stand-in plays GitHub, so this needs no network.
+to create the release: a dev build that changed a workflow and that a newer commit on main has
+replaced gives way with a warning, and every other refusal still fails the job. The stand-in plays GitHub, so this needs no network.
 
     uv run --locked --package khovax-game-checks packages/game-checks/test_dev_release.py
 """
@@ -19,15 +19,20 @@ SHA = "a" * 40
 NEWER = "b" * 40
 
 # Answers as GitHub did in the failed run: no release of this tag yet, and each create refused until
-# REFUSALS of them have been. Every call goes to the log the tests read.
+# REFUSALS of them have been, then AFTER_REFUSALS' error if any. Every call goes to the log the tests
+# read.
 STAND_IN_GH = r"""#!/usr/bin/env bash
 echo "$*" >> "$WORK/calls"
 case "$1 $2" in
   "release view") echo "release not found" >&2; exit 1 ;;
   "release create")
     count=$(grep -c "^release create" "$WORK/calls")
-    if [ "$count" -le "$REFUSALS" ]; then echo "$CREATE_ERROR" >&2; exit 1; fi ;;
-  "api repos/owner/repo/commits/main") echo "$MAIN_HEAD" ;;
+    if [ "$count" -le "$REFUSALS" ]; then echo "$CREATE_ERROR" >&2; exit 1; fi
+    if [ -n "$AFTER_REFUSALS" ]; then echo "$AFTER_REFUSALS" >&2; exit 1; fi ;;
+  "api repos/owner/repo/commits/main")
+    if [ -n "$HEAD_ERROR" ]; then echo "$HEAD_ERROR" >&2; exit 1; fi
+    echo "$MAIN_HEAD" ;;
+  "api repos/owner/repo/commits/$GITHUB_SHA") echo "$WORKFLOW_FILES" ;;
 esac
 """
 
@@ -47,7 +52,16 @@ def step_script() -> str:
 
 
 class DevReleaseTest(unittest.TestCase):
-    def run_step(self, tag="v0.1.0-dev.1", refusals=99, main_head=NEWER, error=REFUSED):
+    def run_step(
+        self,
+        tag="v0.1.0-dev.1",
+        refusals=99,
+        main_head=NEWER,
+        error=REFUSED,
+        workflow_files=1,
+        after_refusals="",
+        head_error="",
+    ):
         with tempfile.TemporaryDirectory() as folder:
             work = Path(folder)
             stand_ins = work / "bin"
@@ -77,6 +91,9 @@ class DevReleaseTest(unittest.TestCase):
                     "REFUSALS": str(refusals),
                     "CREATE_ERROR": error,
                     "MAIN_HEAD": main_head,
+                    "WORKFLOW_FILES": str(workflow_files),
+                    "AFTER_REFUSALS": after_refusals,
+                    "HEAD_ERROR": head_error,
                     "TAG": tag,
                     "RUNNER_TEMP": str(work),
                     "GITHUB_REPOSITORY": "owner/repo",
@@ -110,14 +127,39 @@ class DevReleaseTest(unittest.TestCase):
         self.assertEqual(len(self.calls(calls, "release upload")), 4)
         self.assertEqual(len(self.calls(calls, "release edit")), 1)
 
+    def assert_refused_and_failed(self, done, calls):
+        """It failed at the refusal after all its tries, not on something earlier in the script."""
+        self.assertNotEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(len(self.calls(calls, "release create")), 4)
+        self.assertEqual(self.calls(calls, "release upload"), [])
+        self.assertNotIn("(#1991)", done.stdout + done.stderr)
+
     def test_a_refusal_of_the_newest_commit_fails(self):
         done, calls = self.run_step(main_head=SHA)
-        self.assertNotEqual(done.returncode, 0, done.stdout + done.stderr)
-        self.assertEqual(self.calls(calls, "release edit"), [])
+        self.assert_refused_and_failed(done, calls)
+        self.assertEqual(len(self.calls(calls, "api repos/owner/repo/commits/main")), 1)
+
+    def test_a_refusal_of_a_commit_that_changed_no_workflow_fails(self):
+        done, calls = self.run_step(workflow_files=0)
+        self.assert_refused_and_failed(done, calls)
 
     def test_a_refused_nightly_fails_because_nothing_replaces_it_today(self):
-        done, _ = self.run_step(tag="v0.1.0-nightly.20261102")
+        done, calls = self.run_step(tag="v0.1.0-nightly.20261102")
+        self.assert_refused_and_failed(done, calls)
+        self.assertEqual(self.calls(calls, "api repos/owner/repo/commits/main"), [])
+
+    def test_a_failed_look_at_main_fails(self):
+        done, calls = self.run_step(head_error="HTTP 404: Not Found")
+        self.assert_refused_and_failed(done, calls)
+
+    def test_an_empty_answer_about_main_fails(self):
+        done, calls = self.run_step(main_head="")
+        self.assert_refused_and_failed(done, calls)
+
+    def test_a_refusal_then_another_error_fails(self):
+        done, calls = self.run_step(refusals=1, after_refusals="HTTP 422: Validation Failed")
         self.assertNotEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(len(self.calls(calls, "release create")), 2)
 
     def test_any_other_error_fails_at_once(self):
         done, calls = self.run_step(error="HTTP 422: Validation Failed")

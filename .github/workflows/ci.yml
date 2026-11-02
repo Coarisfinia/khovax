@@ -1324,18 +1324,20 @@ jobs:
           }
           # GitHub has refused the create only for a commit that changed a workflow, once a later merge
           # had changed the workflows again, and every try got the same answer (#1991). This token
-          # can't have the Workflows permission, so nothing here gets past that. A dev build main has
-          # moved past gives way: the newer commit's run publishes a newer one. A nightly has no such
-          # successor, and a refusal of main's newest commit is something else, so those fail.
+          # can't have the Workflows permission, so nothing here gets past that. Such a dev build
+          # gives way once main has moved past it: the newer commit's run should publish a newer one.
+          # A nightly has no such successor, and any other refusal is something else, so those fail.
           if ! retry_403=1 retry create_draft; then
             if [ "$channel" != dev ] || ! grep -q 'Resource not accessible by integration' "$RUNNER_TEMP/last-error"; then
               exit 1
             fi
             head=$(retry gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)
-            if [ "$head" = "$GITHUB_SHA" ]; then
+            workflows=$(retry gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}" \
+              --jq '[.files[].filename | select(startswith(".github/workflows/"))] | length')
+            if [ -z "$head" ] || [ "$head" = "$GITHUB_SHA" ] || [ "${workflows:-0}" = 0 ]; then
               exit 1
             fi
-            echo "::warning::GitHub refused to create ${tag}; main has moved on to ${head}, whose run publishes a newer dev build (#1991)"
+            echo "::warning::GitHub refused to create ${tag}, a commit that changed a workflow; main has moved on to ${head}, whose run should publish a newer dev build (#1991)"
             exit 0
           fi
           # One file at a time, so a failed upload sends only that file again; --clobber replaces
