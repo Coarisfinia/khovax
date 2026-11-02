@@ -724,8 +724,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
     if there is none, the owner makes it from prompts on the world-asset list (below), each ending
     with the model skill's prop block.
 - **Keep at least 20 active model requests on file at all times** (owner, #2002): count only
-  unsupplied models the owner can generate now, each meeting the prompt and texture-decision
-  requirements above. Supplied exports, import tasks and deferred requests do not count. When
+  unsupplied models the owner can generate now, each meeting the prompt, vibe-summary and
+  texture-decision requirements above. Supplied exports, import tasks and deferred requests do not count. When
   exports arrive, track their import, remove them from the active list and replenish it
   automatically. Do not pad the list with unsupported creatures or needs existing suitable
   models/textures resolve; the ore/ingot exception above still holds.
