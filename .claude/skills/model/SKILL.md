@@ -10,7 +10,18 @@ from scratch. The owner gives its source (the mesh, and the rig if it has one), 
 scenery it comes from a free licensed source; agents import, rig, animate, check and fix it, and
 work on the tooling. Needing a new model goes as AGENTS.md
 says (#1575): a `question` issue with base prompts for a monster, a free licensed source for
-anything else, and never a new model for what a retexture of an existing one resolves (#1847).
+anything else, and never a new model for what a retexture of an existing one resolves (#1847),
+except ore deposits (#1950): each needs a unique silhouette and vein geometry as well as colour;
+simply retexturing or recolouring the copper deposit is not an option.
+
+**Every model request has at least three complete, genuinely distinct prompts** (owner, #1996),
+for creatures, props, items and player parts alike, each in its own accordion as AGENTS.md says.
+This minimum does not reduce the 20-prompt requirements for beasts or evolutions. Each asset also
+says `Textured export required: Yes` or `Textured export required: No`, with its reason. Prefer a
+suitable existing texture or the shared set; a new stone shape can use the good stone texture we
+already have. For a shape-only export, describe the material separation and UV/mapping needs so
+we can apply those textures. State a textured-export exception per asset when a reference-specific
+face, pattern or other detail needs it; never request generated textures for everything by default.
 
 **Every base prompt for a monster ends with the same sentence** (the owner's pick on #1682):
 `Two small, plain, flat black oval eyes.` Word for word, in every prompt, whatever else the
@@ -480,7 +491,9 @@ proportions differ.
 
 ## Props from a bare shape: the shared texture set (#1853)
 World props are generated as **shapes only** (5 credits, the owner's pick on #1846) and textured
-by us; creatures and the player keep Meshy's texture (15). **There is one small texture set for
+by us; creatures and the player normally keep Meshy's texture (15). State the texture decision
+and its reason explicitly on each request, including any exception to these defaults (above).
+**There is one small texture set for
 every prop**, in `packages/game-models/textures/` (stone, sandstone, wood, moss): CC0 textures
 (Poly Haven, ambientCG) that `prop_textures.py` downloads by pinned checksum and reduces to a few
 flat tones, so they keep their surface detail but suit the cel shading. Never a texture of a

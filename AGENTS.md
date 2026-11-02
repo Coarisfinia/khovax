@@ -683,10 +683,21 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **Retexture before asking for a new model** (owner's ground rule, #1847): what a retexture
   can resolve is never filed as a new model. Go through the models there are
   (`packages/game/assets/`, `Coarisfinia/khovax-sources`) and retexture one from the shared
-  texture set (the model skill).
+  texture set (the model skill). **Ore deposits are an exception** (owner, #1950): each has a
+  unique silhouette and vein geometry as well as colour; simply retexturing or recolouring the
+  copper deposit is not an option.
 - **Every image prompt in an issue sits in its own accordion** (owner's ground rule, #1825), as on
   #1770 to #1772: `<details><summary>N. short idea</summary>` around a `text` block, for monsters
   and other assets alike.
+- **Every model request includes choices and a texture decision** (owner, #1996): creatures,
+  props, items and player parts alike have at least three genuinely distinct, complete prompts,
+  each in its own accordion. This is a minimum; the 20-prompt beast requirements below still hold.
+  Each asset explicitly says `Textured export required: Yes` or `Textured export required: No`,
+  with a reason. Reuse a suitable existing texture or the shared texture set where possible (stone
+  already has a good texture). For a shape-only export, describe the parts needing separate
+  materials and the UV/mapping needs for applying those textures. A textured-export exception
+  for a reference-specific face, pattern or other detail is explicit for that asset, never a
+  blanket instruction to texture everything.
 - **If you need a new model** (owner's ground rule, #1575):
   - A. **A new monster:** file a `question` issue for the owner, one issue per beast (owner's
     ground rule, #1726). The owner makes the model from it.
