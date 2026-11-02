@@ -48,9 +48,12 @@ runs:
       # A snapshot's metadata is old by design, so only its expiry check is disabled; the live
       # fallback keeps HTTPS and metadata-expiration checks. Both use Ubuntu's signing key.
       # The snapshot mirror sometimes answers 503 (#1429): apt retries each download with a growing
-      # delay, and if the snapshot's index still can't be fetched, the libraries come from Ubuntu's
-      # live archive, signed by the same key, with a warning, rather than failing the run. A failed
-      # index fetch is only a warning to apt-get update, so --error-on=any makes it an error.
+      # delay, and if the snapshot's index or packages still can't be fetched within two minutes
+      # (#2021; a healthy install takes under one, and the job has about five to spare), the
+      # libraries come from Ubuntu's live archive, signed by the same key, with a warning, rather
+      # than failing the run. A failed index fetch is only a warning to apt-get update, so
+      # --error-on=any makes it an error. dpkg --configure -a finishes whatever a time limit
+      # interrupted, or apt refuses to go on.
       shell: bash
       run: |
         docker run --name blender-setup -v /etc/ssl/certs:/etc/ssl/certs:ro "$BLENDER_IMAGE" bash -euc '
@@ -62,15 +65,20 @@ runs:
               "Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg" "Check-Valid-Until: $2" \
               > /etc/apt/sources.list.d/ubuntu.sources
           }
+          install_libraries() {
+            apt-get update --error-on=any -qq &&
+              { echo "127.0.0.1 snapshot.ubuntu.com" >> /etc/hosts; } && # PLANTED for #2021, never merged
+              DEBIAN_FRONTEND=noninteractive apt-get install -qq -y --no-install-recommends \
+                libx11-6 libxi6 libxrender1 libxfixes3 libxext6 libxkbcommon0 libsm6 libgl1 > /dev/null
+          }
+          export -f install_libraries
           use_mirror "https://snapshot.ubuntu.com/ubuntu/$0" no
-          if ! apt-get update --error-on=any -qq; then
-            echo "::warning::Updating from Ubuntu snapshot $0 failed: Blender'"'"'s libraries come from the live archive, maybe newer."
+          if ! timeout 120 bash -c install_libraries; then
+            echo "::warning::Installing from Ubuntu snapshot $0 failed or timed out: Blender'"'"'s libraries come from the live archive, maybe newer."
+            dpkg --configure -a
             use_mirror "https://archive.ubuntu.com/ubuntu" yes
-            apt-get update --error-on=any -qq
+            install_libraries
           fi
-          echo "127.0.0.1 snapshot.ubuntu.com" >> /etc/hosts # PLANTED for #2021, never merged
-          DEBIAN_FRONTEND=noninteractive apt-get install -qq -y --no-install-recommends \
-            libx11-6 libxi6 libxrender1 libxfixes3 libxext6 libxkbcommon0 libsm6 libgl1 > /dev/null
           ldd --version | head -1' "$BLENDER_APT_SNAPSHOT"
         docker commit blender-setup blender > /dev/null
         docker rm -f blender-setup > /dev/null

@@ -348,6 +348,9 @@ jobs:
 
       - name: "🧊 Set up Blender"
         if: steps.models.outputs.changed == 'true'
+        # Under a minute when healthy. The checks below take about 15 of the job's 20 minutes, so a
+        # slow mirror fails here rather than using up the job (#2021).
+        timeout-minutes: 5
         uses: ./.github/actions/setup-blender
 
       - name: "🐺 Check every scripted model's .glb is what its script builds"
