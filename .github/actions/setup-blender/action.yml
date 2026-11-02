@@ -78,7 +78,6 @@ runs:
           if ! timeout 120 bash -c install_libraries; then
             echo "::warning::Installing from Ubuntu snapshot $0 failed or timed out: Blender'"'"'s libraries come from the live archive, maybe newer."
             DEBIAN_FRONTEND=noninteractive dpkg --configure -a
-            echo "172.17.0.1 archive.ubuntu.com" >> /etc/hosts # PLANTED for #2021, never merged
             use_mirror "https://archive.ubuntu.com/ubuntu" yes
             install_libraries
           fi
