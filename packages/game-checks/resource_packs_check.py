@@ -1,35 +1,37 @@
 """Validates the default resource pack (#1860): the game's own resources, its textures, its models
 (#1864), its region files, region pieces and realms (#1861), its quests (#1888), its species
 (#1903), its translation catalogues (#1902), its tile blueprints (#1901) and its loot tables and
-materials (#1953), and its harvest tables (#1990), described by the same manifest a player's pack will have (#1858), and looked up
-only through ResourcePacks. It fails when
+materials (#1953), and harvest tables (#1990), described by the same manifest a player's pack
+will have (#1858), and looked up only through ResourcePacks. It fails when
 - the manifest (game_shared.resource_packs.MANIFEST) is missing or isn't a JSON object;
 - an id doesn't resolve: it isn't an id (Ids), or its file isn't tracked, isn't imported by Godot
   (a .import beside it, for the kinds Godot imports) or isn't of its kind (an image, a .glb or
   .gltf model, a Markdown region file, piece or realm, a JSONC quest, species, tile blueprint, loot
-  table or material, a .po catalogue named after its locale);
+  table, harvest table or material, a .po catalogue named after its locale);
 - a resource is unreferenced: the manifest lists it but no script (outside its comments), scene,
   resource or content file of the game's names its id as a string (but for the realms, the
-  quests, the species, the catalogues, the tile blueprints, the loot tables and the materials,
-  which the game finds by listing the pack), or a file of its kind (an image or model under
+  quests, species, catalogues, tile blueprints, loot and harvest tables and materials, which the
+  game finds by listing the pack), or a file of its kind (an image or model under
   assets/, a region file or piece under regions/, a realm under realms/, a quest in the quests
   slice's data/, a species directly in slices/species/data/, a catalogue under translations/, a
-  tile blueprint in slices/resource_packs/data/tiles/, a loot table or material in the loot slice's
-  data/loot_tables/ or data/materials/) is in the repository but not in the manifest;
-- a quest's, species', loot table's or material's entry isn't its own file
+  tile blueprint in slices/resource_packs/data/tiles/, a loot table, harvest table or material in
+  the loot slice's data/loot_tables/, data/harvest_tables/ or data/materials/) is in the repository
+  but not in the manifest;
+- a quest's, species', loot table's, harvest table's or material's entry isn't its own file
   (slices/quests/data/<id>.jsonc, slices/species/data/<id>.jsonc,
-  slices/loot/data/loot_tables/<id>.jsonc, slices/loot/data/materials/<id>.jsonc), so it's named
+  slices/loot/data/loot_tables/<id>.jsonc, slices/loot/data/harvest_tables/<id>.jsonc,
+  slices/loot/data/materials/<id>.jsonc), so it's named
   after its file (#72);
 - a tile blueprint lies outside the pack (in the core's old core/data/tiles/), or its entry isn't
   slices/resource_packs/data/tiles/<id>.jsonc, so it's named after its file (#802);
 - a script, scene, resource or content file names a texture's, model's, region's, realm's, quest's,
-  species', catalogue's, tile blueprint's, loot table's or material's res:// path instead of its
-  id, so it would get around the resolver, and a pack could never override it (project.godot
+  species', catalogue's, tile blueprint's, loot table's, harvest table's or material's res:// path
+  instead of its id, so it would get around the resolver, and a pack could never override it (project.godot
   naming a catalogue for Godot to load gets around it too, #1902); or a script names anything by
   its uid://, loaded or kept for later (stricter than the pack needs: scripts never do; #1865,
   #1919), or builds a path under assets/, regions/, realms/, translations/, the quests', the
-  species', the tile blueprints', the loot tables' or the materials' folder at runtime (#1865; the
-  tools, which list the assets for the credits, may). A path may hold spaces (#1919).
+  species', the tile blueprints', the loot tables', the harvest tables' or the materials' folder
+  at runtime (#1865; the tools, which list the assets for the credits, may). A path may hold spaces (#1919).
 A catalogue the pack lists that leaves texts of the template untranslated, or holds texts the
 template no longer has, is only warned about (catalogue_gaps.py, #1968).
 An id named only in the tests (any tests/ folder, or a test_*.gd anywhere; #1865, #1919) counts as

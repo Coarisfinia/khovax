@@ -356,7 +356,7 @@ static func _shares(text: String, sounds: String, least: int) -> bool:
 ## (MaterialContent, #774): every item a table drops is one or a piece of gear, noted already.
 static func _add_loot(terms: ContentTerms) -> void:
 	var species_kinds: Array[String] = [LootTable.SPECIES, LootTable.HARVEST]
-	for source: String in [LootContent.KEY, LootContent.HARVEST_DIR]:
+	for source: String in [LootContent.KEY, LootContent.HARVEST_KEY]:
 		for table: LootTable in LootContent.load_loot_tables(source).loot_tables.values():
 			if not species_kinds.has(table.kind):
 				terms.add("loot table", table.id)

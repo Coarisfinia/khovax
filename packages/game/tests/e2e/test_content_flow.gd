@@ -29,7 +29,7 @@ extends RefCounted
 ## two things share an id or a name, whatever their kinds, in any case (#909). Every content kind is
 ## read ahead in the background (#816). The default resource pack (#1860) reads with every texture
 ## resolving, and broken pack manifests are refused; the quests (#1888), the tile blueprints
-## (#1901), the loot tables and the materials (#1953) are read from it.
+## (#1901), the loot tables and materials (#1953), and harvest tables (#1990) are read from it.
 
 ## A model a species can wear (#1223), by its id in the resource packs (#1864).
 const MODEL: String = "model_mana_wolf"
@@ -1126,7 +1126,7 @@ func _check_behaviour_refused() -> String:
 ## drops it, and it's a material (MaterialContent, #774), not a piece of gear.
 func _check_ascensions(content: SpeciesContent) -> String:
 	var dropped: Array[String] = []
-	for source: String in [LootContent.KEY, LootContent.HARVEST_DIR]:
+	for source: String in [LootContent.KEY, LootContent.HARVEST_KEY]:
 		for table: LootTable in LootContent.load_loot_tables(source).loot_tables.values():
 			dropped.append_array(table.items)
 	var materials: Array[String] = MaterialContent.load_materials().ids
@@ -1460,7 +1460,7 @@ func _check_revive_herbs(content: LootContent) -> String:
 ## neither a felled nor a dominated one drops nothing: each loads as a table of its kind named after
 ## a species, and a felled toad's rolls give what dominating it never does.
 func _check_harvest_tables() -> String:
-	var content: LootContent = LootContent.load_loot_tables(LootContent.HARVEST_DIR)
+	var content: LootContent = LootContent.load_loot_tables(LootContent.HARVEST_KEY)
 	if not content.problem.is_empty():
 		return "the harvest tables didn't load: " + content.problem
 	var species: SpeciesContent = SpeciesContent.load_species()
@@ -1544,7 +1544,7 @@ func _check_loot_items() -> String:
 		return "the materials didn't load: " + materials.problem
 	var gear: GearContent = GearContent.load_gear()
 	var tables: Array[LootTable] = []
-	for source: String in [LootContent.KEY, LootContent.HARVEST_DIR]:
+	for source: String in [LootContent.KEY, LootContent.HARVEST_KEY]:
 		tables.append_array(LootContent.load_loot_tables(source).loot_tables.values())
 	var problem: String = _unknown_item(tables, gear, materials)
 	if not problem.is_empty():
@@ -2205,13 +2205,19 @@ func _check_pack_species(pack: ResourcePack) -> String:
 	return _check_pack_loot(pack)
 
 
-## The loot tables and materials are the ones the default pack lists (#1953), each read from its
-## file there, and one whose file is missing is refused.
+## The loot tables, materials (#1953) and harvest tables (#1990) are the default pack's, read from
+## each
+## file it lists; one whose file is missing is refused.
 func _check_pack_loot(pack: ResourcePack) -> String:
 	var tables: Array = pack.files_of("loot_tables").keys()
 	tables.sort()
 	if tables.is_empty() or LootContent.load_loot_tables().loot_tables.keys() != tables:
 		return "the loot tables aren't the default pack's: %s" % [tables]
+	var harvest: Array = pack.files_of("harvest_tables").keys()
+	harvest.sort()
+	var harvested: LootContent = LootContent.load_loot_tables(LootContent.HARVEST_KEY)
+	if harvest.is_empty() or harvested.loot_tables.keys() != harvest:
+		return "the harvest tables aren't the default pack's: %s" % [harvest]
 	var materials: Array = pack.files_of("materials").keys()
 	materials.sort()
 	if materials.is_empty() or MaterialContent.load_materials().ids != materials:
@@ -2248,6 +2254,7 @@ func _check_pack_manifests() -> String:
 		+ " \"realms\": {\"w\": \"realms/w.md\"}, \"quests\": {\"u\": \"quests/u.jsonc\"},"
 		+ " \"species\": {\"s\": \"species/s.jsonc\"}, \"tiles\": {\"t\": \"tiles/t.jsonc\"},"
 		+ " \"loot_tables\": {\"l\": \"loot/l.jsonc\"}, \"materials\": {\"x\": \"loot/x.jsonc\"},"
+		+ " \"harvest_tables\": {\"h\": \"harvest/h.jsonc\"},"
 		+ " \"translations\": {}%s}"
 	)
 	var cog: String = "assets/game-icons/cog.svg"
@@ -2325,8 +2332,9 @@ func _check_pack_translations() -> String:
 	return _check_pack_loading()
 
 
-## The broken manifests made from `valid` whose realm, quest, species, tile blueprint, loot table or
-## material (each read as text) is of another kind or missing, by what's wrong with them; `other`
+## The broken manifests made from `valid` whose realm, quest, species, tile blueprint, loot or
+## harvest table, or material (each read as text) is of another kind or missing, by what's wrong
+## with them; `other`
 ## is a file of another kind.
 func _text_section_cases(valid: String, other: String) -> Dictionary[String, String]:
 	return {
@@ -2340,6 +2348,10 @@ func _text_section_cases(valid: String, other: String) -> Dictionary[String, Str
 		"no tiles": valid.replace(", \"tiles\": {\"t\": \"tiles/t.jsonc\"}", ""),
 		"a loot table that isn't JSONC": valid.replace("loot/l.jsonc", other),
 		"no loot tables": valid.replace(", \"loot_tables\": {\"l\": \"loot/l.jsonc\"}", ""),
+		"a harvest table that isn't JSONC": valid.replace("harvest/h.jsonc", other),
+		"no harvest tables": valid.replace(
+			", \"harvest_tables\": {\"h\": \"harvest/h.jsonc\"}", "",
+		),
 		"a material that isn't JSONC": valid.replace("loot/x.jsonc", "loot/x.md"),
 		"no materials": valid.replace(", \"materials\": {\"x\": \"loot/x.jsonc\"}", ""),
 	}
@@ -2543,7 +2555,8 @@ func _pack_manifest(pack_id: String) -> String:
 		"{\"id\": \"%s\", \"name\": \"n\", \"version\": \"1.0.0\", \"game_version\": \"0.1.0\","
 		+ " \"textures\": {}, \"models\": {}, \"regions\": {\"r\": \"regions/r.md\"},"
 		+ " \"region_pieces\": {}, \"realms\": {}, \"quests\": {}, \"species\": {},"
-		+ " \"translations\": {}, \"tiles\": {}, \"loot_tables\": {}, \"materials\": {}}"
+		+ " \"translations\": {}, \"tiles\": {}, \"loot_tables\": {},"
+		+ " \"materials\": {}, \"harvest_tables\": {}}"
 	) % pack_id
 
 

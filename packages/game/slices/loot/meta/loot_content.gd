@@ -1,28 +1,26 @@
 class_name LootContent
 extends Content
 ## The loot tables' content data (#90), which the loot slice owns (#412): one JSONC file per table,
-## and one harvest table per species in data/harvest_tables/ (#687), each checked against the
-## schema beside it in CI. The loot tables are the resource packs' (#1953): the ones the packs list,
-## so a player's pack can add or replace one; the default pack's lie in the slice's
-## data/loot_tables/. Everything else reads them through this.
+## and one harvest table per species (#687), each checked against the schema beside it in CI.
+## Both are the resource packs' (#1953, #1990): a player's pack can add or replace one.
+## The default pack's lie in data/loot_tables/ and data/harvest_tables/.
+## Everything else reads them through this.
 
 ## The loot tables' key in the content cache (ContentCatalog), and the source that reads them.
 const KEY: String = "loot_tables"
-## The harvest tables' folder, which is also their key: they're read from it, not from a pack.
-const HARVEST_DIR: String = "res://slices/loot/data/harvest_tables/"
+## The harvest tables' key in the content cache and their pack section (#1990).
+const HARVEST_KEY: String = "harvest_tables"
 
 ## Every loot table, by id.
 var loot_tables: Dictionary[String, LootTable] = {}
 
 
 ## Every table of `source`, read and checked: the loot tables the resource packs list
-## (ResourcePacks.loot_tables) for KEY, or every harvest table file in HARVEST_DIR.
+## (ResourcePacks.loot_tables) for KEY, or their harvest tables for HARVEST_KEY.
 static func load_loot_tables(source: String = KEY) -> LootContent:
 	if source == KEY:
 		return load_files(ResourcePacks.loot_tables())
-	var content: LootContent = LootContent.new()
-	content.read(source)
-	return content
+	return load_files(ResourcePacks.harvest_tables())
 
 
 ## Every loot table in `files` (each res:// path by its id), read and checked: a file that's missing
@@ -33,13 +31,13 @@ static func load_files(files: Dictionary[String, String]) -> LootContent:
 	return content
 
 
-## Every table of `source` (KEY or HARVEST_DIR), read once per session (ContentCatalog); tables that
+## Every table of `source` (KEY or HARVEST_KEY), read once per session (ContentCatalog); tables that
 ## don't load are an error, and there are none then.
 static func cached(source: String = KEY) -> LootContent:
 	return ContentCatalog.kept(source, _checked.bind(source))
 
 
-## Every table of `kind` in `source` (KEY or HARVEST_DIR), by its id, which is its species' id.
+## Every table of `kind` in `source` (KEY or HARVEST_KEY), by its id, which is its species' id.
 static func species_tables_for(source: String, kind: String) -> Dictionary[String, LootTable]:
 	var species_tables: Dictionary[String, LootTable] = {}
 	for table: LootTable in cached(source).loot_tables.values():

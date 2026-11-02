@@ -5,7 +5,7 @@
 	"description": "A resource pack's manifest (#1860): its id, its name, its own version, the game version it targets, and the resources it provides (textures, models, regions, region pieces, realms, quests, species, translation catalogues, tile blueprints, loot tables and materials), each by its id. The game's own resources are the default pack; a player's pack (#1858) shares this format. One file per pack, named after its id.",
 	"type": "object",
 	"additionalProperties": false,
-	"required": ["id", "name", "version", "game_version", "textures", "models", "regions", "region_pieces", "realms", "quests", "species", "translations", "tiles", "loot_tables", "materials"],
+	"required": ["id", "name", "version", "game_version", "textures", "models", "regions", "region_pieces", "realms", "quests", "species", "translations", "tiles", "loot_tables", "materials", "harvest_tables"],
 	"properties": {
 		"id": {
 			"description": "Stable: lowercase words joined by underscores.",
@@ -107,6 +107,15 @@
 		},
 		"loot_tables": {
 			"description": "Each loot table's JSONC file (#1953), in the loot slice's loot table format (slices/loot/data/loot_tables.schema.json), by its id, relative to the pack's root, never climbing out of it. The game reads every loot table a pack has; what rolls on one names it by id.",
+			"type": "object",
+			"propertyNames": { "pattern": "^[a-z][a-z0-9_]*$" },
+			"additionalProperties": {
+				"type": "string",
+				"pattern": "^[A-Za-z0-9_-][A-Za-z0-9._/-]*\\.jsonc$"
+			}
+		},
+		"harvest_tables": {
+			"description": "Each harvest table's JSONC file (#1990), in the loot slice's loot table format (slices/loot/data/loot_tables.schema.json), by its id, relative to the pack's root, never climbing out of it. The game reads every harvest table a pack has; each is named by its species id.",
 			"type": "object",
 			"propertyNames": { "pattern": "^[a-z][a-z0-9_]*$" },
 			"additionalProperties": {

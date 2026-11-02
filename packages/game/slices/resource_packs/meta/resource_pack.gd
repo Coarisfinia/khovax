@@ -22,6 +22,7 @@ const FIELDS: Array[String] = [
 	"tiles",
 	"loot_tables",
 	"materials",
+	"harvest_tables",
 ]
 ## Each section of resources the manifest lists, one file per id, with the type its files load as;
 ## "" for a file read as text (a region file or a realm, #1861, a quest, #1888, a species, #1903, a
@@ -39,6 +40,7 @@ const KINDS: Dictionary[String, String] = {
 	"tiles": "",
 	"loot_tables": "",
 	"materials": "",
+	"harvest_tables": "",
 }
 ## The section of regions arranged from pieces (#1861): each region's piece files by its id, read as
 ## text like the region files.
@@ -55,11 +57,14 @@ const ENDINGS: Dictionary[String, Array] = {
 	"tiles": ["jsonc"],
 	"loot_tables": ["jsonc"],
 	"materials": ["jsonc"],
+	"harvest_tables": ["jsonc"],
 }
 ## The sections read whole by their Content from the files files_of gives, never looked up by one
 ## id: each realm (#1861), quest (#1888), species (#1903), tile blueprint (#1901), loot table and
-## material (#1953).
-const LISTED: Array[String] = ["realms", "quests", "species", "tiles", "loot_tables", "materials"]
+## material (#1953), and harvest table (#1990).
+const LISTED: Array[String] = [
+	"realms", "quests", "species", "tiles", "loot_tables", "materials", "harvest_tables",
+]
 ## A version: major.minor.patch.
 const VERSION: String = "\\A[0-9]+\\.[0-9]+\\.[0-9]+\\z"
 

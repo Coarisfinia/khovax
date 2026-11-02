@@ -248,6 +248,19 @@
 		"wild_ground": "slices/loot/data/loot_tables/wild_ground.jsonc",
 		"wobulumu": "slices/loot/data/loot_tables/wobulumu.jsonc"
 	},
+	// Each harvest table (#1990), all read, named by its species id.
+	"harvest_tables": {
+		"kalvrakkor": "slices/loot/data/harvest_tables/kalvrakkor.jsonc",
+		"kavrikka": "slices/loot/data/harvest_tables/kavrikka.jsonc",
+		"nuvvoluvvo": "slices/loot/data/harvest_tables/nuvvoluvvo.jsonc",
+		"ombulumo": "slices/loot/data/harvest_tables/ombulumo.jsonc",
+		"ombuwomo": "slices/loot/data/harvest_tables/ombuwomo.jsonc",
+		"tikazzelu": "slices/loot/data/harvest_tables/tikazzelu.jsonc",
+		"tikazzir": "slices/loot/data/harvest_tables/tikazzir.jsonc",
+		"vynakiir": "slices/loot/data/harvest_tables/vynakiir.jsonc",
+		"vynnimu": "slices/loot/data/harvest_tables/vynnimu.jsonc",
+		"wobulumu": "slices/loot/data/harvest_tables/wobulumu.jsonc"
+	},
 	// Each material (#1953), all read: an item a loot table gives that isn't gear.
 	"materials": {
 		"arcane_crystal": "slices/loot/data/materials/arcane_crystal.jsonc",

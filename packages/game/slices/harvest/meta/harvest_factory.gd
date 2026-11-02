@@ -6,7 +6,7 @@ extends RefCounted
 
 static func build(setup: FeatureSetup) -> HarvestFeature:
 	var tables: Dictionary[String, LootTable] = LootContent.species_tables_for(
-		LootContent.HARVEST_DIR,
+		LootContent.HARVEST_KEY,
 		LootTable.HARVEST,
 	)
 	return HarvestFeature.new(tables, LootContent.instance_table_for(setup))
