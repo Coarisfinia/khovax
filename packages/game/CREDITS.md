@@ -68,6 +68,17 @@ The assets this game uses, with their authors and licenses. Generated from each 
 - **License:** CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/), see `LICENSE.md` next to
   this file (the pack's own notice naming its contributors)
 
+## Korvakkar
+
+- **Files:** `assets/kalvrakkor_magma/`
+- **Author:** the project (generated with Meshy AI, paid plan, Private licence)
+- **Source:** generated and rigged with Meshy AI by the owner (#1771); its mesh and rig reduced and
+  adopted by `packages/game-models/import_source.py` to `packages/game-models/sources/kalvrakkor_magma.glb`
+  (sized to its hex as a stronger monster), then given our eyes, a chain of its own for each of its
+  nine tails, named, animated and exported as `kalvrakkor_magma.glb` by
+  `packages/game-models/kalvrakkor_magma.py` on the shared model library `packages/game-models/lib/`
+- **License:** Unlicense, the repository's own license, see `LICENSE.md` next to this file.
+
 ## Kavrikka
 
 - **Files:** `assets/kavrikka/`

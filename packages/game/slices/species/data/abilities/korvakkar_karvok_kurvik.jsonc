@@ -1,0 +1,16 @@
+// The Korvakkar's special (#1771): a strike of all nine tails. Its power and cooldown are
+// placeholders to tune (#960).
+{
+	"id": "korvakkar_karvok_kurvik",
+	"kind": "special",
+	"name": "Karvok-kurvik",
+	"description": "The ${MONSTER:korvakkar} throws all nine tails over its back and down on its target, one after another, in a rain of magma.",
+	"codex": {
+		"entry": "The roar of a slope of magma letting go, then its slow crackle as it cools. Dominators called it to bring their beast's tails down on a foe.",
+		"gloss": "the fall, then the crackle"
+	},
+	"power": 3200,
+	"cooldown_seconds": 10,
+	"strike_type": "titan",
+	"path": "supremacy"
+}

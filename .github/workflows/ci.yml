@@ -361,6 +361,25 @@ jobs:
         timeout-minutes: 5
         run: uv run --locked --package khovax-game-models ../game-models/check_rebuild.py --all --keep /tmp/rebuilt
 
+      - name: "🧪 Test the tails check on a stand-in beast"
+        # Three tails on chains of their own, on one chain, or still in a clip (#1771): the check
+        # passes the first and fails the others.
+        if: steps.models.outputs.changed == 'true'
+        timeout-minutes: 2
+        run: |
+          uv run --locked --package khovax-game-models ../game-models/blender.py --background --factory-startup \
+            --python ../game-models/test_tails.py
+
+      - name: "🦊 Check every tail of a many-tailed beast is rigged"
+        # Each tail, found on the mesh, follows bones of its own and moves in every clip (the owner,
+        # on #1771: "only two are rigged"); a model not named in check_tails.py passes.
+        if: steps.models.outputs.changed == 'true'
+        timeout-minutes: 5
+        run: |
+          git ls-files -z ':(top)packages/game/*.glb' | xargs -0 uv run --locked --package khovax-game-models \
+            ../game-models/blender.py --background --factory-startup \
+            --python ../game-models/check_tails.py --
+
       - name: "🫧 Check no wisp cuts into a model's body"
         # Every frame of every clip of every .glb in the game (#1227); a model without wisps passes.
         if: steps.models.outputs.changed == 'true'

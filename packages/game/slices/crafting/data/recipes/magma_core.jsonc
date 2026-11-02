@@ -1,0 +1,6 @@
+// The magma core (#1771), a Kalvrakkor's ascension material (#1260, source 3), made from stone and
+// crystals. A placeholder, to tune (#960).
+{
+	"id": "magma_core",
+	"needs": { "stone": 4, "crystal": 5 }
+}

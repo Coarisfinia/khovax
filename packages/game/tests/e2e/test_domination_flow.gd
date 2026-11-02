@@ -1315,13 +1315,15 @@ func _check_passive_data() -> String:
 	var kazri: int = AbilityContent.cached().abilities["tikazzir_kazri_tazri"].hurt_haste
 	var lakvu: int = AbilityContent.cached().abilities["kalvrakkor_lakvu_rakvu"].hurt_haste
 	var vakku: int = AbilityContent.cached().abilities["kavrikka_vakku_rakku"].hurt_haste
+	var rukvo: int = AbilityContent.cached().abilities["korvakkar_rukvo_vukvo"].hurt_haste
 	var lombu: int = AbilityContent.cached().abilities["ombulumo_lombu_bombu"].rest_heal
 	var novvi: int = AbilityContent.cached().abilities["nuvvoluvvo_novvi_lovvi"].rest_heal
-	if kazri < 1 or lakvu < 1 or vakku < 1 or lombu < 1 or novvi < 1:
-		return "a haste (Kazri-tazri, Lakvu-rakvu, Vakku-rakku) or a heal is missing"
+	if kazri < 1 or lakvu < 1 or vakku < 1 or rukvo < 1 or lombu < 1 or novvi < 1:
+		return "a haste (Kazri-tazri, Lakvu-rakvu, Vakku-rakku, Rukvo-vukvo) or a heal is missing"
 	var hastes: Dictionary[String, int] = {
 		"kalvrakkor_lakvu_rakvu": lakvu,
 		"kavrikka_vakku_rakku": vakku,
+		"korvakkar_rukvo_vukvo": rukvo,
 		"tikazzir_kazri_tazri": kazri,
 	}
 	var heals: Dictionary[String, int] = {

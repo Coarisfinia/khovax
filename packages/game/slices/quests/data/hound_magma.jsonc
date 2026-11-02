@@ -1,0 +1,10 @@
+// The frost-and-fire hounds' quest (#1771, source 4 of #1260, as the pups' #1733): a side quest that
+// starts once the player first enters Brekhal Varn and asks them to dominate a Kalvrakkor there.
+// Finishing it hands over the magma core a Kalvrakkor needs to ascend.
+{
+	"id": "hound_magma",
+	"name": "A magma core for a ${MONSTER:kalvrakkor}",
+	"starts_on": { "condition": "entered", "instance": "brekhal_varn" },
+	"steps": [{ "condition": "dominated", "species": "kalvrakkor", "instance": "brekhal_varn", "ends": "hound_magma" }],
+	"materials": { "magma_core": 1 }
+}

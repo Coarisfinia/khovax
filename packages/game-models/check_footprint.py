@@ -46,7 +46,7 @@ from lib import footprint, imported, known, views, world_scale  # noqa: E402
 GAME = os.path.join(os.path.dirname(HERE), "game")
 
 # The models (by .glb name) of bosses, enraged or stronger monsters, which may reach past their hex.
-LARGE = {"fohossa"}
+LARGE = {"fohossa", "kalvrakkor_magma"}
 
 # (model, clip or "rest" for the rest pose) that fails today, with the issue that fixes it; that
 # issue takes its entries off.
