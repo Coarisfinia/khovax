@@ -28,6 +28,16 @@ already have. For a shape-only export, describe the material separation and UV/m
 we can apply those textures. State a textured-export exception per asset when a reference-specific
 face, pattern or other detail needs it; never request generated textures for everything by default.
 
+**Keep at least 20 active, unsupplied model requests on file at all times** (owner, #2002),
+each meeting the prompt, vibe-summary and texture-decision requirements above. A supplied export,
+an import task or a deferred request does not count. When exports arrive, track their imports,
+remove them from the active list and replenish it automatically with genuine eligible model
+needs; never pad it with unsupported creatures or requests existing suitable models/textures
+resolve. The ore/ingot exception still holds. **Discard further player-part prompts for now**
+(owner, #1998): resume only after the supplied hair and full-body cloak are implemented and their
+lessons recorded. Request further trees only after importing and learning from the supplied
+savanna tree. Neither deferred group fills the active minimum.
+
 **Every base prompt for a monster ends with the same sentence** (the owner's pick on #1682):
 `Two small, plain, flat black oval eyes.` Word for word, in every prompt, whatever else the
 prompt says about its face. It only marks where the eyes go and how big they are: the import

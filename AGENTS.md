@@ -723,6 +723,17 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   - B. **Anything else** (props, scenery): use a free source whose license allows it here (below);
     if there is none, the owner makes it from prompts on the world-asset list (below), each ending
     with the model skill's prop block.
+- **Keep at least 20 active model requests on file at all times** (owner, #2002): count only
+  unsupplied models the owner can generate now, each meeting the prompt and texture-decision
+  requirements above. Supplied exports, import tasks and deferred requests do not count. When
+  exports arrive, track their import, remove them from the active list and replenish it
+  automatically. Do not pad the list with unsupported creatures or needs existing suitable
+  models/textures resolve; the ore/ingot exception above still holds.
+- **Learn from supplied models before requesting more in those groups** (owner, #1998, #2002):
+  discard further player-part prompts for now; resume only after the supplied hair and full-body
+  cloak are implemented and their lessons recorded. Request further trees only after importing
+  the supplied savanna tree and learning from it. These deferred groups do not fill the active
+  20-request minimum.
 - **The world-asset list, #1824** (owner's ground rule, #1825): the issue of non-monster assets,
   3 prompts each. When the owner submits an asset, file a follow-up issue for its import and take
   the asset off the list.
