@@ -16,6 +16,9 @@ simply retexturing or recolouring the copper deposit is not an option.
 
 **Every model request has at least three complete, genuinely distinct prompts** (owner, #1996),
 for creatures, props, items and player parts alike, each in its own accordion as AGENTS.md says.
+Its summary conveys a concrete, human-readable vibe or design concept, such as "High umbrella
+of rounded leaves"; "First silhouette", "Option 1" or "Variation 2" alone is not a description.
+A numbered prefix is fine when the concept follows it.
 This minimum does not reduce the 20-prompt requirements for beasts or evolutions. Each asset also
 says `Textured export required: Yes` or `Textured export required: No`, with its reason. Prefer a
 suitable existing texture or the shared set; a new stone shape can use the good stone texture we

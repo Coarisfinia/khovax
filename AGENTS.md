@@ -688,7 +688,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   copper deposit is not an option.
 - **Every image prompt in an issue sits in its own accordion** (owner's ground rule, #1825), as on
   #1770 to #1772: `<details><summary>N. short idea</summary>` around a `text` block, for monsters
-  and other assets alike.
+  and other assets alike. The summary gives the option's concrete, human-readable vibe or design
+  concept (owner, #1996), such as "High umbrella of rounded leaves", never only "First silhouette",
+  "Option 1" or "Variation 2". A numbered prefix is fine when the concept follows it.
 - **Every model request includes choices and a texture decision** (owner, #1996): creatures,
   props, items and player parts alike have at least three genuinely distinct, complete prompts,
   each in its own accordion. This is a minimum; the 20-prompt beast requirements below still hold.
