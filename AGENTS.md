@@ -683,9 +683,10 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **Retexture before asking for a new model** (owner's ground rule, #1847): what a retexture
   can resolve is never filed as a new model. Go through the models there are
   (`packages/game/assets/`, `Coarisfinia/khovax-sources`) and retexture one from the shared
-  texture set (the model skill). **Ore deposits are an exception** (owner, #1950): each has a
-  unique silhouette and vein geometry as well as colour; simply retexturing or recolouring the
-  copper deposit is not an option.
+  texture set (the model skill). **Ore deposits and ore/ingot items are exceptions**
+  (owner, #1949, #1950): every ore and ingot has its own model, with a unique silhouette and
+  geometry as well as colour; deposits also have distinct vein geometry. No generic retextured
+  ore lump, and simply retexturing or recolouring the copper deposit is not an option.
 - **Every image prompt in an issue sits in its own accordion** (owner's ground rule, #1825), as on
   #1770 to #1772: `<details><summary>N. short idea</summary>` around a `text` block, for monsters
   and other assets alike. The summary gives the option's concrete, human-readable vibe or design

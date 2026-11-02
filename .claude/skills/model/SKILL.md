@@ -11,8 +11,10 @@ scenery it comes from a free licensed source; agents import, rig, animate, check
 work on the tooling. Needing a new model goes as AGENTS.md
 says (#1575): a `question` issue with base prompts for a monster, a free licensed source for
 anything else, and never a new model for what a retexture of an existing one resolves (#1847),
-except ore deposits (#1950): each needs a unique silhouette and vein geometry as well as colour;
-simply retexturing or recolouring the copper deposit is not an option.
+except ore deposits and ore/ingot items (#1949, #1950): every ore and ingot needs its own model,
+with a unique silhouette and geometry as well as colour; deposits also have distinct vein geometry.
+No generic retextured ore lump, and simply retexturing or recolouring the copper deposit is not an
+option.
 
 **Every model request has at least three complete, genuinely distinct prompts** (owner, #1996),
 for creatures, props, items and player parts alike, each in its own accordion as AGENTS.md says.
