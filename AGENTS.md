@@ -840,7 +840,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   image's signed Ubuntu archive. They must match the image's own Mesa, and the archive drops a
   superseded version, so an exact pin would break CI on the next security update. **One fallback**
   (#1429, #2021), also an exception to the pinning: when updating or installing from the Ubuntu
-  snapshot that Blender's container pins fails or takes over two minutes (`apt-get update
+  snapshot that Blender's container pins fails or runs out of its time limit (`apt-get update
   --error-on=any` and `apt-get install`, after apt's retries), its libraries come from the live,
   signed archive, possibly in newer versions than the snapshot's, with a warning on the run, rather
   than a mirror outage turning the run red.

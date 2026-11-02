@@ -48,12 +48,14 @@ runs:
       # A snapshot's metadata is old by design, so only its expiry check is disabled; the live
       # fallback keeps HTTPS and metadata-expiration checks. Both use Ubuntu's signing key.
       # The snapshot mirror sometimes answers 503 (#1429): apt retries each download with a growing
-      # delay, and if the snapshot's index or packages still can't be fetched within two minutes
-      # (#2021; a healthy install takes under one, and the job has about five to spare), the
-      # libraries come from Ubuntu's live archive, signed by the same key, with a warning, rather
-      # than failing the run. A failed index fetch is only a warning to apt-get update, so
-      # --error-on=any makes it an error. dpkg --configure -a finishes whatever a time limit
-      # interrupted, or apt refuses to go on.
+      # delay, and if the snapshot's index or packages still can't be fetched in time (#2021; a
+      # healthy setup takes under a minute, and the job has about five to spare), the libraries
+      # come from Ubuntu's live archive, signed by the same key, with a warning, rather than failing
+      # the run. A failed index fetch is only a warning to apt-get update, so --error-on=any makes
+      # it an error. timeout runs apt-get itself, not a shell around it, so it returns only once apt
+      # has let go of its locks. dpkg doesn't wait for a lock, and a dpkg that apt started can
+      # outlive it, so dpkg --configure -a, which finishes whatever a time limit interrupted, is
+      # retried briefly.
       shell: bash
       run: |
         sudo nohup python3 -c 'import socket; s = socket.create_server(("0.0.0.0", 443)); c = []
@@ -68,16 +70,15 @@ runs:
               > /etc/apt/sources.list.d/ubuntu.sources
           }
           install_libraries() {
-            apt-get update --error-on=any -qq &&
+            timeout -k 10 60 apt-get update --error-on=any -qq &&
               { echo "172.17.0.1 snapshot.ubuntu.com" >> /etc/hosts; } && # PLANTED for #2021, never merged
-              DEBIAN_FRONTEND=noninteractive apt-get install -qq -y --no-install-recommends \
+              DEBIAN_FRONTEND=noninteractive timeout -k 10 90 apt-get install -qq -y --no-install-recommends \
                 libx11-6 libxi6 libxrender1 libxfixes3 libxext6 libxkbcommon0 libsm6 libgl1 > /dev/null
           }
-          export -f install_libraries
           use_mirror "https://snapshot.ubuntu.com/ubuntu/$0" no
-          if ! timeout 120 bash -c install_libraries; then
+          if ! install_libraries; then
             echo "::warning::Installing from Ubuntu snapshot $0 failed or timed out: Blender'"'"'s libraries come from the live archive, maybe newer."
-            DEBIAN_FRONTEND=noninteractive dpkg --configure -a
+            DEBIAN_FRONTEND=noninteractive timeout 60 bash -c "until dpkg --configure -a; do sleep 2; done"
             use_mirror "https://archive.ubuntu.com/ubuntu" yes
             install_libraries
           fi
