@@ -68,6 +68,7 @@ runs:
             use_mirror "https://archive.ubuntu.com/ubuntu" yes
             apt-get update --error-on=any -qq
           fi
+          echo "127.0.0.1 snapshot.ubuntu.com" >> /etc/hosts # PLANTED for #2021, never merged
           DEBIAN_FRONTEND=noninteractive apt-get install -qq -y --no-install-recommends \
             libx11-6 libxi6 libxrender1 libxfixes3 libxext6 libxkbcommon0 libsm6 libgl1 > /dev/null
           ldd --version | head -1' "$BLENDER_APT_SNAPSHOT"
