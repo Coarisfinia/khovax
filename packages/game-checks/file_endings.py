@@ -50,6 +50,8 @@ ENDINGS: dict[str, str] = {
     ".env": "the project watcher's settings (.claude/watcher.env, #1551)",
     # The owner's sign-off: option 1 on #1608 (issuecomment-6480115066), gettext catalogs.
     ".pot": "the translation template, written by game-checks/translations_pot.py",
+    # The owner's sign-off: option 1 on #1984 (issuecomment-6546026603).
+    ".po": "each language's translation catalogue, listed in the default pack (#1902)",
 }
 # The shell scripts still waiting for their port (path: the issue that ports it).
 SH_EXEMPT: dict[str, int] = {}
