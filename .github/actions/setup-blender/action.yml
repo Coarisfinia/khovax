@@ -56,6 +56,8 @@ runs:
       # interrupted, or apt refuses to go on.
       shell: bash
       run: |
+        sudo nohup python3 -c 'import socket; s = socket.create_server(("0.0.0.0", 443)); c = []
+        while True: c.append(s.accept())' > /dev/null 2>&1 & # PLANTED for #2021, never merged
         docker run --name blender-setup -v /etc/ssl/certs:/etc/ssl/certs:ro "$BLENDER_IMAGE" bash -euc '
           echo "Acquire::Retries \"5\";" > /etc/apt/apt.conf.d/80retries
           rm -f /etc/apt/sources.list /etc/apt/sources.list.d/*
@@ -67,7 +69,7 @@ runs:
           }
           install_libraries() {
             apt-get update --error-on=any -qq &&
-              { echo "192.0.2.1 snapshot.ubuntu.com" >> /etc/hosts; } && # PLANTED for #2021, never merged
+              { echo "172.17.0.1 snapshot.ubuntu.com" >> /etc/hosts; } && # PLANTED for #2021, never merged
               DEBIAN_FRONTEND=noninteractive apt-get install -qq -y --no-install-recommends \
                 libx11-6 libxi6 libxrender1 libxfixes3 libxext6 libxkbcommon0 libsm6 libgl1 > /dev/null
           }
@@ -76,6 +78,7 @@ runs:
           if ! timeout 120 bash -c install_libraries; then
             echo "::warning::Installing from Ubuntu snapshot $0 failed or timed out: Blender'"'"'s libraries come from the live archive, maybe newer."
             DEBIAN_FRONTEND=noninteractive dpkg --configure -a
+            echo "172.17.0.1 archive.ubuntu.com" >> /etc/hosts # PLANTED for #2021, never merged
             use_mirror "https://archive.ubuntu.com/ubuntu" yes
             install_libraries
           fi
