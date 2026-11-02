@@ -1,17 +1,17 @@
 """Validates the default resource pack (#1860): the game's own resources, its textures, its models
-(#1864), its region files, region pieces and realms (#1861), its quests (#1888), its species
-(#1903), its translation catalogues (#1902), its tile blueprints (#1901) and its loot tables and
+(#1864), its sounds (#2014), its region files, region pieces and realms (#1861), its quests
+(#1888), its species (#1903), its translation catalogues (#1902), its tile blueprints (#1901) and its loot tables and
 materials (#1953), and harvest tables (#1990), described by the same manifest a player's pack
 will have (#1858), and looked up only through ResourcePacks. It fails when
 - the manifest (game_shared.resource_packs.MANIFEST) is missing or isn't a JSON object;
 - an id doesn't resolve: it isn't an id (Ids), or its file isn't tracked, isn't imported by Godot
   (a .import beside it, for the kinds Godot imports) or isn't of its kind (an image, a .glb or
-  .gltf model, a Markdown region file, piece or realm, a JSONC quest, species, tile blueprint, loot
-  table, harvest table or material, a .po catalogue named after its locale);
+  .gltf model, an .ogg sound, a Markdown region file, piece or realm, a JSONC quest, species, tile
+  blueprint, loot table, harvest table or material, a .po catalogue named after its locale);
 - a resource is unreferenced: the manifest lists it but no script (outside its comments), scene,
   resource or content file of the game's names its id as a string (but for the realms, the
   quests, species, catalogues, tile blueprints, loot and harvest tables and materials, which the
-  game finds by listing the pack), or a file of its kind (an image or model under
+  game finds by listing the pack), or a file of its kind (an image, model or sound under
   assets/, a region file or piece under regions/, a realm under realms/, a quest in the quests
   slice's data/, a species directly in slices/species/data/, a catalogue under translations/, a
   tile blueprint in slices/resource_packs/data/tiles/, a loot table, harvest table or material in
@@ -24,7 +24,7 @@ will have (#1858), and looked up only through ResourcePacks. It fails when
   after its file (#72);
 - a tile blueprint lies outside the pack (in the core's old core/data/tiles/), or its entry isn't
   slices/resource_packs/data/tiles/<id>.jsonc, so it's named after its file (#802);
-- a script, scene, resource or content file names a texture's, model's, region's, realm's, quest's,
+- a script, scene, resource or content file names a texture's, model's, sound's, region's, realm's, quest's,
   species', catalogue's, tile blueprint's, loot table's, harvest table's or material's res:// path
   instead of its id, so it would get around the resolver, and a pack could never override it (project.godot
   naming a catalogue for Godot to load gets around it too, #1902); or a script names anything by
@@ -62,6 +62,7 @@ from unused_assets import extracted_textures, gltf_files
 ID = re.compile(r"[a-z][a-z0-9_]*")
 IMAGES = (".svg", ".png", ".jpg", ".jpeg", ".webp")
 MODELS = (".glb", ".gltf")
+AUDIO = (".ogg",)
 
 
 @dataclass(frozen=True)
@@ -98,6 +99,7 @@ HARVEST_TABLES = "slices/loot/data/harvest_tables"
 KINDS: dict[str, Kind] = {
     "textures": Kind("texture", IMAGES, True, "assets"),
     "models": Kind("model", MODELS, True, "assets"),
+    "audio": Kind("sound", AUDIO, True, "assets"),
     # A region drawn whole in one file, regions/<id>.md, and one arranged from the pieces in
     # regions/<id>/ (#1861).
     "regions": Kind("region", (".md",), False, "regions/*.md"),
@@ -136,7 +138,7 @@ PATH_CHAR = r"(?:(?!\1).)"
 NAME_CHAR = r"(?:(?!\1)[^/])"
 PATH = re.compile(
     rf"([\"'])res://(?P<path>assets/{PATH_CHAR}+?\.(?:"
-    + "|".join(ending[1:] for ending in IMAGES + MODELS)
+    + "|".join(ending[1:] for ending in IMAGES + MODELS + AUDIO)
     + rf")|regions/{PATH_CHAR}+|realms/{PATH_CHAR}+|{QUESTS}/{PATH_CHAR}+?\.jsonc"
     + rf"|{SPECIES}/{NAME_CHAR}+\.jsonc"
     + rf"|translations/{PATH_CHAR}+?\.po"

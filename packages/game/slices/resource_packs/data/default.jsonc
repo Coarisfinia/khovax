@@ -1,7 +1,7 @@
 // The default resource pack (#1860): the game's own resources, in the manifest format a player's
 // pack shares (#1858). Every lookup goes through ResourcePacks, which walks the loaded packs in
-// order, this one last. Its files are named from res://, its root: its textures and models load as
-// Godot imported them, its region files, pieces, realms, quests, species, tile blueprints, loot
+// order, this one last. Its files are named from res://, its root: its textures, models and sounds
+// load as Godot imported them, its region files, pieces, realms, quests, species, tile blueprints, loot
 // tables and materials are read as text, and its translation catalogues load as gettext .po files.
 {
 	"id": "default",
@@ -105,6 +105,10 @@
 		"model_trees_a_large": "assets/kaykit-hexagon/trees_A_large.gltf",
 		"model_trees_b_small": "assets/kaykit-hexagon/trees_B_small.gltf",
 		"model_wobulumu": "assets/wobulumu/wobulumu.glb"
+	},
+	// Each sound (#2014), looked up by its id, so a player's pack can replace or add one.
+	"audio": {
+		"music_exploration": "assets/exploration-theme/exploration_theme.ogg"
 	},
 	// Each region drawn whole in one file (#1861).
 	"regions": {

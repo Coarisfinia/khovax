@@ -3,7 +3,8 @@ extends RefCounted
 ## Whether an imported scene in a resource pack's .pck (#1870) is data, read before it's mounted
 ## (PackCheck): a binary PackedScene, compressed or not, that names no script and points only at
 ## its own sub-resources and the pack's own files. Godot's binary resource format, as this Godot
-## writes it: a header, the string table, then the external resources it loads.
+## writes it: a header, the string table, then the external resources it loads. An imported sound
+## (#2014) is that same format, so it's read the same way, for its own type.
 
 ## A compressed resource's magic, and an uncompressed binary one's.
 const COMPRESSED: String = "RSCC"
@@ -14,8 +15,9 @@ const COMPRESSED_HEADER: int = 16
 const MAX_SIZE: int = 256 * 1024 * 1024
 ## The fewest bytes a scene's header takes.
 const HEADER_SIZE: int = 100
-## The only type a scene may be.
+## The only type a scene may be, and the only type a sound may be.
 const SCENE_TYPE: String = "PackedScene"
+const SOUND_TYPE: String = "AudioStreamOggVorbis"
 ## The header's flags: a uid after each external resource's path, and a script class named.
 const FLAG_UIDS: int = 2
 const FLAG_SCRIPT_CLASS: int = 8
@@ -30,9 +32,14 @@ const SCRIPT: String = "Script"
 
 
 ## Why the scene `bytes` can't be mounted, with `files` the pack's (PackFile.files) and `own` its
-## folder (packs/<id>/): not a binary scene, a script in it, or an external resource that isn't
-## one of the pack's own files or its imported ones. Or "".
-static func problem(bytes: PackedByteArray, files: Dictionary, own: String) -> String:
+## folder (packs/<id>/): not a binary resource of `type`, a script in it, or an external resource
+## that isn't one of the pack's own files or its imported ones. Or "".
+static func problem(
+	bytes: PackedByteArray,
+	files: Dictionary,
+	own: String,
+	type: String = SCENE_TYPE,
+) -> String:
 	var magic: String = bytes.slice(0, 4).get_string_from_ascii()
 	var body: StreamPeerBuffer = StreamPeerBuffer.new()
 	# A compressed resource's own magic stands in for the binary one; the body follows.
@@ -40,7 +47,7 @@ static func problem(bytes: PackedByteArray, files: Dictionary, own: String) -> S
 		body.data_array = _decompressed(bytes)
 	elif magic == BINARY:
 		body.data_array = bytes.slice(4)
-	var refused: String = _header_problem(body)
+	var refused: String = _header_problem(body, type)
 	if not refused.is_empty():
 		return refused
 	# A script, embedded or loaded, names its class (GDScript, CSharpScript and the like) as its
@@ -52,22 +59,22 @@ static func problem(bytes: PackedByteArray, files: Dictionary, own: String) -> S
 	refused = _external_problem(body, files, own)
 	# A broken string or count reads on to the end, and the internal resources always follow.
 	if refused.is_empty() and body.get_position() >= body.get_size():
-		return "isn't a binary scene"
+		return "isn't a binary resource"
 	return refused
 
 
-## Why the header doesn't read as a binary scene's, leaving `body` after it. Or "".
-static func _header_problem(body: StreamPeerBuffer) -> String:
+## Why the header doesn't read as a binary resource's of `type`, leaving `body` after it. Or "".
+static func _header_problem(body: StreamPeerBuffer, type: String) -> String:
 	# Its endianness (little), number size, version and format.
 	if body.get_size() < HEADER_SIZE or body.get_u32() != 0:
-		return "isn't a binary scene"
+		return "isn't a binary resource"
 	var _real64: int = body.get_u32()
 	var engine: Dictionary = Engine.get_version_info()
 	var version: Array[int] = [body.get_u32(), body.get_u32(), body.get_u32()]
 	if version != [engine["major"], engine["minor"], FORMAT]:
 		return "is in a binary format this game doesn't read"
-	if _string(body) != SCENE_TYPE:
-		return "isn't a binary scene"
+	if _string(body) != type:
+		return "isn't a binary " + type
 	var _import_metadata: int = body.get_u64()
 	var flags: int = body.get_u32()
 	var _uid: int = body.get_u64()
@@ -99,7 +106,7 @@ static func _external_problem(body: StreamPeerBuffer, files: Dictionary, own: St
 				or not placed):
 			return "points outside the pack: " + path
 		if body.get_position() >= body.get_size():
-			return "isn't a binary scene"
+			return "isn't a binary resource"
 	return ""
 
 

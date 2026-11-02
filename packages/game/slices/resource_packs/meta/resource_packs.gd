@@ -3,9 +3,9 @@ extends RefCounted
 ## The one resolver of the game's resources (#1860): it turns a resource id into the resource by
 ## walking the loaded packs in order, the first that has the id giving it. The game's own resources
 ## are the default pack, last in the order; a player's packs (#1858) come before it, and override
-## what they provide. Nothing looks up a built-in texture, model, region, realm, quest (#1888),
-## species (#1903), translation catalogue (#1902), tile blueprint (#1901), loot table or material
-## (#1953) any other way (resource_packs_check.py in CI).
+## what they provide. Nothing looks up a built-in texture, model, sound (#2014), region, realm,
+## quest (#1888), species (#1903), translation catalogue (#1902), tile blueprint (#1901), loot table
+## or material (#1953) any other way (resource_packs_check.py in CI).
 
 ## The default pack's manifest; its files are named from res://.
 const DEFAULT: String = "res://slices/resource_packs/data/default.jsonc"
@@ -23,6 +23,8 @@ static var _packs: Array[ResourcePack] = []
 static var _textures: Dictionary[String, Texture2D] = {}
 ## Each model looked up so far, by its id (#1864), null when no pack gives it.
 static var _models: Dictionary[String, PackedScene] = {}
+## Each sound looked up so far, by its id (#2014), null when no pack gives it.
+static var _audio: Dictionary[String, AudioStream] = {}
 ## What PackLoader made of each player's pack file so far, by its path, usable or not: Godot can't
 ## unmount a pack, so a reload reuses it rather than mounting it again.
 static var _mounted: Dictionary[String, ResourcePack] = {}
@@ -59,7 +61,22 @@ static func model(model_id: String) -> PackedScene:
 	return _models[model_id]
 
 
-## The first loaded pack whose `kind` (textures or models) has `resource_id`, or null.
+## The sound `audio_id` (#2014) from the first loaded pack that has it, or null when none does or
+## its file doesn't load as a sound, which is warned about once: whatever plays it stays silent, and
+## never touches the simulation. A sound is only ever played by the presentation.
+static func audio_stream(audio_id: String) -> AudioStream:
+	if not _audio.has(audio_id):
+		var found: AudioStream = null
+		var pack: ResourcePack = _with(audio_id, "audio")
+		if pack != null:
+			found = pack.audio_stream(audio_id)
+		if found == null:
+			push_warning("no resource pack gives the sound %s: %s" % [audio_id, _where(pack)])
+		_audio[audio_id] = found
+	return _audio[audio_id]
+
+
+## The first loaded pack whose `kind` (textures, models or audio) has `resource_id`, or null.
 static func _with(resource_id: String, kind: String) -> ResourcePack:
 	for pack: ResourcePack in loaded():
 		var listed: Dictionary = pack.get(kind)
@@ -226,6 +243,7 @@ static func refresh() -> void:
 	_packs.clear()
 	_textures.clear()
 	_models.clear()
+	_audio.clear()
 
 
 ## Each pack in the player's folder (PLAYER_PACKS) that PackLoader mounts and reads without a

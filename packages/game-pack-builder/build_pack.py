@@ -1,5 +1,5 @@
 """Builds a resource pack (#1869): a folder holding its manifest, pack.jsonc, and its raw files
-(images, glTF models, Markdown, JSONC and gettext .po translation catalogues) becomes
+(images, glTF models, .ogg sounds, Markdown, JSONC and gettext .po translation catalogues) becomes
 <id>.desktop.pck and <id>.mobile.pck, imported with the game's import settings by the Godot version
 the game is built with.
 
@@ -9,7 +9,7 @@ or, from the zip each release ships (release_zip.py), python3 build_pack.py <pac
 
 A pack is data, never code (#1859): every file must be on the allow-list (ALLOWED), and a Godot
 .import file beside one (the default pack keeps the game's import settings that way) may name no
-script and no importer but a texture's or a scene's. Anything else refuses the whole pack.
+script and no importer but a texture's, a scene's or a sound's. Anything else refuses the whole pack.
 
 The pack's files go under res://packs/<id>/ in a copy of template/, a project with the game's
 import settings, which Godot imports and exports once per preset: a texture imported with VRAM
@@ -44,14 +44,15 @@ SETUP_GODOT = HERE.parents[1] / ".github" / "actions" / "setup-godot" / "action.
 RELEASED_GODOT = HERE / "godot.json"
 MANIFEST = "pack.jsonc"
 PRESETS = ("desktop", "mobile")
-# What a pack may hold: images, models (a glTF's buffers too), text, translation catalogues (#1969)
-# and Godot's .import files.
-ALLOWED = (".png", ".jpg", ".jpeg", ".webp", ".svg", ".glb", ".gltf", ".bin", ".md", ".jsonc", ".po")
+# What a pack may hold: images, models (a glTF's buffers too), sounds (#2014), text, translation
+# catalogues (#1969) and Godot's .import files.
+ALLOWED = (".png", ".jpg", ".jpeg", ".webp", ".svg", ".glb", ".gltf", ".bin", ".ogg", ".md", ".jsonc", ".po")
 IMPORT = ".import"
 # The importers a .import may name, each with the type it imports as and the files it imports.
 IMPORTERS = {
     "texture": ("CompressedTexture2D", (".png", ".jpg", ".jpeg", ".webp", ".svg")),
     "scene": ("PackedScene", (".glb", ".gltf")),
+    "oggvorbisstr": ("AudioStreamOggVorbis", (".ogg",)),
 }
 # A setting that names a script, unless it names none.
 SCRIPT_SETTING = re.compile(r"^[^=\n]*script[^=\n]*=(?!null$|\"\"$).*$", re.MULTILINE | re.IGNORECASE)

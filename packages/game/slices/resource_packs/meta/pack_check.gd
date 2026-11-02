@@ -4,8 +4,8 @@ extends RefCounted
 ## the same allow-list the pack builder holds packs to (#1869), on what the builder writes. A pack's
 ## own files lie under packs/<id>/ (its manifest, Markdown, JSONC, its translation catalogues,
 ## #1969,
-## and the .import files that point at its imported resources), its imported textures and scenes
-## under .godot/imported/, and only
+## and the .import files that point at its imported resources), its imported textures, scenes and
+## sounds (#2014) under .godot/imported/, and only
 ## the project files every export carries besides, which never replace the game's own.
 
 ## The folder a pack's own files lie in, as packs/<id>/.
@@ -14,9 +14,9 @@ const PACKS: String = "packs/"
 const MANIFEST: String = "pack.jsonc"
 ## The endings of a pack's own files.
 const OWN_ENDINGS: Array[String] = ["md", "jsonc", "po", "import"]
-## Where Godot keeps what it imported, and the endings it may hold: textures and scenes.
+## Where Godot keeps what it imported, and the endings it may hold: textures, scenes and sounds.
 const IMPORTED: String = ".godot/imported/"
-const IMPORTED_ENDINGS: Array[String] = ["ctex", "scn"]
+const IMPORTED_ENDINGS: Array[String] = ["ctex", "scn", "oggvorbisstr"]
 ## The project files every exported pack carries; mounted without replacing, they never reach
 ## the game.
 const PROJECT_FILES: Array[String] = [
@@ -25,7 +25,11 @@ const PROJECT_FILES: Array[String] = [
 	".godot/uid_cache.bin",
 ]
 ## The importers a pack's .import may name.
-const IMPORTERS: Array[String] = ['importer="texture"', 'importer="scene"']
+const IMPORTERS: Array[String] = [
+	'importer="texture"',
+	'importer="scene"',
+	'importer="oggvorbisstr"',
+]
 ## Where a pack's .import may point a resource: at its own imported files.
 const REMAP_TARGET: String = "res://" + IMPORTED
 ## An imported texture's magic.
@@ -85,25 +89,29 @@ static func _file_problem(pack: PackFile, path: String, own: String) -> String:
 	return ""
 
 
-## Why an imported file of the pack can't be mounted: it isn't a texture or a scene, or the scene
-## holds a script. Or "".
+## Why an imported file of the pack can't be mounted: it isn't a texture, a scene or a sound, or the
+## scene or sound holds a script. Or "".
 static func _imported_problem(pack: PackFile, path: String) -> String:
 	var file_name: String = path.trim_prefix(IMPORTED)
 	if file_name.contains("/") or not IMPORTED_ENDINGS.has(file_name.get_extension()):
-		return "isn't an imported texture or scene"
+		return "isn't an imported texture, scene or sound"
 	if pack.files[path][1] > PackScene.MAX_SIZE:
 		return "is too large to check"
 	if file_name.get_extension() == "ctex":
 		var magic: String = pack.read(path).slice(0, 4).get_string_from_ascii()
 		return "" if magic == TEXTURE else "isn't an imported texture"
-	return PackScene.problem(pack.read(path), pack.files, PACKS + pack_id(pack) + "/")
+	# A sound is the same binary format as a scene, so it could hold a script just the same.
+	var type: String = PackScene.SOUND_TYPE
+	if file_name.get_extension() == "scn":
+		type = PackScene.SCENE_TYPE
+	return PackScene.problem(pack.read(path), pack.files, PACKS + pack_id(pack) + "/", type)
 
 
 ## Why a .import of the pack can't be mounted: another importer, or a line that points anywhere
 ## but at the pack's own imported files (a uid is only an id). Or "".
 static func _remap_problem(pack: PackFile, text: String) -> String:
 	if not IMPORTERS.any(text.contains):
-		return "imports with neither the texture nor the scene importer"
+		return "imports with none of the texture, scene and sound importers"
 	for line: String in text.split("\n"):
 		if not line.contains("://") or line.begins_with('uid="uid://'):
 			continue

@@ -492,8 +492,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   number (#802, like features, #784). **Tile traits are
   rules** (`TileKinds`): changing one (e.g. `walkable`) is a rule change, like any other (see the
   golden replays below).
-- **Our resources are the default resource pack** (owner, #1860): textures, models, regions,
-  region pieces, realms, quests (#1888), species (#1903), translation catalogues (#1902), tile
+- **Our resources are the default resource pack** (owner, #1860): textures, models, sounds (#2014),
+  regions, region pieces, realms, quests (#1888), species (#1903), translation catalogues (#1902), tile
   blueprints (#1901), loot tables and materials (#1953) are listed in
   `slices/resource_packs/data/default.jsonc` and reached only through `ResourcePacks` by id, never
   by a `res://` path (`resource_packs_check.py` in CI).
