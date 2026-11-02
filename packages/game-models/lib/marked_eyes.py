@@ -196,7 +196,10 @@ class Box:
 # a comment saying what each marking is, with the renders showing it is the beast's design in the
 # PR that names it; keyed by the .glb's path in the game's project folder. A large dark area (a
 # basalt half) needs no box: `fragments` takes it for a tone of the head's own paint (#1782).
-MARKINGS = {}
+MARKINGS = {
+    # Its black nose on a head of dark basalt.
+    "assets/kalvrakkor_magma/kalvrakkor_magma.glb": [Box((-0.035, -0.565, 0.595), (0.06, -0.51, 0.65))],
+}
 
 
 class Unpainted(ValueError):

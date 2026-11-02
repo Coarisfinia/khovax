@@ -14,8 +14,7 @@ A generator's auto-rig gives a fan of tails one or two chains, whatever the coun
   bone's Z axis points back, so turning a bone about Z sways it within the fan and about X swings
   it fore and aft. What the tails grow out of stays with the hips.
 - **move:** `Fan.move`, an overlay for clips.animate, turns every tail in every clip (MOTIONS), the
-  wave running up each tail and across the fan, so no two tails move alike; `Fan.follow` lets each
-  tail trail the body too.
+  wave running up each tail and across the fan, so no two tails move alike.
 - **check:** `report`, for check_tails.py: there are as many tails as the model says, each moved by
   bones of its own, a bend of those moves only that tail, and it moves in every clip.
 
@@ -41,10 +40,10 @@ WELD = 4
 BONES = 5
 JOINT = 0.35
 ROOT = 0.5
-# Each next bone is this much looser than the one before it (adopted.STALK's way).
-SPRING = (2.8, 0.5, 0.0, 0.15)
-LOOSER = 0.88
-LOOSEST = (1.5, 0.3)
+# The last bone starts this share of the way along a tail's skin.
+LAST = 0.85
+# How many vertices give the middle of a tail's skin at a joint.
+RING = 12
 
 # --- What the check holds a tail to --------------------------------------------------------------
 # A tail's far part, past this share of its length from its base: where nothing blends with the hips.
@@ -209,7 +208,8 @@ def _smooth(share):
 
 class Motion:
     """How a fan moves through one clip, each a function of how far through the clip it is (0..1):
-    `ripple`, how far its waves swing it; `waves`, how many run up it in the clip, a whole number on a
+    `ripple`, how far its waves swing a tail's tip (radians, over the whole tail, as the others);
+    `waves`, how many run up it in the clip, a whole number on a
     loop; `back`, how far it leans back (toward +Y, less than nothing forward); `droop`, how far it
     sinks to the ground (each tail sways down, the middle one back; less than nothing raises it)."""
 
@@ -235,25 +235,25 @@ def _pose_to_pose(*keys):
 # with the gait, streaming back in a run, drawn back and whipped forward with the bite, flung back
 # by a blow, sinking to the ground as it falls or sleeps, and flared up behind a long attack.
 MOTIONS = {
-    "Idle": Motion(_steady(0.10), 2),
-    "Walk": Motion(_steady(0.13), 1, _steady(0.06)),
-    "Run": Motion(_steady(0.12), 1, _steady(0.30)),
-    "Attack": Motion(_pose_to_pose((0.0, 0.03), (0.3, 0.12), (1.0, 0.03)), 2,
-                     _pose_to_pose((0.0, 0.0), (0.22, 0.26), (0.42, -0.34), (0.62, 0.08), (1.0, 0.0))),
-    "Hit": Motion(_pose_to_pose((0.0, 0.03), (0.2, 0.15), (1.0, 0.02)), 3,
-                  _pose_to_pose((0.0, 0.0), (0.15, 0.38), (0.5, -0.06), (1.0, 0.0))),
-    "Faint": Motion(_pose_to_pose((0.0, 0.08), (0.5, 0.03), (1.0, 0.012)), 2, _steady(0.0),
-                    _pose_to_pose((0.0, 0.0), (0.7, 0.13), (1.0, 0.12))),
-    "ChannelStart": Motion(_pose_to_pose((0.0, 0.04), (1.0, 0.09)), 1, _pose_to_pose((0.0, 0.0), (1.0, -0.10)),
-                           _pose_to_pose((0.0, 0.0), (1.0, -0.09))),
-    "Channel": Motion(_steady(0.09), 2, _steady(-0.10), _steady(-0.09)),
-    "ChannelEnd": Motion(_pose_to_pose((0.0, 0.09), (1.0, 0.04)), 1, _pose_to_pose((0.0, -0.10), (1.0, 0.0)),
-                         _pose_to_pose((0.0, -0.09), (1.0, 0.0))),
-    "Feed": Motion(_steady(0.07), 1),
-    "Sleep": Motion(_steady(0.03), 1, _steady(0.0), _steady(0.10)),
+    "Idle": Motion(_steady(0.25), 2),
+    "Walk": Motion(_steady(0.30), 1, _steady(0.10)),
+    "Run": Motion(_steady(0.25), 1, _steady(0.25)),
+    "Attack": Motion(_pose_to_pose((0.0, 0.08), (0.3, 0.30), (1.0, 0.08)), 2,
+                     _pose_to_pose((0.0, 0.0), (0.22, 0.50), (0.42, -0.60), (0.62, 0.14), (1.0, 0.0))),
+    "Hit": Motion(_pose_to_pose((0.0, 0.08), (0.2, 0.20), (1.0, 0.05)), 3,
+                  _pose_to_pose((0.0, 0.0), (0.15, 0.08), (0.5, -0.10), (1.0, 0.0))),
+    "Faint": Motion(_pose_to_pose((0.0, 0.20), (0.5, 0.08), (1.0, 0.03)), 2, _steady(0.0),
+                    _pose_to_pose((0.0, 0.0), (0.7, 0.36), (1.0, 0.32))),
+    "ChannelStart": Motion(_pose_to_pose((0.0, 0.10), (1.0, 0.22)), 1, _pose_to_pose((0.0, 0.0), (1.0, -0.25)),
+                           _pose_to_pose((0.0, 0.0), (1.0, -0.25))),
+    "Channel": Motion(_steady(0.22), 2, _steady(-0.25), _steady(-0.25)),
+    "ChannelEnd": Motion(_pose_to_pose((0.0, 0.22), (1.0, 0.10)), 1, _pose_to_pose((0.0, -0.25), (1.0, 0.0)),
+                         _pose_to_pose((0.0, -0.25), (1.0, 0.0))),
+    "Feed": Motion(_steady(0.18), 1),
+    "Sleep": Motion(_steady(0.11), 1, _steady(-0.30), _steady(0.08)),
 }
 # How far the wave lags from one bone up a tail to the next, and from one tail to the next across the
-# fan (radians), and how much more of its swing each bone up a tail takes.
+# fan (radians), and how much more of its share of the swing each bone up a tail takes.
 UP_THE_TAIL = 0.75
 ACROSS = 1.1
 GROWS = 0.25
@@ -294,28 +294,33 @@ class Fan:
 
     @staticmethod
     def _joints(surface, distance, tail):
-        """A tail's joints: the middle of its skin at each of BONES + 1 even distances from its base
-        to its tip, the last the tip itself."""
-        reach = float(distance[tail.tip]) - tail.base
-        band = reach / BONES / 4.0
+        """A tail's joints: the middle of its skin at each of BONES even distances from its base to
+        where its last bone starts (_span), then the tip itself."""
+        skin = tail.members[~surface.loose[tail.members]]
         out = []
         for index in range(BONES):
-            level = tail.base + reach * index / BONES
-            ring = tail.members[numpy.abs(distance[tail.members] - level) <= band]
-            ring = ring[~surface.loose[ring]]
+            level = tail.base + Fan._span(surface, distance, tail) * index / (BONES - 1)
+            # The vertices nearest that distance: a coarse mesh leaves no even ring.
+            ring = skin[numpy.argsort(numpy.abs(distance[skin] - level), kind="stable")[:RING]]
             out.append(surface.points[ring].mean(axis=0).tolist())
         out.append(surface.points[tail.tip].tolist())
         return out
+
+    @staticmethod
+    def _span(surface, distance, tail):
+        """How far along a tail its last bone starts: short of its skin's end, so the end of the skin
+        and the piece on its tip move as one."""
+        return LAST * (float(distance[tail.members[~surface.loose[tail.members]]].max()) - tail.base)
 
     def _bind(self, skin, surface, distance, tails, hips):
         """All of each tail's skin to its own bones, off whatever held it, blended at each joint and
         at its base with the hips; a loose piece on its tip stays whole, on its last bone."""
         owner = {}
         for number, tail in enumerate(tails):
-            reach = float(distance[tail.tip]) - tail.base
+            span = self._span(surface, distance, tail)
             for member in tail.members.tolist():
-                along = (float(distance[member]) - tail.base) / reach * BONES
-                owner[member] = (number, BONES - 1.0 if surface.loose[member] else min(along, BONES - 1e-6))
+                along = (float(distance[member]) - tail.base) / span * (BONES - 1)
+                owner[member] = (number, BONES - 0.5 if surface.loose[member] else min(along, BONES - 1e-6))
         for index, welded in enumerate(surface.weld.tolist()):
             if welded not in owner:
                 continue
@@ -342,13 +347,6 @@ class Fan:
             out = {names[bone - 1]: 1.0 - share, names[bone]: share}
         return out
 
-    def follow(self):
-        """motion.follow's chains for every tail, each bone looser than the one before it."""
-        frequency, damping, response, shift = SPRING
-        return {name: (max(LOOSEST[0], frequency * LOOSER ** index), max(LOOSEST[1], damping - 0.04 * index),
-                       response, shift)
-                for names in self.names for index, name in enumerate(names)}
-
     def move(self, name, poses, loop):
         """An overlay for clips.animate: turns every tail through clip `name` (MOTIONS)."""
         motion = MOTIONS[name]
@@ -361,9 +359,9 @@ class Fan:
                 side = self.sides[number]
                 for index, bone in enumerate(names):
                     wave = lap - UP_THE_TAIL * index - ACROSS * number
-                    swing = ripple * (1.0 + GROWS * index)
-                    pose[bone] = (back + FORE_AFT * swing * math.cos(wave) + droop * (1.0 - abs(side)), 0.0,
-                                  swing * math.sin(wave) + droop * side)
+                    swing = ripple * (1.0 + GROWS * (index - (BONES - 1) / 2.0)) / BONES
+                    pose[bone] = ((back + droop * (1.0 - abs(side))) / BONES + FORE_AFT * swing * math.cos(wave), 0.0,
+                                  droop * side / BONES + swing * math.sin(wave))
 
 
 # --- The check ----------------------------------------------------------------------------------

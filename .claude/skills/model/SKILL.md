@@ -283,6 +283,11 @@ a second model could use goes into the library or a generic tool, never into one
   every clip, and fails when the body (anything but the eye's own eyeball, iris, pupil, rim, brow
   and lid; a generated skin's loose pieces included) covers more of the eye's face, within its
   rim, than the tolerance (`lib/covered.py`).
+- **The tails check (#1771):** `packages/game-models/check_tails.py -- <model.glb>` fails a many-tailed
+  model when any tail's vertices don't follow that tail's own bones, or when a tail doesn't move in a
+  clip. Its `TAILS` list names each such model and how many tails it has. `lib/tails.py` finds the
+  tails on the mesh and gives them bones, weights and motion (`Fan`). Meshy's rig gives a fan of tails
+  shared stalks at best: remove those and use `Fan`.
 - **The volume check (#1306):** `packages/game-models/check_volume.py -- <model.glb> [share]`
   samples every frame of every clip and prints, per clip, the smallest share of its rest depth or
   width the body keeps at a station on the spine or neck, the frame, the station and which; it

@@ -25,13 +25,15 @@ import math
 import os
 import sys
 
+import bmesh
 import bpy
+import mathutils
 from mathutils import Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-from lib import adopted, attachments, clips, frostfire, marked_eyes, metrics, rigged, scene, tuning  # noqa: E402
+from lib import adopted, attachments, clips, frostfire, marked_eyes, metrics, rigged, scene, tails, tuning  # noqa: E402
 from lib.materials import palette  # noqa: E402
 
 SOURCE = os.path.join(HERE, "sources", "kalvrakkor_magma.glb")
@@ -53,9 +55,12 @@ FAINT_LIDS = (14, 34)
 # --- The rig -----------------------------------------------------------------------------------
 # The generator's bones (import_source.py named them) to the library's quadruped scheme the clips
 # key. Weights first go from the bones that go to the ones that stay (MERGES): the pelvis' zigzag of
-# three short bones into the hips, the chest's stub into the chest, the skull's top into the head,
+# three short bones and the generator's two tail chains (the tails get their own, TAILS) into the
+# hips, the chest's stub into the chest, the skull's top into the head,
 # and each paw's toe bones into the bone above them, so the paw the clips plant is the whole foot.
+STALKS = ("stalk_%02d.L", "stalk_%02d.R")
 MERGES = {
+    **{stalk % number: "hips" for stalk in STALKS for number in range(1, 5)},
     "chain1_02": "chain1_01", "chain2_01": "hips", "chain2_02": "hips", "chain3_01": "hips", "stalk_03": "stalk_02",
     "1_leg_04": "1_leg_03", "1_paw": "1_leg_03", "2_leg_04": "2_leg_03", "2_paw": "2_leg_03",
     "3_paw": "3_leg_04", "4_paw": "4_leg_04",
@@ -72,13 +77,22 @@ RENAMES = {
 # The legs' tops hold much of the trunk's skin: above this height (metres) the shoulders' and the
 # haunches' skin goes to the chest and the hips, so a swinging leg doesn't drag the trunk thin (the
 # volume check), as Fohossa's legs give theirs up.
-TRUNK = 0.31
+TRUNK = 0.28
+# The brisket, the upper arms' skin ahead of this depth (metres along Y), goes to the chest too, so
+# the neck's base keeps its depth as a foreleg steps out (as quadruped.bind_underside's `brisket`).
+BRISKET = -0.215
+# The generator's forelegs have a stub of an upper arm over a long stiff paw: the elbow and the wrist
+# move down to these heights (metres), along the leg, and each leg's skin goes to the bone at its
+# height, blended over BLEND either side of a joint, so the leg bends where a hound's does.
+ELBOW, WRIST, BLEND = 0.27, 0.10, 0.02
 # The heel's skin below this height (metres) goes from the hock to the hind paw, so the whole sole
 # is the paw's and stays where the paw is planted as the hock turns.
 HEEL = 0.06
 # The tip of its nose: the head bone points along the head to it, so the clips' nods turn the head
 # about its own crosswise axis; it bites with it.
 NOSE = (0.014, -0.547, 0.625)
+# How many tails it has, each found on the mesh and given a chain of its own (lib/tails.py).
+TAILS = 9
 # Its ears, a bone each, the generator having none: (its base, its tip). A vertex is an ear's when
 # it lies along that line, nearer it than EAR_REACH and off the head's middle by EAR_OFF.
 MIDDLE = 0.014
@@ -98,9 +112,9 @@ FOLLOW = {name: value for name, value in clips.FOLLOW.items() if not name.starts
 TILE = math.sqrt(3.0)
 WALK_SPEED = TILE / 0.8
 RUN_SPEED = TILE / 0.3
-WALK_TILES, RUN_TILES = 0.35, 1.0
+WALK_TILES, RUN_TILES = 0.3, 1.0
 WALK_DUTY, WALK_LIFT, WALK_CURL, WALK_ROLL, WALK_BOB = 0.4, 0.15, 0.4, 0.05, 0.4
-RUN_DUTY, RUN_FOLD, RUN_SPINE_FLEX, RUN_ROLL, RUN_BOB = 0.3, 0.5, 0.06, 0.0, 0.4
+RUN_DUTY, RUN_FOLD, RUN_SPINE_FLEX, RUN_ROLL, RUN_BOB = 0.3, 0.6, 0.06, 0.0, 0.4
 GAIT = ("WALK_TILES", "WALK_DUTY", "WALK_LIFT", "WALK_CURL", "WALK_ROLL", "WALK_BOB", "RUN_TILES", "RUN_DUTY",
         "RUN_FOLD", "RUN_SPINE_FLEX", "RUN_ROLL", "RUN_BOB")
 OUT = tuning.arguments(globals(), GAIT)
@@ -114,17 +128,44 @@ RUN_STRIDE = RUN_SPEED * RUN_FRAMES / FPS / SCALE
 BELLY_HEIGHT = 0.27
 SHARE = 0.22
 FAINT_FOREPAWS = 0.2
-SLEEP_PAWS = {"front_paw": (0.0, 0.0, 0.2), "hind_paw": (0.06, 0.0, -0.06)}
+SLEEP_PAWS = {"front_paw": (0.0, 0.0, 0.13), "hind_paw": (0.06, 0.0, -0.06)}
+
+
+def at_height(*bones, height):
+    """The point at `height` on the line a leg's `bones` run along, top first, standing upright."""
+    for bone in bones:
+        if bone.tail.z <= height <= bone.head.z:
+            return bone.head.lerp(bone.tail, (bone.head.z - height) / (bone.head.z - bone.tail.z))
+    raise ValueError("no bone reaches %.3f" % height)
+
+
+def foreleg_skin(skin, leg):
+    """Foreleg `leg`'s skin to the bone at its height (ELBOW, WRIST), however much each held."""
+    names = ["%s_leg_%02d" % (leg, number) for number in (1, 2, 3)]
+    groups = [skin.vertex_groups[name] for name in names]
+    indices = {group.index for group in groups}
+    for vertex in skin.data.vertices:
+        held = sum(element.weight for element in vertex.groups if element.group in indices)
+        if held <= 0.0:
+            continue
+        lower = min(1.0, max(0.0, (ELBOW + BLEND - vertex.co.z) / (2.0 * BLEND)))
+        paw = min(1.0, max(0.0, (WRIST + BLEND - vertex.co.z) / (2.0 * BLEND)))
+        shares = (held * (1.0 - lower), held * (lower - paw), held * paw)
+        for group, share in zip(groups, shares):
+            group.add([vertex.index], share, "REPLACE")
 
 
 def rename(rig, skin):
     rigged.merge(skin, MERGES)
     rigged.merge(skin, {"1_leg_01": "chain1_01", "2_leg_01": "chain1_01", "3_leg_01": "hips", "4_leg_01": "hips"},
                  lambda vertex: vertex.co.z > TRUNK)
+    rigged.merge(skin, {"1_leg_01": "chain1_01", "2_leg_01": "chain1_01"}, lambda vertex: vertex.co.y < BRISKET)
     rigged.merge(skin, {"3_leg_03": "3_leg_04", "4_leg_03": "4_leg_04"}, lambda vertex: vertex.co.z < HEEL)
     for name in MERGES:
         if skin.vertex_groups.get(name):
             skin.vertex_groups.remove(skin.vertex_groups[name])
+    for leg in ("1", "2"):
+        foreleg_skin(skin, leg)
     scene.select_only(rig)
     bpy.ops.object.mode_set(mode="EDIT")
     edit = rig.data.edit_bones
@@ -134,12 +175,22 @@ def rename(rig, skin):
         edit[keep].tail = edit[toes[-1]].tail
         for toe in toes:
             edit.remove(edit[toe])
+    for leg in ("1", "2"):
+        upper, fore, paw = (edit["%s_leg_%02d" % (leg, number)] for number in (1, 2, 3))
+        elbow, wrist = at_height(upper, fore, paw, height=ELBOW), at_height(upper, fore, paw, height=WRIST)
+        upper.tail = elbow
+        fore.head, fore.tail = elbow, wrist
+        paw.head = wrist
     hips, chest, neck, head = edit["hips"], edit["chain1_01"], edit["stalk_01"], edit["stalk_02"]
     # Everything behind the middle hangs from the hips, not from a spine bone, so the spine bends
     # without moving the hind legs' tops.
-    for name in ("3_leg_01", "4_leg_01", "stalk_01.L", "stalk_01.R"):
+    for name in ("3_leg_01", "4_leg_01"):
         edit[name].use_connect = False
         edit[name].parent = hips
+    for stalk in STALKS:
+        for number in (4, 3, 2, 1):
+            if stalk % number in edit:
+                edit.remove(edit[stalk % number])
     for name in ("chain3_01", "chain2_02", "chain2_01"):
         edit.remove(edit[name])
     chest.tail = neck.head
@@ -181,6 +232,51 @@ def ears(rig, skin):
             group.add([vertex.index], held, "REPLACE")
 
 
+def _at(vertex):
+    """Where a vertex is: the export splits vertices along UV seams, so one place can hold several."""
+    return tuple(round(value, 5) for value in vertex.co)
+
+
+def close_holes(skin):
+    """Closes the generator's holes in the skin (one, on the small of the back) in the colour of the
+    skin beside each. A hole's ring can already hold a stray face of the generator's: that one stays."""
+    mesh = bmesh.new()
+    mesh.from_mesh(skin.data)
+    uvs = mesh.loops.layers.uv.active
+    edges_at = {}
+    for edge in mesh.edges:
+        edges_at.setdefault(tuple(sorted(map(_at, edge.verts))), []).append(edge)
+    following, corner, beside = {}, {}, {}
+    for edges in edges_at.values():
+        if len(edges) == 1 and len(edges[0].link_loops) == 1:
+            loop = edges[0].link_loops[0]
+            # Walked against its old face's direction, so the new faces point the same way.
+            following[_at(loop.link_loop_next.vert)] = _at(loop.vert)
+            corner[_at(loop.link_loop_next.vert)] = loop.link_loop_next.vert
+            beside[_at(loop.link_loop_next.vert)] = sum((each[uvs].uv for each in loop.face.loops), Vector((0.0, 0.0))) / 3.0
+    taken = {frozenset(map(_at, face.verts)) for face in mesh.faces}
+    while following:
+        ring = [min(following)]
+        while following[ring[-1]] != ring[0]:
+            ring.append(following.pop(ring[-1]))
+        following.pop(ring[-1])
+        facing = mathutils.geometry.normal([corner[point].co for point in ring])
+        colour = beside[ring[0]]
+        # A dented ring: the first corner whose fan stays inside it.
+        for root in range(len(ring)):
+            order = ring[root:] + ring[:root]
+            fan = [(order[0], order[index], order[index + 1]) for index in range(1, len(order) - 1)]
+            if all(mathutils.geometry.normal([corner[point].co for point in each]).dot(facing) > 0.0 for each in fan):
+                break
+        for triangle in fan:
+            if frozenset(triangle) not in taken:
+                face = mesh.faces.new([corner[point] for point in triangle])
+                for loop in face.loops:
+                    loop[uvs].uv = colour
+    mesh.to_mesh(skin.data)
+    mesh.free()
+
+
 def build(out):
     scene.reset(FPS)
     bpy.ops.import_scene.gltf(filepath=SOURCE)
@@ -190,15 +286,16 @@ def build(out):
         bpy.data.objects.remove(obj)
     rig.name, skin.name = "KalvrakkorMagmaRig", "KalvrakkorMagma"
     rigged.flatten(rig, skin)
+    close_holes(skin)
     scene.select_only(skin)
     bpy.ops.mesh.customdata_custom_splitnormals_clear()
     bpy.ops.object.shade_smooth()
     rename(rig, skin)
     ears(rig, skin)
-    lids, spots = marked_eyes.replace(rig, skin, palette(COLORS), FAINT_LIDS, marked=MARKED)
+    fan = tails.Fan(rig, skin, TAILS)
+    lids, spots = marked_eyes.replace(rig, skin, palette(COLORS), FAINT_LIDS, marked=MARKED, rim=True)
     attachments.add(rig, spots, [(NOSE, "head")])
     body = adopted.Body(rig, NOSE)
-    chains = {**FOLLOW, **adopted.follow(rig)}
     clips.animate(rig, {
         "Idle": clips.idle(),
         "Walk": clips.gait(WALK_FRAMES, WALK_STRIDE, body, clips.WALK, duty=WALK_DUTY, fold=0.0, lift=WALK_LIFT,
@@ -211,7 +308,7 @@ def build(out):
         **{name: adopted.lesser(clip, SHARE) for name, clip in clips.channel().items()},
         "Feed": clips.feed(forepaws=0.04),
         "Sleep": clips.sleep(clips.curled(BELLY_HEIGHT), SLEEP_PAWS),
-    }, SCALE, ground_meshes=[skin], chains=chains, limbs=adopted.limbs(rig), overlays=[lids.shut])
+    }, SCALE, ground_meshes=[skin], chains=FOLLOW, limbs=adopted.limbs(rig), overlays=[lids.shut, fan.move])
     scene.export_glb(out)
     print("MODEL", out, "triangles", scene.triangles(skin), "bones", len(rig.data.bones),
           "materials", len(skin.data.materials))

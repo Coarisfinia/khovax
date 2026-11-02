@@ -259,6 +259,7 @@
 	// Each harvest table (#1990), all read, named by its species id.
 	"harvest_tables": {
 		"kalvrakkor": "slices/loot/data/harvest_tables/kalvrakkor.jsonc",
+		"korvakkar": "slices/loot/data/harvest_tables/korvakkar.jsonc",
 		"kavrikka": "slices/loot/data/harvest_tables/kavrikka.jsonc",
 		"nuvvoluvvo": "slices/loot/data/harvest_tables/nuvvoluvvo.jsonc",
 		"ombulumo": "slices/loot/data/harvest_tables/ombulumo.jsonc",
