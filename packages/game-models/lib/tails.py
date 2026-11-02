@@ -324,8 +324,8 @@ class Fan:
         for index, welded in enumerate(surface.weld.tolist()):
             if welded not in owner:
                 continue
-            for element in list(skin.data.vertices[index].groups):
-                skin.vertex_groups[element.group].remove([index])
+            for group in [element.group for element in skin.data.vertices[index].groups]:
+                skin.vertex_groups[group].remove([index])
             number, along = owner[welded]
             for name, weight in self._shares(number, along, hips).items():
                 group = skin.vertex_groups.get(name) or skin.vertex_groups.new(name=name)
@@ -423,7 +423,7 @@ def _own_bones(tails, strongest):
 
 
 def _bent(rig, skin, tails, number):
-    """Bends the first of tail `number`'s bones: how far its tip moves, and the most any other tail's
+    """Bends the lowest of the bones tail `number` counts as its own: how far its tip moves, and the most any other tail's
     skin moves."""
     tail = tails[number]
     chain = {bone.name: bone for bone in rig.pose.bones if bone.name in tail.bones}
@@ -479,7 +479,6 @@ def report(rig, objects, count, hips="hips"):
     for bone in rig.pose.bones:
         bone.location, bone.scale = (0.0, 0.0, 0.0), (1.0, 1.0, 1.0)
         bone.rotation_quaternion = (1.0, 0.0, 0.0, 0.0)
-    rigged_ok = []
     for number, tail in enumerate(tails):
         label = "tail %d (tip %.2f, %.2f, %.2f)" % (number + 1, *rest[tail.tip])
         share = sum(holds[number].get(bone, 0.0) for bone in tail.bones)
@@ -495,7 +494,6 @@ def report(rig, objects, count, hips="hips"):
             lines.append("FAIL %s: a bend of %s moves its tip %.3f m (needs %.3f) and another tail %.3f m (at most %.3f)" % (
                 label, tail.bones[0], moved, MOVES * tail.length, others, STAYS))
             continue
-        rigged_ok.append(number)
         lines.append("ok %s: %d bones of its own, %.0f%% of it; a bend moves its tip %.3f m, the others %.3f m" % (
             label, len(tail.bones), 100.0 * share, moved, others))
     actions = sorted(bpy.data.actions, key=lambda action: action.name)

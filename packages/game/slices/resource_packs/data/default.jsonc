@@ -181,10 +181,10 @@
 		"first_domination": "slices/quests/data/first_domination.jsonc",
 		"guild_charts_morwe_wudhen": "slices/quests/data/guild_charts_morwe_wudhen.jsonc",
 		"guild_holds_edhra_tewk": "slices/quests/data/guild_holds_edhra_tewk.jsonc",
+		"hound_magma": "slices/quests/data/hound_magma.jsonc",
 		"lumwen_hoal_fork": "slices/quests/data/lumwen_hoal_fork.jsonc",
 		"pond_chest": "slices/quests/data/pond_chest.jsonc",
 		"pup_crystal": "slices/quests/data/pup_crystal.jsonc",
-		"hound_magma": "slices/quests/data/hound_magma.jsonc",
 		"pup_rime": "slices/quests/data/pup_rime.jsonc",
 		"sprite_ribbon": "slices/quests/data/sprite_ribbon.jsonc",
 		"tadpole_pondweed": "slices/quests/data/tadpole_pondweed.jsonc",
@@ -259,8 +259,8 @@
 	// Each harvest table (#1990), all read, named by its species id.
 	"harvest_tables": {
 		"kalvrakkor": "slices/loot/data/harvest_tables/kalvrakkor.jsonc",
-		"korvakkar": "slices/loot/data/harvest_tables/korvakkar.jsonc",
 		"kavrikka": "slices/loot/data/harvest_tables/kavrikka.jsonc",
+		"korvakkar": "slices/loot/data/harvest_tables/korvakkar.jsonc",
 		"nuvvoluvvo": "slices/loot/data/harvest_tables/nuvvoluvvo.jsonc",
 		"ombulumo": "slices/loot/data/harvest_tables/ombulumo.jsonc",
 		"ombuwomo": "slices/loot/data/harvest_tables/ombuwomo.jsonc",
@@ -280,10 +280,10 @@
 		"dew": "slices/loot/data/materials/dew.jsonc",
 		"feather": "slices/loot/data/materials/feather.jsonc",
 		"hide": "slices/loot/data/materials/hide.jsonc",
+		"magma_core": "slices/loot/data/materials/magma_core.jsonc",
 		"moss": "slices/loot/data/materials/moss.jsonc",
 		"pondweed": "slices/loot/data/materials/pondweed.jsonc",
 		"revive_herb": "slices/loot/data/materials/revive_herb.jsonc",
-		"magma_core": "slices/loot/data/materials/magma_core.jsonc",
 		"rime_shard": "slices/loot/data/materials/rime_shard.jsonc",
 		"stone": "slices/loot/data/materials/stone.jsonc",
 		"wind_ribbon": "slices/loot/data/materials/wind_ribbon.jsonc"

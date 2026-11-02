@@ -1,6 +1,7 @@
 // What Brekhal Varn's chest holds (#694), a placeholder to tune (#960): crafting supplies, stone of
 // the pass, sometimes a piece of basic gear, and more often than its ground the rime shard a
-// Kavrikka needs to ascend (#1733, #1260) the wind ribbon a Tikazzelu needs (#1732) and the magma core a Kalvrakkor needs (#1771). Always
+// Kavrikka needs to ascend (#1733, #1260), the wind ribbon a Tikazzelu needs (#1732) and the magma
+// core a Kalvrakkor needs (#1771). Always
 // something, never nothing.
 {
 	"id": "pass_chest",

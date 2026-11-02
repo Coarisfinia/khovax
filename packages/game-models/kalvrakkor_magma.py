@@ -268,6 +268,8 @@ def close_holes(skin):
             fan = [(order[0], order[index], order[index + 1]) for index in range(1, len(order) - 1)]
             if all(mathutils.geometry.normal([corner[point].co for point in each]).dot(facing) > 0.0 for each in fan):
                 break
+        else:
+            raise ValueError("no fan fills the hole at %s" % (ring,))
         for triangle in fan:
             if frozenset(triangle) not in taken:
                 face = mesh.faces.new([corner[point] for point in triangle])

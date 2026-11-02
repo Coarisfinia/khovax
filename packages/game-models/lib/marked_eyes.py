@@ -167,12 +167,12 @@ BEASTS = {
     "assets/drakkudor/drakkudor.glb": GLOW,
     # Pale lanterns, weighted only 0.41 to the head (the muzzle and neck hold the rest).
     "assets/fohossa/fohossa.glb": Marked("PALE", _pale, weight=0.3),
-    # Two eye pieces painted by frostfire_hound.py, MAGMA_EYE's amber and ICE_EYE's pale cyan on a
-    # head of ice blue (hue about 210) and amber cracks. The generator set them off the middle, one
-    # ahead of the other: they mirror each other only roughly, across x = 0.068.
     # Black ovals on a head of dark basalt, which DARK takes for one big eye; ours replaced them on a
     # head standing a little off the middle (kalvrakkor_magma.py).
     "assets/kalvrakkor_magma/kalvrakkor_magma.glb": Marked("BLACK", _black, middle=0.0125),
+    # Two eye pieces painted by frostfire_hound.py, MAGMA_EYE's amber and ICE_EYE's pale cyan on a
+    # head of ice blue (hue about 210) and amber cracks. The generator set them off the middle, one
+    # ahead of the other: they mirror each other only roughly, across x = 0.068.
     "assets/frostfire_hound/frostfire_hound.glb": Marked("AMBER/ICE", glow((36.0, 46.0), (180.0, 195.0)),
                                                          middle=0.068, mirror=1.0),
 }
