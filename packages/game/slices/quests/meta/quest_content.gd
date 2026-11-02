@@ -41,7 +41,7 @@ static func load_quests(
 		SpeciesContent.load_species(),
 		FactionContent.load_factions(faction_directory),
 		DialogContent.load_dialogs(dialog_directory),
-		[LootContent.load_loot_tables(), LootContent.load_loot_tables(LootContent.HARVEST_DIR)],
+		[LootContent.load_loot_tables(), LootContent.load_loot_tables(LootContent.HARVEST_KEY)],
 	)
 
 
@@ -57,7 +57,7 @@ static func _from_cache() -> QuestContent:
 		SpeciesContent.cached(),
 		FactionContent.cached(),
 		DialogContent.cached(),
-		[LootContent.cached(), LootContent.cached(LootContent.HARVEST_DIR)],
+		[LootContent.cached(), LootContent.cached(LootContent.HARVEST_KEY)],
 	)
 
 

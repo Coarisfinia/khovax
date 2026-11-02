@@ -1,7 +1,7 @@
 # The pack builder
 
 Builds a resource pack for the game: textures, models, regions, realms, quests, species, tile kinds,
-translations, loot tables and materials that add to or replace the game's own. A pack is data,
+translations, loot tables, harvest tables and materials that add to or replace the game's own. A pack is data,
 never code. The builder refuses anything else, and the game checks every pack again before it
 loads it.
 
@@ -27,6 +27,7 @@ my_pack/
   species/...       species: .jsonc, in the game's species format
   tiles/...         tile kinds: .jsonc, in the game's tile blueprint format
   translations/...  translation catalogues: gettext .po, one per language
+  harvest_tables/... harvest tables: .jsonc, in the game's loot table format, by species id
   loot_tables/...   loot tables: .jsonc, in the game's loot table format
   materials/...     materials: .jsonc, in the game's material format
 ```
@@ -53,6 +54,7 @@ at plain files inside the pack. Anything else gets the whole pack refused.
 	"translations": { "de": "translations/de.po" },
 	"tiles": { "my_tile": "tiles/my_tile.jsonc" },
 	"loot_tables": { "my_loot": "loot_tables/my_loot.jsonc" },
+	"harvest_tables": { "my_species": "harvest_tables/my_species.jsonc" },
 	"materials": { "my_material": "materials/my_material.jsonc" }
 }
 ```

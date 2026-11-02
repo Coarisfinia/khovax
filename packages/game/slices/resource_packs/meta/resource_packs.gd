@@ -119,6 +119,11 @@ static func loot_tables() -> Dictionary[String, String]:
 	return _every("loot_tables")
 
 
+## Every harvest table the loaded packs provide, by species id (#1990).
+static func harvest_tables() -> Dictionary[String, String]:
+	return _every("harvest_tables")
+
+
 ## Every material (#1953) the loaded packs have, its file as a res:// path by its id, in id order:
 ## the first pack that has an id gives its file, so a player's pack can add or replace one.
 static func materials() -> Dictionary[String, String]:
