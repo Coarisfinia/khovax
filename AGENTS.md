@@ -707,10 +707,12 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
     - **A brand-new beast:** its vibe, its type and 20 or more base prompts for the image
       generator, as diverse, unique and weird as possible: no generic puppies or cute blobs.
     - **A baby form or any other evolution** (owner, #1754): the best picture of the earlier form
-      (a clean render), attached as the reference, and 20 variations of the evolution copypasta
-      in the model skill, word for word, each with its own change as a plain sentence and its
-      own body line: for a later form `Its body also evolves. It becomes <how> - redesign it.`
-      ("more sturdy" by default). **An evolved form redesigns its body, never copies the earlier one** (owner's
+      (a clean render), attached as the reference, and 20 variations of its evolution copypasta
+      in the model skill, word for word, including capitals and punctuation, each with its own
+      change as a plain sentence. A later form uses the owner's next-form prompt (#1993): `Draw
+      its next form: the same creature line.`, a `The change:` line and `More powerful body
+      structure! it's the next evolution, so make it fancier, more <theme>-themed, more
+      interesting.`, with the creature's own theme. **An evolved form redesigns its body, never copies the earlier one** (owner's
       ground rule, 2026-10-30, #1821). Every variation adds something unique, unusual or
       fantastical, such as nine tails, a skateboard, wings, extra heads or a landscape on its
       back, and a form later than the pictured one looks more powerful and more fantastical,
@@ -821,7 +823,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   runners to this public repository. **The one exception** (owner's pick on #1867, #1874):
   `approve-cleared.yml` runs on `pull_request_target` (`labeled` only), with a
   read-only token, and never checks out or runs anything from the pull request. It approves as a
-  separate reviewer GitHub App (Pull requests: write, Contents: read), whose key is
+  separate reviewer GitHub App (Pull requests: write, Contents: write), whose key is
   the secret `REVIEWER_APP_KEY` (its ID the variable `REVIEWER_APP_ID`) of the environment
   `approve-cleared`, which only `main` may use: a workflow on any other branch can't approve.
   "Allow GitHub Actions to create and approve pull requests" stays off (owner's pick on #1874).

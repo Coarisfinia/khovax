@@ -44,25 +44,42 @@ prompt says about its face. It only marks where the eyes go and how big they are
 replaces them with our own eyes, which blink and shut (`lib/marked_eyes.py`, below). A monster
 designed without eyes leaves the sentence out and says so in its issue.
 
-**Every evolution prompt is this copypasta** (owner, #1754; reworded by the owner's ground rule
-of 2026-10-30, #1821): a baby form or any other evolution of an existing beast is asked for with
-the best picture of the earlier form attached as the reference and this block, word for word, only
-its two `<…>` parts differing between the issue's 20 variations. It ends with the eye sentence too.
+**Every evolution prompt is one of these two copypastas** (owner, #1754; reworded by the owner's
+ground rule of 2026-10-30, #1821): a baby form or any other evolution of an existing beast is asked
+for with the best picture of the earlier form attached as the reference and its block, word for
+word, including its capitals and punctuation, only its `<…>` parts differing between the issue's 20
+variations. Each ends with the eye sentence too.
 **An evolved form redesigns its body; it never copies the earlier form's body** (owner's ground
 rule, 2026-10-30, #1821): copying it isn't interesting. So each variation has a change, written as
 a plain sentence, that adds something unique, unusual or fantastical, such as nine tails, a
-skateboard, wings, extra heads or a landscape on its back, and its own body line saying how the
-body becomes different. A form later than the pictured one looks more powerful and more
-fantastical, never the same animal recoloured (owner, #1772); its body line is free per variation,
-with "more sturdy" as the default. **A baby form** (owner's pick on #1823, 2026-10-30) says
-`Draw its baby form.` instead of `Draw its evolved form.`, and its body line is always
-`Its body also changes. It becomes younger and smaller - redesign it.`
+skateboard, wings, extra heads or a landscape on its back. A form later than the pictured one looks
+more powerful and more fantastical, never the same animal recoloured (owner, #1772).
+
+**A later form** (the owner's prompt, #1993, which made the Kalvrakkor's magma form, #1771): two
+parts change per prompt, the `The change:` line and the theme in `more <theme>-themed`, the
+creature's own theme (the owner's prompt says `more magma-themed`).
 
 ```text
-Generate a brand-new image of a creature. Draw its evolved form.
+Generate a brand-new image of a creature. The attached picture is only a reference for it: it shows this creature's earlier form. Draw its next form: the same creature line.
+The change: <the change, as a plain sentence, e.g. "nine long tails of flowing magma fan out behind it like a fox spirit's, each tipped with a glowing ember-shaped crystal.">
+
+More powerful body structure! it's the next evolution, so make it fancier, more <theme>-themed, more interesting.
+
+
+One single creature, centred and alone, in a front three-quarter view, its whole body in frame with space all around it. The background is plain, flat light grey and continues unbroken beneath it.
+Pose: a calm, symmetrical rest pose, head level, mouth closed. No loose or floating parts, no effects such as sparks, steam or smoke.
+Style: a stylized game creature with large, readable shapes and flat matte colours, smooth like a clay 3D render and ready for cel shading: plain flat colour areas without drawn outlines, painted highlights or painted shadows. Soft, even, shadowless light. No text.
+Two small, plain, flat black oval eyes.
+```
+
+**A baby form** (owner's pick on #1823, 2026-10-30) keeps its own wording: only the change differs
+between variations.
+
+```text
+Generate a brand-new image of a creature. Draw its baby form.
 <the change, as a plain sentence, e.g. "It has grown a pair of great wings of frosted ice, folded at its sides.">
 
-Its body also evolves. It becomes <how, e.g. "more sturdy"> - redesign it.
+Its body also changes. It becomes younger and smaller - redesign it.
 
 One single creature, centred and alone, in a front three-quarter view, its whole body in frame with space all around it. The background is plain, flat light grey and continues unbroken beneath it.
 Pose: a calm, symmetrical rest pose, head level, mouth closed. No loose or floating parts, no effects such as sparks, steam or smoke.
@@ -350,7 +367,7 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
    and the import takes it from there as the `<download.glb>` of steps 2 and 3. The face carries only the prompt's two flat black ovals
    (#1682), never eyes Meshy draws or details: ours replace them (step 5). Meshy rigs it first wherever it can (#1514);
    where it can't, we build our own Blender rig (#1732, section 2). An evolution's image comes
-   from the copypasta above (#1754).
+   from the copypastas above (#1754).
 2. **Inspect:** `uv run --locked packages/game-models/inspect_meshy.py <download.glb>` (#1523),
    one report on its mesh, material, painted eyes, body columns and rig. Read it before measuring
    anything by hand. It warns when the download is far above step 1's triangle target.
