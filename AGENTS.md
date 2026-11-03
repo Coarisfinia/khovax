@@ -684,9 +684,12 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   can resolve is never filed as a new model. Go through the models there are
   (`packages/game/assets/`, `Coarisfinia/khovax-sources`) and retexture one from the shared
   texture set (the model skill). **Ore deposits and ore/ingot items are exceptions**
-  (owner, #1949, #1950): every ore and ingot has its own model, with a unique silhouette and
-  geometry as well as colour; deposits also have distinct vein geometry. No generic retextured
-  ore lump, and simply retexturing or recolouring the copper deposit is not an option.
+  (owner, #1949, #1950): every ore and ingot, including copper and iron, has its own model,
+  with a unique silhouette and geometry as well as colour; deposits also have distinct vein
+  geometry. No generic retextured ore lump, and simply retexturing or recolouring the copper deposit is not an option.
+  **Ingots stay vaguely rectangular but dynamic, creative and distinctive** (owner, #2036):
+  never plain bricks or variants distinguished only by shallow top details. Generated ingot
+  references depict solid metal with a closed underside, never bowls, trays or hollow shells.
 - **Every image prompt in an issue sits in its own accordion** (owner's ground rule, #1825), as on
   #1770 to #1772: `<details><summary>N. short idea</summary>` around a `text` block, for monsters
   and other assets alike. The summary gives the option's concrete, human-readable vibe or design
@@ -701,6 +704,19 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   materials and the UV/mapping needs for applying those textures. A textured-export exception
   for a reference-specific face, pattern or other detail is explicit for that asset, never a
   blanket instruction to texture everything.
+- **Broad model ideation uses diverse keyword banks and real random draws** (owner, #2036).
+  The current brief starts with 100 creature bases, 200 concepts/vibes and 100 randomized draws; these
+  are starting sizes for that brief, not universal quotas for routine model edits. Actually randomize
+  combinations, then use judgement to reinterpret, recombine or discard them: inspiration, not law.
+  Use a fresh, unused concept/vibe bank for each new round, including object-based creature rounds.
+  Keep a used-concept ledger with the round’s bank, selected/rejected labels and drawn pairings;
+  exclude those concepts and pairings from later rounds rather than recycling or renaming them.
+  Screen candidates against the existing roster and prompts and recognizable familiar-media overlap.
+  Prefer coherent anatomy, behaviour and readable silhouettes over recolours, accessories or word
+  salad. Repeat, expand the banks and redraw until enough strong, distinct ideas emerge; no fixed
+  batch or retry cap replaces the usage rules. Finish started work as required and track further work
+  when the budget bars new starts. Do not claim globally provable uniqueness. Existing model-request
+  eligibility rules still apply.
 - **If you need a new model** (owner's ground rule, #1575):
   - A. **A new monster:** file a `question` issue for the owner, one issue per beast (owner's
     ground rule, #1726). The owner makes the model from it.
@@ -727,18 +743,21 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
     with the model skill's prop block.
 - **Keep at least 20 active model requests on file at all times** (owner, #2002): count only
   unsupplied models the owner can generate now, each meeting the prompt, vibe-summary and
-  texture-decision requirements above. Supplied exports, import tasks and deferred requests do not count. When
-  exports arrive, track their import, remove them from the active list and replenish it
-  automatically. Do not pad the list with unsupported creatures or needs existing suitable
-  models/textures resolve; the ore/ingot exception above still holds.
+  texture-decision requirements above. Supplied exports, import tasks and deferred requests do not
+  count. On accepted model delivery (owner, #2036), track the import and completely remove its
+  entry and every prompt option from active prompt lists: no supplied/done/filed-as heading or
+  replacement status entry. Source links and implementation status belong on import issues.
+  Replenish the active minimum automatically with genuine eligible requests; never pad it with
+  unsupported creatures or needs existing suitable models/textures resolve. The ore/ingot
+  exception above still holds. An explicitly rejected trial is archived for reference and does
+  not fulfil its request; keep that request active while the owner retries.
 - **Learn from supplied models before requesting more in those groups** (owner, #1998, #2002):
   discard further player-part prompts for now; resume only after the supplied hair and full-body
   cloak are implemented and their lessons recorded. Request further trees only after importing
   the supplied savanna tree and learning from it. These deferred groups do not fill the active
   20-request minimum.
 - **The world-asset list, #1824** (owner's ground rule, #1825): the issue of non-monster assets,
-  3 prompts each. When the owner submits an asset, file a follow-up issue for its import and take
-  the asset off the list.
+  3 prompts each. Accepted deliveries follow the active-request removal and import rule above.
 - **A beast exists only from the owner's vibe or model** (owner's ground rule, #1686): prompt
   suggestions, such as the brainstormed lists for A, make no beast: only the owner's vibe or model
   does. They're never rewritten, asked about or tracked as creatures, and a rule about "every beast"

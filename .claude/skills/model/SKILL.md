@@ -11,10 +11,12 @@ scenery it comes from a free licensed source; agents import, rig, animate, check
 work on the tooling. Needing a new model goes as AGENTS.md
 says (#1575): a `question` issue with base prompts for a monster, a free licensed source for
 anything else, and never a new model for what a retexture of an existing one resolves (#1847),
-except ore deposits and ore/ingot items (#1949, #1950): every ore and ingot needs its own model,
-with a unique silhouette and geometry as well as colour; deposits also have distinct vein geometry.
+except ore deposits and ore/ingot items (#1949, #1950): every ore and ingot, including copper and iron,
+needs its own model, with a unique silhouette and geometry as well as colour; deposits also have distinct vein geometry.
 No generic retextured ore lump, and simply retexturing or recolouring the copper deposit is not an
-option.
+option. **Ingots stay vaguely rectangular but dynamic, creative and distinctive** (owner, #2036):
+never plain bricks or variants distinguished only by shallow top details. Generated ingot references
+depict solid metal with a closed underside, never bowls, trays or hollow shells.
 
 **Every model request has at least three complete, genuinely distinct prompts** (owner, #1996),
 for creatures, props, items and player parts alike, each in its own accordion as AGENTS.md says.
@@ -28,12 +30,31 @@ already have. For a shape-only export, describe the material separation and UV/m
 we can apply those textures. State a textured-export exception per asset when a reference-specific
 face, pattern or other detail needs it; never request generated textures for everything by default.
 
+**Broad model ideation uses diverse keyword banks and real random draws** (owner, #2036).
+The current brief starts with 100 creature bases, 200 concepts/vibes and 100 randomized draws; these
+are starting sizes for that brief, not universal quotas for routine model edits. Actually randomize
+combinations, then use judgement to reinterpret, recombine or discard them: inspiration, not law.
+Use a fresh, unused concept/vibe bank for each new round, including object-based creature rounds.
+Keep a used-concept ledger with the round’s bank, selected/rejected labels and drawn pairings;
+exclude those concepts and pairings from later rounds rather than recycling or renaming them.
+Screen candidates against the existing roster and prompts and recognizable familiar-media overlap.
+Prefer coherent anatomy, behaviour and readable silhouettes over recolours, accessories or word
+salad. Repeat, expand the banks and redraw until enough strong, distinct ideas emerge; no fixed
+batch or retry cap replaces the usage rules. Finish started work as required and track further work
+when the budget bars new starts. Do not claim globally provable uniqueness. Existing model-request
+eligibility rules still apply.
+
 **Keep at least 20 active, unsupplied model requests on file at all times** (owner, #2002),
 each meeting the prompt, vibe-summary and texture-decision requirements above. A supplied export,
-an import task or a deferred request does not count. When exports arrive, track their imports,
-remove them from the active list and replenish it automatically with genuine eligible model
-needs; never pad it with unsupported creatures or requests existing suitable models/textures
-resolve. The ore/ingot exception still holds. **Discard further player-part prompts for now**
+an import task or a deferred request does not count. On accepted model delivery (owner, #2036),
+track the import and completely remove its entry and every prompt option from active prompt lists:
+no supplied/done/filed-as heading or replacement status entry. Source links and implementation status
+belong on import issues. Replenish the active minimum automatically with genuine eligible model
+needs; never pad it with unsupported creatures or requests existing suitable models/textures resolve.
+An explicitly rejected trial is archived for reference and does not fulfil its request; keep that
+request active while the owner retries. The ore/ingot exception still holds.
+
+**Discard further player-part prompts for now**
 (owner, #1998): resume only after the supplied hair and full-body cloak are implemented and their
 lessons recorded. Request further trees only after importing and learning from the supplied
 savanna tree. Neither deferred group fills the active minimum.
