@@ -704,6 +704,16 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   materials and the UV/mapping needs for applying those textures. A textured-export exception
   for a reference-specific face, pattern or other detail is explicit for that asset, never a
   blanket instruction to texture everything.
+- **Broad creature ideation uses diverse keyword banks and real random draws** (owner, #2036).
+  The current brief starts with 100 creature bases, 200 concepts/vibes and 100 randomized draws; these
+  are starting sizes for that brief, not universal quotas for routine model edits. Actually randomize
+  combinations, then use judgement to reinterpret, recombine or discard them: inspiration, not law.
+  Screen candidates against the existing roster and prompts and recognizable familiar-media overlap.
+  Prefer coherent anatomy, behaviour and readable silhouettes over recolours, accessories or word
+  salad. Repeat, expand the banks and redraw until enough strong, distinct ideas emerge; no fixed
+  batch or retry cap replaces the usage rules. Finish started work as required and track further work
+  when the budget bars new starts. Do not claim globally provable uniqueness. Existing model-request
+  eligibility rules still apply.
 - **If you need a new model** (owner's ground rule, #1575):
   - A. **A new monster:** file a `question` issue for the owner, one issue per beast (owner's
     ground rule, #1726). The owner makes the model from it.
