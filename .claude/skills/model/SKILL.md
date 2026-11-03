@@ -11,10 +11,12 @@ scenery it comes from a free licensed source; agents import, rig, animate, check
 work on the tooling. Needing a new model goes as AGENTS.md
 says (#1575): a `question` issue with base prompts for a monster, a free licensed source for
 anything else, and never a new model for what a retexture of an existing one resolves (#1847),
-except ore deposits and ore/ingot items (#1949, #1950): every ore and ingot needs its own model,
-with a unique silhouette and geometry as well as colour; deposits also have distinct vein geometry.
+except ore deposits and ore/ingot items (#1949, #1950): every ore and ingot, including copper and iron,
+needs its own model, with a unique silhouette and geometry as well as colour; deposits also have distinct vein geometry.
 No generic retextured ore lump, and simply retexturing or recolouring the copper deposit is not an
-option.
+option. **Ingots stay vaguely rectangular but dynamic, creative and distinctive** (owner, #2036):
+never plain bricks or variants distinguished only by shallow top details. Generated ingot references
+depict solid metal with a closed underside, never bowls, trays or hollow shells.
 
 **Every model request has at least three complete, genuinely distinct prompts** (owner, #1996),
 for creatures, props, items and player parts alike, each in its own accordion as AGENTS.md says.
@@ -30,10 +32,15 @@ face, pattern or other detail needs it; never request generated textures for eve
 
 **Keep at least 20 active, unsupplied model requests on file at all times** (owner, #2002),
 each meeting the prompt, vibe-summary and texture-decision requirements above. A supplied export,
-an import task or a deferred request does not count. When exports arrive, track their imports,
-remove them from the active list and replenish it automatically with genuine eligible model
-needs; never pad it with unsupported creatures or requests existing suitable models/textures
-resolve. The ore/ingot exception still holds. **Discard further player-part prompts for now**
+an import task or a deferred request does not count. On accepted model delivery (owner, #2036),
+track the import and completely remove its entry and every prompt option from active prompt lists:
+no supplied/done/filed-as heading or replacement status entry. Source links and implementation status
+belong on import issues. Replenish the active minimum automatically with genuine eligible model
+needs; never pad it with unsupported creatures or requests existing suitable models/textures resolve.
+An explicitly rejected trial is archived for reference and does not fulfil its request; keep that
+request active while the owner retries. The ore/ingot exception still holds.
+
+**Discard further player-part prompts for now**
 (owner, #1998): resume only after the supplied hair and full-body cloak are implemented and their
 lessons recorded. Request further trees only after importing and learning from the supplied
 savanna tree. Neither deferred group fills the active minimum.
