@@ -30,10 +30,13 @@ already have. For a shape-only export, describe the material separation and UV/m
 we can apply those textures. State a textured-export exception per asset when a reference-specific
 face, pattern or other detail needs it; never request generated textures for everything by default.
 
-**Broad creature ideation uses diverse keyword banks and real random draws** (owner, #2036).
+**Broad model ideation uses diverse keyword banks and real random draws** (owner, #2036).
 The current brief starts with 100 creature bases, 200 concepts/vibes and 100 randomized draws; these
 are starting sizes for that brief, not universal quotas for routine model edits. Actually randomize
 combinations, then use judgement to reinterpret, recombine or discard them: inspiration, not law.
+Use a fresh, unused concept/vibe bank for each new round, including object-based creature rounds.
+Keep a used-concept ledger with the round’s bank, selected/rejected labels and drawn pairings;
+exclude those concepts and pairings from later rounds rather than recycling or renaming them.
 Screen candidates against the existing roster and prompts and recognizable familiar-media overlap.
 Prefer coherent anatomy, behaviour and readable silhouettes over recolours, accessories or word
 salad. Repeat, expand the banks and redraw until enough strong, distinct ideas emerge; no fixed
