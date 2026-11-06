@@ -574,6 +574,22 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **Monsters may be strange** (owner, #990): obscure, barely alive, mystical or warped monsters
   are encouraged (a swirling vortex with glowing rocks for eyes is a wonderful creature); not
   every monster has four legs and barks.
+- **Creature prompts are concept-first and prescribe no anatomy by default** (owner's ground rule
+  on #2052, 2026-11-03): "These instructions about "two legs", "mouth open", "neutral rigging pose"
+  etc. are severely limiting the image gen and overall creativity. Only add mouth, limb and posture
+  instructions when it's really necessary." Every creature prompt, base or evolution, leads with
+  its core vibe (an evolution copypasta's change right after the owner's opening line) and names
+  no facial details, eye markers, mouth position, limb count or posture
+  unless its concept truly needs it: no fixed eye sentence (it superseded #1682's), no blanket
+  rest-pose or rigging-pose line, and no other universal anatomy recipe in their place. Our eye
+  import tooling never dictates the design (an eyeless design goes into the eye check's `EYELESS`
+  list). A concept carries as much visual weight as its base
+  shape (owner, #2051): it transforms the whole anatomy, material, form and behaviour (a melting
+  body, a creature wielding a form its concept gives it), never only a shorter beak, a swapped crest
+  or a small decoration; abstract, loose, floating, thread-like or physically impossible forms stay
+  as bold as they are. Every creature prompt explicitly tells the image generator to be bold and
+  creative, keeping the creature readable. Flight shapes a source only for a creature that flies
+  (the model skill).
 - **Monsters are wolf-smart, and humanoids are never fought** (owner's worldbuilding rules): no
   monster is smarter than an average wild wolf (packs with leaders and ambushes, never talking).
   The player fights only monsters, never humanoids. Factions may hate the player, and the player can
@@ -591,6 +607,13 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   `grazer`, `drinker`, `predator`); the content flow refuses a species that hasn't. A sleeping
   monster wakes only when struck or enraged, unless its species is a `light_sleeper` (owner, #1230):
   then a player coming next to it wakes it too.
+- **Crafting keeps to the owner's boundaries** (owner, #2038, #2039): **durability is banned**: no
+  durability, wear or repair loop, also not as a default trade-off for a crafted item or tool. The
+  seed pod is the one consumable respec item, never a potion; potions are separate craftable items
+  of the hybrid trait system (recognizable recipes with a few explicit, visible trait choices).
+  Ingredients fit their category: a rock is no potion ingredient, and a generic material slot never
+  takes everything in the inventory. Today's supplied tool models are icons and world decoration:
+  they authorize no equipping, harvesting or tool-part system.
 - **Randomness sparingly** (owner's ground rule, #1602): random rolls feel unsatisfying,
   especially on enemies. Prefer deterministic, readable rules (counters, thresholds, every Nth
   time, cooldowns) over chance; a new chance-based mechanic needs a reason in its issue.
@@ -699,6 +722,14 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   **Ingots stay vaguely rectangular but dynamic, creative and distinctive** (owner, #2036):
   never plain bricks or variants distinguished only by shallow top details. Generated ingot
   references depict solid metal with a closed underside, never bowls, trays or hollow shells.
+- **Ordinary tools share base models; legendary parts, gold and copper get their own** (owner,
+  #2039): an ordinary tool family (an iron axe, pick or shovel head, a handle) is one base model,
+  varied per material by material and shading or reusable procedural shape treatments (crystal a
+  broad faceted, jagged surface, moss a softer one), with semantic attachment markers for later
+  modifiers and accessories: the working edge or tip, the surface centre, the handle centre and the
+  grip. A unique legendary part and a complete legendary item get unique models, and gold and copper
+  get extra, fancier models, not recolours. Don't request every combination now; the ore, deposit
+  and ingot rules above are unchanged. The model skill has the details.
 - **Every image prompt in an issue sits in its own accordion** (owner's ground rule, #1825), as on
   #1770 to #1772: `<details><summary>N. short idea</summary>` around a `text` block, for monsters
   and other assets alike. The summary gives the option's concrete, human-readable vibe or design
@@ -721,7 +752,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   Keep a used-concept ledger with the round’s bank, selected/rejected labels and drawn pairings;
   exclude those concepts and pairings from later rounds rather than recycling or renaming them.
   Screen candidates against the existing roster and prompts and recognizable familiar-media overlap.
-  Prefer coherent anatomy, behaviour and readable silhouettes over recolours, accessories or word
+  Prefer bold concepts with readable silhouettes (abstract, loose or impossible forms included,
+  #2052) over recolours, accessories or word
   salad. Repeat, expand the banks and redraw until enough strong, distinct ideas emerge; no fixed
   batch or retry cap replaces the usage rules. Finish started work as required and track further work
   when the budget bars new starts. Do not claim globally provable uniqueness. Existing model-request
@@ -741,7 +773,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
       ground rule, 2026-10-30, #1821). Every variation adds something unique, unusual or
       fantastical, such as nine tails, a skateboard, wings, extra heads or a landscape on its
       back, and a form later than the pictured one looks more powerful and more fantastical,
-      never the same animal recoloured (owner, #1772). A baby form's prompt says `Draw its baby
+      never the same animal recoloured (owner, #1772). The copypastas carry no pose, mouth or
+      eye line (#2052, above). A baby form's prompt says `Draw its baby
       form.` and `Its body also changes. It becomes younger and smaller - redesign it.` (owner's
       pick on #1823, 2026-10-30).
     - **Every beast is rigged and animated by us** (owner, #1732, #1754): a model Meshy can't rig
@@ -756,6 +789,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   count. On accepted model delivery (owner, #2036), track the import and completely remove its
   entry and every prompt option from active prompt lists: no supplied/done/filed-as heading or
   replacement status entry. Source links and implementation status belong on import issues.
+  A concept image among the owner's downloads may be used as a reference or ignored (#2051), but
+  alone it never fulfils a requested 3D-model delivery: the request stays active until its model
+  export is supplied.
   Replenish the active minimum automatically with genuine eligible requests; never pad it with
   unsupported creatures or needs existing suitable models/textures resolve. The ore/ingot
   exception above still holds. An explicitly rejected trial is archived for reference and does
