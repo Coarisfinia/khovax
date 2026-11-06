@@ -10,7 +10,8 @@ The texts come from:
 - content data: the fields its schema marks with "x-translate": true, followed through $ref,
   items, the combinators and if/then/else, so a new player-facing field is marked once, where it's
   declared;
-- realms: the name (its title, #1710), codex entry and gloss of each realms/<id>.md.
+- realms: the name (its title, #1710), codex entry and gloss of each realm,
+  resourcepacks/default/realms/<id>.md (#1978).
 
 Texts are kept as written, text tags (${…}) included: a tag is resolved after the line is
 translated. Each entry names the files it comes from, without line numbers, so moving a line
@@ -321,7 +322,9 @@ def entries() -> tuple[list[Entry], list[tuple[str, str]]]:
     """Every translatable text, each once with every file it's in, and the conflicts (a message
     and its file): one text with two plurals, or both with and without one, which gettext can't
     hold in one entry."""
-    files = git_files("*.gd", "*.tscn", "core/data/*.jsonc", "slices/*/data/*.jsonc", "realms/*.md")
+    files = git_files(
+        "*.gd", "*.tscn", "core/data/*.jsonc", "slices/*/data/*.jsonc", "resourcepacks/default/realms/*.md"
+    )
     # The tools and tests are never shown to a player.
     files = [path for path in files if not path.startswith(("tools/", "tests/"))]
     marked: dict[str, set[tuple[str, ...]]] = {}

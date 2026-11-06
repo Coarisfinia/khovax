@@ -9,15 +9,15 @@ msgstr ""
 msgid "Loading the world…"
 msgstr ""
 
-#: realms/ardvaun.md
+#: resourcepacks/default/realms/ardvaun.md
 msgid "Ardvaun"
 msgstr ""
 
-#: realms/ardvaun.md
+#: resourcepacks/default/realms/ardvaun.md
 msgid "The high land at the heart of the world, where the settlers made their first camps and named the ground in Land-speech. Every realm's name ends in -vaun, the Land-speech word for land."
 msgstr ""
 
-#: realms/ardvaun.md
+#: resourcepacks/default/realms/ardvaun.md
 msgid "high land, heart land"
 msgstr ""
 

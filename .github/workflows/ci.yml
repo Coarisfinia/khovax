@@ -113,6 +113,11 @@ jobs:
           uv lock --check
           uv run --locked python -c 'import sys; print(f"Python {sys.version}")'
 
+      - name: "🔗 Link the resource packs"
+        # The checks below read the default pack's files through the game's link to them (#1978),
+        # before setting up Godot makes it too.
+        run: uv run --locked ../game-build/link_resource_packs.py
+
       - name: "🧹 Check every declared function, variable, constant and class is used"
         # Godot's script check already fails on unused locals, parameters and signals; this finds
         # what nothing in the whole project names (#315).
@@ -662,6 +667,10 @@ jobs:
         if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
         run: |
           git worktree add -q /tmp/parent HEAD^1
+          # Its own link to the resource packs, once it has them (#1978).
+          if [ -f /tmp/parent/packages/game-build/link_resource_packs.py ]; then
+            uv run --locked --project /tmp/parent /tmp/parent/packages/game-build/link_resource_packs.py
+          fi
           # The parent's game: in packages/game, or at its root before the move there (#1101).
           game=/tmp/parent/packages/game
           [ -f "$game/project.godot" ] || game=/tmp/parent

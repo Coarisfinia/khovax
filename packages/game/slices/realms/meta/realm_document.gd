@@ -9,7 +9,7 @@ extends RefCounted
 ## the item "- Gloss: <text>"; a realm without both is refused. Under `## Day and night`, its look
 ## by day and at night (#1247) is the items "- Day light: #rrggbb", "- Day ambience: #rrggbb",
 ## "- Night light: #rrggbb" and "- Night ambience: #rrggbb"; a realm without all four is refused.
-## The realms are the files in DIR, found by listing it (Realms). A realm without a title is
+## The realms are the ones the resource packs list (Realms). A realm without a title is
 ## refused.
 
 ## What starts the title, the realm's name.
