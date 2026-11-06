@@ -56,6 +56,7 @@ from game_shared import log
 from game_shared.gdscript_code import without_comments
 from game_shared.git_files import git_files
 from game_shared.resource_packs import MANIFEST, file_lists, read_manifest, section, strip_jsonc
+from quest_reachability import problems as unreachable_quests
 from translations_pot import TEMPLATE
 from unused_assets import extracted_textures, gltf_files
 
@@ -399,6 +400,14 @@ def main() -> int:
         problems += unreferenced(kind, entries[name], named, files)
     for message, file in problems:
         log.error(message, file)
+    # A quest whose dominated step names a species its instance never has can't be finished (#2027).
+    try:
+        unreachable = unreachable_quests(read_manifest())
+    except (OSError, ValueError):
+        # The manifest's own problems are reported above.
+        unreachable = []
+    for message, file, line in unreachable:
+        log.error(message, file, line)
     # A catalogue's gaps only warn: a language may well be incomplete (#1968).
     if TEMPLATE.is_file():
         template = TEMPLATE.read_text(encoding="utf-8")
@@ -407,7 +416,7 @@ def main() -> int:
                 if path in tracked:
                     for message in report(locale, template, Path(path).read_text(encoding="utf-8")):
                         log.warning(message, path)
-    return 1 if problems else 0
+    return 1 if problems or unreachable else 0
 
 
 if __name__ == "__main__":
