@@ -44,8 +44,8 @@ static var invincible: bool = false
 ## Where every slot's commands come from; the local player's by default. Tests replace them.
 var sources: Array[CommandSource] = []
 var schedule: CommandSchedule
-## The state hash after each of the last HASH_HISTORY ticks, by tick: the basis for spotting a
-## desync between players later.
+## The state hash after each of the last HASH_HISTORY ticks, by tick, in co-op: the basis for
+## spotting a desync between players later. Alone there's no one to compare with, so none is kept.
 var hashes: Dictionary[int, int] = {}
 ## Every tick of this session so far, to play back (#35).
 var recording: Replay
@@ -196,8 +196,11 @@ func _step() -> bool:
 	world.step(commands)
 	last_commands = commands
 	recording.record(world, commands)
-	hashes[tick] = world.state_hash()
-	var _forgot: bool = hashes.erase(tick - HASH_HISTORY)
+	# Only co-op has anyone to compare hashes with, and the hash goes through every loaded instance,
+	# so alone it would cost each tick more with every instance entered (#2084).
+	if players > 1:
+		hashes[tick] = world.state_hash()
+		var _forgot: bool = hashes.erase(tick - HASH_HISTORY)
 	# A copy of the local player's instance's events (the simulation clears its list when the next
 	# tick starts): the instance they were in, and the one they walked into if they left it.
 	var events: Array[RefCounted] = []
