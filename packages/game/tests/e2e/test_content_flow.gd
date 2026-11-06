@@ -2469,9 +2469,9 @@ func _check_pack_catalogue() -> String:
 func _check_player_packs() -> String:
 	var region_id: String = str(ResourcePacks.loaded()[-1].regions.keys()[0])
 	var made: Dictionary[String, String] = _player_pack_files(region_id)
-	var _folder: Error = DirAccess.make_dir_recursive_absolute(ResourcePacks.PLAYER_PACKS)
+	var _folder: Error = DirAccess.make_dir_recursive_absolute(PackFolder.path())
 	for file: String in made:
-		var _copied: Error = DirAccess.copy_absolute(made[file], ResourcePacks.PLAYER_PACKS + file)
+		var _copied: Error = DirAccess.copy_absolute(made[file], PackFolder.path() + file)
 	var tree: SceneTree = Engine.get_main_loop() as SceneTree
 	tree.call("expect_warning", "b_scripted.pck")
 	tree.call("expect_warning", "c_nameless.pck")
@@ -2484,7 +2484,7 @@ func _check_player_packs() -> String:
 	ResourcePacks.refresh()
 	var kept: bool = ResourcePacks.loaded()[0].id == "pack_player"
 	for file: String in made:
-		var _removed: Error = DirAccess.remove_absolute(ResourcePacks.PLAYER_PACKS + file)
+		var _removed: Error = DirAccess.remove_absolute(PackFolder.path() + file)
 	ResourcePacks.refresh()
 	if ResourcePacks.loaded().size() != 1:
 		return "a player's pack taken out of the folder was still loaded"

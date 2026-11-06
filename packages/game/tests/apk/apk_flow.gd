@@ -63,7 +63,9 @@ func run(main: Node, tree: SceneTree) -> String:
 	await tree.create_timer(1.5).timeout
 	final_hash = driver.state.state_hash()
 	var result: String = _result(driver, camera, start, camera_before)
-	return result if not result.is_empty() else _save_log_by_controller(main)
+	if result.is_empty():
+		result = _save_log_by_controller(main)
+	return result if not result.is_empty() else _check_pack_folder()
 
 
 func _result(
@@ -122,6 +124,29 @@ func _save_log_by_controller(main: Node) -> String:
 	_press_a(false)
 	save.queue_free()
 	return ""
+
+
+## The folder a player's resource packs are found in (#1942): on Android the app's folder on the
+## shared storage, which a player reaches over USB, never the private `user://`, and the game can
+## write and read a file there; everywhere else `user://packs/`.
+func _check_pack_folder() -> String:
+	var folder: String = PackFolder.path()
+	if not OS.has_feature("android"):
+		var off: bool = folder != PackFolder.USER
+		return "the packs folder isn't user://packs/: " + folder if off else ""
+	if folder.begins_with("user://") or folder.begins_with(OS.get_user_data_dir()):
+		return "on Android the packs folder is the app's private storage: " + folder
+	if not folder.contains("/Android/data/") or not folder.ends_with("/packs/"):
+		return "on Android the packs folder isn't the app's shared storage folder: " + folder
+	var probe: String = folder + "probe.txt"
+	var file: FileAccess = FileAccess.open(probe, FileAccess.WRITE)
+	if file == null:
+		return "the packs folder on Android can't be written: " + folder
+	var _stored: bool = file.store_string("pack")
+	file.close()
+	var read: String = FileAccess.get_file_as_string(probe)
+	var _removed: Error = DirAccess.remove_absolute(probe)
+	return "" if read == "pack" else "the packs folder on Android can't be read: " + folder
 
 
 func _press_a(pressed: bool) -> void:
