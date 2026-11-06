@@ -91,7 +91,14 @@ jobs:
           # (`uses:`) could reach one through it, even an unchanged one, so it needs the owner too.
           # Each changed workflow is read as data from its blob, never checked out or run, and one
           # that can't be listed, read or parsed approves nothing. A removed one can reach nothing.
-          # Other `.github/` files may be cleared (#2061): no job of this file uses them.
+          # Other `.github/` files may be cleared (#2061): no job of this file uses them. This file
+          # runs from `main` with the key whatever a pull request makes of it, so a change to it, a
+          # rename from it included, is refused by its path.
+          if printf '%s\n' "$files" | cut -c2- |
+            grep -qx '"\.github/workflows/approve-cleared\.yml"'; then
+            echo "Not approving #$PR: it changes the approval guard, which always needs the owner."
+            exit 0
+          fi
           workflows=$(gh api --paginate "repos/$REPO/compare/$DEFAULT_BRANCH...$HEAD" --jq '.files[]? |
             select(.status != "removed" and (.filename | startswith(".github/workflows/"))) |
             .sha + " " + (.filename | @json)') ||
