@@ -130,11 +130,12 @@ def dominated_steps(node: object) -> list[dict]:
 
 
 def line_of(path: str, species: str) -> int | None:
+    """The line of the `dominated` step naming `species`, or, for a step written over several
+    lines, the first line naming the species at all."""
     lines = Path(path).read_text(encoding="utf-8").split("\n")
-    for number, line in enumerate(lines, 1):
-        if '"dominated"' in line and f'"species": "{species}"' in line:
-            return number
-    return None
+    naming = [number for number, line in enumerate(lines, 1) if f'"species": "{species}"' in line]
+    on_one = [number for number in naming if '"dominated"' in lines[number - 1]]
+    return (on_one or naming or [None])[0]
 
 
 def problems(manifest: dict[str, object]) -> list[tuple[str, str, int | None]]:
