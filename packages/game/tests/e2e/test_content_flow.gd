@@ -30,7 +30,8 @@ extends RefCounted
 ## read ahead in the background (#816). The default resource pack (#1860) reads with every texture
 ## and sound (#2014) resolving, and broken pack manifests are refused; the quests (#1888), the tile
 ## blueprints
-## (#1901), the loot tables and materials (#1953), and harvest tables (#1990) are read from it.
+## (#1901), the loot tables and materials (#1953), and harvest tables (#1990) are read from it, and
+## its files load in the background with progress (#1943).
 
 ## A model a species can wear (#1223), by its id in the resource packs (#1864).
 const MODEL: String = "model_mana_wolf"
@@ -2494,6 +2495,43 @@ func _check_player_packs() -> String:
 		return "the player's packs weren't loaded before the default pack, alone: %s" % [ids]
 	if found != "res://packs/pack_player/regions/r.md":
 		return "a player's pack didn't override the default pack's region: " + found
+	return _check_pack_preload()
+
+
+## The default pack's files that load as resources load in the background (#1943), with progress
+## that never goes back and ends at 1 once each is in Godot's resource cache, none failing; a file
+## that doesn't exist fails at once rather than being waited on.
+func _check_pack_preload() -> String:
+	var pack: ResourcePack = ResourcePacks.loaded()[-1]
+	var loads: PackPreload = PackPreload.start(pack)
+	var last: float = 0.0
+	var deadline: int = Time.get_ticks_msec() + 60_000
+	while not loads.is_done():
+		var now: float = loads.progress()
+		if now < last or now > 1.0:
+			return "the pack's loading went from %s to %s" % [last, now]
+		last = now
+		if Time.get_ticks_msec() > deadline:
+			return "the default pack's files didn't load in the background in time"
+		OS.delay_msec(5)
+	if loads.progress() != 1.0 or not loads.failed.is_empty():
+		return "the default pack didn't load whole: %s, failed %s" % [
+			loads.progress(),
+			loads.failed,
+		]
+	for kind: String in ResourcePack.KINDS:
+		var files: Dictionary = {} if ResourcePack.KINDS[kind].is_empty() else pack.get(kind)
+		for file: Variant in files.values():
+			if not ResourceLoader.has_cached(pack.root + str(file)):
+				return "the default pack's %s isn't kept once loaded" % file
+	var broken: ResourcePack = ResourcePack.new()
+	broken.root = "res://"
+	broken.textures = { "pack_missing": "pack_missing.png" }
+	var missing: PackPreload = PackPreload.start(broken)
+	if not missing.is_done() or missing.failed != PackedStringArray(["res://pack_missing.png"]):
+		return "a missing file didn't fail at once: %s" % [missing.failed]
+	if missing.progress() != 1.0:
+		return "a pack whose files all failed isn't done loading: %s" % missing.progress()
 	return ""
 
 
