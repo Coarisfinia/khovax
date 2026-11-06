@@ -1292,8 +1292,9 @@ jobs:
           }
           # A run that made a draft and ends without publishing it drops that draft, whatever ended
           # it: an upload that failed for good would otherwise leave a full set of builds behind
-          # until the same tag runs again, which it mostly never does (#2024). The job keeps its own
-          # exit status; a cleanup that fails too only warns.
+          # until the same tag runs again, which it mostly never does (#2024). Only one run has a tag
+          # at a time: a dev tag carries its run's number, and nightly.yml's runs queue, so the
+          # drafts are this run's. The job keeps its own exit status; a cleanup that fails only warns.
           drop_unpublished_draft() {
             local status=$?
             if [ "${creates:-0}" -gt 0 ] && [ -z "${published:-}" ]; then
