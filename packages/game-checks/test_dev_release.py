@@ -33,6 +33,7 @@ case "$1 $2" in
     if [ -n "$HEAD_ERROR" ]; then echo "$HEAD_ERROR" >&2; exit 1; fi
     echo "$MAIN_HEAD" ;;
   "api repos/owner/repo/commits/$GITHUB_SHA") echo "$WORKFLOW_FILES" ;;
+  "api repos/owner/repo/compare/$GITHUB_SHA...$MAIN_HEAD") echo "$COMPARE" ;;
 esac
 """
 
@@ -61,6 +62,7 @@ class DevReleaseTest(unittest.TestCase):
         workflow_files=1,
         after_refusals="",
         head_error="",
+        compare="ahead 1",
     ):
         with tempfile.TemporaryDirectory() as folder:
             work = Path(folder)
@@ -94,6 +96,7 @@ class DevReleaseTest(unittest.TestCase):
                     "WORKFLOW_FILES": str(workflow_files),
                     "AFTER_REFUSALS": after_refusals,
                     "HEAD_ERROR": head_error,
+                    "COMPARE": compare,
                     "TAG": tag,
                     "RUNNER_TEMP": str(work),
                     "GITHUB_REPOSITORY": "owner/repo",
@@ -119,6 +122,14 @@ class DevReleaseTest(unittest.TestCase):
         self.assertEqual(len(self.calls(calls, "release create")), 4)
         self.assertEqual(self.calls(calls, "release upload"), [])
         self.assertEqual(self.calls(calls, "release edit"), [])
+
+    def test_a_replaced_dev_build_whose_workflows_main_has_changed_gives_way(self):
+        """#2028: a commit that changed no workflow, refused once a later merge had changed one."""
+        done, calls = self.run_step(workflow_files=0, compare="ahead 1")
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertIn("::warning::", done.stderr + done.stdout)
+        self.assertIn(NEWER, done.stderr + done.stdout)
+        self.assertEqual(self.calls(calls, "release upload"), [])
 
     def test_a_refusal_that_passes_still_publishes(self):
         done, calls = self.run_step(refusals=2)
