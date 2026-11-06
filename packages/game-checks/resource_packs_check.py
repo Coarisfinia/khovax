@@ -22,6 +22,8 @@ will have (#1858), and looked up only through ResourcePacks. It fails when
   slices/loot/data/loot_tables/<id>.jsonc, slices/loot/data/harvest_tables/<id>.jsonc,
   slices/loot/data/materials/<id>.jsonc), so it's named
   after its file (#72);
+- a file of a kind already moved into the default pack's own folder at the repository's root
+  (PACK_ROOT, #1978; MOVED) is listed outside it;
 - a tile blueprint lies outside the pack (in the core's old core/data/tiles/), or its entry isn't
   slices/resource_packs/data/tiles/<id>.jsonc, so it's named after its file (#802);
 - a script, scene, resource or content file names a texture's, model's, sound's, region's, realm's, quest's,
@@ -121,6 +123,12 @@ KINDS: dict[str, Kind] = {
     "harvest_tables": Kind("harvest table", (".jsonc",), False, f"{HARVEST_TABLES}/*.jsonc", listed=True),
     "materials": Kind("material", (".jsonc",), False, f"{MATERIALS}/*.jsonc", listed=True),
 }
+# The default pack's own folder at the repository's root (#1978), laid out like a player's pack,
+# which the game reaches through its link, res://resourcepacks/ (link_resource_packs.py)...
+PACK_ROOT = "resourcepacks/default/"
+# ...and the kinds already moved into it, each in its own folder there; the move goes one kind at
+# a time, and the rest follow (#1978).
+MOVED = ("realms",)
 # The project setting through which Godot would load catalogues itself, around the pack (#1902).
 PROJECT = Path("project.godot")
 PROJECT_TRANSLATIONS = re.compile(r"^locale/translations=", re.MULTILINE)
@@ -260,6 +268,19 @@ def misplaced_regions(whole: Entries, pieces: Entries) -> Problems:
     return problems
 
 
+def outside_root(entries: dict[str, Entries]) -> Problems:
+    """The files of a kind already moved (MOVED) that the manifest lists outside its folder in
+    the default pack's own folder (PACK_ROOT)."""
+    return [
+        (f"{KINDS[name].noun} {entry_id}'s file {path} lies outside {PACK_ROOT}{name}/: move it there"
+         " (#1978)", MANIFEST.as_posix())
+        for name in MOVED
+        for entry_id, paths in entries[name].items()
+        for path in paths
+        if not path.startswith(f"{PACK_ROOT}{name}/")
+    ]  # fmt: skip
+
+
 def manifest_sections() -> tuple[dict[str, Entries], Problems]:
     """Each kind's entries in the manifest, and why any can't be read."""
     entries: dict[str, Entries] = {name: {} for name in KINDS}
@@ -327,6 +348,7 @@ def main() -> int:
 
     entries, read_problems = manifest_sections()
     problems += read_problems
+    problems += outside_root(entries)
     problems += [
         (f"region {region_id} is both drawn whole and in pieces", MANIFEST.as_posix())
         for region_id in sorted(entries["regions"].keys() & entries["region_pieces"].keys())
