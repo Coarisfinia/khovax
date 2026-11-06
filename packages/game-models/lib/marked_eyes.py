@@ -1,11 +1,12 @@
-"""Our own eyes in place of the ones a generator painted (#1682, #1683). Every prompt for a
-generated beast carries the fixed sentence "Two small, plain, flat black oval eyes." (the model
-skill), which only marks where its eyes go and how big they are. On import, the model script
-calls `replace` on its adopted rig and skin, which:
+"""Our own eyes in place of the ones a generator painted (#1682, #1683). The eyes a source's
+texture shows tell where ours go and how big they are; prompts don't mark them (#2052), so this
+reads the eyes the design has, never the reverse. On import, the model script calls `replace` on
+its adopted rig and skin, which:
 
-- **finds** the two marked ovals on the head (`find`): spots of the base colour that `DARK` (or,
-  for a beast imported with its generator's eyes before the rule, its own `Marked` in `BEASTS`)
-  picks out, grouped where they lie, the pair that mirror each other across the middle best;
+- **finds** the two painted eyes on the head (`find`): spots of the base colour that `DARK` (dark
+  eyes, such as the flat black ovals older prompts asked for, #1682) or the beast's own `Marked`
+  in `BEASTS` (glowing, pale or black on a dark head) picks out, grouped where they lie, the pair
+  that mirror each other across the middle best;
 - **repaints** them (`repaint`): every texel over each oval, with a margin for its soft edge, takes
   the colour of the skin around it, blended from that ring by distance, so no painted eye shows
   past ours;
@@ -153,15 +154,15 @@ def glow(*hues):
     return picks
 
 
-# A marked eye's flat black, the generators' eyes since the rule (the model skill).
+# A painted dark eye, such as the flat black ovals older prompts asked for (#1682).
 DARK = Marked("DARK", _dark)
 # A painted glowing eye: bright and saturated.
 GLOW = Marked("GLOW", _glow)
 # A painted pale eye: near white and barely tinted.
 PALE = Marked("PALE", _pale)
 
-# The beasts imported with their generator's eyes before the rule (#1684), each with how its own
-# are marked: what the model script hands `replace` and check_painted_eyes.py looks for, keyed by
+# The beasts whose painted eyes `DARK` doesn't pick out (#1684), each with how its own are
+# marked: what the model script hands `replace` and check_painted_eyes.py looks for, keyed by
 # the .glb's path in the game's project folder.
 BEASTS = {
     "assets/drakkudor/drakkudor.glb": GLOW,

@@ -433,8 +433,8 @@ jobs:
             --python ../game-models/test_painted_eyes.py
 
       - name: "🎨 Check no generated eye is left in a creature's texture"
-        # Each creature's head, its texture sampled for a mirrored pair of flat black ovals or
-        # glowing painted eyes, or the beast's own marking (#1719), as lib/marked_eyes.py finds them
+        # Each creature's head, its texture sampled for a mirrored pair of dark or glowing painted
+        # eyes, or the beast's own marking (#1719), as lib/marked_eyes.py finds them
         # on import (#1688); a model without a textured head passes.
         if: steps.models.outputs.changed == 'true'
         timeout-minutes: 5
