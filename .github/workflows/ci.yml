@@ -296,9 +296,9 @@ jobs:
             | tee -a "$GITHUB_STEP_SUMMARY"
 
   models:
-    # The model checks (#1357): every scripted model rebuilt and checked in Blender, which takes
-    # most of ten minutes on its own, so it runs beside headless rather than inside its time limit.
-    # It always runs, and only sets up Blender where a model or its build changed.
+    # The model checks (#1357): scripted models rebuilt and checked in Blender, which takes
+    # minutes on its own, so it runs beside headless rather than inside its time limit. It always
+    # runs, and only sets up Blender where a model or its build changed, for the models it lists.
     runs-on: ubuntu-26.04
     timeout-minutes: 20
     defaults:
@@ -321,34 +321,35 @@ jobs:
           sudo tar xzf /tmp/uv.tar.gz -C /usr/local/bin --strip-components=1 \
             uv-x86_64-unknown-linux-gnu/uv
 
-      - name: "🔀 See whether a model or its build changed"
+      - name: "🧪 Test which models a change checks"
+        # A model's own files check it, what every model is built or checked by checks them all,
+        # and anything else none (#2031).
+        timeout-minutes: 2
+        run: uv run --locked --package khovax-game-models ../game-models/test_changed_models.py
+
+      - name: "🔀 See which models changed"
         id: models
-        # The rebuild check below needs Blender, so it runs only where it can find something: a
-        # change to the model scripts and their library, to a .glb or its .import (whose clip rate
-        # the checks sample at), to Blender's pin, or to the tile blueprints (whose models the
-        # footprint check leaves out as decorations, #1651), or to the slices' look/ scripts and the
-        # scenes (the views whose scale, clips and hidden parts it measures a pack's model by, read
-        # only from there, #1652), or to the default resource pack's manifest (which gives each
-        # model id its .glb, #1864), against the parent, or on a push to main against the commit
-        # before the push, fetched here, so a push of several commits counts them all. A
-        # failing diff counts as a change, so the check runs rather than being skipped.
+        # The checks below need Blender, so they run only where they can find something, and look
+        # only at the models a pull request changes: its model script, source, .glb or its .import
+        # (whose clip rate the checks sample at). A change to what every model is built or checked
+        # by (the model library and checks, Blender's pin, this workflow) or measured by (the
+        # slices' look/ scripts and the scenes, #1652, the default pack's manifest, #1864) checks
+        # every model, and so does a failing diff (packages/game-models/changed_models.py, #2031).
+        # It reads the change against the parent, or on a push to main against the commit before
+        # the push, fetched here, so a push of several commits counts them all; main checks every
+        # model whenever one changed.
         env:
           EVENT: ${{ github.event_name }}
           BEFORE: ${{ github.event.before }}
         run: |
           base=HEAD^1
+          every=
           if [ "$EVENT" = push ]; then
             base="$BEFORE"
+            every=--every
             git fetch -q --depth=1 origin "$base" || true
           fi
-          if git diff --quiet "$base" -- ':(top)packages/game-models' ':(top)*.glb' ':(top)*.glb.import' \
-            ':(top).github/actions/setup-blender' \
-            ':(top)packages/game/slices/*/look/*' ':(top)packages/game/*.tscn' \
-            ':(top)packages/game/slices/resource_packs/data'; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          fi
+          uv run --locked --package khovax-game-models ../game-models/changed_models.py "$base" /tmp/models.list $every
 
       - name: "🧊 Set up Blender"
         if: steps.models.outputs.changed == 'true'
@@ -358,11 +359,14 @@ jobs:
         uses: ./.github/actions/setup-blender
 
       - name: "🐺 Check every scripted model's .glb is what its script builds"
-        # Builds each model twice and compares the bytes with each other and the committed .glb
-        # (#1085, #1161); a difference is an error annotation naming the model and what differs.
+        # Builds each model listed above twice and compares the bytes with each other and the
+        # committed .glb (#1085, #1161), several models at once (#2031); a difference is an error
+        # annotation naming the model and what differs. A model script without a .glb always fails.
         if: steps.models.outputs.changed == 'true'
         timeout-minutes: 8
-        run: uv run --locked --package khovax-game-models ../game-models/check_rebuild.py --all --keep /tmp/rebuilt
+        run: |
+          uv run --locked --package khovax-game-models ../game-models/check_rebuild.py --all --keep /tmp/rebuilt \
+            --only /tmp/models.list
 
       - name: "🧪 Test the tails check on a stand-in beast"
         # Three tails on chains of their own, on one chain, or still in a clip (#1771): the check
@@ -379,7 +383,7 @@ jobs:
         if: steps.models.outputs.changed == 'true'
         timeout-minutes: 5
         run: |
-          git ls-files -z ':(top)packages/game/*.glb' | xargs -0 uv run --locked --package khovax-game-models \
+          xargs -0 -r -a /tmp/models.list uv run --locked --package khovax-game-models \
             ../game-models/blender.py --background --factory-startup \
             --python ../game-models/check_tails.py --
 
@@ -388,7 +392,7 @@ jobs:
         if: steps.models.outputs.changed == 'true'
         timeout-minutes: 5
         run: |
-          git ls-files -z ':(top)packages/game/*.glb' | xargs -0 uv run --locked --package khovax-game-models \
+          xargs -0 -r -a /tmp/models.list uv run --locked --package khovax-game-models \
             ../game-models/blender.py --background --factory-startup \
             --python ../game-models/check_clearance.py --
 
@@ -398,7 +402,7 @@ jobs:
         if: steps.models.outputs.changed == 'true'
         timeout-minutes: 5
         run: |
-          git ls-files -z ':(top)packages/game/*.glb' | xargs -0 uv run --locked --package khovax-game-models \
+          xargs -0 -r -a /tmp/models.list uv run --locked --package khovax-game-models \
             ../game-models/blender.py --background --factory-startup \
             --python ../game-models/check_brows.py --
 
@@ -418,7 +422,7 @@ jobs:
         if: steps.models.outputs.changed == 'true'
         timeout-minutes: 8
         run: |
-          git ls-files -z ':(top)packages/game/*.glb' | xargs -0 uv run --locked --package khovax-game-models \
+          xargs -0 -r -a /tmp/models.list uv run --locked --package khovax-game-models \
             ../game-models/blender.py --background --factory-startup \
             --python ../game-models/check_eyes_covered.py --
 
@@ -439,7 +443,7 @@ jobs:
         if: steps.models.outputs.changed == 'true'
         timeout-minutes: 5
         run: |
-          git ls-files -z ':(top)packages/game/*.glb' | xargs -0 -r uv run --locked --package khovax-game-models \
+          xargs -0 -r -a /tmp/models.list uv run --locked --package khovax-game-models \
             ../game-models/blender.py --background --factory-startup \
             --python ../game-models/check_painted_eyes.py --
 
@@ -449,7 +453,7 @@ jobs:
         if: steps.models.outputs.changed == 'true'
         timeout-minutes: 5
         run: |
-          git ls-files -z ':(top)packages/game/*.glb' | xargs -0 -r uv run --locked --package khovax-game-models \
+          xargs -0 -r -a /tmp/models.list uv run --locked --package khovax-game-models \
             ../game-models/blender.py --background --factory-startup \
             --python ../game-models/check_dimensions.py --
 
@@ -459,7 +463,7 @@ jobs:
         if: steps.models.outputs.changed == 'true'
         timeout-minutes: 5
         run: |
-          git ls-files -z ':(top)packages/game/*.glb' | xargs -0 -r uv run --locked --package khovax-game-models \
+          xargs -0 -r -a /tmp/models.list uv run --locked --package khovax-game-models \
             ../game-models/blender.py --background --factory-startup \
             --python ../game-models/check_volume.py --
 
@@ -481,15 +485,14 @@ jobs:
             --python ../game-models/test_connectivity.py
 
       - name: "💎 Check every attached part stays on the skin"
-        # Every frame of every clip of every .glb, each part's gap to the piece it sits on against
-        # its gap at rest (#1403, split off #1303), and how far it sinks in (#1458); a model of one
-        # piece passes. It grows with each new model, as the rebuild check above does.
+        # Every frame of every clip of each .glb listed above, each part's gap to the piece it sits
+        # on against its gap at rest (#1403, split off #1303), and how far it sinks in (#1458); a
+        # model of one piece passes. One Blender per model, several at once (#2031).
         if: steps.models.outputs.changed == 'true'
         timeout-minutes: 8
         run: |
-          git ls-files -z ':(top)packages/game/*.glb' | xargs -0 -r uv run --locked --package khovax-game-models \
-            ../game-models/blender.py --background --factory-startup \
-            --python ../game-models/check_connectivity.py --
+          uv run --locked --package khovax-game-models ../game-models/blender_each.py /tmp/models.list \
+            ../game-models/check_connectivity.py
 
       - name: "🧪 Test the hex footprint check on boxes"
         # Monsters, props and static models that fit their hex or are too big for it (#1641): the
@@ -516,7 +519,7 @@ jobs:
         if: steps.models.outputs.changed == 'true'
         timeout-minutes: 5
         run: |
-          git ls-files -z ':(top)packages/game/*.glb' | xargs -0 -r uv run --locked --package khovax-game-models \
+          xargs -0 -r -a /tmp/models.list uv run --locked --package khovax-game-models \
             ../game-models/blender.py --background --factory-startup \
             --python ../game-models/check_footprint.py --
 
@@ -536,7 +539,7 @@ jobs:
         if: steps.models.outputs.changed == 'true'
         timeout-minutes: 5
         run: |
-          git ls-files -z ':(top)packages/game/*.glb' | xargs -0 -r uv run --locked --package khovax-game-models \
+          xargs -0 -r -a /tmp/models.list uv run --locked --package khovax-game-models \
             ../game-models/blender.py --background --factory-startup \
             --python ../game-models/check_world_scale.py --
 
