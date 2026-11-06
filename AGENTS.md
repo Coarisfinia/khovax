@@ -327,8 +327,8 @@ background; only wait in the foreground for a result the very next step needs.
     `assets/`, `translations/`, `realms/` and `regions/`, and its scenes, resources, images,
     models, sounds, fonts and shaders, outside its `tests/` and `tools/`), nor for one whose
     changed workflows could reach a secret's environment: a job with any environment but
-    `github-pages`, or a call to a workflow outside the same commit (`uses:` not starting with
-    `./`). The reviewer app's key lives in such an environment, so **a change to the guard, or to
+    `github-pages`, or a job calling another workflow (`uses:`), which could reach one through
+    it. The reviewer app's key lives in such an environment, so **a change to the guard, or to
     any workflow job that deploys to a protected environment, always needs the owner**. Every
     other change to `.github/` may be cleared (#2061). That approval is permanent, like
     the owner's (owner's pick 2 on #1895, #1900): a later push or a new base never withdraws it,

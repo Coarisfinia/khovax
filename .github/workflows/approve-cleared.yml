@@ -87,14 +87,15 @@ jobs:
           # The guard never approves a change to itself (#1874). Any job on `main` that names the
           # reviewer app's environment gets its key, and the release key lives in an environment
           # too, so a changed workflow may name none but `github-pages` (no secrets), and as a
-          # plain name: a name built at run time could be any. A call to a workflow outside the
-          # commit (`uses:` without `./`) could name one too. Each changed workflow is read as
-          # data from its blob, never checked out or run, and one that can't be read or parsed
-          # approves nothing. A removed one can reach nothing. Other `.github/` files may be
-          # cleared (#2061): no job of this file uses them.
+          # plain name: a name built at run time could be any. A job calling another workflow
+          # (`uses:`) could reach one through it, even an unchanged one, so it needs the owner too.
+          # Each changed workflow is read as data from its blob, never checked out or run, and one
+          # that can't be listed, read or parsed approves nothing. A removed one can reach nothing.
+          # Other `.github/` files may be cleared (#2061): no job of this file uses them.
           workflows=$(gh api --paginate "repos/$REPO/compare/$DEFAULT_BRANCH...$HEAD" --jq '.files[]? |
             select(.status != "removed" and (.filename | startswith(".github/workflows/"))) |
-            .sha + " " + (.filename | @json)')
+            .sha + " " + (.filename | @json)') ||
+            { echo "Not approving #$PR: its changed workflows couldn't be listed."; exit 0; }
           command -v yq > /dev/null || { echo "Not approving #$PR: yq is missing."; exit 0; }
           while read -r blob name; do
             [ -n "$blob" ] || continue
@@ -106,9 +107,7 @@ jobs:
                   (if type == "object" then .name else . end) as $env |
                   select(($env | type) != "string" or ($env | ascii_downcase) != "github-pages") |
                   "job \($job | @json) deploys to the environment \($env | @json)"),
-                 (select(has("uses")) | select((.uses | type) != "string" or
-                  (.uses | startswith("./") | not)) |
-                  "job \($job | @json) calls \(.uses | @json)"))'); then
+                 (select(has("uses")) | "job \($job | @json) calls \(.uses | @json)"))'); then
               echo "Not approving #$PR: the workflow $name couldn't be read as a workflow."
               exit 0
             fi
@@ -124,7 +123,7 @@ jobs:
           user_facing=$(printf '%s\n' "$files" | cut -c2- | grep '^"packages/game/' |
             grep -v -e '^"packages/game/tests/' -e '^"packages/game/tools/' |
             grep -i -e '^"packages/game/\(assets\|translations\|realms\|regions\)/' \
-              -e '\.\(tscn\|tres\|res\|import\|png\|svg\|jpg\|jpeg\|webp\|glb\|gltf\|bin\|ogg\|wav\|mp3\|ttf\|otf\|gdshader\)"$' ||
+              -e '\.\(tscn\|tres\|res\|import\|png\|svg\|jpg\|jpeg\|webp\|glb\|gltf\|bin\|ogg\|wav\|mp3\|ttf\|otf\|gdshader\|gdshaderinc\)"$' ||
             true)
           if [ -n "$user_facing" ]; then
             echo "Not approving #$PR: it changes files that are always user-facing, which need the" \
