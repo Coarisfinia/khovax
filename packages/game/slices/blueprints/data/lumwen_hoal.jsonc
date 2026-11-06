@@ -12,8 +12,8 @@
 	"chest_table": "glade_chest",
 	"wild_species": { "ombulumo": 1 },
 	"variants": [
-		// Once its corrupting monster faints, it emits lumwen_hoal_purified (regions/lymwen_hoall.md),
-		// which purifies it: Lumwen Hoal again.
+		// Once its corrupting monster faints, it emits lumwen_hoal_purified
+		// (resourcepacks/default/regions/lymwen_hoall.md), which purifies it: Lumwen Hoal again.
 		{ "flag": "EVENT_EMITTED_lumwen_hoal_purified", "region": "" },
 		// Corrupted (#541), a placeholder region until the corrupted instances' own arrive.
 		{
