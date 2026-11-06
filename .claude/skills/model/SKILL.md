@@ -17,6 +17,18 @@ No generic retextured ore lump, and simply retexturing or recolouring the copper
 option. **Ingots stay vaguely rectangular but dynamic, creative and distinctive** (owner, #2036):
 never plain bricks or variants distinguished only by shallow top details. Generated ingot references
 depict solid metal with a closed underside, never bowls, trays or hollow shells.
+**Ordinary tools share base models; legendary parts and fancy metals get their own** (owner,
+#2039): an ordinary tool family (an iron axe, pick or shovel head, a handle) is one good base model,
+varied per material by material and shading or by a reusable procedural shape treatment rather than
+a new model per material: crystal can have a broad faceted, jagged surface on the head, moss a softer
+one. Shading changes how the planes read, never the outline, so a truly jagged outline needs geometry
+(still a reusable variant). Base models carry semantic attachment markers where modifiers and
+accessories go later: the working edge or tip (the axe's blade, the pick's tip, the shovel's tip),
+the surface centre, the handle centre and the grip. A unique legendary part (a found legendary axe
+head) and a complete legendary item get unique models, and gold and copper get extra, fancier models
+rather than ordinary recolours. Don't request every tool-by-material combination now, and the ore,
+deposit and ingot rules above stay as they are. Today's supplied tools are icons and world
+decoration only (AGENTS.md, "Crafting").
 
 **Every model request has at least three complete, genuinely distinct prompts** (owner, #1996),
 for creatures, props, items and player parts alike, each in its own accordion as AGENTS.md says.
@@ -38,7 +50,8 @@ Use a fresh, unused concept/vibe bank for each new round, including object-based
 Keep a used-concept ledger with the round’s bank, selected/rejected labels and drawn pairings;
 exclude those concepts and pairings from later rounds rather than recycling or renaming them.
 Screen candidates against the existing roster and prompts and recognizable familiar-media overlap.
-Prefer coherent anatomy, behaviour and readable silhouettes over recolours, accessories or word
+Prefer bold concepts with readable silhouettes (abstract, loose or impossible forms included,
+#2052) over recolours, accessories or word
 salad. Repeat, expand the banks and redraw until enough strong, distinct ideas emerge; no fixed
 batch or retry cap replaces the usage rules. Finish started work as required and track further work
 when the budget bars new starts. Do not claim globally provable uniqueness. Existing model-request
@@ -49,8 +62,9 @@ each meeting the prompt, vibe-summary and texture-decision requirements above. A
 an import task or a deferred request does not count. On accepted model delivery (owner, #2036),
 track the import and completely remove its entry and every prompt option from active prompt lists:
 no supplied/done/filed-as heading or replacement status entry. Source links and implementation status
-belong on import issues. Replenish the active minimum automatically with genuine eligible model
-needs; never pad it with unsupported creatures or requests existing suitable models/textures resolve.
+belong on import issues. Concept images can be ignored when taking in the owner's downloads
+(owner, #2051): an image alone never fulfils a requested 3D-model delivery. Replenish the active
+minimum automatically with genuine eligible model needs; never pad it with unsupported creatures or requests existing suitable models/textures resolve.
 An explicitly rejected trial is archived for reference and does not fulfil its request; keep that
 request active while the owner retries. The ore/ingot exception still holds.
 
@@ -59,17 +73,36 @@ request active while the owner retries. The ore/ingot exception still holds.
 lessons recorded. Request further trees only after importing and learning from the supplied
 savanna tree. Neither deferred group fills the active minimum.
 
-**Every base prompt for a monster ends with the same sentence** (the owner's pick on #1682):
-`Two small, plain, flat black oval eyes.` Word for word, in every prompt, whatever else the
-prompt says about its face. It only marks where the eyes go and how big they are: the import
-replaces them with our own eyes, which blink and shut (`lib/marked_eyes.py`, below). A monster
-designed without eyes leaves the sentence out and says so in its issue.
+**Creature prompts lead with the concept, and only the concept prescribes anatomy** (owner's
+ground rule on #2052, 2026-11-03, which supersedes the fixed eye sentence of #1682 and the pose
+lines below): "These instructions about "two legs", "mouth open", "neutral rigging pose" etc. are
+severely limiting the image gen and overall creativity. Only add mouth, limb and posture
+instructions when it's really necessary." So every creature prompt, base or evolution, opens with
+its core vibe and prescribes no facial details, eye markers, mouth position, limb count or posture
+unless the specific concept truly needs it. No fixed eye sentence, no blanket rest-pose,
+mouth-open, mouth-closed or rigging-pose line, and no other universal anatomy recipe in its place.
+Our own-eye import tooling (`lib/marked_eyes.py`, below) is a separate concern: its convenience
+never dictates the design.
+**A concept carries as much visual weight as its base shape** (owner, #2051): it transforms the
+whole anatomy, material, form and behaviour. A dinosaur with a shorter beak, a swapped crest or a
+small decoration isn't a concept; a melting body, or a creature wielding a form its concept
+gives it, is. Bold concepts stay bold, including abstract, loose, floating, thread-like,
+incoherent or physically impossible forms; random draws stay inspiration, not law. **Every
+creature prompt explicitly tells the image generator to be bold and creative**: keep the function
+and silhouette readable, but never dilute the concept into timid, model-friendly surface tweaks.
+**Flight shapes the source only where the creature flies** (owner, after #2059): for a creature
+that actually needs flight, consider a partly spread reference or source, so the wings' undersides
+and important overlapping layers come apart. Existing textures don't supply missing geometry:
+inspect and repair a supplied source before asking for a new one. This is no blanket pose rule and
+puts no flight on flightless forms (the Patchwork Songbird's chick doesn't need to fly); each later
+form is judged on its own.
 
 **Every evolution prompt is one of these two copypastas** (owner, #1754; reworded by the owner's
 ground rule of 2026-10-30, #1821): a baby form or any other evolution of an existing beast is asked
 for with the best picture of the earlier form attached as the reference and its block, word for
 word, including its capitals and punctuation, only its `<…>` parts differing between the issue's 20
-variations. Each ends with the eye sentence too.
+variations. Neither carries a pose, mouth or eye line any more (#2052, above): where a
+variation's concept truly needs one, it says so in its change.
 **An evolved form redesigns its body; it never copies the earlier form's body** (owner's ground
 rule, 2026-10-30, #1821): copying it isn't interesting. So each variation has a change, written as
 a plain sentence, that adds something unique, unusual or fantastical, such as nine tails, a
@@ -78,7 +111,9 @@ more powerful and more fantastical, never the same animal recoloured (owner, #17
 
 **A later form** (the owner's prompt, #1993, which made the Kalvrakkor's magma form, #1771): two
 parts change per prompt, the `The change:` line and the theme in `more <theme>-themed`, the
-creature's own theme (the owner's prompt says `more magma-themed`).
+creature's own theme (the owner's prompt says `more magma-themed`). Its pose line, its "no loose
+or floating parts" and its closing eye sentence are dropped by the owner's later rule (#2052), and
+the bold line is added (#2051); the rest is the owner's wording as it was.
 
 ```text
 Generate a brand-new image of a creature. The attached picture is only a reference for it: it shows this creature's earlier form. Draw its next form: the same creature line.
@@ -88,9 +123,9 @@ More powerful body structure! it's the next evolution, so make it fancier, more 
 
 
 One single creature, centred and alone, in a front three-quarter view, its whole body in frame with space all around it. The background is plain, flat light grey and continues unbroken beneath it.
-Pose: a calm, symmetrical rest pose, head level, mouth closed. No loose or floating parts, no effects such as sparks, steam or smoke.
+Be bold and creative: the change transforms its whole body, material and form, never just a surface detail.
+No effects such as sparks, steam or smoke.
 Style: a stylized game creature with large, readable shapes and flat matte colours, smooth like a clay 3D render and ready for cel shading: plain flat colour areas without drawn outlines, painted highlights or painted shadows. Soft, even, shadowless light. No text.
-Two small, plain, flat black oval eyes.
 ```
 
 **A baby form** (owner's pick on #1823, 2026-10-30) keeps its own wording: only the change differs
@@ -103,9 +138,9 @@ Generate a brand-new image of a creature. Draw its baby form.
 Its body also changes. It becomes younger and smaller - redesign it.
 
 One single creature, centred and alone, in a front three-quarter view, its whole body in frame with space all around it. The background is plain, flat light grey and continues unbroken beneath it.
-Pose: a calm, symmetrical rest pose, head level, mouth closed. No loose or floating parts, no effects such as sparks, steam or smoke.
+Be bold and creative: the change transforms its whole body, material and form, never just a surface detail.
+No effects such as sparks, steam or smoke.
 Style: a stylized game creature with large, readable shapes and flat matte colours, smooth like a clay 3D render and ready for cel shading: plain flat colour areas without drawn outlines, painted highlights or painted shadows. Soft, even, shadowless light. No text.
-Two small, plain, flat black oval eyes.
 ```
 
 **Every prop prompt ends with this fixed block** (owner, #1824, #1825): a non-monster asset (the
@@ -188,8 +223,10 @@ a second model could use goes into the library or a generic tool, never into one
     any point of its swing (#1690): `clipped` measures it against the lid's mesh, `eye` grows a
     narrow eye's lid taller until nothing does, and `Lids` fails the build if anything still does.
   - `marked_eyes` (#1683): our eyes in place of a generated model's. `replace` finds the two
-    flat black ovals the prompt's eye sentence marked on the head (`GLOW` instead of `DARK` for a
-    beast imported with glowing painted eyes), paints them over in the skin's colour around them,
+    dark eyes painted on the head, such as the flat black ovals older prompts asked for (`GLOW`
+    instead of `DARK` for a beast imported with glowing painted eyes; prompts no longer prescribe
+    eyes, #2052, so the tooling adapts to the design, never the reverse), paints them over in
+    the skin's colour around them,
     fits `eyes.eye` with lids there by their position, size and spacing (`clear` sets them out
     along the way they look where the head's skin covers least of their iris and pupil, and
     fails the build past `BURIED`), joins them into the skin, and returns the `Lids` (for `animate`'s overlays) and the eye points (for
@@ -390,8 +427,9 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
    triangles. **The owner's raw export goes to the private repository
    `Coarisfinia/khovax-sources`** (#1849): one folder per issue (`<issue>-<slug>/`), each file
    named after its asset (`<slug>.glb`, a variant with a suffix); the import issue links the file,
-   and the import takes it from there as the `<download.glb>` of steps 2 and 3. The face carries only the prompt's two flat black ovals
-   (#1682), never eyes Meshy draws or details: ours replace them (step 5). Meshy rigs it first wherever it can (#1514);
+   and the import takes it from there as the `<download.glb>` of steps 2 and 3. Whatever eyes
+   the source's face has, ours replace them (step 5); the prompt doesn't mark them (#2052).
+   Meshy rigs it first wherever it can (#1514);
    where it can't, we build our own Blender rig (#1732, section 2). An evolution's image comes
    from the copypastas above (#1754).
 2. **Inspect:** `uv run --locked packages/game-models/inspect_meshy.py <download.glb>` (#1523),
@@ -428,8 +466,8 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
 - **Seam splits:** the export splits a vertex wherever its UVs part, which broke the volume
   check's body detection; `lib/volume.py` handles it now. A new check reading the mesh welds by
   position too.
-- **Painted eyes:** the generator paints its eyes on the texture; they can't blink or shut. The
-  prompt marks them as flat black ovals (its fixed eye sentence, above), and the model script
+- **Painted eyes:** the generator paints its eyes on the texture; they can't blink or shut. Older
+  prompts marked them as flat black ovals (#1682; prompts no longer do, #2052), and the model script
   swaps in ours with `marked_eyes.replace` once the bones are named (#1682): the eye check fails
   a creature without them.
 - **Custom normals:** Blender's glTF import keeps a file's normals as custom ones, the model
