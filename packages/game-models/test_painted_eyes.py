@@ -18,7 +18,8 @@ does a dim fragment on the pale side of a head mostly basalt, or a dim patch acr
 between its tones (#1799), also one only a few texels across (#1811).
 `fit` sets our eyes where the marks it was given are, mirrored across the middle they were found
 across (#1735): on a ball centred on x = 0 with `DARK`'s ovals, and on one off the middle with the
-hound's.
+hound's. On a ball with no painted eyes, `find`'s error names the ways on (#2100), and our eyes
+placed there by hand (`placed`) land at the given spot and size, mirrored across the given middle.
 
     uv run --locked packages/game-models/blender.py --background --factory-startup \
         --python packages/game-models/test_painted_eyes.py
@@ -143,6 +144,12 @@ FITS = {
     # off theirs (#1735).
     "fit_hound": ((ICE_EYE, AMBER), ICE, HOUND),
 }
+# Our eyes placed by hand on a plain ball off the middle (#2100): its middle, and the left eye's
+# width and height there; and how far off the given size our eyeball may be, as a share of it.
+PLACED_MIDDLE, PLACED_WIDTH, PLACED_HEIGHT, PLACED_NEAR = 0.05, 0.12, 0.08, 0.05
+# What `find`'s error names when it finds no eyes: a beast's own `Marked`, the placement by hand
+# and the eye check's list of eyeless designs.
+FIND_OPTIONS = ("BEASTS", "placed", "EYELESS")
 # How far our eye's iris may lie from its mark's middle, as a share of the mark's width: the iris
 # stands a little out from the surface, and `clear` may move it a little further.
 FIT_NEAR = 0.2
@@ -374,6 +381,49 @@ def fits(name, paint, colour, beast):
     return ok
 
 
+def placed():
+    """Whether `find`'s error on a ball with no painted eyes names FIND_OPTIONS, and our eyes
+    placed by hand there (`placed`, #2100) land at the given spot and size: the marks at the spot
+    on the surface and its mirror image across PLACED_MIDDLE, as wide and high as given, and `fit`
+    setting each eye's iris on its mark, its eyeball as wide as the mark."""
+    skin = build(None, False, 1.0, SKIN, PLACED_MIDDLE)
+    try:
+        marked_eyes.find(marked_eyes.Head(skin, "head"))
+        message = "found eyes"
+    except ValueError as error:
+        message = str(error)
+    named = all(option in message for option in FIND_OPTIONS)
+    ok = named
+    (log.info if named else log.error)("%s placed: find says %r, naming %s" % (
+        "ok" if named else "FAIL", message, ", ".join(FIND_OPTIONS)))
+    spot = (PLACED_MIDDLE + EYE.x, EYE.y, EYE.z)
+    marks = marked_eyes.placed(skin, spot, PLACED_WIDTH, PLACED_HEIGHT, middle=PLACED_MIDDLE)
+    spots = [numpy.array(spot), numpy.array((PLACED_MIDDLE - EYE.x, EYE.y, EYE.z))]
+    mats = {"dark": material("dark", colour=BLACK), "glow": material("glow", colour=GLOW),
+            "skin": material("lid", colour=SKIN)}
+    pieces = marked_eyes.fit(skin, marks, mats, "head", middle=PLACED_MIDDLE)
+    for side, mark, given in zip("LR", marks, spots):
+        mine = [piece for piece in pieces if piece.name.startswith("Eye.%s." % side)]
+        eyeball = next(piece for piece in mine if piece.name.endswith(".eyeball"))
+        corners = numpy.array([(eyeball.matrix_world @ vertex.co)[:] for vertex in eyeball.data.vertices])
+        # The eyeball's widest radius is its size, half the mark's width (fit).
+        wide = 2.0 * float(numpy.sqrt(((corners - corners.mean(axis=0)) ** 2).sum(axis=1)).max())
+        iris = numpy.array(eyes.spot(mine))
+        checks = {
+            "mark at the spot": float(numpy.sqrt(((mark.middle - given) ** 2).sum())) <= FIT_NEAR * PLACED_WIDTH,
+            "mark's size": (abs(mark.width - PLACED_WIDTH) < 1e-9 and abs(mark.height - PLACED_HEIGHT) < 1e-9),
+            "iris on the mark": float(numpy.sqrt(((iris - given) ** 2).sum())) <= FIT_NEAR * PLACED_WIDTH,
+            "eyeball's width": abs(wide - PLACED_WIDTH) <= PLACED_NEAR * PLACED_WIDTH,
+        }
+        for what, good in checks.items():
+            ok = ok and good
+            (log.info if good else log.error)("%s placed: eye %s, %s (mark at %s, %.3f by %.3f; iris at %s; "
+                                              "eyeball %.3f wide)" % (
+                "ok" if good else "FAIL", side, what, tuple(round(float(v), 3) for v in mark.middle),
+                mark.width, mark.height, tuple(round(float(v), 3) for v in iris), wide))
+    return ok
+
+
 def main():
     passed = True
     for name, (picks, yes, no) in PICKS.items():
@@ -403,6 +453,7 @@ def main():
         passed = marking(name, named, fragment, passes) and passed
     for name, (paint, colour, beast) in FITS.items():
         passed = fits(name, paint, colour, beast) and passed
+    passed = placed() and passed
     log.info("PAINTED EYES TEST: %s" % ("PASS" if passed else "FAIL"))
     sys.exit(0 if passed else 1)
 
