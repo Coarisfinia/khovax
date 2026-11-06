@@ -17,15 +17,22 @@ extends SceneTree
 ##       -s res://tests/soak/run_soak.gd
 ## Headless it measures the frames without the renderer's share.
 ##
-## Each window measures two things:
+## With `-- tour` (#2084) the explorer is a TourExplorer instead: it walks through the exits into
+## every instance it can reach and back home, so the end window is measured with all of them
+## loaded behind the player, as after a while of play. CI runs it headless, where the frame is the
+## game's own work, which the software renderer's share would otherwise hide.
+##
+## Each window measures three things:
 ## - the median frame time, all the views and the HUD included and the explorer's own pathfinding
 ##   left out, divided by the median time of a fixed piece of work run beside it (`_reference`), so
 ##   a machine busy with other work slows both alike and the ratio stays put;
+## - the median time of the frame's tick (GameDriver.advance), the explorer left out, divided by
+##   the same: what every tick costs however few views there are;
 ## - the median number of draw calls a frame makes, 3D and 2D: what a phone's or a browser's GPU
 ##   pays for per call, while CI's software renderer barely notices them. Headless draws nothing.
-## It fails when either is more than GROWTH_BOUND times higher at the end than at the start, or when
-## the walk didn't explore its instance and come back in time, or on any error logged. On the way it
-## prints the same measures every few seconds with what has grown by then.
+## It fails when any is more than GROWTH_BOUND times higher at the end than at the start, or when
+## the walk didn't explore its instance (or tour the world) and come back in time, or on any error
+## logged. On the way it prints the same measures every few seconds with what has grown by then.
 
 ## Where the soak keeps the world and the profile it plays, never the player's own.
 const WORLD_PATH: String = "user://soak_world.json"
@@ -43,6 +50,8 @@ const MOST_FRAMES: int = Simulation.TICKS_PER_SECOND * 300
 const GROWTH_BOUND: float = 1.5
 ## The fewest tiles the walk has to stand on for the measurement to count.
 const LEAST_EXPLORED: int = 300
+## The fewest times a tour has to walk into another instance for the measurement to count.
+const LEAST_ENTERED: int = 6
 ## Every how many frames the reference work runs.
 const REFERENCE_EVERY: int = 10
 ## How many tiles the reference work fills a dictionary with.
@@ -53,11 +62,14 @@ var _errors: ErrorCounter = ErrorCounter.new()
 var _main: Node
 var _driver: GameDriver
 var _explorer: SoakExplorer
+## Whether the explorer tours the world's instances (`-- tour`) rather than its own.
+var _touring: bool = false
 ## The frames since the walk came back home, or -1 before.
 var _home_frames: int = -1
-## The current window's frame times and reference times, in microseconds, and its draw calls.
+## The current window's frame, reference and tick times, in microseconds, and its draw calls.
 var _frame_usec: Array[int] = []
 var _reference_usec: Array[int] = []
+var _tick_usec: Array[int] = []
 var _draws: Array[int] = []
 ## The start window's and the end window's measures, once taken.
 var _start: SoakWindow
@@ -90,7 +102,7 @@ func _process(_delta: float) -> bool:
 		_finish(_verdict())
 		return false
 	if _frames >= MOST_FRAMES:
-		printerr("FAIL: the walk didn't explore its instance and come back in %.0f s" % [
+		printerr("FAIL: the walk didn't explore and come back in %.0f s" % [
 			MOST_FRAMES / float(Simulation.TICKS_PER_SECOND),
 		])
 		_finish(1)
@@ -101,6 +113,8 @@ func _process(_delta: float) -> bool:
 	# would add real time's ticks to the soak's one.
 	_driver.set_process(false)
 	_driver.advance(1.0 / Simulation.TICKS_PER_SECOND)
+	# Polled inside the tick, so its time is in there too.
+	_tick_usec.append(Time.get_ticks_usec() - _last_usec - _explorer.spent_usec)
 	return false
 
 
@@ -117,6 +131,7 @@ func _initialize() -> void:
 	GameDriver.fixed_seed = SEED
 	# A wild monster that fells the player would stop the walk.
 	GameDriver.invincible = true
+	_touring = OS.get_cmdline_user_args().has("tour")
 	InstanceContent.prefetch(Realms.start())
 	ContentFill.wait()
 	_main = (load(Boot.GAME) as PackedScene).instantiate()
@@ -130,7 +145,12 @@ func _initialize() -> void:
 	_driver = _main.get_node("Driver") as GameDriver
 	# The soak steps the world itself, one tick a frame, and walks the player by its explorer.
 	_driver.set_process(false)
-	_explorer = SoakExplorer.new()
+	if _touring:
+		var tour: TourExplorer = TourExplorer.new()
+		tour.driver = _driver
+		_explorer = tour
+	else:
+		_explorer = SoakExplorer.new()
 	_driver.sources.assign([_explorer])
 
 
@@ -163,6 +183,7 @@ func _measure() -> void:
 func _begin_window() -> void:
 	_frame_usec.clear()
 	_reference_usec.clear()
+	_tick_usec.clear()
 	_draws.clear()
 
 
@@ -196,28 +217,40 @@ func _close_window() -> SoakWindow:
 	var window: SoakWindow = SoakWindow.new(
 		SoakWindow.median(_frame_usec),
 		SoakWindow.median(_reference_usec),
+		SoakWindow.median(_tick_usec),
 		SoakWindow.median(_draws),
 	)
 	_begin_window()
 	var trails: TrailFeature = _driver.state.feature(TrailFeature.ID) as TrailFeature
-	print("%3.0f s: %s, %4d tiles explored, trail %4d, %5d nodes" % [
+	print("%3.0f s: %s, %4d tiles explored, trail %4d, %5d nodes, %d instances loaded" % [
 		_frames / float(Simulation.TICKS_PER_SECOND),
 		window.line(),
 		_explorer.stood_on.size(),
 		trails.shared.tiles.size() if trails != null else 0,
 		Performance.get_monitor(Performance.OBJECT_NODE_COUNT),
+		_driver.world.instances.size(),
 	])
 	return window
 
 
 ## 0 when neither measure grew past the bound, else 1, saying why.
 func _verdict() -> int:
-	if _explorer.stood_on.size() < LEAST_EXPLORED:
+	if _touring and (_explorer as TourExplorer).entered < LEAST_ENTERED:
+		printerr("FAIL: the tour walked into another instance only %d times, too few to measure" % [
+			(_explorer as TourExplorer).entered,
+		])
+		return 1
+	if not _touring and _explorer.stood_on.size() < LEAST_EXPLORED:
 		printerr("FAIL: the walk stood on only %d tiles, too few to measure" % [
 			_explorer.stood_on.size(),
 		])
 		return 1
 	var failed: bool = _judge("frame time, in references", _start.relative(), _end.relative())
+	failed = _judge(
+		"tick time, in references",
+		_start.relative_tick(),
+		_end.relative_tick(),
+	) or failed
 	if DisplayServer.get_name() == "headless":
 		print("no draw calls measured: headless, nothing is drawn")
 	elif _start.draws <= 0:
