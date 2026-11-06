@@ -177,7 +177,7 @@ func advance(delta: float) -> void:
 	_accumulated += delta
 	var tick_seconds: float = 1.0 / Simulation.TICKS_PER_SECOND
 	var budget_usec: float = tick_seconds * 1_000_000.0
-	var began: int = int(clock.call())
+	var began: int = _now_usec()
 	var ticks: int = 0
 	# On a device whose ticks take longer than they last (#2097), catching up would only lengthen
 	# the frame, so the next frame is due even more ticks and every frame ends up running the full
@@ -186,7 +186,7 @@ func advance(delta: float) -> void:
 	while (
 		_accumulated >= tick_seconds
 		and ticks < MAX_TICKS_PER_FRAME
-		and (ticks == 0 or int(clock.call()) - began < budget_usec)
+		and (ticks == 0 or _now_usec() - began < budget_usec)
 		and _step()
 	):
 		_accumulated -= tick_seconds
@@ -197,6 +197,12 @@ func advance(delta: float) -> void:
 	# command arrives that tick runs and the normal pace resumes, without a burst of catching up.
 	# This only shifts when ticks run; what they do still depends on the commands alone.
 	_accumulated = minf(_accumulated, tick_seconds)
+
+
+## The clock's time, in microseconds.
+func _now_usec() -> int:
+	var now: int = clock.call()
+	return now
 
 
 ## Runs the next tick if every player's command for it is known; returns whether it ran.
