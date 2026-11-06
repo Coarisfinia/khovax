@@ -37,6 +37,12 @@ license, a public-domain claim without a CC0 or license file) isn't on the list:
 or put the choice to the owner in a `question` issue. The root Unlicense never covers a third
 party's file.
 
+**A file the project owns**, because it was built in the repository or the owner made or generated
+it for khovax (such as a model from a paid Meshy plan under its Private license, #1476), follows
+AGENTS.md's project-owned rule: it is under the Unlicense, its `LICENSE.md` is a copy of the root
+`LICENSE`, and its `SOURCE.md` names the project (or its contributors) as the author and says how
+the file was made.
+
 **If you couldn't verify something, say so** on the issue or pull request, and in `Checked` below.
 A file's license or its publisher's right to grant it, left unverified, blocks the import until
 there is independent provenance or the owner's decision in a `question` issue. A source's general
@@ -49,7 +55,10 @@ Each pack lives in `packages/game/assets/<pack>/`, with only what the game uses,
 download:
 
 - **`LICENSE.md`:** the license's text, or the pack's own notice if it came with one.
-- **Godot's `.import` file:** committed beside the file it describes.
+- **Godot's `.import` file:** committed beside the file it describes. Godot writes it only on an
+  import, so after adding the file run `godot --headless --path packages/game --import` from the
+  repository's root (as for `.uid` files in AGENTS.md's "Testing and CI"). It generates files
+  rather than checking anything, so it isn't a rerun of CI.
 - **`SOURCE.md`:** a title, then the three lines `tools/godot/credits.gd` turns into `CREDITS.md`,
   then the rest of the file's history. Never edit `CREDITS.md` by hand: CI fails when it differs.
 
