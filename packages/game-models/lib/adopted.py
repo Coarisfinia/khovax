@@ -10,6 +10,8 @@ three bones a leg and a four-bone tail.
   bone looser than the one before it, as the quadruped's tail is (clips.FOLLOW).
 - `Body`: what clips.gait reads of a body, from a rig named to the quadruped's scheme.
 - `lesser`: one of the library's clips scaled down for shorter legs (#1609).
+- `bowed`: one of the library's lying clips with its chest (or any bone) bowed further, for a
+  body whose neck can't bow as far as the wolf's without thinning (#2030).
 
 Blender is Z-up and the model faces -Y."""
 
@@ -114,4 +116,23 @@ def lesser(clip, share, turns=1.0, lift=1.0):
     for step in clip.steps:
         step.spot = tuple(share * value for value in step.spot)
         step.height *= lift
+    return clip
+
+
+def bowed(clip, bow, start=None, full=None):
+    """`clip` with each bone in `bow` ({bone: radians}) pitched that much further down (its X
+    turn; a negative one tips it up) on every key: for a long or stiff neck that thins where it
+    bows as far as the wolf's (the volume check), the chest tips its front down instead, so the
+    head still comes down low (#2030). With `start` and `full` (frames) the bow grows
+    from nothing at `start` to all of it at `full`, as a body sinks into lying; without them every
+    key has all of it."""
+    keys = []
+    for key in clip.keys:
+        share = 1.0 if start is None else min(1.0, max(0.0, (key[0] - start) / (full - start)))
+        pose = dict(key[1])
+        for name, pitch in bow.items():
+            x, y, z = pose.get(name, (0.0, 0.0, 0.0))
+            pose[name] = (x + share * pitch, y, z)
+        keys.append((key[0], pose, *key[2:]))
+    clip.keys = keys
     return clip

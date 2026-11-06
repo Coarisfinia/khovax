@@ -150,25 +150,35 @@ RUN_FRAMES = clips.cycle_frames(RUN_SPEED, TILE * RUN_TILES, FPS)
 WALK_STRIDE = WALK_SPEED * WALK_FRAMES / FPS / SCALE
 RUN_STRIDE = RUN_SPEED * RUN_FRAMES / FPS / SCALE
 
-# How far it sinks to lie on its belly, lying limp or asleep (its forearms lie flat under it
-# asleep, so it sinks less), and how much of the wolf's reach its clips keep
-# (adopted.lesser). A blow barely shifts it (HIT_SHARE, HIT_TURNS).
-BELLY_HEIGHT = 0.24
-SLEEP_HEIGHT = 0.2
+# How far it sinks to lie on its belly, lying limp or asleep: as far as its forelegs let it, its
+# belly on or near the ground (#2030; animate lifts it where its elbows would sink), and how much
+# of the wolf's reach its other clips keep (adopted.lesser). A blow barely shifts it (HIT_SHARE,
+# HIT_TURNS).
+BELLY_HEIGHT = 0.12
+SLEEP_HEIGHT = 0.25
 SHARE = 0.5
 HIT_SHARE, HIT_TURNS = 0.3, 0.5
-# Its neck is long and armoured: lying down, it bows less than a wolf's (the volume check).
-LYING_TURNS = 0.7
+# Its neck is long and armoured: lying down, it bows less than a wolf's (the volume check), asleep
+# and limp. So its chest tips its front down instead, bringing its head low (adopted.bowed,
+# #2030). Asleep its head tips back up on its neck a little, so its eyes look out over its
+# forepaws rather than down onto them (the eyes-covered check).
+LYING_TURNS = 0.6
+FAINT_TURNS = 0.75
+SLEEP_BOW = {"spine_02": 0.3, "head": -0.12}
+FAINT_BOW = {"spine_02": 0.25}
+# Faint's frames over which its bow grows, as it sinks (clips.faint's keys).
+FAINT_BOWING = (10, 32)
 # A smaller brace than the wolf's: its weight doesn't need to shift far to hold (clips.channel).
 BRACE = {"front_paw": (0.03, 0.0, 0.1), "hind_paw": (0.02, 0.0, 0.0)}
 # Its tail reaches the hex's corner at rest, so its swings stay small: a heavy tail hardly moves.
 TAIL_SHARE = 0.3
-FAINT_SHARE = 0.15
 # Its long neck and tall stance reach the ground with its chest low, its head tipped down and its
 # forepaws out in front (clips.feed).
 FEED = {"neck": 0.36, "head": 0.6, "crouch": 0.3, "forepaws": 0.1}
-FAINT_FOREPAWS = 0.2
-SLEEP_PAWS = {"front_paw": (0.0, 0.0, 0.3), "hind_paw": (0.09, 0.0, -0.09)}
+# Lying, its forepaws reach far out in front, so its forelegs lie long and its elbows let its
+# chest down onto the ground: folded under it, they'd hold it up in a crouch (#2030).
+FAINT_FOREPAWS = 0.4
+SLEEP_PAWS = {"front_paw": (0.0, 0.0, 0.44), "hind_paw": (0.09, 0.0, -0.09)}
 
 
 def slam():
@@ -345,10 +355,12 @@ def build(out):
                           spine_flex=RUN_SPINE_FLEX, roll=RUN_ROLL, bob=RUN_BOB, planted=False),
         "Attack": slam(),
         "Hit": adopted.lesser(clips.hit(), HIT_SHARE, turns=HIT_TURNS),
-        "Faint": adopted.lesser(clips.faint(BELLY_HEIGHT, forepaws=FAINT_FOREPAWS), FAINT_SHARE, turns=LYING_TURNS),
+        "Faint": adopted.bowed(adopted.lesser(clips.faint(BELLY_HEIGHT, forepaws=FAINT_FOREPAWS), 1.0,
+                                              turns=FAINT_TURNS), FAINT_BOW, *FAINT_BOWING),
         **{name: adopted.lesser(clip, SHARE) for name, clip in clips.channel(brace=BRACE).items()},
         "Feed": adopted.lesser(clips.feed(**FEED), TAIL_SHARE),
-        "Sleep": adopted.lesser(clips.sleep(clips.curled(SLEEP_HEIGHT), SLEEP_PAWS), 1.0, turns=LYING_TURNS),
+        "Sleep": adopted.bowed(adopted.lesser(clips.sleep(clips.curled(SLEEP_HEIGHT), SLEEP_PAWS), 1.0,
+                                              turns=LYING_TURNS), SLEEP_BOW),
     }, SCALE, ground_meshes=[skin], chains=FOLLOW, limbs=limbs(rig), overlays=[lids.shut])
     scene.export_glb(out)
     print("MODEL", out, "triangles", scene.triangles(skin), "bones", len(rig.data.bones),
