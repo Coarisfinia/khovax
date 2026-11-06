@@ -1290,6 +1290,19 @@ jobs:
               gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/${id}" || return 1
             done
           }
+          # A run that made a draft and ends without publishing it drops that draft, whatever ended
+          # it: an upload that failed for good would otherwise leave a full set of builds behind
+          # until the same tag runs again, which it mostly never does (#2024). The job keeps its own
+          # exit status; a cleanup that fails too only warns.
+          drop_unpublished_draft() {
+            local status=$?
+            if [ "${creates:-0}" -gt 0 ] && [ -z "${published:-}" ]; then
+              echo "${tag} wasn't published; dropping its draft" >&2
+              retry drop_drafts || echo "::warning::couldn't drop the draft of ${tag}; delete it by hand" >&2
+            fi
+            exit "$status"
+          }
+          trap drop_unpublished_draft EXIT
           # A rerun of this run finds its release already published, or the draft a failed upload
           # left, which has no tag yet and is made again. Any error but "release not found" fails
           # the job, so it is never mistaken for "none".
@@ -1377,3 +1390,4 @@ jobs:
             retry_403=1 retry gh release upload "$tag" "$file" --repo "$GITHUB_REPOSITORY" --clobber
           done
           retry gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false
+          published=1
