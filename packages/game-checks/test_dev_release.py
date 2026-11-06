@@ -1,6 +1,8 @@
 """Tests the dev-release step of ci.yml (#1991, #2028) by running it against a stand-in `gh` that
 refuses to create the release: a dev build that a newer commit on main has replaced, whose workflows
-differ from main's, gives way with a warning, and every other refusal still fails the job. The stand-in plays GitHub, so this needs no network.
+differ from main's, gives way with a warning, and every other refusal still fails the job. An
+upload that fails for good drops the draft it was filling (#2024). The stand-in plays GitHub, so
+this needs no network.
 
     uv run --locked --package khovax-game-checks packages/game-checks/test_dev_release.py
 """
@@ -19,8 +21,9 @@ SHA = "a" * 40
 NEWER = "b" * 40
 
 # Answers as GitHub did in the failed run: no release of this tag yet, and each create refused until
-# REFUSALS of them have been, then AFTER_REFUSALS' error if any. Every call goes to the log the tests
-# read.
+# REFUSALS of them have been, then AFTER_REFUSALS' error if any. A create that passes makes draft 7,
+# which the releases list shows until it is published or deleted; an upload fails with UPLOAD_ERROR
+# if it is set. Every call goes to the log the tests read.
 STAND_IN_GH = r"""#!/usr/bin/env bash
 echo "$*" >> "$WORK/calls"
 case "$1 $2" in
@@ -28,7 +31,12 @@ case "$1 $2" in
   "release create")
     count=$(grep -c "^release create" "$WORK/calls")
     if [ "$count" -le "$REFUSALS" ]; then echo "$CREATE_ERROR" >&2; exit 1; fi
-    if [ -n "$AFTER_REFUSALS" ]; then echo "$AFTER_REFUSALS" >&2; exit 1; fi ;;
+    if [ -n "$AFTER_REFUSALS" ]; then echo "$AFTER_REFUSALS" >&2; exit 1; fi
+    echo 7 > "$WORK/drafts" ;;
+  "release upload") if [ -n "$UPLOAD_ERROR" ]; then echo "$UPLOAD_ERROR" >&2; exit 1; fi ;;
+  "release edit") : > "$WORK/drafts" ;;
+  "api --paginate") case "$3" in *"/releases?"*) cat "$WORK/drafts" ;; esac ;;
+  "api -X") [ "$4" = "repos/owner/repo/releases/7" ] && : > "$WORK/drafts" ;;
   "api repos/owner/repo/commits/main")
     if [ -n "$HEAD_ERROR" ]; then echo "$HEAD_ERROR" >&2; exit 1; fi
     echo "$MAIN_HEAD" ;;
@@ -65,6 +73,7 @@ class DevReleaseTest(unittest.TestCase):
         status="ahead",
         own_workflows="tree1",
         main_workflows="tree2",
+        upload_error="",
     ):
         with tempfile.TemporaryDirectory() as folder:
             work = Path(folder)
@@ -85,6 +94,7 @@ class DevReleaseTest(unittest.TestCase):
                 (work / "builds" / build).parent.mkdir(parents=True)
                 (work / "builds" / build).touch()
             (work / "calls").touch()
+            (work / "drafts").touch()
             done = subprocess.run(
                 ["bash", "--noprofile", "--norc", "-e", "-o", "pipefail", "-c", step_script()],
                 cwd=work,
@@ -100,6 +110,7 @@ class DevReleaseTest(unittest.TestCase):
                     "STATUS": status,
                     "OWN_WORKFLOWS": own_workflows,
                     "MAIN_WORKFLOWS": main_workflows,
+                    "UPLOAD_ERROR": upload_error,
                     "TAG": tag,
                     "RUNNER_TEMP": str(work),
                     "GITHUB_REPOSITORY": "owner/repo",
@@ -112,6 +123,7 @@ class DevReleaseTest(unittest.TestCase):
                 text=True,
                 check=False,
             )
+            self.drafts_left = (work / "drafts").read_text(encoding="utf-8").split()
             return done, (work / "calls").read_text(encoding="utf-8").splitlines()
 
     def calls(self, calls, start):
@@ -133,6 +145,7 @@ class DevReleaseTest(unittest.TestCase):
         self.assertEqual(len(self.calls(calls, "release create")), 3)
         self.assertEqual(len(self.calls(calls, "release upload")), 4)
         self.assertEqual(len(self.calls(calls, "release edit")), 1)
+        self.assertEqual(self.calls(calls, "api -X DELETE"), [])
 
     def assert_refused_and_failed(self, done, calls):
         """It failed at the refusal after all its tries, not on something earlier in the script."""
@@ -184,6 +197,16 @@ class DevReleaseTest(unittest.TestCase):
         done, calls = self.run_step(error="HTTP 422: Validation Failed")
         self.assertNotEqual(done.returncode, 0, done.stdout + done.stderr)
         self.assertEqual(len(self.calls(calls, "release create")), 1)
+
+    def test_a_failed_upload_drops_its_draft_and_fails(self):
+        # As in run 40950002022, whose draft of v0.1.0-dev.2859 stayed behind (#2024).
+        done, calls = self.run_step(refusals=0, upload_error="HTTP 408: Request Timeout")
+        self.assertNotEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(len(self.calls(calls, "release upload")), 4)
+        self.assertEqual(self.calls(calls, "release edit"), [])
+        deletes = self.calls(calls, "api -X DELETE")
+        self.assertEqual(deletes, ["api -X DELETE repos/owner/repo/releases/7"])
+        self.assertEqual(self.drafts_left, [])
 
 
 if __name__ == "__main__":
