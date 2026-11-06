@@ -312,16 +312,25 @@ background; only wait in the foreground for a result the very next step needs.
 - **When a pull request may be queued** (owner's ground rule, #1783): Codex's findings are
   handled, CI is green and every review thread is settled, and then:
   - **user-facing** (gameplay, content, UI, models, #1381): only once the owner has **approved** it;
-  - **not user-facing** (tooling, CI, docs, refactors, agent rules): once a review subagent finds
-    nothing blocking, named on the pull request. The merge queue still needs one approving review
+  - **not user-facing** (tooling, CI, docs, refactors, agent rules, and changes to `.github/` or
+    to the game's code that no player sees, owner's pick 1 on #2061): once a review subagent finds
+    nothing blocking, named on the pull request. **A pull request is user-facing** when a player
+    could notice any of it: what the game shows, plays or sounds like, its rules, balance, content,
+    texts, models and UI, the web build's page, or a release's contents. A refactor, a test, a
+    tool or a CI change that leaves all of that as it was is not. **When in doubt, it counts as
+    user-facing.** The merge queue still needs one approving review
     and doesn't apply the bot's bypass (#1867), so the main session then labels the pull request
     `subagent-cleared` and `.github/workflows/approve-cleared.yml` approves it (#1874) as a
     separate reviewer GitHub App, but only
     when the agent bot or a human admin put the label on, only into the default branch, and never
-    for a pull request that changes or renames user-facing files (`packages/game/` outside its
-    `tests/` and `tools/`; owner's pick 1 on #1874), nor for one that changes any workflow
-    (`.github/workflows/`): any workflow could reach the guard's environment, so **a change to the
-    guard, or to any workflow, always needs the owner**. That approval is permanent, like
+    for a pull request that changes or renames files that are always user-facing (the game's
+    `assets/`, `translations/`, `realms/` and `regions/`, and its scenes, resources, images,
+    models, sounds, fonts and shaders, outside its `tests/` and `tools/`), nor for one whose
+    changed workflows could reach a secret's environment: a job with any environment but
+    `github-pages`, or a call to a workflow outside the same commit (`uses:` not starting with
+    `./`). The reviewer app's key lives in such an environment, so **a change to the guard, or to
+    any workflow job that deploys to a protected environment, always needs the owner**. Every
+    other change to `.github/` may be cleared (#2061). That approval is permanent, like
     the owner's (owner's pick 2 on #1895, #1900): a later push or a new base never withdraws it,
     so name each push after the clearance in a PR comment, as after the owner's approval. (Only a
     pull request that changed while it was being approved gets that approval taken back at once.)
@@ -840,7 +849,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   App's Workflows permission. For the owner's own login it is the `workflow` scope
   (`gh auth refresh -h github.com -s workflow`).
 - **Never use the `pull_request_target` or `workflow_run` triggers**, and never add self-hosted
-  runners to this public repository. **The one exception** (owner's pick on #1867, #1874):
+  runners to this public repository. **The one exception** (owner's pick on #1867, #1874, #2061):
   `approve-cleared.yml` runs on `pull_request_target` (`labeled` only), with a
   read-only token, and never checks out or runs anything from the pull request. It approves as a
   separate reviewer GitHub App (Pull requests: write, Contents: write), whose key is
