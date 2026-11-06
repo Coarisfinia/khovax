@@ -24,3 +24,7 @@ __pycache__/
 
 # The default pack's .pck a build carries (#1941): CI builds it before exporting.
 /packages/game/packs/
+
+# The game's link to the resource packs at the root (#1978), made by
+# packages/game-build/link_resource_packs.py: a symlink, or on Windows a junction.
+/packages/game/resourcepacks

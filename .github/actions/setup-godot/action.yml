@@ -1,6 +1,7 @@
 name: Set up Godot
 description: >-
-  Godot's Linux editor at ~/godot/godot, optionally its export templates, and the imported project.
+  Godot's Linux editor at ~/godot/godot, optionally its export templates, uv (pinned by the job's
+  UV_VERSION and UV_SHA256), the game's link to the resource packs (#1978) and the imported project.
   The one place Godot's version and checksums are pinned (#924): ci.yml and release.yml both use it.
 
 inputs:
@@ -14,9 +15,9 @@ inputs:
     default: "true"
   templates:
     description: >-
-      "true" also installs the export templates export_presets.cfg needs, and uv, pinned by the
-      job's UV_VERSION and UV_SHA256: downloading the templates needs it, and so does building the
-      default pack the builds carry (#1941), even when the templates come from the cache (#1975).
+      "true" also installs the export templates export_presets.cfg needs. Downloading them needs
+      uv, and so does building the default pack the builds carry (#1941), even when the templates
+      come from the cache (#1975); it is installed either way (below).
     default: "false"
   import:
     description: >-
@@ -69,13 +70,13 @@ runs:
         key: godot-templates-${{ env.GODOT_VERSION }}-${{ env.GODOT_TEMPLATES_SHA512 }}-${{ hashFiles(format('{0}/export_presets.cfg', inputs.project)) }}
 
     - name: "🧰 Install uv (the Python tooling's runner)"
-      # Whenever the templates are set up, cached or not (#1975), and not again when the job
-      # installed it already. An unpinned uv the runner image might bring doesn't count.
-      if: inputs.templates == 'true'
+      # Always: linking the resource packs needs it (#1978), and so do the templates, cached or not
+      # (#1975). Not again when the job installed it already; an unpinned uv the runner image
+      # might bring doesn't count.
       shell: bash
       run: |
         if [ -z "${UV_VERSION:-}" ] || [ -z "${UV_SHA256:-}" ]; then
-          echo "::error::the export templates need uv: set UV_VERSION and UV_SHA256 in the job's env"
+          echo "::error::setting up Godot needs uv: set UV_VERSION and UV_SHA256 in the job's env"
           exit 1
         fi
         if [ "$(uv --version 2> /dev/null | cut -d' ' -f2)" = "${UV_VERSION}" ]; then
@@ -103,6 +104,12 @@ runs:
         uv run --locked ../game-build/export_templates.py > /tmp/templates.txt
         mapfile -t needed < <(sed 's#^#templates/#' /tmp/templates.txt)
         unzip -q -j /tmp/templates.tpz "${needed[@]}" templates/version.txt -d "$target"
+
+    - name: "🔗 Link the resource packs"
+      # The default pack's files lie at the repository's root, in resourcepacks/ (#1978), which
+      # the game reaches through its link, as every checkout does.
+      shell: bash
+      run: uv run --locked packages/game-build/link_resource_packs.py
 
     - name: "📦 Import the project"
       # Tool scripts run during the import too; a script error there passes silently otherwise.

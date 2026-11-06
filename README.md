@@ -41,6 +41,11 @@ root and names it with `--path packages/game`.
 `gdstyle` (the GDScript linter and formatter) isn't in a scoop bucket, so the repository carries its
 manifest, and scoop needs its absolute path (the `cygpath` above is for Git Bash).
 
+Once per checkout, link the game to the resource packs at the repository's root
+(`resourcepacks/`, where the default pack's files lie): `uv run --locked
+packages/game-build/link_resource_packs.py`. It makes `packages/game/resourcepacks` a symlink, or on
+Windows a directory junction, which needs no admin rights.
+
 Open the project in Godot (`godot --path packages/game --editor`), or run it directly with
 `godot --path packages/game`.
 

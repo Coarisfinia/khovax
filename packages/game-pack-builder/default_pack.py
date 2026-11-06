@@ -19,6 +19,9 @@ from game_shared import log
 from game_shared.resource_packs import MANIFEST, file_lists, gltf_files, read_manifest, section
 
 GAME = Path(__file__).resolve().parents[1] / "game"
+# The default pack's own folder at the repository's root (#1978), which the game reaches through
+# its link, resourcepacks/ (packages/game-build/link_resource_packs.py).
+PACK_ROOT = GAME.parents[1] / "resourcepacks" / "default"
 SINGLE = (
     "textures", "models", "audio", "regions", "realms", "quests", "species", "tiles", "translations", "loot_tables",
     "materials", "harvest_tables",
@@ -59,8 +62,10 @@ def gather(out: Path) -> None:
     shutil.copyfile(MANIFEST, out / "pack.jsonc")
     for path in listed(manifest):
         source = Path(path)
-        # Only the game's own plain files, each to its own place in the pack.
-        if source.is_symlink() or not source.resolve().is_relative_to(GAME) or not source.is_file():
+        # Only the game's own plain files, its project's or its pack folder's, each to its own place
+        # in the pack.
+        inside = source.resolve().is_relative_to(GAME) or source.resolve().is_relative_to(PACK_ROOT)
+        if source.is_symlink() or not inside or not source.is_file():
             raise ValueError(f"{path} isn't a plain file in the game")
         target = (out / path).resolve()
         if not target.is_relative_to(out):

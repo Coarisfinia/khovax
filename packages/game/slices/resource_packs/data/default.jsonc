@@ -171,9 +171,9 @@
 			"regions/morwe_wudhen/stream.md"
 		]
 	},
-	// Each realm (#1861), every one of which the game plays.
+	// Each realm (#1861), every one of which the game plays, in the pack's own folder (#1978).
 	"realms": {
-		"ardvaun": "realms/ardvaun.md"
+		"ardvaun": "resourcepacks/default/realms/ardvaun.md"
 	},
 	// Each quest (#1888), every one of which the players can take; its file stays in the quests
 	// slice, which owns the kind and its schema (#412).
