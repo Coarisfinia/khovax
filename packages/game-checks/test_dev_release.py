@@ -1,6 +1,6 @@
-"""Tests the dev-release step of ci.yml (#1991) by running it against a stand-in `gh` that refuses
-to create the release: a dev build that changed a workflow and that a newer commit on main has
-replaced gives way with a warning, and every other refusal still fails the job. The stand-in plays GitHub, so this needs no network.
+"""Tests the dev-release step of ci.yml (#1991, #2028) by running it against a stand-in `gh` that
+refuses to create the release: a dev build that a newer commit on main has replaced, whose workflows
+differ from main's, gives way with a warning, and every other refusal still fails the job. The stand-in plays GitHub, so this needs no network.
 
     uv run --locked --package khovax-game-checks packages/game-checks/test_dev_release.py
 """
@@ -32,8 +32,9 @@ case "$1 $2" in
   "api repos/owner/repo/commits/main")
     if [ -n "$HEAD_ERROR" ]; then echo "$HEAD_ERROR" >&2; exit 1; fi
     echo "$MAIN_HEAD" ;;
-  "api repos/owner/repo/commits/$GITHUB_SHA") echo "$WORKFLOW_FILES" ;;
-  "api repos/owner/repo/compare/$GITHUB_SHA...$MAIN_HEAD") echo "$COMPARE" ;;
+  "api repos/owner/repo/compare/$GITHUB_SHA...$MAIN_HEAD") echo "$STATUS" ;;
+  "api repos/owner/repo/contents/.github?ref=$GITHUB_SHA") echo "$OWN_WORKFLOWS" ;;
+  "api repos/owner/repo/contents/.github?ref=$MAIN_HEAD") echo "$MAIN_WORKFLOWS" ;;
 esac
 """
 
@@ -59,10 +60,11 @@ class DevReleaseTest(unittest.TestCase):
         refusals=99,
         main_head=NEWER,
         error=REFUSED,
-        workflow_files=1,
         after_refusals="",
         head_error="",
-        compare="ahead 1",
+        status="ahead",
+        own_workflows="tree1",
+        main_workflows="tree2",
     ):
         with tempfile.TemporaryDirectory() as folder:
             work = Path(folder)
@@ -93,10 +95,11 @@ class DevReleaseTest(unittest.TestCase):
                     "REFUSALS": str(refusals),
                     "CREATE_ERROR": error,
                     "MAIN_HEAD": main_head,
-                    "WORKFLOW_FILES": str(workflow_files),
                     "AFTER_REFUSALS": after_refusals,
                     "HEAD_ERROR": head_error,
-                    "COMPARE": compare,
+                    "STATUS": status,
+                    "OWN_WORKFLOWS": own_workflows,
+                    "MAIN_WORKFLOWS": main_workflows,
                     "TAG": tag,
                     "RUNNER_TEMP": str(work),
                     "GITHUB_REPOSITORY": "owner/repo",
@@ -114,7 +117,8 @@ class DevReleaseTest(unittest.TestCase):
     def calls(self, calls, start):
         return [call for call in calls if call.startswith(start)]
 
-    def test_a_replaced_dev_build_gives_way_with_a_warning(self):
+    def test_a_replaced_dev_build_whose_workflows_differ_from_mains_gives_way(self):
+        """Whether or not the commit changed a workflow itself: #2028's changed none."""
         done, calls = self.run_step()
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
         self.assertIn("::warning::", done.stderr + done.stdout)
@@ -122,14 +126,6 @@ class DevReleaseTest(unittest.TestCase):
         self.assertEqual(len(self.calls(calls, "release create")), 4)
         self.assertEqual(self.calls(calls, "release upload"), [])
         self.assertEqual(self.calls(calls, "release edit"), [])
-
-    def test_a_replaced_dev_build_whose_workflows_main_has_changed_gives_way(self):
-        """#2028: a commit that changed no workflow, refused once a later merge had changed one."""
-        done, calls = self.run_step(workflow_files=0, compare="ahead 1")
-        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
-        self.assertIn("::warning::", done.stderr + done.stdout)
-        self.assertIn(NEWER, done.stderr + done.stdout)
-        self.assertEqual(self.calls(calls, "release upload"), [])
 
     def test_a_refusal_that_passes_still_publishes(self):
         done, calls = self.run_step(refusals=2)
@@ -143,15 +139,27 @@ class DevReleaseTest(unittest.TestCase):
         self.assertNotEqual(done.returncode, 0, done.stdout + done.stderr)
         self.assertEqual(len(self.calls(calls, "release create")), 4)
         self.assertEqual(self.calls(calls, "release upload"), [])
-        self.assertNotIn("(#1991)", done.stdout + done.stderr)
+        self.assertNotIn("GitHub refused to create", done.stdout + done.stderr)
 
     def test_a_refusal_of_the_newest_commit_fails(self):
         done, calls = self.run_step(main_head=SHA)
         self.assert_refused_and_failed(done, calls)
         self.assertEqual(len(self.calls(calls, "api repos/owner/repo/commits/main")), 1)
 
-    def test_a_refusal_of_a_commit_that_changed_no_workflow_fails(self):
-        done, calls = self.run_step(workflow_files=0)
+    def test_a_refusal_while_mains_workflows_match_the_commits_fails(self):
+        done, calls = self.run_step(main_workflows="tree1")
+        self.assert_refused_and_failed(done, calls)
+
+    def test_a_refusal_of_a_commit_main_isnt_past_fails(self):
+        done, calls = self.run_step(status="diverged")
+        self.assert_refused_and_failed(done, calls)
+
+    def test_an_empty_comparison_with_main_fails(self):
+        done, calls = self.run_step(status="")
+        self.assert_refused_and_failed(done, calls)
+
+    def test_no_workflows_folder_to_compare_fails(self):
+        done, calls = self.run_step(own_workflows="", main_workflows="")
         self.assert_refused_and_failed(done, calls)
 
     def test_a_refused_nightly_fails_because_nothing_replaces_it_today(self):

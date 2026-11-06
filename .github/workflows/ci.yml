@@ -1344,22 +1344,31 @@ jobs:
             gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
               --draft --prerelease --title "$tag" --notes "$notes" "${start[@]}"
           }
-          # GitHub has refused the create only for a commit that changed a workflow, once a later merge
-          # had changed the workflows again, and every try got the same answer (#1991). This token
+          # GitHub has refused the create only once main had moved past the commit and main's
+          # workflows differed from the commit's, mostly for a commit that changed a workflow itself
+          # (#1991), once for one that didn't (#2028), and every try got the same answer. This token
           # can't have the Workflows permission, so nothing here gets past that. Such a dev build
-          # gives way once main has moved past it: the newer commit's run should publish a newer one.
-          # A nightly has no such successor, and any other refusal is something else, so those fail.
+          # gives way: the newer commit's run should publish a newer one. A nightly has no such
+          # successor, and any other refusal is something else, so those fail.
           if ! retry_403=1 retry create_draft; then
             if [ "$channel" != dev ] || ! grep -q 'Resource not accessible by integration' "$RUNNER_TEMP/last-error"; then
               exit 1
             fi
             head=$(retry gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)
-            workflows=$(retry gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}" \
-              --jq '[.files[].filename | select(startswith(".github/workflows/"))] | length')
-            if [ -z "$head" ] || [ "$head" = "$GITHUB_SHA" ] || [ "${workflows:-0}" = 0 ]; then
+            if [ -z "$head" ] || [ "$head" = "$GITHUB_SHA" ]; then
               exit 1
             fi
-            echo "::warning::GitHub refused to create ${tag}, a commit that changed a workflow; main has moved on to ${head}, whose run should publish a newer dev build (#1991)"
+            # "ahead": main is past this commit. The workflows are compared by their folder's tree, as
+            # a comparison's list of changed files stops at 300.
+            status=$(retry gh api "repos/${GITHUB_REPOSITORY}/compare/${GITHUB_SHA}...${head}" --jq .status)
+            own=$(retry gh api "repos/${GITHUB_REPOSITORY}/contents/.github?ref=${GITHUB_SHA}" \
+              --jq '.[] | select(.name == "workflows") | .sha')
+            main=$(retry gh api "repos/${GITHUB_REPOSITORY}/contents/.github?ref=${head}" \
+              --jq '.[] | select(.name == "workflows") | .sha')
+            if [ "$status" != ahead ] || [ -z "$own" ] || [ -z "$main" ] || [ "$own" = "$main" ]; then
+              exit 1
+            fi
+            echo "::warning::GitHub refused to create ${tag}; main has moved on to ${head}, whose workflows differ from this commit's, and its run should publish a newer dev build (#1991, #2028)"
             exit 0
           fi
           # One file at a time, so a failed upload sends only that file again; --clobber replaces
