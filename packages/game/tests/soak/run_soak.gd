@@ -50,8 +50,8 @@ const MOST_FRAMES: int = Simulation.TICKS_PER_SECOND * 300
 const GROWTH_BOUND: float = 1.5
 ## The fewest tiles the walk has to stand on for the measurement to count.
 const LEAST_EXPLORED: int = 300
-## The fewest times a tour has to walk into another instance for the measurement to count.
-const LEAST_ENTERED: int = 6
+## The fewest instances a tour has to walk into, home included, for the measurement to count.
+const LEAST_REACHED: int = 5
 ## Every how many frames the reference work runs.
 const REFERENCE_EVERY: int = 10
 ## How many tiles the reference work fills a dictionary with.
@@ -235,9 +235,9 @@ func _close_window() -> SoakWindow:
 
 ## 0 when neither measure grew past the bound, else 1, saying why.
 func _verdict() -> int:
-	if _touring and (_explorer as TourExplorer).entered < LEAST_ENTERED:
-		printerr("FAIL: the tour walked into another instance only %d times, too few to measure" % [
-			(_explorer as TourExplorer).entered,
+	if _touring and (_explorer as TourExplorer).reached.size() < LEAST_REACHED:
+		printerr("FAIL: the tour walked into only %d instances, too few to measure" % [
+			(_explorer as TourExplorer).reached.size(),
 		])
 		return 1
 	if not _touring and _explorer.stood_on.size() < LEAST_EXPLORED:

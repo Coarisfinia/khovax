@@ -13,8 +13,8 @@ var driver: Session
 var seen: Dictionary[String, bool] = {}
 ## The instances on the way from home to the one it is in, home first.
 var trail: Array[String] = []
-## How many times it walked into another instance.
-var entered: int = 0
+## Every instance it has walked into, home included.
+var reached: Dictionary[String, bool] = {}
 ## The instance it walks to next, or "".
 var _next: String = ""
 var _in: String = ""
@@ -36,6 +36,9 @@ func _walk(state: GameState, player: Entity) -> int:
 		var step: int = _first_step(state, player.tile, _on_exit.bind(state))
 		if step != Command.NO_MOVE:
 			return step
+		if trail.size() >= 2 and _next == trail[-2]:
+			# No way back just now (a wild monster in it): wait for one, never give the way home up.
+			return Command.NO_MOVE
 		# No way to that exit: count the instance behind it as seen.
 		seen[_next] = true
 		_next = ""
@@ -46,9 +49,8 @@ func _walk(state: GameState, player: Entity) -> int:
 func _arrive(instance_name: String) -> void:
 	if instance_name == _in:
 		return
-	if not _in.is_empty():
-		entered += 1
 	_in = instance_name
+	reached[instance_name] = true
 	_next = ""
 	seen[instance_name] = true
 	if trail.size() >= 2 and trail[-2] == instance_name:
