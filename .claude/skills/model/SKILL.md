@@ -62,8 +62,9 @@ each meeting the prompt, vibe-summary and texture-decision requirements above. A
 an import task or a deferred request does not count. On accepted model delivery (owner, #2036),
 track the import and completely remove its entry and every prompt option from active prompt lists:
 no supplied/done/filed-as heading or replacement status entry. Source links and implementation status
-belong on import issues. Concept images can be ignored when taking in the owner's downloads
-(owner, #2051): an image alone never fulfils a requested 3D-model delivery. Replenish the active
+belong on import issues. A concept image among the owner's downloads may be used as a reference
+or ignored (owner, #2051), but alone it never fulfils a requested 3D-model delivery: the request
+stays active until its model export is supplied. Replenish the active
 minimum automatically with genuine eligible model needs; never pad it with unsupported creatures or requests existing suitable models/textures resolve.
 An explicitly rejected trial is archived for reference and does not fulfil its request; keep that
 request active while the owner retries. The ore/ingot exception still holds.
@@ -82,7 +83,8 @@ its core vibe and prescribes no facial details, eye markers, mouth position, lim
 unless the specific concept truly needs it. No fixed eye sentence, no blanket rest-pose,
 mouth-open, mouth-closed or rigging-pose line, and no other universal anatomy recipe in its place.
 Our own-eye import tooling (`lib/marked_eyes.py`, below) is a separate concern: its convenience
-never dictates the design.
+never dictates the design, and a creature designed without eyes goes into the eye check's
+`EYELESS` list (step 21).
 **A concept carries as much visual weight as its base shape** (owner, #2051): it transforms the
 whole anatomy, material, form and behaviour. A dinosaur with a shorter beak, a swapped crest or a
 small decoration isn't a concept; a melting body, or a creature wielding a form its concept

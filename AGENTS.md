@@ -572,7 +572,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   its core vibe and names no facial details, eye markers, mouth position, limb count or posture
   unless its concept truly needs it: no fixed eye sentence (it superseded #1682's), no blanket
   rest-pose or rigging-pose line, and no other universal anatomy recipe in their place. Our eye
-  import tooling never dictates the design. A concept carries as much visual weight as its base
+  import tooling never dictates the design (an eyeless design goes into the eye check's `EYELESS`
+  list). A concept carries as much visual weight as its base
   shape (owner, #2051): it transforms the whole anatomy, material, form and behaviour (a melting
   body, a creature wielding a form its concept gives it), never only a shorter beak, a swapped crest
   or a small decoration; abstract, loose, floating, thread-like or physically impossible forms stay
@@ -778,8 +779,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   count. On accepted model delivery (owner, #2036), track the import and completely remove its
   entry and every prompt option from active prompt lists: no supplied/done/filed-as heading or
   replacement status entry. Source links and implementation status belong on import issues.
-  Concept images can be ignored when taking in the owner's downloads (#2051): an image alone
-  never fulfils a requested 3D-model delivery.
+  A concept image among the owner's downloads may be used as a reference or ignored (#2051), but
+  alone it never fulfils a requested 3D-model delivery: the request stays active until its model
+  export is supplied.
   Replenish the active minimum automatically with genuine eligible requests; never pad it with
   unsupported creatures or needs existing suitable models/textures resolve. The ore/ingot
   exception above still holds. An explicitly rejected trial is archived for reference and does
