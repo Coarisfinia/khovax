@@ -86,9 +86,10 @@ class Kind:
 # The default pack's own folder at the repository's root (#1978), laid out like a player's pack,
 # which the game reaches through its link, res://resourcepacks/ (link_resource_packs.py)...
 PACK_ROOT = "resourcepacks/default/"
-# ...and the kinds already moved into it, each in its own folder there; the move goes one kind at
-# a time, and the rest follow (#1978).
-MOVED = ("realms",)
+# ...and the kinds already moved into it, by their section, each with its own folder there (a
+# region's pieces lie beside the regions drawn whole); the move goes one kind at a time, and the
+# rest follow (#1978).
+MOVED = {"realms": "realms", "regions": "regions", "region_pieces": "regions"}
 # Where the default pack's realms lie (#1978).
 REALMS = f"{PACK_ROOT}realms"
 # Where the default pack's quests lie (#1888): in the quests slice, which owns the kind and its
@@ -275,12 +276,12 @@ def outside_root(entries: dict[str, Entries]) -> Problems:
     """The files of a kind already moved (MOVED) that the manifest lists outside its folder in
     the default pack's own folder (PACK_ROOT)."""
     return [
-        (f"{KINDS[name].noun} {entry_id}'s file {path} lies outside {PACK_ROOT}{name}/: move it there"
-         " (#1978)", MANIFEST.as_posix())
-        for name in MOVED
+        (f"{KINDS[name].noun} {entry_id}'s file {path} lies outside {PACK_ROOT}{folder}/: move it"
+         " there (#1978)", MANIFEST.as_posix())
+        for name, folder in MOVED.items()
         for entry_id, paths in entries[name].items()
         for path in paths
-        if not path.startswith(f"{PACK_ROOT}{name}/")
+        if not path.startswith(f"{PACK_ROOT}{folder}/")
     ]  # fmt: skip
 
 
