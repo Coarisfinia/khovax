@@ -569,7 +569,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   on #2052, 2026-11-03): "These instructions about "two legs", "mouth open", "neutral rigging pose"
   etc. are severely limiting the image gen and overall creativity. Only add mouth, limb and posture
   instructions when it's really necessary." Every creature prompt, base or evolution, leads with
-  its core vibe and names no facial details, eye markers, mouth position, limb count or posture
+  its core vibe (an evolution copypasta's change right after the owner's opening line) and names
+  no facial details, eye markers, mouth position, limb count or posture
   unless its concept truly needs it: no fixed eye sentence (it superseded #1682's), no blanket
   rest-pose or rigging-pose line, and no other universal anatomy recipe in their place. Our eye
   import tooling never dictates the design (an eyeless design goes into the eye check's `EYELESS`

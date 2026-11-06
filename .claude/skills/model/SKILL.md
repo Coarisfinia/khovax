@@ -78,8 +78,9 @@ savanna tree. Neither deferred group fills the active minimum.
 ground rule on #2052, 2026-11-03, which supersedes the fixed eye sentence of #1682 and the pose
 lines below): "These instructions about "two legs", "mouth open", "neutral rigging pose" etc. are
 severely limiting the image gen and overall creativity. Only add mouth, limb and posture
-instructions when it's really necessary." So every creature prompt, base or evolution, opens with
-its core vibe and prescribes no facial details, eye markers, mouth position, limb count or posture
+instructions when it's really necessary." So every creature prompt, base or evolution, leads with
+its core vibe (an evolution copypasta keeps the owner's opening line, and its change follows it
+straight away) and prescribes no facial details, eye markers, mouth position, limb count or posture
 unless the specific concept truly needs it. No fixed eye sentence, no blanket rest-pose,
 mouth-open, mouth-closed or rigging-pose line, and no other universal anatomy recipe in its place.
 Our own-eye import tooling (`lib/marked_eyes.py`, below) is a separate concern: its convenience
@@ -125,7 +126,7 @@ More powerful body structure! it's the next evolution, so make it fancier, more 
 
 
 One single creature, centred and alone, in a front three-quarter view, its whole body in frame with space all around it. The background is plain, flat light grey and continues unbroken beneath it.
-Be bold and creative: the change transforms its whole body, material and form, never just a surface detail.
+Be bold and creative: let the concept drive the changes; never reduce it to timid surface tweaks.
 No effects such as sparks, steam or smoke.
 Style: a stylized game creature with large, readable shapes and flat matte colours, smooth like a clay 3D render and ready for cel shading: plain flat colour areas without drawn outlines, painted highlights or painted shadows. Soft, even, shadowless light. No text.
 ```
@@ -140,7 +141,7 @@ Generate a brand-new image of a creature. Draw its baby form.
 Its body also changes. It becomes younger and smaller - redesign it.
 
 One single creature, centred and alone, in a front three-quarter view, its whole body in frame with space all around it. The background is plain, flat light grey and continues unbroken beneath it.
-Be bold and creative: the change transforms its whole body, material and form, never just a surface detail.
+Be bold and creative: let the concept drive the changes; never reduce it to timid surface tweaks.
 No effects such as sparks, steam or smoke.
 Style: a stylized game creature with large, readable shapes and flat matte colours, smooth like a clay 3D render and ready for cel shading: plain flat colour areas without drawn outlines, painted highlights or painted shadows. Soft, even, shadowless light. No text.
 ```
