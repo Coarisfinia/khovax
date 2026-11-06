@@ -406,7 +406,8 @@ def placed():
         mine = [piece for piece in pieces if piece.name.startswith("Eye.%s." % side)]
         eyeball = next(piece for piece in mine if piece.name.endswith(".eyeball"))
         corners = numpy.array([(eyeball.matrix_world @ vertex.co)[:] for vertex in eyeball.data.vertices])
-        # The eyeball's widest radius is its size, half the mark's width (fit).
+        # The eyeball's widest radius is its size, half the mark's width (fit): it is never taller
+        # than wide (marked_eyes.ALMOND tops at 1) and shallower still.
         wide = 2.0 * float(numpy.sqrt(((corners - corners.mean(axis=0)) ** 2).sum(axis=1)).max())
         iris = numpy.array(eyes.spot(mine))
         checks = {
