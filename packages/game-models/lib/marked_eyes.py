@@ -19,6 +19,11 @@ Frostfire Hound's and its pup's, #1733) gets them taken out first: the caller `f
 removes the pieces they lie on (`modelled`), paints its skin as it will, and hands the marks to
 `replace`, which then only fits ours.
 
+A source whose eyes no `Marked` picks out (stylised, more or fewer than two, or none, #2100) gets
+ours placed by hand: the model script builds the marks from a spot, width and height on the head
+(`placed`), paints over what showed there as it will (`repaint` with those marks), and hands them
+to `replace` the same way. A design without eyes goes into check_eyes.py's EYELESS instead.
+
 The lids shut in Sleep, over Faint's fall and in a blink now and then in Idle: `replace` returns
 the `eyes.Lids`, whose `shut` goes into `clips.animate`'s overlays, and the eye points for
 `attachments.add`.
@@ -340,6 +345,34 @@ def _spots(points, cell):
     return sorted((sorted(group) for group in groups.values()), key=lambda group: group[0])
 
 
+# What `find` says when it finds no eyes: the ways on, never a prompt change to mark them (#2100).
+WAYS_ON = ("name the beast's own Marked in BEASTS, place ours by hand (placed, then replace(marks=...)), "
+           "or list a design without eyes in check_eyes.py's EYELESS")
+
+
+def placed(skin, spot, width, height, middle=0.0):
+    """Our eyes' marks placed by hand (#2100), for `replace(marks=...)` (and `repaint`): the left
+    one at the point of `skin`'s surface nearest `spot` (left, +X, of the plane x = `middle`), the
+    right one at the point nearest its mirror image across that plane, as `fit` mirrors them, each
+    `width` wide and `height` high across the surface, facing out along its normal there. Returns
+    (left, right), as `find` does."""
+    spot = numpy.array(spot, dtype=float)
+    if spot[0] - middle <= width / 2.0:
+        raise ValueError("a placed left eye must lie left (+X) of the middle, x = %.3f, by more than half its width: %s"
+                         % (middle, tuple(spot.round(3))))
+    inverse = skin.matrix_world.inverted()
+    turn = inverse.to_3x3().transposed()
+    marks = []
+    for at in (spot, spot * (-1.0, 1.0, 1.0) + (2.0 * middle, 0.0, 0.0)):
+        found, location, normal, _index = skin.closest_point_on_mesh(inverse @ Vector(at))
+        if not found:
+            raise ValueError("%s has no surface near the placed eye at %s" % (skin.name, tuple(at.round(3))))
+        mark = Mark(numpy.array([(skin.matrix_world @ location)[:]]), numpy.array([(turn @ normal)[:]]))
+        mark.width, mark.height = width, height
+        marks.append(mark)
+    return tuple(marks)
+
+
 def find(head, marked=DARK):
     """The two marked eyes on `head` (a `Head`), left (+X) then right: of the spots `marked` (a
     `Marked`) picks out, off its middle, the pair that mirror each other across it with the most
@@ -347,7 +380,7 @@ def find(head, marked=DARK):
     picked = numpy.flatnonzero(marked(head.colours))
     points = head.points[picked]
     if len(points) == 0:
-        raise ValueError("no marked eye on the head's colour")
+        raise ValueError("no marked eye on the head's colour: " + WAYS_ON)
     cell = numpy.ptp(head.points, axis=0).max() / CELLS
     marks = [Mark(points[group], head.normals[picked][group]) for group in _spots(points, cell)
              if len(group) >= MIN_SAMPLES]
@@ -364,7 +397,8 @@ def find(head, marked=DARK):
             if close and alike and (best is None or left.count + right.count > best[0].count + best[1].count):
                 best = (left, right)
     if best is None:
-        raise ValueError("no pair of marked eyes mirroring each other on the head (%d spots)" % len(marks))
+        raise ValueError("no pair of marked eyes mirroring each other on the head (%d spots): %s"
+                         % (len(marks), WAYS_ON))
     return best
 
 
@@ -932,12 +966,13 @@ def modelled(skin, marks):
     return len(faces)
 
 
-def replace(rig, skin, mats, faint, bone="head", marked=DARK, grow=1.0, marks=None, **shape):
+def replace(rig, skin, mats, faint, bone="head", marked=DARK, grow=1.0, marks=None, middle=None, **shape):
     """Our eyes in place of the ones `marked` (a `Marked`, a beast's own from BEASTS) picks out on
     an adopted `rig` and its weighted `skin` (`find`, `repaint`, `fit`), joined into the skin,
     their lids on bones of their own hung from `bone`, `grow` times as large as the marks (fit).
-    With `marks` (left, right) the caller has found them and dealt with what showed there
-    (`modelled`): only ours are fitted.
+    With `marks` (left, right) the caller has found or placed them (`placed`) and dealt with what
+    showed there (`modelled`, `repaint`): only ours are fitted, mirrored across x = `middle`
+    (`marked`'s unless given).
     `mats` needs "dark" and "glow" (eyes.eye); "skin", the lids' and brows', is the
     skin's colour around the marks unless given (and must be, with `marks`). `faint` is Faint's
     (first frame, last frame) the lids shut over (eyes.Lids). Returns the `eyes.Lids`, whose
@@ -951,7 +986,7 @@ def replace(rig, skin, mats, faint, bone="head", marked=DARK, grow=1.0, marks=No
             mats = dict(mats, skin=materials.material("EyeSkin", linear(around)))
     elif "skin" not in mats:
         raise ValueError("found marks need the lids' colour: mats has no \"skin\"")
-    pieces = fit(skin, marks, mats, bone, middle=marked.middle, grow=grow, **shape)
+    pieces = fit(skin, marks, mats, bone, middle=marked.middle if middle is None else middle, grow=grow, **shape)
     points = {}
     for side in ("L", "R"):
         mine = [piece for piece in pieces if piece.name.startswith("Eye.%s." % side)]

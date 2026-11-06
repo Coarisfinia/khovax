@@ -459,7 +459,11 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
    unrigged download is rigged by the model script, as `drakkudor.py` does with `lib/hexapod.py`.
    Once the head bone is named, swap in our eyes: `marked_eyes.replace(rig, skin, mats, faint)`
    before `attachments.add` (its eye points) and `clips.animate` (its `Lids.shut` among the
-   overlays), and read its `EYES` line.
+   overlays), and read its `EYES` line. When it finds no eyes (stylised, more or fewer than two,
+   or none, #2100), its error names the ways on: the beast's own `Marked` in `BEASTS`, our eyes
+   placed by hand (`marked_eyes.placed(skin, spot, width, height, middle)`, painting over what
+   showed there with `repaint`, then `replace(..., marks=..., middle=...)` with `mats["skin"]`),
+   or `EYELESS` in `check_eyes.py` for a design without eyes.
 6. **Clips:** the full creature set through `clips.animate`, as for any model; tune the gait
    with the gait sweep, not by hand.
 7. **Checks, renders, PR:** the checks of section 4, `render_media.py` for the pictures, then
