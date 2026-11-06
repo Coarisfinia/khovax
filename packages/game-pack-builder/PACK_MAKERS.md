@@ -78,3 +78,20 @@ python3 build_pack.py my_pack out
 
 This writes `out/my_pack.desktop.pck` and `out/my_pack.mobile.pck`: the same pack, with textures
 compressed for desktop and for mobile.
+
+## Where a player puts a pack
+
+A player puts the built `.pck` into the game's packs folder and starts the game. The game loads the
+packs there in their file names' order, before its own: where two packs give the same id, the one
+whose file name sorts first wins. Put only one of a pack's two files there, the one for the
+platform: a second `.pck` with the same pack id is refused.
+
+- **Linux:** `~/.local/share/godot/app_userdata/khovax/packs/`, with `<id>.desktop.pck`.
+- **Windows:** `%APPDATA%\Godot\app_userdata\khovax\packs\`, with `<id>.desktop.pck`.
+- **Android:** `Android/data/io.github.coarisfinia.khovax/files/packs/` on the phone's shared
+  storage, with `<id>.mobile.pck`. Connect the phone to a computer over USB and copy the file there
+  (the game makes the folder on its first start).
+- **Web:** the game looks in the browser's storage for the site, but there is no way yet to put a
+  pack there (#2088).
+
+On Linux and Windows, make the `packs` folder if it isn't there yet.

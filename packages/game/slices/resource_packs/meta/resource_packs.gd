@@ -12,9 +12,6 @@ const DEFAULT: String = "res://slices/resource_packs/data/default.jsonc"
 ## The default pack's .pck, built by the pack builder like any pack, which every build carries and
 ## mounts like one (#1941). A run from the project has none and reads the files DEFAULT names.
 const BUILT_DEFAULT: String = "res://packs/default.pck"
-## The folder a player's packs are found in, each a .pck the pack builder made (#1869); the folders
-## per platform are #1942's.
-const PLAYER_PACKS: String = "user://packs/"
 
 ## The loaded packs, in lookup order, the default pack last; read on the first lookup.
 static var _packs: Array[ResourcePack] = []
@@ -246,19 +243,20 @@ static func refresh() -> void:
 	_audio.clear()
 
 
-## Each pack in the player's folder (PLAYER_PACKS) that PackLoader mounts and reads without a
+## Each pack in the player's folder (PackFolder) that PackLoader mounts and reads without a
 ## problem. One it refuses, or mounts but whose manifest has a problem (it stays mounted, unused),
 ## is warned about the first time it's read.
 static func _player_packs() -> Array[ResourcePack]:
 	var usable: Array[ResourcePack] = []
-	if not DirAccess.dir_exists_absolute(PLAYER_PACKS):
+	var folder: String = PackFolder.path()
+	if not DirAccess.dir_exists_absolute(folder):
 		return usable
-	var files: PackedStringArray = DirAccess.get_files_at(PLAYER_PACKS)
+	var files: PackedStringArray = DirAccess.get_files_at(folder)
 	files.sort()
 	for file: String in files:
 		if file.get_extension() != "pck":
 			continue
-		var path: String = PLAYER_PACKS + file
+		var path: String = folder + file
 		if not _mounted.has(path):
 			_mounted[path] = PackLoader.mount(path)
 			if not _mounted[path].problem.is_empty():
