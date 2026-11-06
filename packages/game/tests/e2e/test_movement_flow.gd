@@ -869,7 +869,11 @@ func _check_key_survives_touch() -> String:
 func _check_driver_timing() -> String:
 	var tick_seconds: float = 1.0 / Simulation.TICKS_PER_SECOND
 	var start: int = _driver.state.tick
+	# A stopped clock: the frame's ticks take no time, so only the cap stops them.
+	var real_clock: Callable = _driver.clock
+	_driver.clock = _stopped_clock
 	_driver.advance(60.0)
+	_driver.clock = real_clock
 	var long_frame_ticks: int = _driver.state.tick - start
 	# The capped frame leaves exactly one tick's time, which the next frame runs.
 	_driver.advance(0.0)
@@ -917,6 +921,11 @@ func _check_slow_device() -> String:
 			per_frame,
 		]
 	return _check_tick_events()
+
+
+## A clock that never moves.
+func _stopped_clock() -> int:
+	return 0
 
 
 ## Takes as long as a slow device's tick, after the tick ran.

@@ -49,6 +49,9 @@ var schedule: CommandSchedule
 var hashes: Dictionary[int, int] = {}
 ## Every tick of this session so far, to play back (#35).
 var recording: Replay
+## Real time in microseconds, which decides when a frame stops catching up (#2097); tests hand it a
+## clock of their own, so how many ticks a long frame runs doesn't depend on the machine's speed.
+var clock: Callable = Callable(Time, "get_ticks_usec")
 var _accumulated: float = 0.0
 
 
@@ -165,15 +168,27 @@ func pause(on: bool) -> void:
 		set_process(not on)
 
 
-## Runs as many whole ticks as `delta` adds up to, at most MAX_TICKS_PER_FRAME. Called every
-## frame; tests call it with fixed steps.
+## Runs as many whole ticks as `delta` adds up to, at most MAX_TICKS_PER_FRAME, and catches up
+## only while the frame's ticks took less real time than one tick lasts. Called every frame; tests
+## call it with fixed steps.
 func advance(delta: float) -> void:
 	if world == null:
 		return
 	_accumulated += delta
 	var tick_seconds: float = 1.0 / Simulation.TICKS_PER_SECOND
+	var budget_usec: float = tick_seconds * 1_000_000.0
+	var began: int = int(clock.call())
 	var ticks: int = 0
-	while _accumulated >= tick_seconds and ticks < MAX_TICKS_PER_FRAME and _step():
+	# On a device whose ticks take longer than they last (#2097), catching up would only lengthen
+	# the frame, so the next frame is due even more ticks and every frame ends up running the full
+	# cap: a crawl of a few frames a second. Running one tick a frame there keeps the frames coming
+	# as fast as the ticks allow. A device that keeps up still catches up after a hitch.
+	while (
+		_accumulated >= tick_seconds
+		and ticks < MAX_TICKS_PER_FRAME
+		and (ticks == 0 or int(clock.call()) - began < budget_usec)
+		and _step()
+	):
 		_accumulated -= tick_seconds
 		ticks += 1
 	# After a long frame (a hitch, a backgrounded tab), the rest of the time is dropped rather than
