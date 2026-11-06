@@ -1430,7 +1430,7 @@ jobs:
           # published release is never a draft. Best effort: this release is out, so a failure warns.
           stale=$(retry gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
             --jq ".[] | select(.draft and .tag_name != \"${tag}\" and (.tag_name | test(\"^v[0-9]+[.][0-9]+[.][0-9]+-dev[.][0-9]+\$\")) and (.created_at | fromdateiso8601) < now - 86400) | .id") \
-            || stale=
+            || { stale=; echo "::warning::couldn't list the releases to sweep stale dev drafts" >&2; }
           for id in $stale; do
             retry gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/${id}" \
               || echo "::warning::couldn't delete stale dev draft ${id}" >&2

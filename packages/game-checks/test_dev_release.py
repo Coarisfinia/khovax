@@ -52,6 +52,7 @@ case "$1 $2" in
   "api repos/owner/repo/contents/.github?ref=$MAIN_HEAD") echo "$MAIN_WORKFLOWS" ;;
   "api --paginate")
     case "$3" in *"/releases?"*)
+      if [ -n "$LIST_ERROR" ]; then echo "$LIST_ERROR" >&2; exit 1; fi
       while [ "$#" -gt 0 ] && [ "$1" != --jq ]; do shift; done
       jq -r "$2" "$WORK/releases.json" ;;
     esac ;;
@@ -92,6 +93,7 @@ class DevReleaseTest(unittest.TestCase):
         upload_error="",
         releases=(),
         delete_error="",
+        list_error="",
     ):
         with tempfile.TemporaryDirectory() as folder:
             work = Path(folder)
@@ -130,6 +132,7 @@ class DevReleaseTest(unittest.TestCase):
                     "MAIN_WORKFLOWS": main_workflows,
                     "UPLOAD_ERROR": upload_error,
                     "DELETE_ERROR": delete_error,
+                    "LIST_ERROR": list_error,
                     "TAG": tag,
                     "RUNNER_TEMP": str(work),
                     "GITHUB_REPOSITORY": "owner/repo",
@@ -242,6 +245,14 @@ class DevReleaseTest(unittest.TestCase):
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
         self.assertIn("::warning::", done.stdout + done.stderr)
         self.assertEqual(len(self.calls(calls, "release edit")), 1)
+
+    def test_a_failed_list_to_sweep_only_warns(self):
+        done, calls = self.run_step(
+            refusals=0, releases=SWEPT_AND_KEPT, list_error="HTTP 422: Validation Failed"
+        )
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertIn("couldn't list the releases", done.stdout + done.stderr)
+        self.assertEqual(self.calls(calls, "api -X DELETE"), [])
 
 
 def release(release_id, tag, days_old, draft=True):
