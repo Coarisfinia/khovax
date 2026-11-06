@@ -20,6 +20,8 @@ var reached: Dictionary[String, bool] = {}
 ## The instance it walks to next, or "".
 var _next: String = ""
 var _in: String = ""
+## The ticks it has found no way to `_next` in a row.
+var _waited: int = 0
 
 
 func _walk(state: GameState, player: Entity) -> int:
@@ -34,14 +36,19 @@ func _walk(state: GameState, player: Entity) -> int:
 			return _first_step(state, player.tile, _at_home)
 		var out: int = _out_towards(state, player.tile)
 		if out != Command.NO_MOVE:
+			_waited = 0
 			return out
 		var step: int = _first_step(state, player.tile, _on_exit.bind(state))
 		if step != Command.NO_MOVE:
+			_waited = 0
 			return step
-		if trail.size() >= 2 and _next == trail[-2]:
-			# No way back just now (a wild monster in it): wait for one, never give the way home up.
+		# No way there just now: a wild monster may stand in it, so wait a while. The way back it
+		# came by is never given up (the soak's time limit ends a tour stuck on it); another exit
+		# without a way for that long is given up from here (a sealed passage).
+		_waited += 1
+		if _waited <= STUCK_TICKS or (trail.size() >= 2 and _next == trail[-2]):
 			return Command.NO_MOVE
-		# No way to that exit: give it up from here.
+		_waited = 0
 		blocked[_edge(_next)] = true
 		_next = ""
 	return Command.NO_MOVE
