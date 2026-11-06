@@ -321,6 +321,12 @@ jobs:
           sudo tar xzf /tmp/uv.tar.gz -C /usr/local/bin --strip-components=1 \
             uv-x86_64-unknown-linux-gnu/uv
 
+      - name: "🧪 Test which models a change checks"
+        # A model's own files check it, what every model is built or checked by checks them all,
+        # and anything else none (#2031).
+        timeout-minutes: 2
+        run: uv run --locked --package khovax-game-models ../game-models/test_changed_models.py
+
       - name: "🔀 See whether a model or its build changed"
         id: models
         # The rebuild check below needs Blender, so it runs only where it can find something: a
