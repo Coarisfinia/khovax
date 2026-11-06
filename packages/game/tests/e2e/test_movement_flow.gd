@@ -900,10 +900,7 @@ func _check_driver_timing() -> String:
 ## behind, so each would run the full cap. Each frame is handed the real time the last one took,
 ## starting from a hitch, as Godot hands `_process` its delta.
 func _check_slow_device() -> String:
-	var slow: Callable = func(
-		_tick: int,
-		_events: Array[RefCounted],
-	) -> void: OS.delay_usec(SLOW_TICK_USEC)
+	var slow: Callable = _slow_tick
 	if _driver.ticked.connect(slow) != OK:
 		return "couldn't slow the driver's ticks down"
 	var delta: float = float(GameDriver.MAX_TICKS_PER_FRAME) / Simulation.TICKS_PER_SECOND
@@ -920,6 +917,11 @@ func _check_slow_device() -> String:
 			per_frame,
 		]
 	return _check_tick_events()
+
+
+## Takes as long as a slow device's tick, after the tick ran.
+func _slow_tick(_tick: int, _events: Array[RefCounted]) -> void:
+	OS.delay_usec(SLOW_TICK_USEC)
 
 
 ## Views learn about each tick's one-shot events from the driver: every tick exactly once and in
