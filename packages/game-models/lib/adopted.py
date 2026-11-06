@@ -100,15 +100,18 @@ class Body:
         self.nose = nose
 
 
-def lesser(clip, share, turns=1.0, lift=1.0):
+def lesser(clip, share, turns=1.0, lift=1.0, tail=None):
     """`clip` with its body's shifts, its paws' moves and its tail's swing `share` as large: for a
     body whose legs are short against the wolf's the library's clips are made for, which would
-    reach too far for its hex. Its neck and head turn `turns` as far, and its paws' steps rise
-    `lift` as high."""
+    reach too far for its hex. Its neck and head turn `turns` as far, its paws' steps rise `lift`
+    as high, and with `tail` its tail swings that share instead (a long tail that reaches its hex's
+    corner, #2030)."""
+    tail = share if tail is None else tail
     keys = []
     for key in clip.keys:
-        pose = {name: tuple(share * value for value in values)
-                if name == "root_loc" or name.startswith(("plant.", "tail_"))
+        pose = {name: tuple(tail * value for value in values) if name.startswith("tail_")
+                else tuple(share * value for value in values)
+                if name == "root_loc" or name.startswith("plant.")
                 else tuple(turns * value for value in values) if name in ("neck", "head") else values
                 for name, values in key[1].items()}
         keys.append((key[0], pose, *key[2:]))

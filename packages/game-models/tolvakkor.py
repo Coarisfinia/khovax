@@ -171,7 +171,9 @@ FAINT_BOWING = (10, 32)
 # A smaller brace than the wolf's: its weight doesn't need to shift far to hold (clips.channel).
 BRACE = {"front_paw": (0.03, 0.0, 0.1), "hind_paw": (0.02, 0.0, 0.0)}
 # Its tail reaches the hex's corner at rest, so its swings stay small: a heavy tail hardly moves.
+# Lying limp, it swings least of all, or it reaches past the hex (the footprint check).
 TAIL_SHARE = 0.3
+FAINT_TAIL = 0.15
 # Its long neck and tall stance reach the ground with its chest low, its head tipped down and its
 # forepaws out in front (clips.feed).
 FEED = {"neck": 0.36, "head": 0.6, "crouch": 0.3, "forepaws": 0.1}
@@ -356,7 +358,7 @@ def build(out):
         "Attack": slam(),
         "Hit": adopted.lesser(clips.hit(), HIT_SHARE, turns=HIT_TURNS),
         "Faint": adopted.bowed(adopted.lesser(clips.faint(BELLY_HEIGHT, forepaws=FAINT_FOREPAWS), 1.0,
-                                              turns=FAINT_TURNS), FAINT_BOW, *FAINT_BOWING),
+                                              turns=FAINT_TURNS, tail=FAINT_TAIL), FAINT_BOW, *FAINT_BOWING),
         **{name: adopted.lesser(clip, SHARE) for name, clip in clips.channel(brace=BRACE).items()},
         "Feed": adopted.lesser(clips.feed(**FEED), TAIL_SHARE),
         "Sleep": adopted.bowed(adopted.lesser(clips.sleep(clips.curled(SLEEP_HEIGHT), SLEEP_PAWS), 1.0,
