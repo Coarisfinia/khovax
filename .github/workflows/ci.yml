@@ -338,8 +338,9 @@ jobs:
         # only at the models a pull request changes: its model script, source, .glb or its .import
         # (whose clip rate the checks sample at). A change to what every model is built or checked
         # by (the model library and checks, Blender's pin, this workflow) or measured by (the
-        # slices' look/ scripts and the scenes, #1652, the default pack's manifest, #1864) checks
-        # every model, and so does a failing diff (packages/game-models/changed_models.py, #2031).
+        # slices' look/ folders and the scenes, #1652, any game script, whose constants a view may
+        # name, #2072, the default pack's manifest, #1864) checks every model, and so does a
+        # failing diff (packages/game-models/changed_models.py, #2031).
         # It reads the change against the parent, or on a push to main against the commit before
         # the push, fetched here, so a push of several commits counts them all; main checks every
         # model whenever one changed.
