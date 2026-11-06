@@ -20,16 +20,7 @@ var _next: String = ""
 var _in: String = ""
 
 
-func _move(state: GameState) -> int:
-	var player: Entity = state.player(slot)
-	if player == null:
-		return Command.NO_MOVE
-	if not _homed:
-		_homed = true
-		_home = player.tile
-	if not _exploring or _back:
-		return Command.NO_MOVE
-	stood_on[player.tile] = true
+func _walk(state: GameState, player: Entity) -> int:
 	_arrive(driver.local_instance_name())
 	while true:
 		if _next.is_empty():
