@@ -56,8 +56,14 @@ func _move(state: GameState) -> int:
 		_home = player.tile
 	if not _exploring or _back:
 		return Command.NO_MOVE
-	visited[player.tile] = true
 	stood_on[player.tile] = true
+	return _walk(state, player)
+
+
+## The direction `player`, out walking, steps in next, or NO_MOVE to stand. A TourExplorer walks
+## its own way.
+func _walk(state: GameState, player: Entity) -> int:
+	visited[player.tile] = true
 	if player.tile != _tile:
 		_tile = player.tile
 		_stuck = 0
