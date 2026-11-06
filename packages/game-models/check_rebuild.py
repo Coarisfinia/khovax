@@ -6,13 +6,15 @@ that too, which tells whether a pull request's .glb is what its script builds.
         packages/game-models/<name>.py \
         [packages/game/assets/<name>/<name>.glb]
     uv run --locked --package khovax-game-models packages/game-models/check_rebuild.py --all \
-        [--keep <folder>]
+        [--keep <folder>] [--only <list>]
 
 `--all` checks every scripted model against its committed .glb, as CI does (#1161): a model
 script is one here that exports through scene.export_glb, and its .glb is the tracked one under
 the game's assets/ named like it (mana_wolf.py builds assets/mana-wolf/mana_wolf.glb); a model
 script without one fails. `--keep` copies each model's build into the folder, named like its .glb,
-so CI can offer the build it compared.
+so CI can offer the build it compared. `--only` builds only the models whose .glb is in the list
+(NUL-separated, as changed_models.py writes it, #2031), while a model script without a .glb still
+fails. Several models build at once, two Blenders each, as many as the machine has cores for.
 It prints `REBUILD CHECK: PASS` or `FAIL`. On a difference it names what differs, the JSON part
 (nodes, materials, ...) or each binary accessor (a mesh's indices or attribute, a clip's
 channel) with how many values differ and by how much: indices that only move point to the order
@@ -28,6 +30,8 @@ import struct
 import subprocess
 import sys
 import tempfile
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from game_shared import log
@@ -39,6 +43,8 @@ BLENDER = MODELS / "blender.py"
 EXPORT = re.compile(r"^\s*scene\.export_glb\(", re.MULTILINE)
 WIDTHS = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4, "MAT2": 4, "MAT3": 9, "MAT4": 16}
 FORMATS = {5120: "b", 5121: "B", 5122: "h", 5123: "H", 5125: "I", 5126: "f"}
+# One model reports at a time, so the lines of models built at once never mix.
+REPORT = threading.Lock()
 
 
 def build(script: Path, out: Path, output: Path) -> subprocess.Popen:
@@ -128,33 +134,50 @@ def check(script_path: str, committed: Path | None, keep: Path | None = None) ->
                 if run.poll() is None:
                     run.kill()
                     run.wait()
-        for code, output, out in zip(codes, outputs, outs):
-            if code != 0 or not out.is_file():
-                print(output.read_text(), end="")
-                log.error(f"{script.name} didn't build", script_path)
-                return False
-        if keep is not None and committed is not None:
-            keep.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(outs[0], keep / committed.name)
-        same = True
-        pairs = [(f"{script.name}: the two builds", outs[0], outs[1], script_path)]
-        if committed is not None:
-            pairs.append((f"{script.name}: the build and {committed}", outs[0], committed, str(committed)))
-        for label, a, b, file in pairs:
-            lines = differences(a, b)
-            if not lines:
-                log.info(f"{label}: the same bytes")
-                continue
-            log.error(f"{label} differ:\n" + "\n".join(f"  {line}" for line in lines), file)
-            same = False
+        with REPORT:
+            return compare(script, script_path, committed, keep, codes, outputs, outs)
+
+
+def compare(script: Path, script_path: str, committed: Path | None, keep: Path | None, codes: list[int],
+            outputs: list[Path], outs: list[Path]) -> bool:
+    """Reports a model's two builds against each other and the committed .glb; true when they're
+    all the same bytes."""
+    for code, output, out in zip(codes, outputs, outs):
+        if code != 0 or not out.is_file():
+            print(output.read_text(), end="")
+            log.error(f"{script.name} didn't build", script_path)
+            return False
+    if keep is not None and committed is not None:
+        keep.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(outs[0], keep / committed.name)
+    same = True
+    pairs = [(f"{script.name}: the two builds", outs[0], outs[1], script_path)]
+    if committed is not None:
+        pairs.append((f"{script.name}: the build and {committed}", outs[0], committed, str(committed)))
+    for label, a, b, file in pairs:
+        lines = differences(a, b)
+        if not lines:
+            log.info(f"{label}: the same bytes")
+            continue
+        log.error(f"{label} differ:\n" + "\n".join(f"  {line}" for line in lines), file)
+        same = False
     return same
 
 
+def options(args: list[str]) -> dict[str, Path] | None:
+    """`--keep` and `--only` after `--all`, each with its path; None when they don't parse."""
+    found = {}
+    while args:
+        if len(args) < 2 or args[0] not in ("--keep", "--only") or args[0] in found:
+            return None
+        found[args[0]], args = Path(args[1]), args[2:]
+    return found
+
+
 def main() -> int:
-    keep = None
-    if sys.argv[1:2] == ["--all"] and len(sys.argv) == 4 and sys.argv[2] == "--keep":
-        keep = Path(sys.argv[3])
-    if sys.argv[1:2] == ["--all"] and (len(sys.argv) == 2 or keep is not None):
+    found = options(sys.argv[2:]) if sys.argv[1:2] == ["--all"] else None
+    keep = None if found is None else found.get("--keep")
+    if found is not None:
         models = scripted_models()
         unpaired = [script for script, glb in models if glb is None]
         for script in unpaired:
@@ -164,17 +187,21 @@ def main() -> int:
             if not models:
                 log.error("no model script calls scene.export_glb: nothing to check")
             return 1
+        if "--only" in found:
+            listed = {Path(glb).resolve() for glb in found["--only"].read_text().split("\0") if glb}
+            models = [(script, glb) for script, glb in models if Path(glb).resolve() in listed]
     elif len(sys.argv) in (2, 3) and not sys.argv[1].startswith("--"):
         models = [(sys.argv[1], sys.argv[2] if len(sys.argv) == 3 else None)]
     else:
         print(__doc__, file=sys.stderr)
         return 2
-    # Every model is checked, so one failure doesn't hide another's.
-    results = [check(script, None if glb is None else Path(glb), keep) for script, glb in models]
+    # Every model is checked, so one failure doesn't hide another's; two Blenders build each.
+    with ThreadPoolExecutor(max_workers=max(1, (os.cpu_count() or 2) // 2)) as pool:
+        results = list(pool.map(lambda model: check(model[0], None if model[1] is None else Path(model[1]), keep),
+                                models))
     passed = all(results)
     log.info("REBUILD CHECK: " + ("PASS" if passed else "FAIL"))
     return 0 if passed else 1
-
 
 if __name__ == "__main__":
     sys.exit(main())
