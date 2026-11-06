@@ -4,15 +4,17 @@ extends SoakExplorer
 ## `explore`, then walks out through the exits into every instance it can reach, one after another
 ## and deeper first, back the way it came once an instance has no new one beside it, the way a
 ## player roams the world's instances, and once home again onto its home tile (`is_home`). Each
-## instance it passes through stays loaded behind it, as in play. An instance it can't walk to (a
-## sealed passage) counts as seen.
+## instance it passes through stays loaded behind it, as in play. An exit it can't walk to (a
+## sealed passage) is given up from that instance; another way may still lead there.
 
 ## The driver, which says which instance the player is in.
 var driver: Session
-## Every instance it has been in, or given up on.
+## Every instance it has been in.
 var seen: Dictionary[String, bool] = {}
 ## The instances on the way from home to the one it is in, home first.
 var trail: Array[String] = []
+## The exits it gave up, as "from>to" by instance name.
+var blocked: Dictionary[String, bool] = {}
 ## Every instance it has walked into, home included.
 var reached: Dictionary[String, bool] = {}
 ## The instance it walks to next, or "".
@@ -39,8 +41,8 @@ func _walk(state: GameState, player: Entity) -> int:
 		if trail.size() >= 2 and _next == trail[-2]:
 			# No way back just now (a wild monster in it): wait for one, never give the way home up.
 			return Command.NO_MOVE
-		# No way to that exit: count the instance behind it as seen.
-		seen[_next] = true
+		# No way to that exit: give it up from here.
+		blocked[_edge(_next)] = true
 		_next = ""
 	return Command.NO_MOVE
 
@@ -63,7 +65,7 @@ func _arrive(instance_name: String) -> void:
 ## from; "" at home with every instance seen.
 func _onward(state: GameState) -> String:
 	for target: String in state.region.exit_blueprints:
-		if not seen.has(target):
+		if not seen.has(target) and not blocked.has(_edge(target)):
 			return target
 	return trail[-2] if trail.size() >= 2 else ""
 
@@ -75,6 +77,11 @@ func _out_towards(state: GameState, tile: Vector2i) -> int:
 		if state.region.exit_blueprints[i] == _next and Vector2i(exit.x, exit.y) == tile:
 			return exit.z
 	return Command.NO_MOVE
+
+
+## The exit from the instance it is in to `target`, as `blocked` names it.
+func _edge(target: String) -> String:
+	return "%s>%s" % [_in, target]
 
 
 func _on_exit(tile: Vector2i, state: GameState) -> bool:
