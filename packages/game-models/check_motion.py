@@ -134,14 +134,32 @@ def jointed(rig, feet):
     return spots
 
 
-def sample(rig, meshes, feet, start, end):
+def weighs(obj, bone):
+    """Whether any vertex of `obj` carries some of `bone`'s weight."""
+    group = obj.vertex_groups.get(bone)
+    return group is not None and any(
+        entry.group == group.index and entry.weight > 0.0 for vertex in obj.data.vertices for entry in vertex.groups)
+
+
+def foot_bones(rig, meshes):
+    """The rig's feet, and whether it has no body to measure them on. A bone named like a foot
+    that moves no vertex is a control (an IK target, a foot roll), not a foot; a rig whose feet
+    all move none has no body (the player's clip library, its stand-in only, #2128), and its
+    feet are measured by their joints."""
+    feet = ground.foot_bones(rig)
+    weighted = [name for name in feet if any(weighs(obj, name) for obj in meshes)]
+    if feet and not weighted:
+        return feet, True
+    return weighted, False
+
+
+def sample(rig, meshes, feet, bodiless, start, end):
     """Every frame's local bone rotations and translations (metres: the model is built at its
     scale) and, per foot, its lowest point and centre: of the part of the mesh it moves most or,
-    on a rig without a body (no mesh moves any foot), of its joints."""
+    on a rig without a body, of its joints."""
     scene = bpy.context.scene
     depsgraph = bpy.context.evaluated_depsgraph_get()
     parts = {obj.name: ground.owned(obj, feet) for obj in meshes}
-    bodiless = bool(feet) and not any(indices for owned in parts.values() for indices in owned.values())
     frames = []
     for frame in range(start, end + 1):
         scene.frame_set(frame)
@@ -258,7 +276,7 @@ def joins(ends, loops, misses):
 def check(rig, meshes, fps, loops, speeds, misses):
     """Lines per clip and join, and whether every one passes; `misses` (summary.Misses) collects
     each limit a clip misses."""
-    feet = ground.foot_bones(rig)
+    feet, bodiless = foot_bones(rig, meshes)
     lines, passed, ends = [], True, {}
     for action in sorted(bpy.data.actions, key=lambda a: a.name):
         start, end = imported.play(rig, action)
@@ -266,7 +284,7 @@ def check(rig, meshes, fps, loops, speeds, misses):
         # at every loop's seam (#1089).
         late = start != 0
         loop = action.name in loops
-        frames = sample(rig, meshes, feet, start, end)
+        frames = sample(rig, meshes, feet, bodiless, start, end)
         # A foot no frame measures can't be seen to slide: that fails too (#2128).
         unmeasured = sorted(name for name in feet if not any(name in spots for _t, _p, spots in frames))
         ends[action.name] = (frames[0], frames[-1])
