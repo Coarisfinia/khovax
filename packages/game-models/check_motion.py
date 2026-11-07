@@ -32,8 +32,12 @@ from the .glb's .import, as the game imports it.
 
 `--speeds <folder>` (#2117) also takes the speeds from `<folder>/<model.glb>.speeds`, which
 check_rebuild.py's `--keep` writes from each build's `SPEEDS` line, so CI checks every model at
-the speeds its build prints; a model without one (a prop, the player's clips) is checked standing
-still. A model without a rig or clips passes: nothing moves. A clip or join that still fails today
+the speeds its build prints; a model without one (a prop, the third-party Rogue) is checked
+standing still. A model with a Walk or Run clip but no speed for it fails there (#2128): CI would
+check its gait standing still. A foot no frame finds on the ground (no part of the mesh follows
+it) fails its clip rather than passing unseen (#2128); a rig without a body, such as the player's
+clip library, is measured by its feet's joints instead. A model without a rig or clips
+passes: nothing moves. A clip or join that still fails today
 waits in KNOWN with the issue that fixes it (lib/known.py's way): it prints its numbers and doesn't
 fail the check, and fails once it passes until it's taken off. CI runs it on every .glb."""
 
@@ -42,6 +46,7 @@ import os
 import sys
 
 import bpy
+from mathutils import Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 # Blender's own Python runs this, outside the uv environment: game_shared comes from its folder.
@@ -60,6 +65,11 @@ SLIDE_LIMIT = 0.2
 SEAM_POSE_LIMIT = 0.5
 SEAM_SHIFT_LIMIT = 0.002
 JITTER_LIMIT = 15.0
+# The clips the game glides a model at while they play: each needs the speed its build prints.
+GAITS = ("Walk", "Run")
+# A clip line's note on the feet no frame measures: a failure KNOWN never excuses, since a check
+# that can't see a foot says nothing about it.
+UNMEASURED = "; unmeasured (no part of the mesh follows the bone): "
 
 # (model, clip) that fails today, with the issue that fixes it; that issue takes its entries off.
 # A join is named after its lead with " join" (`("mana_wolf", "WalkStart join")`).
@@ -75,6 +85,7 @@ KNOWN = {
     ("kavrikka", "Attack"): 1780,
     ("kavrikka", "Run"): 1780,
     ("kavrikka", "Walk"): 1780,
+    # The player's clips jitter, and the walk and run slide at the game's pace (#2128).
     **{("player_clips", clip): 2128
        for clip in ("GetUp", "HarvestBush", "Hit", "KnockedDown", "PickUp", "Run", "Throw", "Walk")},
     # The third-party Rogue's every clip (#2129).
@@ -103,9 +114,49 @@ def spin(a, b):
     return axis * math.degrees(angle)
 
 
-def sample(rig, meshes, feet, start, end):
+def joints(rig, foot):
+    """A foot's joints: its bone and every bone below it (the toes and their tips)."""
+    bone = rig.pose.bones[foot]
+    return [bone] + list(bone.children_recursive)
+
+
+def jointed(rig, feet):
+    """Per foot, from its joints (a rig without a body, such as the player's clip library, #2128):
+    the lowest joint's height above its rest height, and their centre. Such a rig stands on the
+    floor at rest (lib/planted_feet.py), so a joint at its rest height is on the ground."""
+    spots = {}
+    for name in feet:
+        bones = joints(rig, name)
+        world = rig.matrix_world
+        heights = [(world @ bone.head).z - (world @ bone.bone.head_local).z for bone in bones]
+        centre = sum((world @ bone.head for bone in bones), Vector()) / len(bones)
+        spots[name] = (min(heights), centre.x, centre.y)
+    return spots
+
+
+def weighs(obj, bone):
+    """Whether any vertex of `obj` carries some of `bone`'s weight."""
+    group = obj.vertex_groups.get(bone)
+    return group is not None and any(
+        entry.group == group.index and entry.weight > 0.0 for vertex in obj.data.vertices for entry in vertex.groups)
+
+
+def foot_bones(rig, meshes):
+    """The rig's feet, and whether it has no body to measure them on. A bone named like a foot
+    that moves no vertex is a control (an IK target, a foot roll), not a foot; a rig whose feet
+    all move none has no body (the player's clip library, its stand-in only, #2128), and its
+    feet are measured by their joints."""
+    feet = ground.foot_bones(rig)
+    weighted = [name for name in feet if any(weighs(obj, name) for obj in meshes)]
+    if feet and not weighted:
+        return feet, True
+    return weighted, False
+
+
+def sample(rig, meshes, feet, bodiless, start, end):
     """Every frame's local bone rotations and translations (metres: the model is built at its
-    scale) and, per foot, its lowest point and centre."""
+    scale) and, per foot, its lowest point and centre: of the part of the mesh it moves most or,
+    on a rig without a body, of its joints."""
     scene = bpy.context.scene
     depsgraph = bpy.context.evaluated_depsgraph_get()
     parts = {obj.name: ground.owned(obj, feet) for obj in meshes}
@@ -122,6 +173,9 @@ def sample(rig, meshes, feet, start, end):
             for name, indices in parts[obj.name].items():
                 points[name] += [world @ mesh.vertices[index].co for index in indices]
             evaluated.to_mesh_clear()
+        if bodiless:
+            frames.append((turns, places, jointed(rig, feet)))
+            continue
         # A foot may be split over several meshes: all of its parts count.
         spots = {}
         for name, found in points.items():
@@ -222,7 +276,7 @@ def joins(ends, loops, misses):
 def check(rig, meshes, fps, loops, speeds, misses):
     """Lines per clip and join, and whether every one passes; `misses` (summary.Misses) collects
     each limit a clip misses."""
-    feet = ground.foot_bones(rig)
+    feet, bodiless = foot_bones(rig, meshes)
     lines, passed, ends = [], True, {}
     for action in sorted(bpy.data.actions, key=lambda a: a.name):
         start, end = imported.play(rig, action)
@@ -230,14 +284,18 @@ def check(rig, meshes, fps, loops, speeds, misses):
         # at every loop's seam (#1089).
         late = start != 0
         loop = action.name in loops
-        frames = sample(rig, meshes, feet, start, end)
+        frames = sample(rig, meshes, feet, bodiless, start, end)
+        # A foot no frame measures can't be seen to slide: that fails too (#2128).
+        unmeasured = sorted(name for name in feet if not any(name in spots for _t, _p, spots in frames))
         ends[action.name] = (frames[0], frames[-1])
         slide, mean, fastest = sliding(frames, feet, fps, speeds.get(action.name, 0.0))
         rough = roughness(spins(frames), loop)
         shake, shaking, at = jitter(rough, start)
-        fails = late or shake > JITTER_LIMIT or slide > SLIDE_LIMIT
+        fails = late or bool(unmeasured) or shake > JITTER_LIMIT or slide > SLIDE_LIMIT
         if late:
             misses.flag(action.name, "late-start")
+        for name in unmeasured:
+            misses.flag(action.name, name + "-unmeasured")
         misses.above(action.name, "slide", slide, SLIDE_LIMIT, "m/s")
         misses.above(action.name, "jitter", shake, JITTER_LIMIT, "deg/frame^2")
         text = "slide %.2f m/s (mean %.2f; %s)" % (
@@ -250,6 +308,8 @@ def check(rig, meshes, fps, loops, speeds, misses):
             text += "; seam %.2f deg, shift %.1f mm (%s), rough %.2f deg/frame^2 (%s)" % (
                 pose, shift * 1000, shifted, speed, jumping)
         text += "; jitter %.2f deg/frame^2 (%s, frame %d)" % (shake, shaking, at)
+        if unmeasured:
+            text += UNMEASURED + ", ".join(unmeasured)
         if late:
             text += "; starts at frame %d, not 0: the game holds its first pose until then" % start
         passed = passed and not fails
@@ -260,7 +320,10 @@ def check(rig, meshes, fps, loops, speeds, misses):
 
 def judge(model, line):
     """A report line as KNOWN judges it (lib/known.py): the line and whether it fails the check.
-    A join's line (`ok WalkStart join: ...`) is keyed apart from its lead's own clip."""
+    A join's line (`ok WalkStart join: ...`) is keyed apart from its lead's own clip, and a clip
+    with a foot unmeasured fails whatever KNOWN says."""
+    if UNMEASURED in line:
+        return line, True
     words = line.split(" ", 3)
     clip = words[1] + " join" if words[2:3] == ["join:"] else None
     return known.judge(KNOWN, model, line, clip)
@@ -311,6 +374,14 @@ def main():
         lines = []
     else:
         passed = True
+    if folder is not None:
+        # CI takes every speed from the build: a gait it has none for would be checked standing
+        # still, its slide meaning nothing (#2128).
+        unspeeded = [clip for clip in GAITS if clip in bpy.data.actions and clip not in speeds]
+        if unspeeded:
+            passed = False
+            log.error("MOTION %s: its build prints no speed for %s: print them in a SPEEDS line"
+                      % (model, ", ".join(unspeeded)), glb)
     for line in lines:
         text, fails = judge(model, line)
         passed = passed and not fails
