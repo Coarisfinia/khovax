@@ -20,6 +20,9 @@ between its tones (#1799), also one only a few texels across (#1811).
 across (#1735): on a ball centred on x = 0 with `DARK`'s ovals, and on one off the middle with the
 hound's. On a ball with no painted eyes, `find`'s error names the ways on (#2100), and our eyes
 placed there by hand (`placed`) land at the given spot and size, mirrored across the given middle.
+A mark whose normal lies (nearly) along Z has no sideways axis, so `Mark` refuses it (#2105), while
+`find` passes over such a spot (a dark crown) and still finds the eyes; and `placed` refuses a spot
+off the surface whose nearest point there lies within half the eye's width of the middle.
 
     uv run --locked packages/game-models/blender.py --background --factory-startup \
         --python packages/game-models/test_painted_eyes.py
@@ -147,6 +150,13 @@ FITS = {
 # Our eyes placed by hand on a plain ball off the middle (#2100): its middle, and the left eye's
 # width and height there; and how far off the given size our eyeball may be, as a share of it.
 PLACED_MIDDLE, PLACED_WIDTH, PLACED_HEIGHT, PLACED_NEAR = 0.05, 0.12, 0.08, 0.05
+# Off the surface (#2105): left of the middle by more than half the eye's width, yet so far above the
+# ball that its nearest point there lies within it.
+PLACED_ABOVE = (PLACED_MIDDLE + 0.07, -0.3, 2.0)
+# Normals along Z or nearly so (#2105): a mark has no sideways axis with them.
+ALONG_Z = {"up": (0.0, 0.0, 1.0), "down": (0.0, 0.0, -1.0), "nearly_up": (1e-4, 0.0, 1.0)}
+# A dark spot painted on the ball's crown, about its top (#2105), and how far around it reaches.
+CROWN, CROWN_RADIUS = Vector((0.0, 0.0, RADIUS)), 0.12
 # What `find`'s error names when it finds no eyes: a beast's own `Marked`, the placement by hand
 # and the eye check's list of eyeless designs.
 FIND_OPTIONS = ("BEASTS", "placed", "EYELESS")
@@ -425,6 +435,56 @@ def placed():
     return ok
 
 
+def along_z():
+    """Whether `Mark` refuses a normal (nearly) along Z with a ValueError (#2105): it would have no
+    sideways axis (`side` NaN, or turned any way by a rounding error)."""
+    ok = True
+    for name, normal in ALONG_Z.items():
+        try:
+            with numpy.errstate(all="ignore"):
+                mark = marked_eyes.Mark(numpy.array([EYE[:]]), numpy.array([normal]))
+            message = "made a mark, side %s" % (tuple(round(float(v), 3) for v in mark.side),)
+            good = False
+        except ValueError as error:
+            message, good = str(error), True
+        ok = ok and good
+        (log.info if good else log.error)("%s along_z %s: %s" % ("ok" if good else "FAIL", name, message))
+    return ok
+
+
+def crown():
+    """Whether `find` still finds `DARK`'s painted eyes on a ball with a dark spot on its crown too
+    (#2105), whose normal lies nearly along Z, without a mark with a NaN in it."""
+    skin = build((BLACK, BLACK), False, 1.0, SKIN, 0.0)
+    head = marked_eyes.Head(skin, "head")
+    rows, columns, texels = marked_eyes._texels(head, numpy.ones(len(head.spots), dtype=bool))
+    inside = numpy.sqrt(((texels - numpy.array(CROWN)) ** 2).sum(axis=1)) <= CROWN_RADIUS
+    head.pixels[rows[inside], columns[inside], :3] = BLACK
+    bpy.data.images["skin"].pixels.foreach_set(head.pixels.ravel())
+    try:
+        with numpy.errstate(invalid="raise", divide="raise"):
+            left, right = marked_eyes.find(marked_eyes.Head(skin, "head"))
+        message = "found eyes at %s and %s" % (tuple(left.middle.round(3)), tuple(right.middle.round(3)))
+        good = left.middle[0] > 0.0 > right.middle[0] and left.middle[2] < CROWN.z - CROWN_RADIUS
+    except (ValueError, FloatingPointError) as error:
+        message, good = "%s: %s" % (type(error).__name__, error), False
+    (log.info if good else log.error)("%s crown: %s" % ("ok" if good else "FAIL", message))
+    return good
+
+
+def placed_above():
+    """Whether `placed` refuses a spot off the surface whose nearest point there lies within half the
+    eye's width of the middle (#2105), though the spot itself lies far enough off it."""
+    skin = build(None, False, 1.0, SKIN, PLACED_MIDDLE)
+    try:
+        marks = marked_eyes.placed(skin, PLACED_ABOVE, PLACED_WIDTH, PLACED_HEIGHT, middle=PLACED_MIDDLE)
+        message, good = "placed the left eye at %s" % (tuple(marks[0].middle.round(3)),), False
+    except ValueError as error:
+        message, good = str(error), True
+    (log.info if good else log.error)("%s placed_above: %s" % ("ok" if good else "FAIL", message))
+    return good
+
+
 def main():
     passed = True
     for name, (picks, yes, no) in PICKS.items():
@@ -455,6 +515,9 @@ def main():
     for name, (paint, colour, beast) in FITS.items():
         passed = fits(name, paint, colour, beast) and passed
     passed = placed() and passed
+    passed = along_z() and passed
+    passed = crown() and passed
+    passed = placed_above() and passed
     log.info("PAINTED EYES TEST: %s" % ("PASS" if passed else "FAIL"))
     sys.exit(0 if passed else 1)
 
