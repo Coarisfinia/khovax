@@ -30,6 +30,11 @@ const SCREENS: Array[Vector2] = [
 	Vector2(720, 1600),
 	Vector2(2400, 1080),
 ]
+## The most frames the Survey's middle may take to glide onto a standing player, and the frames
+## after it that must change nothing (#2096).
+const STILL_SETTLE: int = 600
+const STILL_FRAMES: int = 30
+const FRAME: float = 1.0 / 60.0
 
 
 func run(tree: SceneTree) -> String:
@@ -87,7 +92,8 @@ func _check_survey(main: Node) -> String:
 
 
 ## Why the Survey's tiles aren't exactly the explored ones in their kinds' colors and symbols
-## (#68), or its closest zoom draws no symbols, or "".
+## (#68), or its closest zoom draws no symbols, or it keeps working them out while nothing changes
+## (#2096), or "".
 func _survey_ground(driver: GameDriver, survey: SurveyView) -> String:
 	var state: GameState = driver.state
 	var keeper: ExploredKeeper = survey.keeper
@@ -113,9 +119,35 @@ func _survey_ground(driver: GameDriver, survey: SurveyView) -> String:
 		hidden += 0 if known else 1
 	if hidden == 0:
 		return "nothing of the instance was still in the fog to hide on the Survey"
-	return "" if _survey_symbols_drawn(survey) else (
-		"the Survey draws no tile symbols even at its closest zoom"
-	)
+	if not _survey_symbols_drawn(survey):
+		return "the Survey draws no tile symbols even at its closest zoom"
+	return _survey_still(driver, survey)
+
+
+## Why the Survey, while nothing it shows changes, still works out what it shows or asks to be
+## drawn again frame after frame, or "" (#2096): with the world held and the player standing, once
+## its middle has glided onto them, it neither rebuilds nor redraws. Its frames are stepped here,
+## a sixtieth of a second each, so it settles alike on every machine.
+func _survey_still(driver: GameDriver, survey: SurveyView) -> String:
+	driver.set_process(false)
+	# The middle glides onto the player, closer every frame, until it moves no more.
+	for _frame: int in STILL_SETTLE:
+		var asked: int = survey.changes.redraws
+		survey._process(FRAME)
+		if survey.changes.redraws == asked:
+			break
+	var rebuilt: int = survey.changes.rebuilds
+	var redrawn: int = survey.changes.redraws
+	for _frame: int in STILL_FRAMES:
+		survey._process(FRAME)
+	driver.set_process(true)
+	if survey.changes.rebuilds != rebuilt or survey.changes.redraws != redrawn:
+		return "over %d frames where nothing changed, the Survey rebuilt %d and redrew %d times" % [
+			STILL_FRAMES,
+			survey.changes.rebuilds - rebuilt,
+			survey.changes.redraws - redrawn,
+		]
+	return ""
 
 
 ## Whether the Survey draws tile symbols at its closest zoom, at the corner size of a desktop

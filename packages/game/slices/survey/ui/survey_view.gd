@@ -88,9 +88,10 @@ var circles: Dictionary[int, Vector2] = {}
 var quest_targets: Dictionary[String, Vector2i] = {}
 ## This machine's player's quests, whose targets it marks: none until game/ hands them in (#1666).
 var quests: SurveyQuests = SurveyQuests.new()
+## What it showed last, and how often it worked it out and was drawn again (#2096).
+var changes: SurveyChanges = SurveyChanges.new()
 ## The ground point in the middle, in world units on the XZ plane.
 var _middle: Vector2 = Vector2.ZERO
-var _region: Region
 
 
 func _ready() -> void:
@@ -109,6 +110,7 @@ func _process(delta: float) -> void:
 	show_state()
 	var own: Vector2 = circles.get(_slot(), ground_of(Vector2i.ZERO))
 	_middle = _middle.lerp(own, 1.0 - exp(-GLIDE * delta))
+	changes.redraws += 1
 	queue_redraw()
 
 
@@ -181,6 +183,7 @@ func grey_arrow_box(key: String) -> Rect2:
 ## Works out what is shown from the state. Called every frame while it shows; tests call it
 ## directly.
 func show_state() -> void:
+	changes.rebuilds += 1
 	tiles.clear()
 	blocking.clear()
 	exits.clear()
@@ -189,9 +192,9 @@ func show_state() -> void:
 	if driver == null or driver.state == null:
 		return
 	var state: GameState = driver.state
-	if state.region != _region:
+	if state.region != changes.region:
 		# Another instance: the middle starts on this machine's player, never sliding across.
-		_region = state.region
+		changes.region = state.region
 		var own: Entity = state.player(_slot())
 		_middle = ground_of(own.tile if own != null else Vector2i.ZERO)
 	var known: Dictionary = _explored(state)
