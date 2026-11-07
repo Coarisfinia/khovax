@@ -73,9 +73,6 @@ var _out_dir: String = ""
 var _clip: String = ""
 ## Where a clip is seen from: "game" (the game camera) or one of VIEWS.
 var _from: String = "game"
-## How a clip's view camera is placed (`camera=`): empty to frame the clip's motion, REST, or the
-## `.camera` file or folder to take it from.
-var _camera: String = ""
 var _frame: int = 0
 var _wait: int = 0
 ## The shots to take, in order: each one's file name, and what poses the scene for it.
@@ -139,12 +136,8 @@ func _initialize() -> void:
 			_clip = arg.trim_prefix("clip=")
 		elif arg.begins_with("from="):
 			_from = arg.trim_prefix("from=")
-		elif arg.begins_with("camera="):
-			_camera = arg.trim_prefix("camera=")
-	if problem.is_empty() and not (_from == "game" or VIEWS.has(_from)):
-		problem = "no view " + _from
-	if problem.is_empty() and not _camera.is_empty() and not VIEWS.has(_from):
-		problem = "camera= holds a view's camera: it needs from=<view>"
+	if problem.is_empty():
+		problem = _view_problem()
 	if problem.is_empty() and args.size() >= 2:
 		_out_dir = args[1]
 		var made: Error = DirAccess.make_dir_recursive_absolute(_out_dir)
@@ -165,6 +158,23 @@ func _initialize() -> void:
 	# sometimes reports it as resources still in use at exit.
 	_main.get_node("Music").free()
 	_viewport.add_child(_main)
+
+
+## What's wrong with the view a clip is seen from (`from=`) and its camera (`camera=`), or "".
+func _view_problem() -> String:
+	if not (_from == "game" or VIEWS.has(_from)):
+		return "no view " + _from
+	if not _option("camera").is_empty() and not VIEWS.has(_from):
+		return "camera= holds a view's camera: it needs from=<view>"
+	return ""
+
+
+## The value the command line gives the option `name=`, or "" when it gives none.
+func _option(name: String) -> String:
+	for arg: String in OS.get_cmdline_user_args().slice(2):
+		if arg.begins_with(name + "="):
+			return arg.trim_prefix(name + "=")
+	return ""
 
 
 ## Stands the model on the tile beside the player and lists the shots.
@@ -257,13 +267,14 @@ func _clip_camera(
 		clip: String,
 		times: PackedFloat32Array,
 ) -> Callable:
-	if _camera.is_empty():
+	var camera: String = _option("camera")
+	if camera.is_empty():
 		return _aim_side.bind(_from, _posed_over(model, animations, clip, times))
-	if _camera == REST:
+	if camera == REST:
 		return _aim_side.bind(_from, _at_rest(_from))
-	var path: String = _camera
-	if DirAccess.dir_exists_absolute(_camera):
-		path = _camera.path_join(clip + ".camera")
+	var path: String = camera
+	if DirAccess.dir_exists_absolute(camera):
+		path = camera.path_join(clip + ".camera")
 	var held: Variant = str_to_var(FileAccess.get_file_as_string(path))
 	if held is not Transform3D:
 		printerr("no camera in %s: a clip run from a view writes one as <Clip>.camera" % path)
