@@ -35,11 +35,19 @@ def load(glb, fps):
     return rig
 
 
-def load_view(glb, fps, scale=1.0):
+def load_view(glb, fps, scale=1.0, library=None):
     """The model in an empty scene at the clip rate, drawn at `scale` as a view's node would, and
-    its armature (None for a static one)."""
+    its armature (None for a static one). With `library`, a clip library's .glb on the same
+    skeleton (#1827), its clips come too, as the view plays them on the model."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.context.scene.render.fps = fps
+    if library is not None:
+        # Only its clips stay: its rig was their carrier, and the model's bones have its bones' names.
+        bpy.ops.import_scene.gltf(filepath=library)
+        for obj in list(bpy.data.objects):
+            bpy.data.objects.remove(obj, do_unlink=True)
+        for action in bpy.data.actions:
+            action.use_fake_user = True
     bpy.ops.import_scene.gltf(filepath=glb)
     if scale != 1.0:
         holder = bpy.data.objects.new("view", None)
@@ -50,6 +58,9 @@ def load_view(glb, fps, scale=1.0):
                 obj.parent = holder
         bpy.context.view_layer.update()
     rig = next((obj for obj in bpy.data.objects if obj.type == "ARMATURE"), None)
+    if rig is not None and library is not None and rig.animation_data is None:
+        # A body without clips of its own has nothing to play them on yet.
+        rig.animation_data_create()
     if rig is not None and rig.animation_data is not None:
         rig.animation_data.use_nla = False
     return rig

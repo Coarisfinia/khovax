@@ -24,23 +24,7 @@ const UNPLACED_MODELS: Array[String] = ["model_starry_egg"]
 ## Clip libraries built before the body that plays them (#1935), with the clips each holds: each
 ## loads with its clips on Godot's humanoid skeleton profile (the BoneMap in its .import), so any
 ## body mapped to that profile plays them, until a view names it and it leaves this list.
-const UNWORN_CLIPS: Dictionary[String, Array] = {
-	"model_player_clips":
-	[
-		&"GetUp",
-		&"HarvestBush",
-		&"Hit",
-		&"Idle",
-		&"KnockedDown",
-		&"PickUp",
-		&"Run",
-		&"SitFloor",
-		&"Talk",
-		&"Throw",
-		&"Walk",
-		&"Wave",
-	],
-}
+const UNWORN_CLIPS: Dictionary[String, Array] = {}
 ## The skeleton every humanoid clip library's tracks name, as Godot's retargeting calls it.
 const HUMANOID_SKELETON: String = "%GeneralSkeleton"
 
@@ -319,15 +303,24 @@ func _check_player_placement(main: Node) -> String:
 	return ""
 
 
-## The character carries none of the model's weapons and idles while it stands.
+## The character idles while it stands, and every bone its clips turn is on its body: the clip
+## library's tracks (#1935) find the body's skeleton through its humanoid bone map (#1827), or the
+## body would stand in its rest pose whatever it plays.
 func _check_player_model(main: Node) -> String:
 	var player: PlayerView = main.get_node("Instance/Player") as PlayerView
-	for part: String in PlayerView.HIDDEN_PARTS:
-		var node: Node3D = player.model.find_child(part) as Node3D
-		if node == null or node.visible:
-			return "the model's %s is missing or shown" % part
 	if player.current_clip() != PlayerView.IDLE:
 		return "the standing player plays %s, not %s" % [player.current_clip(), PlayerView.IDLE]
+	var animations: AnimationPlayer = player.model.find_child("AnimationPlayer") as AnimationPlayer
+	var root: Node = animations.get_node(animations.root_node)
+	for clip: StringName in PlayerView.CLIPS:
+		var animation: Animation = animations.get_animation(clip)
+		for track: int in animation.get_track_count():
+			var path: NodePath = animation.track_get_path(track)
+			var skeleton: Skeleton3D = (
+				root.get_node_or_null(NodePath(str(path.get_concatenated_names()))) as Skeleton3D
+			)
+			if skeleton == null or skeleton.find_bone(str(path.get_concatenated_subnames())) < 0:
+				return "%s turns %s, which the player's body doesn't have" % [clip, path]
 	return ""
 
 

@@ -13,7 +13,10 @@ script it uses as `Class.NAME` (a value may name another constant too, in the vi
 - `MODEL_SCALE`: the scale it draws the model at (1 without one);
 - `CLIPS`: the clips it plays (every clip without one, an empty list for none);
 - `IDLE`: the clip it stands in, measured in place of the rest pose (a figure's is a T-pose);
-- `HIDDEN_PARTS`: the parts it hides (the figure's weapons), left out of the measure.
+- `HIDDEN_PARTS`: the parts it hides (the figure's weapons), left out of the measure;
+- `CLIP_LIBRARY`: the id of the clip library it plays the model's clips from (#1827: the player's
+  body carries none, player_clips.glb holds them on the same skeleton), whose clips the model is
+  measured in.
 
 A model no view names isn't put on the board (the items, shown only in the gear
 panel's pictures) and has no views."""
@@ -33,14 +36,16 @@ CLASS = re.compile(r"^class_name\s+(\w+)", re.M)
 
 class View:
     """How one view shows a model: `name` (the view's script), `scale`, `clips`, `standing` (a
-    clip, or None) and `hidden` (part names)."""
+    clip, or None), `hidden` (part names) and `library` (the .glb its clips come from, or None
+    for the model's own)."""
 
-    def __init__(self, name, scale, clips, standing, hidden):
+    def __init__(self, name, scale, clips, standing, hidden, library=None):
         self.name, self.scale, self.clips, self.standing, self.hidden = name, scale, clips, standing, hidden
+        self.library = library
 
     def key(self):
         clips = None if self.clips is None else tuple(self.clips)
-        return (self.scale, clips, self.standing, tuple(sorted(self.hidden)))
+        return (self.scale, clips, self.standing, tuple(sorted(self.hidden)), self.library)
 
 
 class Scripts:
@@ -109,12 +114,14 @@ class Scripts:
 
     def view(self, path):
         """How the script at `path` shows its model."""
+        library = self.setting(path, "CLIP_LIBRARY")
         return View(
             os.path.splitext(os.path.basename(path))[0],
             self.setting(path, "MODEL_SCALE", 1.0),
             self.setting(path, "CLIPS"),
             self.setting(path, "IDLE"),
-            self.setting(path, "HIDDEN_PARTS", []))
+            self.setting(path, "HIDDEN_PARTS", []),
+            None if library is None else model_path(self.game, library))
 
 
 def find(game, model, scripts=None):
@@ -160,6 +167,14 @@ def model_ids(game, model):
     return {
         model_id for model_id, file in models(read_manifest(Path(path))).items()
         if os.path.splitext(os.path.basename(file))[0] == model}
+
+
+def model_path(game, model_id):
+    """The .glb the default resource pack gives the id `model_id`, in the Godot project at `game`."""
+    files = models(read_manifest(Path(os.path.join(game, MANIFEST))))
+    if model_id not in files:
+        raise ValueError("the default pack has no model %s" % model_id)
+    return os.path.join(game, files[model_id])
 
 
 def _expression(text, start):

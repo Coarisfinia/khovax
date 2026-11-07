@@ -93,7 +93,7 @@ def measure(model, glb, fps, scripts):
         return None
     lines = []
     for view in shown:
-        rig = imported.load_view(glb, fps, view.scale)
+        rig = imported.load_view(glb, fps, view.scale, view.library)
         meshes = [obj for obj in footprint.meshes(rig, bpy.data.objects) if obj.name not in view.hidden]
         # A figure stands in its idle clip and plays only the view's clips; a static model has
         # only its rest pose. It's held to a prop's limits: it neither walks on nor strikes.

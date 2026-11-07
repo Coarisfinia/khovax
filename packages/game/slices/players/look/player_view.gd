@@ -13,22 +13,21 @@ extends HexPiece
 ## How fast the character turns toward where it walks, in radians per second: quick enough to
 ## follow a zigzag, never a snap.
 const TURN_SPEED: float = 10.0
-## The character model's id in the resource packs (#1864): the placeholder character.
-const MODEL: String = "model_rogue"
+## The character model's id in the resource packs (#1864): the baseline body (#1827), bald,
+## barefoot and bare-handed, with the owner's texture.
+const MODEL: String = "model_player_body"
+## The clip library the body plays (#1935): the body carries no clips, the library holds them on
+## the same skeleton.
+const CLIP_LIBRARY: String = "model_player_clips"
+## The scale the body is drawn at: the player's height on the world's scale (#1837), which the
+## world-scale check measures it against, standing in IDLE.
+const MODEL_SCALE: float = 1.28
 const IDLE: StringName = &"Idle"
-const MOVE: StringName = &"Running_A"
+const MOVE: StringName = &"Run"
 ## The clip a knocked-down player plays (#479, #488): down on the ground until revived.
-const DOWN: StringName = &"Sit_Floor_Idle"
+const DOWN: StringName = &"SitFloor"
 ## Every clip the view plays, which the boot flow checks its model has (#992).
 const CLIPS: Array[StringName] = [IDLE, MOVE, DOWN]
-## Parts of the placeholder model the player doesn't carry: its weapons.
-const HIDDEN_PARTS: Array[String] = [
-	"Knife",
-	"Knife_Offhand",
-	"1H_Crossbow",
-	"2H_Crossbow",
-	"Throwable",
-]
 ## Each slot's spot inside a tile it shares with other players: the corners of a small square,
 ## in world units from the tile's center.
 const SPOTS: Array[Vector3] = [
@@ -68,19 +67,16 @@ var circle: PlayerCircle
 func _ready() -> void:
 	super()
 	model = ResourcePacks.model(MODEL).instantiate() as Node3D
+	model.scale = Vector3.ONE * MODEL_SCALE
 	add_child(model)
 	# Only in the game: in the editor, the copies would be saved into the scene.
 	if not Engine.is_editor_hint():
 		Toon.apply_to_model(model)
 		circle = PlayerCircle.new(slot)
 		add_child(circle)
-	for part: String in HIDDEN_PARTS:
-		var node: Node3D = model.find_child(part) as Node3D
-		if node != null:
-			node.visible = false
-	# The clips loop by the model's import settings (Rogue.glb.import), not by changing the
-	# imported animations here, which every instance shares.
-	_animations = model.find_child("AnimationPlayer") as AnimationPlayer
+	# The clips loop by the library's import settings (player_clips.glb.import), not by changing
+	# the imported animations here, which every instance shares.
+	_animations = ClipLibrary.play_on(model, CLIP_LIBRARY)
 
 
 func _process(delta: float) -> void:

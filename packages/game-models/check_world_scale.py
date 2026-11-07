@@ -91,7 +91,7 @@ def shown(model, glb, fps, scripts):
         return None
     lines = []
     for view in found:
-        rig = imported.load_view(glb, fps, view.scale)
+        rig = imported.load_view(glb, fps, view.scale, view.library)
         meshes = [obj for obj in footprint.meshes(rig, bpy.data.objects) if obj.name not in view.hidden]
         standing = view.standing if rig is not None else None
         if standing is not None and standing not in bpy.data.actions:

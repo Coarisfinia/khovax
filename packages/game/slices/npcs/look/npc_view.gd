@@ -1,16 +1,26 @@
 class_name NpcView
 extends Node3D
 ## The people's look (#557): a person standing idle on every person's tile, hidden in the fog until
-## an ally sees them, like a chest. The figure is the players' placeholder character, without the
+## an ally sees them, like a chest. The figure is the players' old placeholder character, without
+## the
 ## circle that marks a player; what says "someone to talk to" is the speech mark floating over
 ## them, a shape and not a color (#68). A guide who walks (EscortFeature, #1588) glides from tile to
 ## tile like a companion, running and turning toward where they walk. It only reads the state.
 
-## The placeholder person until the game's own people exist: the players' character, unarmed. Its
-## id in the resource packs (#1864).
-const MODEL: String = PlayerView.MODEL
+## The placeholder person until the game's own people exist: the players' old placeholder
+## character, unarmed (the players wear the baseline body since #1827). Its id in the resource
+## packs (#1864).
+const MODEL: String = "model_rogue"
 const IDLE: StringName = &"Idle"
-const MOVE: StringName = PlayerView.MOVE
+const MOVE: StringName = &"Running_A"
+## Parts of the placeholder model a person doesn't carry: its weapons.
+const HIDDEN_PARTS: Array[String] = [
+	"Knife",
+	"Knife_Offhand",
+	"1H_Crossbow",
+	"2H_Crossbow",
+	"Throwable",
+]
 ## Every clip the view plays, which the boot flow checks its model has (#992).
 const CLIPS: Array[StringName] = [IDLE, MOVE]
 ## The speech mark over a person's head, and how high above their tile's top it floats.
@@ -79,7 +89,7 @@ func _add_figure(tile: Vector2i) -> HexPiece:
 	piece.base_offset = 0.0
 	var model: Node3D = ResourcePacks.model(MODEL).instantiate() as Node3D
 	Toon.apply_to_model(model)
-	for part: String in PlayerView.HIDDEN_PARTS:
+	for part: String in HIDDEN_PARTS:
 		var held: Node3D = model.find_child(part) as Node3D
 		if held != null:
 			held.visible = false
