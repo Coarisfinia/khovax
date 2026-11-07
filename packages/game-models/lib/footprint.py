@@ -94,10 +94,11 @@ def reach(meshes, hexes=1):
 
 def points(meshes, across=False):
     """Every vertex of the deformed `meshes` at the scene's current frame, an (n, 3) array in world
-    space. With `across`, also where each edge crosses the plane X = 0: two hexes' shared edge,
-    whose ends their outline notches in at (#1907), so an edge spanning a notch counts there though
-    both its ends lie inside. Each hex is convex, so the vertices and these points are all a face
-    can reach in it."""
+    space. With `across`, also where each edge of the triangles the mesh is drawn as crosses the
+    plane X = 0: two hexes' shared edge, whose ends their outline notches in at (#1907), so a face
+    spanning a notch counts there though all its corners lie inside. Each hex is convex, so the
+    vertices and these points are all a triangle can reach in it; a quad's diagonal counts too,
+    since a quad that isn't flat is drawn as two triangles."""
     depsgraph = bpy.context.evaluated_depsgraph_get()
     found = [numpy.empty((0, 3))]
     for obj in meshes:
@@ -105,14 +106,18 @@ def points(meshes, across=False):
         mesh = evaluated.to_mesh()
         coords = numpy.empty(len(mesh.vertices) * 3)
         mesh.vertices.foreach_get("co", coords)
-        ends = numpy.empty(len(mesh.edges) * 2, dtype=numpy.int64)
-        mesh.edges.foreach_get("vertices", ends)
+        if across:
+            mesh.calc_loop_triangles()
+            corners = numpy.empty(len(mesh.loop_triangles) * 3, dtype=numpy.int64)
+            mesh.loop_triangles.foreach_get("vertices", corners)
+            corners = corners.reshape(-1, 3)
+            ends = numpy.concatenate([corners[:, [0, 1]], corners[:, [1, 2]], corners[:, [2, 0]]])
         evaluated.to_mesh_clear()
         world = numpy.array(evaluated.matrix_world)
         placed = coords.reshape(-1, 3) @ world[:3, :3].T + world[:3, 3]
         found.append(placed)
         if across:
-            first, second = placed[ends[0::2]], placed[ends[1::2]]
+            first, second = placed[ends[:, 0]], placed[ends[:, 1]]
             crosses = first[:, 0] * second[:, 0] < 0.0
             first, second = first[crosses], second[crosses]
             share = first[:, 0] / (first[:, 0] - second[:, 0])
