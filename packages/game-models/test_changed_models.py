@@ -19,7 +19,7 @@ CASES = [
                               "packages/game/assets/kavrikka/kavrikka.glb.import"], {"mana_wolf", "kavrikka"}),
     ("a model's source", ["packages/game-models/sources/kavrikka.glb"], {"kavrikka"}),
     ("a .glb with no script", ["packages/game/assets/items/pebble.glb"], {"pebble"}),
-    ("nothing the checks read", ["packages/game/core/tick.gd", "README.md", ".github/workflows/nightly.yml",
+    ("nothing the checks read", ["packages/game/slices/quests/data/quests/x.jsonc", "README.md", ".github/workflows/nightly.yml",
                                  "packages/game/assets/mana-wolf/SOURCE.md"], set()),
     ("the attached-part check", ["packages/game-models/check_connectivity.py"], None),
     ("the rebuild check", ["packages/game-models/check_rebuild.py"], None),
@@ -36,6 +36,8 @@ CASES = [
     ("Blender's setup", [".github/actions/setup-blender/action.yml"], None),
     ("a view the footprint check reads", ["packages/game/slices/board/look/board_view.gd"], None),
     ("a scene", ["packages/game/game/main.tscn"], None),
+    ("a game script a view's settings may name (#2072)", ["packages/game/slices/combat/rules/x.gd"], None),
+    ("a core script (#2072)", ["packages/game/core/tick.gd"], None),
     ("the default pack's manifest", ["packages/game/slices/resource_packs/data/default.jsonc"], None),
     ("one model and the library", ["packages/game-models/mana_wolf.py", "packages/game-models/lib/eyes.py"], None),
 ]
