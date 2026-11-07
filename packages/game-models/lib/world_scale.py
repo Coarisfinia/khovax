@@ -16,8 +16,10 @@ A model built by a script here that isn't a monster (a prop in lib/footprint.py'
 or no Walk clip) names its kind in its script, `WORLD_SCALE = "<kind>"`, one of `KINDS`. Each
 kind gives the range its height must be in, and an **edge piece** (a wall, a gate) runs along
 one hex edge: Blender's X, centred on the origin at the edge's middle, `HEX_EDGE` long, so pieces
-meet end to end at the hex's corners. A monster is sized against its hex instead (the footprint
-check) and has no kind."""
+meet end to end at the hex's corners. A kind bigger than one hex (a portal, #1907) stands on the
+edge between two hexes, its origin at the edge's middle and its X along the line between their
+centres, and the footprint check measures it against both (`Kind.hexes`, lib/footprint.py). A
+monster is sized against its hex instead (the footprint check) and has no kind."""
 
 import ast
 import math
@@ -43,18 +45,19 @@ CLIP_LIBRARY = "clip_library"
 
 
 class Kind:
-    """A kind of model: the range its height must be in, in metres, and whether it's an edge piece
-    (`HEX_EDGE` long along X)."""
+    """A kind of model: the range its height must be in, in metres, whether it's an edge piece
+    (`HEX_EDGE` long along X) and how many hexes it stands on (lib/footprint.py's `HEXES`)."""
 
-    def __init__(self, low, high, edge, what):
-        self.low, self.high, self.edge, self.what = low, high, edge, what
+    def __init__(self, low, high, edge, what, hexes=1):
+        self.low, self.high, self.edge, self.what, self.hexes = low, high, edge, what, hexes
 
 
 KINDS = {
     "prop": Kind(0.05 * PLAYER_HEIGHT, 1.5 * PLAYER_HEIGHT, False,
                  "a thing standing on one hex: a well, a campfire, a signpost, a stone"),
     "portal": Kind(1.1 * PLAYER_HEIGHT, 1.3 * WALL_HEIGHT, False,
-                   "a gate on one hex the player walks through, standing above the player"),
+                   "a gate on the edge between two hexes the player walks through, standing above"
+                   " the player", hexes=2),
     "wall": Kind(0.9 * WALL_HEIGHT, 1.1 * WALL_HEIGHT, True, "a wall piece along one hex edge"),
     "gate": Kind(1.1 * PLAYER_HEIGHT, 1.3 * WALL_HEIGHT, True,
                  "a passable piece along one hex edge, standing above the player"),
@@ -107,6 +110,14 @@ def script_kind(path):
                 isinstance(target, ast.Name) and target.id == KIND for target in node.targets):
             return node.value.value if isinstance(node.value, ast.Constant) else None
     return None
+
+
+def hexes(script):
+    """How many hexes the model the script at `script` builds stands on: its kind's, or one for a
+    script that names no kind (a monster) or one `KINDS` doesn't know (the world-scale check fails
+    it)."""
+    kind = script_kind(script) if os.path.exists(script) else None
+    return KINDS[kind].hexes if kind in KINDS else 1
 
 
 def clip_library(script):

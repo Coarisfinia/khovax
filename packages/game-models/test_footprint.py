@@ -1,6 +1,7 @@
 """Tests lib/footprint.py's judgement on models built here (#1641): boxes standing on the hex,
 each as a monster (rigged, with a Walk clip) or a prop (rigged with only an Idle clip, or static),
-inside their hex or too big for it. The ones that fit pass; an oversized one fails whatever it
+inside their hex or too big for it, and static boxes on the edge between two hexes (#1907), which
+fit both or reach past them. The ones that fit pass; an oversized one fails whatever it
 is, and a prop whose clip spreads past the hex's edge fails, even one it calls Attack, though a
 monster may do so (props have limits of their own, never an exemption).
 
@@ -59,12 +60,29 @@ MODELS = {
     "figure_lacks_its_stance": (FITS, {"Idle": 1.0}, False, None, "Stand"),
 }
 
+# Pieces on the edge between two hexes (#1907), static boxes `length` along X (the line between the
+# hexes' centres) and `depth` along Y, centred on the shared edge's middle: (length, depth, whether
+# two hexes pass it, whether one hex does). 2.6 by 0.6 reaches 0.75 of two hexes but 1.47 of one;
+# 3.6 long reaches past both hexes' far edges (1.04) and 2.0 deep past the notches at the shared
+# edge's ends (2.00). 1.6 by 1.2 has its corners inside (0.71), but its edges cross those notches
+# (1.20 there), so it fails though no vertex lies outside; so does a box that fits one hex, stood
+# on the shared edge (1.10).
+TWO_HEXES = {
+    "two_hexes_fits": (2.6, 0.6, True, False),
+    "two_hexes_too_long": (3.6, 0.6, False, False),
+    "two_hexes_too_deep": (2.6, 2.0, False, False),
+    "two_hexes_across_the_notch": (1.6, 1.2, False, False),
+    "two_hexes_one_hex_box": (FITS, FITS, False, True),
+}
 
-def box(width):
-    """A box mesh `width` metres across, standing on the ground at the hex's centre."""
+
+def box(width, depth=None):
+    """A box mesh `width` metres across (along X) and `depth` deep (along Y, `width` when None),
+    standing on the ground at the hex's centre."""
     mesh = bpy.data.meshes.new("box")
     built = bmesh.new()
-    bmesh.ops.create_cube(built, size=width, matrix=Matrix.Translation(Vector((0, 0, width / 2.0))))
+    shape = Matrix.Diagonal(Vector((1.0, (width if depth is None else depth) / width, 1.0, 1.0)))
+    bmesh.ops.create_cube(built, size=width, matrix=Matrix.Translation(Vector((0, 0, width / 2.0))) @ shape)
     built.to_mesh(mesh)
     built.free()
     obj = bpy.data.objects.new("box", mesh)
@@ -176,6 +194,17 @@ def main():
         if verdict != passes:
             passed = False
             log.error("FOOTPRINT test: %s should %s" % (name, "pass" if passes else "fail"), __file__)
+    for name, (length, depth, on_two, on_one) in sorted(TWO_HEXES.items()):
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        meshes = [box(length, depth)]
+        for hexes, passes in ((2, on_two), (1, on_one)):
+            lines, verdict = footprint.report(None, meshes, footprint.PROP, hexes=hexes)
+            for line in lines:
+                log.info("FOOTPRINT test %s on %d hex(es) %s" % (name, hexes, line))
+            if verdict != passes:
+                passed = False
+                log.error("FOOTPRINT test: %s should %s on %d hex(es)" % (
+                    name, "pass" if passes else "fail", hexes), __file__)
     log.info("FOOTPRINT TEST: %s" % ("PASS" if passed else "FAIL"))
     sys.exit(0 if passed else 1)
 

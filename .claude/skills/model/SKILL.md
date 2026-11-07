@@ -369,7 +369,10 @@ a second model could use goes into the library or a generic tool, never into one
   its other clips, and one in its `LARGE` set (a boss, an enraged or stronger monster) past 1.05 at
   rest, 1.30 in its Attack and 1.10 in its other clips (`lib/footprint.py`). A prop (a model
   without a rig or without a Walk clip, such as a gate or an egg) is held to limits of its own:
-  0.95 at rest and 1.00 in every clip, a static one by its rest pose. Nothing is let off through
+  0.95 at rest and 1.00 in every clip, a static one by its rest pose. A piece whose kind stands on
+  two hexes (a `portal`, #1907) is measured against both, from the middle of their shared edge,
+  with the same limits, an edge across the notches at the shared edge's ends counting too; the
+  test's boxes show it. Nothing is let off through
   an exemption list (#1641): a model too big for its hex is shrunk in its script. A tile's
   decoration (a model a tile blueprint names) is the tile's own look, not a thing on it, and isn't
   measured (the owner, on #1651). A pack's model (no script here: the figure, the chest) is
@@ -676,7 +679,10 @@ No runes or carvings by script: they come from the rune set (#1855) and the engr
   flats), the player `PLAYER_HEIGHT` tall (the players' figure standing, which the check
   measures), and a wall `WALL_HEIGHT`, a quarter above the player. Every model that isn't a
   monster names its kind in its script, `WORLD_SCALE = "<kind>"`, from `KINDS` there: `prop`
-  (on one hex: a well, a campfire, a signpost), `portal` (on one hex, walked through), `wall`,
+  (on one hex: a well, a campfire, a signpost), `portal` (on the edge between two hexes, walked
+  through: its origin at the edge's middle, its X along the line between the hexes' centres, so
+  its arch spans both and the player walks along the edge; the footprint check measures it
+  against both hexes, #1907), `wall`,
   `gate` and `ruined_wall` (**edge pieces**: along Blender's X, centred on the origin at the
   edge's middle, `HEX_EDGE` long, so pieces meet end to end at the hex's corners), `tower` (at a
   hex corner, above the walls) and `ruin`. Its height must be in its kind's range. Size it in its
