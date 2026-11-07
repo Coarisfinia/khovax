@@ -90,7 +90,14 @@ PACK_ROOT = "resourcepacks/default/"
 # ...and the kinds already moved into it, by their section, each with its own folder there (a
 # region's pieces lie beside the regions drawn whole); the move goes one kind at a time, and the
 # rest follow (#1978).
-MOVED = {"realms": "realms", "regions": "regions", "region_pieces": "regions", "tiles": "tiles", "quests": "quests"}
+MOVED = {
+    "realms": "realms",
+    "regions": "regions",
+    "region_pieces": "regions",
+    "tiles": "tiles",
+    "quests": "quests",
+    "species": "species",
+}
 # Where the default pack's realms, regions and region pieces lie (#1978).
 REALMS = f"{PACK_ROOT}realms"
 REGIONS = f"{PACK_ROOT}regions"
