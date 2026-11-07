@@ -13,13 +13,13 @@ will have (#1858), and looked up only through ResourcePacks. It fails when
   quests, species, catalogues, tile blueprints, loot and harvest tables and materials, which the
   game finds by listing the pack), or a file of its kind (an image, model or sound under
   assets/, a region file or piece under resourcepacks/default/regions/, a realm in
-  resourcepacks/default/realms/, a quest in the quests
-  slice's data/, a species directly in slices/species/data/, a catalogue under translations/, a
+  resourcepacks/default/realms/, a quest in resourcepacks/default/quests/, a species directly in
+  slices/species/data/, a catalogue under translations/, a
   tile blueprint in resourcepacks/default/tiles/, a loot table, harvest table or material in
   the loot slice's data/loot_tables/, data/harvest_tables/ or data/materials/) is in the repository
   but not in the manifest;
 - a quest's, species', loot table's, harvest table's or material's entry isn't its own file
-  (slices/quests/data/<id>.jsonc, slices/species/data/<id>.jsonc,
+  (resourcepacks/default/quests/<id>.jsonc, slices/species/data/<id>.jsonc,
   slices/loot/data/loot_tables/<id>.jsonc, slices/loot/data/harvest_tables/<id>.jsonc,
   slices/loot/data/materials/<id>.jsonc), so it's named
   after its file (#72);
@@ -32,7 +32,7 @@ will have (#1858), and looked up only through ResourcePacks. It fails when
   instead of its id, so it would get around the resolver, and a pack could never override it (project.godot
   naming a catalogue for Godot to load gets around it too, #1902); or a script names anything by
   its uid://, loaded or kept for later (stricter than the pack needs: scripts never do; #1865,
-  #1919), or builds a path under assets/, resourcepacks/, translations/, the quests', the
+  #1919), or builds a path under assets/, resourcepacks/, translations/, the
   species', the tile blueprints', the loot tables', the harvest tables' or the materials' folder
   at runtime (#1865; the tools, which list the assets for the credits, may). A path may hold spaces (#1919).
 A catalogue the pack lists that leaves texts of the template untranslated, or holds texts the
@@ -90,13 +90,13 @@ PACK_ROOT = "resourcepacks/default/"
 # ...and the kinds already moved into it, by their section, each with its own folder there (a
 # region's pieces lie beside the regions drawn whole); the move goes one kind at a time, and the
 # rest follow (#1978).
-MOVED = {"realms": "realms", "regions": "regions", "region_pieces": "regions", "tiles": "tiles"}
+MOVED = {"realms": "realms", "regions": "regions", "region_pieces": "regions", "tiles": "tiles", "quests": "quests"}
 # Where the default pack's realms, regions and region pieces lie (#1978).
 REALMS = f"{PACK_ROOT}realms"
 REGIONS = f"{PACK_ROOT}regions"
-# Where the default pack's quests lie (#1888): in the quests slice, which owns the kind and its
-# schema (#412).
-QUESTS = "slices/quests/data"
+# Where the default pack's quests lie (#1888), in its own folder (#1978); their schema stays in the
+# quests slice, which owns the kind (#412).
+QUESTS = f"{PACK_ROOT}quests"
 # Where the species lie (#1903): each directly in the species slice's data/, beside its schema and
 # its abilities' folder, which aren't species.
 SPECIES = "slices/species/data"
@@ -153,7 +153,7 @@ NAME_CHAR = r"(?:(?!\1)[^/])"
 PATH = re.compile(
     rf"([\"'])res://(?P<path>assets/{PATH_CHAR}+?\.(?:"
     + "|".join(ending[1:] for ending in IMAGES + MODELS + AUDIO)
-    + rf")|resourcepacks/{PATH_CHAR}+|{QUESTS}/{PATH_CHAR}+?\.jsonc"
+    + rf")|resourcepacks/{PATH_CHAR}+"
     + rf"|{SPECIES}/{NAME_CHAR}+\.jsonc"
     + rf"|translations/{PATH_CHAR}+?\.po"
     + rf"|{TILES}/{PATH_CHAR}+|{OLD_TILES}(?:/{PATH_CHAR}*)?"
@@ -167,10 +167,9 @@ PATH = re.compile(
 # Any uid:// string, not only a load()'s or preload()'s argument: a threaded load, or a uid kept
 # in a constant and loaded later, gets around the resolver too (#1919).
 UID_STRING = re.compile(rf"([\"'])(?P<uid>uid://{PATH_CHAR}*)\1")
-# The quests' folder also holds their schema, a whole file, which names no quest; the species'
-# folder also holds the abilities' folder, which isn't theirs.
+# The species' folder also holds the abilities' folder, which isn't theirs.
 PACK_STRING = re.compile(
-    rf"([\"'])res://(?:(?:assets|resourcepacks|translations|{QUESTS}|{TILES}|{OLD_TILES}"
+    rf"([\"'])res://(?:(?:assets|resourcepacks|translations|{TILES}|{OLD_TILES}"
     + rf"|{LOOT_TABLES}|{MATERIALS}|{HARVEST_TABLES})"
     + rf"(?:/{PATH_CHAR}*)?|{SPECIES}(?:/{NAME_CHAR}*)?)\1"
 )

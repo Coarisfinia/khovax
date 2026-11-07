@@ -496,7 +496,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **Content data** (#72): species, loot tables, tile blueprints, quests and, later, items are JSONC
   files, one per entry and named after its id. **Each kind lives in exactly one slice** (owner,
   #412): `slices/<slice>/data/<kind>/`, with its JSON Schema beside it (`<kind>.schema.json`), read
-  only through that slice's accessor; the core gets plain integers and ids. The one exception: the
+  only through that slice's accessor; the core gets plain integers and ids. A kind the default pack
+  already holds in its own folder keeps its schema there too: the quests lie in
+  `resourcepacks/default/quests/` (#1978), their schema in `slices/quests/data/`. The one exception: the
   tile blueprints, which the core's `TileKinds` needs, keep their format (schema) in the core,
   `core/data/schemas/`, and are read by `TileContent` in `core/io/` (#506), but are the default
   pack's resources (#1901), in `resourcepacks/default/tiles/` (#1978): `game/` hands the core

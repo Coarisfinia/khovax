@@ -6,8 +6,9 @@ resource pack holds (the tile blueprints, #1901) lies in the default pack's own 
 PACK_DATA/<kind>/ at the repository's root (#1978), which the game reaches through its link, and
 is checked against the core's schema, which is the format every pack's files share. The slice's own
 kind sits directly in its data/, beside <slice>.schema.json, so no folder repeats the slice's name
-(#442). A folder without its schema fails, so a slice's data never borrows another's schema; so
-does a schema without its data, which would sit unchecked, and a kind with two schemas.
+(#442), or in the default pack's own folder, PACK_DATA/<slice>/ (the quests, #1978), still
+checked against the schema in its slice. A folder without its schema fails, so a slice's data never
+borrows another's schema; so does a schema without its data, which would sit unchecked, and a kind with two schemas.
 
     [GODOT=<binary>] [JV=<binary>] uv run --locked --package khovax-game-checks \\
         packages/game-checks/content_schemas_check.py
@@ -43,6 +44,9 @@ def schema_problems() -> tuple[dict[str, str], list[tuple[str, str | None]]]:
         core_schema = Path(f"core/data/schemas/{folder.name}.schema.json")
         if folder.parent == PACK_DATA and core_schema.is_file():
             schema = core_schema
+        elif folder.parent == PACK_DATA:
+            # A slice's own kind the pack holds keeps its schema in its slice.
+            schema = Path(f"slices/{folder.name}/data/{folder.name}.schema.json")
         elif folder.parts[0] == "slices":
             schema = folder.with_name(f"{folder.name}.schema.json")
         else:
@@ -62,8 +66,10 @@ def schema_problems() -> tuple[dict[str, str], list[tuple[str, str | None]]]:
         else:
             folder = schema.parent / name
         if folder == Path(f"slices/{name}/data/{name}"):
-            if not any(schema.parent.glob("*.jsonc")):
-                problems.append((f"has no {schema.parent.as_posix()}/*.jsonc to check", path))
+            if not any(schema.parent.glob("*.jsonc")) and not any((PACK_DATA / name).glob("*.jsonc")):
+                problems.append(
+                    (f"has no {schema.parent.as_posix()}/*.jsonc or {(PACK_DATA / name).as_posix()}/*.jsonc to check", path)
+                )
         elif not folder.is_dir():
             problems.append((f"has no {folder.as_posix()}/ folder to check", path))
         if name in schema_of:

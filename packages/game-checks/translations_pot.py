@@ -11,7 +11,8 @@ The texts come from:
   items, the combinators and if/then/else, so a new player-facing field is marked once, where it's
   declared;
 - realms: the name (its title, #1710), codex entry and gloss of each realm,
-  resourcepacks/default/realms/<id>.md (#1978).
+  resourcepacks/default/realms/<id>.md (#1978);
+- quests: their content fields, as above, resourcepacks/default/quests/<id>.jsonc (#1978).
 
 Texts are kept as written, text tags (${…}) included: a tag is resolved after the line is
 translated. Each entry names the files it comes from, without line numbers, so moving a line
@@ -293,10 +294,14 @@ def schema_of(data_file: str) -> str:
     parts = Path(data_file).parts
     if parts[0] == "core":
         return f"core/data/schemas/{parts[2]}.schema.json"
-    # A core kind the default resource pack holds (#1901), in its own folder (#1978), shares the
-    # core's schema.
+    # A kind the default resource pack holds in its own folder (#1978) shares the core's schema
+    # when it is a core kind (the tiles, #1901), and otherwise keeps it in the slice that owns the
+    # kind (the quests).
     if parts[:2] == ("resourcepacks", "default") and len(parts) == 4:
-        return f"core/data/schemas/{parts[2]}.schema.json"
+        core = f"core/data/schemas/{parts[2]}.schema.json"
+        if Path(core).is_file():
+            return core
+        return f"slices/{parts[2]}/data/{parts[2]}.schema.json"
     # slices/<slice>/data/<file> belongs to the slice's own kind, named for the slice.
     kind = parts[1] if len(parts) == 4 else parts[3]
     return f"slices/{parts[1]}/data/{kind}.schema.json"
@@ -328,6 +333,7 @@ def entries() -> tuple[list[Entry], list[tuple[str, str]]]:
         "slices/*/data/*.jsonc",
         "resourcepacks/default/realms/*.md",
         "resourcepacks/default/tiles/*.jsonc",
+        "resourcepacks/default/quests/*.jsonc",
     )
     # The tools and tests are never shown to a player.
     files = [path for path in files if not path.startswith(("tools/", "tests/"))]
