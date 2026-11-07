@@ -12,6 +12,9 @@ reach over the hex's inradius (1.00 at its edge; the limits are in lib/footprint
     (a model in LARGE)
     prop (no rig, or no Walk)   rest pose 0.95                 every clip  1.00
 
+A piece whose kind stands on two hexes (a portal, lib/world_scale.py, #1907) is measured against
+both, from the middle of their shared edge, with the same limits (lib/footprint.py).
+
 It prints a line for the rest pose and one per clip (the largest reach and its frame, and the
 limit) and `FOOTPRINT CHECK: PASS` or `FAIL` (and exits 1 on a fail), through game_shared.log
 (#1115): a failing line is an error on the .glb. It checks every model built by a script here,
@@ -83,10 +86,12 @@ def measure(model, glb, fps, scripts):
     """The report lines for `model`: its own when a script here builds it, else one set per view
     that shows the pack's model on the board, each line named after its view. None when nothing
     stands it on the board."""
-    if os.path.exists(os.path.join(HERE, model + ".py")):
+    script = os.path.join(HERE, model + ".py")
+    if os.path.exists(script):
         rig = imported.load_view(glb, fps)
         lines, _passed = footprint.report(
-            rig, footprint.meshes(rig, bpy.data.objects), footprint.limits(rig, model in LARGE))
+            rig, footprint.meshes(rig, bpy.data.objects), footprint.limits(rig, model in LARGE),
+            hexes=world_scale.hexes(script))
         return [(line, "") for line in lines]
     shown = views.find(GAME, model, scripts)
     if not shown:
