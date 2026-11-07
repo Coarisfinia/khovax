@@ -72,16 +72,17 @@ def elsewhere():
     keyed(holder, "location", (0, 10))
 
 
-# Case: (how it builds the model, whether the check passes it).
+# Case: (how it builds the model, whether the check passes it, what it must print to say why), so
+# a crash, which exits 1 too, never passes for the failure.
 CASES = {
-    "prop": (prop, True),
-    "played": (played, True),
-    "elsewhere": (elsewhere, False),
+    "prop": (prop, True, "no rig or clips: nothing to check"),
+    "played": (played, True, "ok Idle:"),
+    "elsewhere": (elsewhere, False, "has clips but its rig has no animation data to play them on"),
 }
 
 
 def checked(folder, name, build):
-    """Builds the model, exports it and returns check_motion.py's exit code."""
+    """Builds the model, exports it and returns check_motion.py's exit code and output."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
     build()
     glb = os.path.join(folder, name + ".glb")
@@ -90,19 +91,22 @@ def checked(folder, name, build):
         found.write("animation/fps=30\n")
     command = [bpy.app.binary_path, "--python-exit-code", "1", "--background", "--factory-startup",
                "--python", os.path.join(HERE, "check_motion.py"), "--", glb]
-    return subprocess.run(command, check=False).returncode
+    run = subprocess.run(command, check=False, capture_output=True, text=True)
+    print(run.stdout + run.stderr)
+    return run.returncode, run.stdout + run.stderr
 
 
 def main():
     passed = True
     with tempfile.TemporaryDirectory() as folder:
-        for name, (build, passes) in CASES.items():
-            code = checked(folder, name, build)
-            right = (code == 0) == passes
+        for name, (build, passes, says) in CASES.items():
+            code, output = checked(folder, name, build)
+            verdict = "MOTION CHECK: %s" % ("PASS" if passes else "FAIL")
+            right = (code == 0) == passes and verdict in output and says in output
             passed = passed and right
-            line = "%s %s: the check %s (exit %d), it should %s" % (
+            line = "%s %s: the check %s (exit %d), it should %s, saying \"%s\"" % (
                 "ok" if right else "FAIL", name, "passes" if code == 0 else "fails", code,
-                "pass" if passes else "fail")
+                "pass" if passes else "fail", says)
             if right:
                 log.info("MOTION TEST " + line)
             else:
