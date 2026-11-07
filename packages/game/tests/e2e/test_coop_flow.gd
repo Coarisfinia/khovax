@@ -20,6 +20,8 @@ const DELAY: int = 3
 const LATE_POLLS: int = 5
 ## Ticks the per-tick hash's cost is watched over, with an instance nobody is in loaded (#2095).
 const HASH_TICKS: int = 20
+## The differences planted in one machine's world (`_plant`).
+const PLANTS: int = 5
 const EAST: int = 0
 
 var _tree: SceneTree
@@ -215,7 +217,7 @@ func _check_input_delay() -> String:
 		return "the driver ran %d ticks, not %d" % [_driver.state.tick, TICKS]
 	if _driver.state.state_hash() != _plain_hash(DELAY):
 		return "with an input delay, the game isn't the plain playback of the delayed commands"
-	if _driver.hashes.get(TICKS, 0) != _driver.world.state_hash():
+	if _driver.hashes.get(TICKS, 0) != _driver.world.sync_hash():
 		return "the driver didn't keep the last tick's hash"
 	if _driver.hashes.size() > GameDriver.HASH_HISTORY:
 		return "the driver keeps %d hashes, more than %d" % [
@@ -235,14 +237,67 @@ func _check_hash_cost() -> String:
 		return "the co-op flow couldn't load the glade beside the players"
 	var counter: HashCounter = HashCounter.new()
 	idle.features.append(counter)
+	idle.touch()
 	_run_frames(HASH_TICKS)
 	idle.features.erase(counter)
-	if counter.hashed > 1:
+	idle.touch()
+	if counter.hashed != 1:
 		return "the per-tick hash read an instance nobody is in %d times in %d ticks, not once" % [
 			counter.hashed,
 			HASH_TICKS,
 		]
+	# Every instance's own hash taken afresh gives the number the driver kept.
+	var kept: int = _driver.hashes.get(_driver.world.tick, 0)
+	for each: GameState in _driver.world.instances.values():
+		each.touch()
+	if _driver.world.sync_hash() != kept:
+		return "the per-tick hash an instance nobody is in kept isn't its hash taken afresh"
+	return _check_hash_divergence()
+
+
+## Two machines playing the same world get the same per-tick hash (#2095), and a difference
+## planted in one changes it: in the glade nobody is in, an entity added, a feature switched off or
+## a value changed by hand (with `touch`); a world store's entry; a player moved by hand where they
+## are.
+func _check_hash_divergence() -> String:
+	var same: int = _played_world().sync_hash()
+	if _played_world().sync_hash() != same:
+		return "two machines playing the same world got different per-tick hashes"
+	for plant: int in PLANTS:
+		var world: World = _played_world()
+		_plant(world, plant)
+		if world.sync_hash() == same:
+			return "the per-tick hash missed difference %d planted in one machine's world" % plant
 	return ""
+
+
+## The world from the start of the co-op flow's instance with two players and the glade loaded
+## beside them, played for HASH_TICKS ticks, the first player walking east.
+static func _played_world() -> World:
+	var world: World = World.new(BlueprintSource.new(), 0, FlowSteps.BASIC, 2)
+	var _loaded: GameState = world.instance(FlowSteps.GLADE)
+	for _tick: int in HASH_TICKS:
+		world.step(FlowSteps.commands([EAST, Command.NO_MOVE]))
+	return world
+
+
+## Plants difference `plant` (see `_check_hash_divergence`) in `world`.
+static func _plant(world: World, plant: int) -> void:
+	var glade: GameState = world.instances[FlowSteps.GLADE]
+	match plant:
+		0:
+			var _added: Entity = glade.add_entity(Entity.NO_SLOT, glade.region.sorted_tiles()[0])
+		1:
+			glade.set_enabled(glade.features[0].id(), not glade.features[0].enabled)
+		2:
+			glade.next_entity_id += 1
+			glade.touch()
+		3:
+			world.set_entry(0, HashCounter.new().id(), { "planted": 1 })
+		_:
+			var basic: GameState = world.instances[FlowSteps.BASIC]
+			basic.player(0).tile += Hex.DIRECTIONS[EAST]
+			basic.touch()
 
 
 ## A player whose commands are late holds the game: no tick runs without them past the delay's

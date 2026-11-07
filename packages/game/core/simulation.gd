@@ -25,3 +25,5 @@ static func step(
 			feature.step(state, commands)
 			if after_each.is_valid():
 				after_each.call(feature.id())
+	# Its features changed it as they stepped, so its own hash is taken again (#2095).
+	state.touch()

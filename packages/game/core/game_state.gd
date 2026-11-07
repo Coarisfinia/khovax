@@ -7,6 +7,8 @@ extends RefCounted
 
 ## Players in this instance, each in its own slot; a tick's commands are indexed by slot.
 const MAX_PLAYERS: int = 4
+## No own hash taken yet (`own_hash`): a hash is never negative.
+const NOT_HASHED: int = -1
 
 var tick: int = 0
 ## The world's tick (#1215): the time every instance of a world shares, which the time of day
@@ -50,6 +52,9 @@ var stores: Array[PlayerStore] = []
 ## it's in no hash; `next_door_version` goes up whenever it changes (`hand_next_door`).
 var next_door: Dictionary[Vector2i, String] = {}
 var next_door_version: int = 0
+## The instance's own hash (`own_hash`) while nothing changed since it was taken, or NOT_HASHED
+## once something did (`touch`).
+var _own_hash: int = NOT_HASHED
 ## Why the instance's feature order is invalid, or "" when it is valid. An invalid state has no
 ## features and must not be run: InstanceBlueprints.create refuses it.
 var problem: String = ""
@@ -105,6 +110,7 @@ static func order_problem(ordered: Array[Feature]) -> String:
 func add_entity(slot: int, tile: Vector2i) -> Entity:
 	if slot != Entity.NO_SLOT and (slot < 0 or slot >= MAX_PLAYERS or player(slot) != null):
 		return null
+	touch()
 	var added: Entity = Entity.new(next_entity_id, slot, tile)
 	next_entity_id += 1
 	# Ids only grow, so appending keeps the list in id order.
@@ -120,6 +126,7 @@ func add_entity(slot: int, tile: Vector2i) -> Entity:
 func remove_entity(id: int) -> void:
 	for i: int in entities.size():
 		if entities[i].id == id:
+			touch()
 			entities.remove_at(i)
 			var _dropped: bool = _by_id.erase(id)
 			for each: Feature in features:
@@ -182,6 +189,7 @@ func set_enabled(id: String, on: bool) -> void:
 	var target: Feature = feature(id)
 	if target == null or target.enabled == on:
 		return
+	touch()
 	target.enabled = on
 	if not on:
 		target.disabled(self)
@@ -198,6 +206,7 @@ func change_tile(tile: Vector2i, kind: String) -> bool:
 	var was: String = region.terrain[tile]
 	if not region.change(tile, kind):
 		return false
+	touch()
 	changed_tiles[tile] = true
 	for each: Feature in features:
 		each.tile_changed(self, tile)
@@ -208,6 +217,7 @@ func change_tile(tile: Vector2i, kind: String) -> bool:
 ## Takes `ground` as the ground next door (#191), which only the world hands over: every feature
 ## hears of it at once (Feature.next_door_changed), so sight across the seam never lags behind it.
 func hand_next_door(ground: Dictionary[Vector2i, String]) -> void:
+	touch()
 	next_door = ground
 	next_door_version += 1
 	for each: Feature in features:
@@ -249,6 +259,7 @@ func to_data() -> Dictionary:
 ## ground next door (WorldData): its tick and entities, then each feature's state, which is worked
 ## out from both. Bad data is reported to `data`.
 func load_data(data: DataReader) -> void:
+	touch()
 	tick = data.whole("tick", 0, DataReader.MOST)
 	next_entity_id = data.whole("next_entity_id", 1, DataReader.MOST)
 	var flat: Array[int] = data.wholes("entities", -DataReader.MOST, DataReader.MOST)
@@ -280,6 +291,7 @@ func load_data(data: DataReader) -> void:
 ## Changes the region's tiles as `to_data` saved them (#530), without events: a loaded instance
 ## shows them from the start. Returns whether they were valid; reports why not to `data`.
 func load_changed_tiles(data: DataReader) -> bool:
+	touch()
 	for changed: DataReader in data.entries("changed_tiles"):
 		var tile: Vector2i = Vector2i(
 			changed.whole("q", -DataReader.MOST, DataReader.MOST),
@@ -321,10 +333,42 @@ static func _restored(id: int, slot: int, tile: Vector2i) -> Entity:
 ## and, in order, every feature's id (as its code, StateHash.name_code), on/off and state.
 func state_hash() -> int:
 	var values: Array[int] = [tick, world_tick, rng_seed]
-	for each: PlayerStore in stores:
+	values.append_array(store_values(stores))
+	_append_own_values(values)
+	return StateHash.of_values(values)
+
+
+## A fingerprint of what this instance holds itself (#2095): everything `state_hash` covers but the
+## world's tick and the world stores, which every instance of a world shares, so the world hashes
+## them once (World.sync_hash). It's kept until the state changes: a tick (Simulation.step) and
+## every method here that changes the state call `touch`, so an instance nobody is in, which
+## doesn't step, costs nothing to hash again.
+func own_hash() -> int:
+	if _own_hash == NOT_HASHED:
+		var values: Array[int] = [tick, rng_seed]
+		_append_own_values(values)
+		_own_hash = StateHash.of_values(values)
+	return _own_hash
+
+
+## Notes that the state changed, so `own_hash` is taken again. Whatever changes the state's fields
+## from outside a tick and outside this class's methods, like a test, calls it too.
+func touch() -> void:
+	_own_hash = NOT_HASHED
+
+
+## Every slot's world store in `slots`, for a hash: each one's values, after how many there are.
+static func store_values(slots: Array[PlayerStore]) -> Array[int]:
+	var values: Array[int] = []
+	for each: PlayerStore in slots:
 		var stored_values: Array[int] = each.hash_values()
 		values.append(stored_values.size())
 		values.append_array(stored_values)
+	return values
+
+
+## Appends to `values` the region, every entity in id order and every feature in order, for a hash.
+func _append_own_values(values: Array[int]) -> void:
 	values.append_array(region.hash_values())
 	values.append(next_entity_id)
 	values.append(entities.size())
@@ -337,4 +381,3 @@ func state_hash() -> int:
 		values.append(StateHash.name_code(each.id()))
 		values.append(1 if each.enabled else 0)
 		values.append_array(each.hash_values())
-	return StateHash.of_values(values)
