@@ -1,7 +1,8 @@
 # Credits
 
-The assets this game uses, with their authors and licenses. Generated from each pack's
-`assets/<pack>/SOURCE.md` by `tools/godot/credits.gd`; don't edit it by hand.
+The assets this game uses, with their authors and licenses. Generated from each pack's `SOURCE.md`
+(`assets/<pack>/`, or `resourcepacks/default/<kind>/<pack>/`) by `tools/godot/credits.gd`; don't
+edit it by hand.
 
 ## Pearl bracelet
 
@@ -25,7 +26,7 @@ The assets this game uses, with their authors and licenses. Generated from each 
 
 ## Exploration Theme
 
-- **Files:** `assets/exploration-theme/`
+- **Files:** `resourcepacks/default/audio/exploration-theme/`
 - **Author:** Cleyton Kauffman (https://soundcloud.com/cleytonkauffman)
 - **Source:** https://opengameart.org/content/exploration-theme (`Exploration Theme.ogg` from
   `exploration_theme.zip`)

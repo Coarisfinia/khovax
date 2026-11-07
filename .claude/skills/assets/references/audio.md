@@ -43,8 +43,8 @@ right one in `SOURCE.md`.
 - **Change as little as you can**, and write each change and its command into `Modifications`. CC
   BY requires noting them; CC0 doesn't, but the next reader wants to know. Hash the file as
   downloaded, before any change.
-- **Format:** the game's music is Ogg Vorbis (`assets/exploration-theme/`); Godot also imports WAV
-  and MP3. Re-encoding one lossy format into another loses quality, so a lossy source stays as it
+- **Format:** the game's music is Ogg Vorbis (`resourcepacks/default/audio/exploration-theme/`);
+  Godot also imports WAV and MP3. Re-encoding one lossy format into another loses quality, so a lossy source stays as it
   is unless there's a reason. `.gitattributes` marks only `.ogg` and `.wav` as binary, so a first
   MP3 adds its line.
 - **Size:** every file ships in the game's builds, the web one included. From a lossless source, cut
