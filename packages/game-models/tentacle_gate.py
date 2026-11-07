@@ -1,9 +1,13 @@
 """The tentacle gate (#1634): a stone arch with an eye at its crown, a dark, starry portal in its
 opening and four tentacles curling out from its feet onto the ground. Its mesh and colour come from
 the owner's generated model (`sources/tentacle_gate.glb`, made by import_source.py from the
-download at `scale` 2.2: see the asset's SOURCE.md). That made it two hexes wide, far too big for
-the game (the owner, on #1636), so the script shrinks it by SCALE: like every model, it stands
-within its hex, tentacles and all (a prop's limits in lib/footprint.py, #1641).
+download at `scale` 2.2: see the asset's SOURCE.md). It's a portal on the world's scale
+(lib/world_scale.py, #1907): it stands on the edge between two hexes, its arch spanning both, and
+the player walks through it along that edge, so the script sizes it until its portal stands just
+above the player (`OPENING`). Its tentacles reached far past the two hexes at that size, so the
+script draws them in (`DRAW_TURN`, `DRAW_REACH`): each turns towards the arch's line and reaches
+less far out over the ground, keeping its rise, until the whole gate stands within its two hexes
+(a prop's limits in lib/footprint.py, #1641).
 
     uv run --locked packages/game-models/blender.py --background --factory-startup \
         --python packages/game-models/tentacle_gate.py -- packages/game/assets/tentacle_gate/tentacle_gate.glb
@@ -29,18 +33,22 @@ from mathutils import Matrix, Vector
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-from lib import scene  # noqa: E402
+from lib import scene, world_scale  # noqa: E402
 
 SOURCE = os.path.join(HERE, "sources", "tentacle_gate.glb")
 FPS = 30
-# Its kind on the world's scale (lib/world_scale.py): a gate on one hex the player walks through
-# (#1634).
+# Its kind on the world's scale (lib/world_scale.py): a gate on the edge between two hexes the
+# player walks through (#1634, #1907).
 WORLD_SCALE = "portal"
 # The loop's length (frames): slow, so the gate breathes rather than fidgets.
 LOOP = 180
-# How much the source is shrunk, so the gate's rest pose reaches within a prop's limit on its hex
-# with lib/footprint.py's slack and its tentacles' sway stays inside it (check_footprint.py).
-SCALE = 0.37
+# How tall the portal stands, as a share of the player's height: just above the player, which keeps
+# the whole gate within a portal's height (lib/world_scale.py's KINDS).
+OPENING = 1.02
+# How the tentacles are drawn in, so the gate stands within its two hexes at that size: each turns
+# about its root towards the arch's line (radians) and reaches this share as far over the ground,
+# blending in over its first band so it still leaves the arch's foot where it did.
+DRAW_TURN, DRAW_REACH = math.radians(25.0), 0.5
 
 # The portal is the smallest of the mesh's pieces (a thin slab behind the arch's opening), the
 # arch the largest; the other two each hold one side's pair of tentacles.
@@ -51,7 +59,8 @@ PORTAL_CUTS = 6
 PORTAL_FULL, PORTAL_RIM = 0.2, 0.85
 # Its slow turn about its own facing (radians), its swell in its plane (a share of its size) and
 # how far its middle bulges out to the front (metres, at the source's size).
-PORTAL_TURN, PORTAL_SWELL, PORTAL_BULGE = math.radians(12.0), 0.05, 0.03 * SCALE
+# (The bulge is 3 cm at the source's size, scaled with the gate.)
+PORTAL_TURN, PORTAL_SWELL, PORTAL_BULGE = math.radians(12.0), 0.05, 0.03
 
 # Each tentacle's chain: bones laid through the middle of equal bands of the tentacle, from where
 # it leaves the arch's foot (ROOT_DEPTH, how far it lies before or behind the arch, a share of the
@@ -134,6 +143,27 @@ def tentacle_joints(points, side, pair, depth):
         near = [point for point in own if abs(point.y * y_sign - middle) < width / 2.0]
         joints.append(sum(near, Vector()) / len(near))
     return joints, start, width
+
+
+def draw_in(skin, feet, depth):
+    """Draws each tentacle in about its root (`DRAW_TURN`, `DRAW_REACH`): over the ground only, so
+    it keeps its rise and its tip stays on the ground."""
+    points = [skin.data.vertices[index].co.copy() for index in feet]
+    for (pair, side, _phase) in TENTACLES:
+        joints, start, width = tentacle_joints(points, side, pair, depth)
+        root = joints[0]
+        x_sign = 1.0 if side == "L" else -1.0
+        y_sign = -1.0 if pair == "front" else 1.0
+        for index in feet:
+            point = skin.data.vertices[index].co
+            if point.x * x_sign <= 0.0 or point.y * y_sign <= start:
+                continue
+            share = smoothstep(start, start + width, point.y * y_sign)
+            # Towards the X axis: the turn that lowers the tentacle's angle from it.
+            angle = -DRAW_TURN * share * x_sign * y_sign
+            offset = Matrix.Rotation(angle, 2) @ (point.xy - root.xy)
+            reach = 1.0 - share * (1.0 - DRAW_REACH)
+            point.x, point.y = root.x + reach * offset.x, root.y + reach * offset.y
 
 
 def armature(portal_middle, portal_size, tentacles):
@@ -220,7 +250,7 @@ def turn(bone, axis, angle):
     return Matrix.Rotation(angle, 3, local.normalized()).to_quaternion()
 
 
-def animate(rig):
+def animate(rig, bulge):
     """Keys the Idle loop on every frame and stashes it on its NLA track (scene.export_glb)."""
     rig.animation_data_create()
     action = bpy.data.actions.new("Idle")
@@ -236,7 +266,7 @@ def animate(rig):
         swell = 1.0 + PORTAL_SWELL * math.sin(time + math.pi / 3.0)
         portal.scale = (swell, 1.0, swell)
         # Along the bone, which points out of the portal's front.
-        portal.location = (0.0, PORTAL_BULGE * 0.5 * (1.0 - math.cos(time)), 0.0)
+        portal.location = (0.0, bulge * 0.5 * (1.0 - math.cos(time)), 0.0)
         for pair, side, phase in TENTACLES:
             for number in range(TENTACLE_BONES):
                 bone = rig.pose.bones[bone_name(pair, side, number)]
@@ -270,7 +300,7 @@ def build(out):
                 and not any("glTF_not_exported" in collection.name for collection in obj.users_collection))
     matrix = skin.matrix_world.copy()
     skin.parent = None
-    skin.data.transform(Matrix.Scale(SCALE, 4) @ matrix)
+    skin.data.transform(matrix)
     skin.matrix_world = Matrix.Identity(4)
     skin.modifiers.clear()
     skin.vertex_groups.clear()
@@ -286,6 +316,13 @@ def build(out):
     if len(pieces) != 4:
         sys.exit("expected the arch, two pairs of tentacles and the portal, found %d pieces" % len(pieces))
     portal_low, portal_high = bounds([skin.data.vertices[index].co for index in pieces[-1]])
+    size = OPENING * world_scale.PLAYER_HEIGHT / (portal_high.z - portal_low.z)
+    skin.data.transform(Matrix.Scale(size, 4))
+    portal_low, portal_high = bounds([skin.data.vertices[index].co for index in pieces[-1]])
+    # The tentacles' bands are laid out by the gate's depth before they're drawn in.
+    low, high = bounds([vertex.co for vertex in skin.data.vertices])
+    depth = (high.y - low.y) / 2.0
+    draw_in(skin, pieces[1] + pieces[2], depth)
     cut_portal(skin, pieces[-1])
     # The cut portal is found again as the piece filling the slab's bounds, whatever order the
     # cuts left the vertices in; the arch stays the largest piece.
@@ -298,16 +335,15 @@ def build(out):
     portal_middle = (portal_low + portal_high) / 2.0
     portal_half = (portal_high - portal_low) / 2.0
     feet = [points[index] for piece in pieces[1:3] for index in piece]
-    depth = (high.y - low.y) / 2.0
     tentacles = {key: tentacle_joints(feet, key[1], key[0], depth) for key in TENTACLES}
     rig = armature(portal_middle, 2.0 * portal_half, tentacles)
     bind(skin, rig, pieces, portal_middle, portal_half, tentacles)
-    animate(rig)
+    animate(rig, PORTAL_BULGE * size)
     scene.export_glb(out)
     print("MODEL", out, "triangles", scene.triangles(skin), "bones", len(rig.data.bones),
           "materials", len(skin.data.materials))
-    print("SIZE %.2f wide, %.2f deep, %.2f tall; portal %.2f wide, %.2f tall" % (
-        high.x - low.x, high.y - low.y, high.z - low.z, 2.0 * portal_half.x, 2.0 * portal_half.z))
+    print("SIZE scale %.3f; %.2f wide, %.2f deep, %.2f tall; portal %.2f wide, %.2f tall" % (
+        size, high.x - low.x, high.y - low.y, high.z - low.z, 2.0 * portal_half.x, 2.0 * portal_half.z))
 
 
 build(sys.argv[sys.argv.index("--") + 1])
