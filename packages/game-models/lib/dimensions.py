@@ -52,6 +52,13 @@ BOUNDS = {
     },
     "hexapod": {"%s shin/thigh" % pair: (0.6, 1.4) for pair in ("front", "mid", "hind")},
 }
+# A model's own range for one measure, where its joints stand bent inside a skin the measure's
+# range was made for: {(model, measure): ((low, high), issue)}. The Korvakkar's shoulder and elbow
+# joints move apart inside its unchanged foreleg, so the leg stands bent at the elbow and doesn't
+# snap straight as it walks (#2026): its bones zigzag longer than the leg the skin shows.
+ALLOWED = {
+    ("kalvrakkor_magma", "foreleg/shoulder height"): ((0.6, 1.2), 2026),
+}
 # The joints that make a rig a quadruped (quadruped.armature), and a hexapod (hexapod.armature).
 QUADRUPED = ("upper_arm.L", "forearm.L", "front_paw.L", "thigh.L", "shin.L", "hock.L")
 # A hoofed quadruped is a quadruped with a cannon between its forearm and its hoof.
@@ -95,10 +102,10 @@ def body_plan(rig):
     return None if len(lacking) == len(QUADRUPED) else lacking
 
 
-def report(rig):
-    """Each measure of `rig`'s body plan against its range. Returns (lines, passed); a rig of no
-    body plan in BOUNDS has nothing to measure and passes, and one with only some of a
-    quadruped's or a hexapod's limb joints fails."""
+def report(rig, model=None):
+    """Each measure of `rig`'s body plan against its range, `model`'s own where ALLOWED has one.
+    Returns (lines, passed); a rig of no body plan in BOUNDS has nothing to measure and passes,
+    and one with only some of a quadruped's or a hexapod's limb joints fails."""
     plan = body_plan(rig)
     if plan is None:
         return ["no limbs of a known body plan: nothing to measure"], True
@@ -106,8 +113,10 @@ def report(rig):
         return ["FAIL limbs lacking the joints " + ", ".join(plan)], False
     lines, passed = [], True
     for name, (low, high) in BOUNDS[plan].items():
+        (low, high), issue = ALLOWED.get((model, name), ((low, high), None))
         value = measure(rig, name)
         ok = low <= value <= high
         passed = passed and ok
-        lines.append("%s %s %s: %.2f, range %.2f to %.2f" % ("ok" if ok else "FAIL", plan, name, value, low, high))
+        lines.append("%s %s %s: %.2f, range %.2f to %.2f%s" % ("ok" if ok else "FAIL", plan, name, value, low, high,
+                                                               " (its own, #%d)" % issue if issue else ""))
     return lines, passed
