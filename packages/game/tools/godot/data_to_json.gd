@@ -3,16 +3,18 @@
 extends SceneTree
 ## Writes every content data file (the core's, core/data/<kind>/*.jsonc, #506; in a slice's data/,
 ## #412, the slice's own kind's files directly, named for the slice so no folder repeats it, #442,
-## and any other kind it owns in <kind>/; a core kind the default pack holds in its own folder,
-## PACK,
-## #1978) as plain JSON into build/data-json/<kind>/,
-## with the comments stripped by the game's own stripper (Jsonc), so CI can check each one against
+## and any other kind it owns in <kind>/; a core kind the default pack holds, in its own folder in
+## PACKS, #1978) as plain JSON into build/data-json/<kind>/, with the comments stripped by the
+## game's own stripper (Jsonc), so CI can check each one against
 ## its schema: godot --headless --path packages/game -s res://tools/godot/data_to_json.gd
 
 const TARGET: String = "res://build/data-json/"
 const SLICES: String = "res://slices/"
-## The default pack's own folder, through the game's link to it (#1978).
-const PACK: String = "res://resourcepacks/default/"
+## The resource packs' folder, through the game's link to it (#1978), and the default pack's own
+## folder in it. Like the credits tool's, the path is built here, not named whole, which only the
+## resolver may (resource_packs_check.py).
+const PACKS: String = "res://resourcepacks/"
+const DEFAULT_PACK: String = "default/"
 
 
 func _init() -> void:
@@ -21,9 +23,10 @@ func _init() -> void:
 		if DirAccess.dir_exists_absolute(SLICES + slice + "/data"):
 			failed += _convert_all(SLICES + slice + "/data/", slice)
 	# Only the pack's kinds held as JSONC are content; its realms and the like aren't.
-	for folder: String in DirAccess.get_directories_at(PACK):
-		if _holds_jsonc(PACK + folder):
-			failed += _convert(PACK, folder)
+	var pack: String = PACKS + DEFAULT_PACK
+	for folder: String in DirAccess.get_directories_at(pack):
+		if _holds_jsonc(pack + folder):
+			failed += _convert(pack, folder)
 	quit(1 if failed > 0 else 0)
 
 
