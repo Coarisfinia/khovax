@@ -1,17 +1,20 @@
 """Tests the dev-release step of ci.yml (#1991, #2028) by running it against a stand-in `gh` that
 refuses to create the release: a dev build that a newer commit on main has replaced, whose workflows
 differ from main's, gives way with a warning, and every other refusal still fails the job. An
-upload that fails for good drops the draft it was filling (#2024). The stand-in plays GitHub, so
-this needs no network.
+upload that fails for good drops the draft it was filling, and a published release sweeps away dev
+drafts older than a day, and nothing else (#2024). The stand-in plays GitHub, so this needs no
+network.
 
     uv run --locked --package khovax-game-checks packages/game-checks/test_dev_release.py
 """
 
+import json
 import os
 import subprocess
 import tempfile
 import textwrap
 import unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 CI = Path(__file__).resolve().parents[2] / ".github/workflows/ci.yml"
@@ -21,9 +24,11 @@ SHA = "a" * 40
 NEWER = "b" * 40
 
 # Answers as GitHub did in the failed run: no release of this tag yet, and each create refused until
-# REFUSALS of them have been, then AFTER_REFUSALS' error if any. A create that passes makes draft 7,
-# which the releases list shows until it is published or deleted; an upload fails with UPLOAD_ERROR
-# if it is set. Every call goes to the log the tests read.
+# REFUSALS of them have been, then AFTER_REFUSALS' error if any. The releases list is releases.json:
+# a create that passes adds draft 7 of TAG, publishing it makes it a release, a delete removes one
+# (or fails with DELETE_ERROR), and a list runs the call's own --jq filter over it, so the step's
+# filters are tested as written. The list fails with LIST_ERROR and an upload with UPLOAD_ERROR if
+# they are set. Every call goes to the log the tests read.
 STAND_IN_GH = r"""#!/usr/bin/env bash
 echo "$*" >> "$WORK/calls"
 case "$1 $2" in
@@ -32,17 +37,29 @@ case "$1 $2" in
     count=$(grep -c "^release create" "$WORK/calls")
     if [ "$count" -le "$REFUSALS" ]; then echo "$CREATE_ERROR" >&2; exit 1; fi
     if [ -n "$AFTER_REFUSALS" ]; then echo "$AFTER_REFUSALS" >&2; exit 1; fi
-    echo 7 > "$WORK/drafts" ;;
+    jq --arg tag "$TAG" --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+      '. + [{id: 7, tag_name: $tag, draft: true, created_at: $now}]' "$WORK/releases.json" > "$WORK/next"
+    mv "$WORK/next" "$WORK/releases.json" ;;
   "release upload") if [ -n "$UPLOAD_ERROR" ]; then echo "$UPLOAD_ERROR" >&2; exit 1; fi ;;
-  "release edit") : > "$WORK/drafts" ;;
-  "api --paginate") case "$3" in *"/releases?"*) cat "$WORK/drafts" ;; esac ;;
-  "api -X") [ "$4" = "repos/owner/repo/releases/7" ] && : > "$WORK/drafts" ;;
+  "release edit")
+    jq 'map(if .id == 7 then .draft = false else . end)' "$WORK/releases.json" > "$WORK/next"
+    mv "$WORK/next" "$WORK/releases.json" ;;
   "api repos/owner/repo/commits/main")
     if [ -n "$HEAD_ERROR" ]; then echo "$HEAD_ERROR" >&2; exit 1; fi
     echo "$MAIN_HEAD" ;;
   "api repos/owner/repo/compare/$GITHUB_SHA...$MAIN_HEAD") echo "$STATUS" ;;
   "api repos/owner/repo/contents/.github?ref=$GITHUB_SHA") echo "$OWN_WORKFLOWS" ;;
   "api repos/owner/repo/contents/.github?ref=$MAIN_HEAD") echo "$MAIN_WORKFLOWS" ;;
+  "api --paginate")
+    case "$3" in *"/releases?"*)
+      if [ -n "$LIST_ERROR" ]; then echo "$LIST_ERROR" >&2; exit 1; fi
+      while [ "$#" -gt 0 ] && [ "$1" != --jq ]; do shift; done
+      jq -r "$2" "$WORK/releases.json" ;;
+    esac ;;
+  "api -X")
+    if [ -n "$DELETE_ERROR" ]; then echo "$DELETE_ERROR" >&2; exit 1; fi
+    jq --argjson id "${4##*/}" 'map(select(.id != $id))' "$WORK/releases.json" > "$WORK/next"
+    mv "$WORK/next" "$WORK/releases.json" ;;
 esac
 """
 
@@ -74,6 +91,9 @@ class DevReleaseTest(unittest.TestCase):
         own_workflows="tree1",
         main_workflows="tree2",
         upload_error="",
+        releases=(),
+        delete_error="",
+        list_error="",
     ):
         with tempfile.TemporaryDirectory() as folder:
             work = Path(folder)
@@ -94,7 +114,7 @@ class DevReleaseTest(unittest.TestCase):
                 (work / "builds" / build).parent.mkdir(parents=True)
                 (work / "builds" / build).touch()
             (work / "calls").touch()
-            (work / "drafts").touch()
+            (work / "releases.json").write_text(json.dumps(list(releases)), encoding="utf-8")
             done = subprocess.run(
                 ["bash", "--noprofile", "--norc", "-e", "-o", "pipefail", "-c", step_script()],
                 cwd=work,
@@ -111,6 +131,8 @@ class DevReleaseTest(unittest.TestCase):
                     "OWN_WORKFLOWS": own_workflows,
                     "MAIN_WORKFLOWS": main_workflows,
                     "UPLOAD_ERROR": upload_error,
+                    "DELETE_ERROR": delete_error,
+                    "LIST_ERROR": list_error,
                     "TAG": tag,
                     "RUNNER_TEMP": str(work),
                     "GITHUB_REPOSITORY": "owner/repo",
@@ -123,7 +145,8 @@ class DevReleaseTest(unittest.TestCase):
                 text=True,
                 check=False,
             )
-            self.drafts_left = (work / "drafts").read_text(encoding="utf-8").split()
+            listed = json.loads((work / "releases.json").read_text(encoding="utf-8"))
+            self.drafts_left = [r["id"] for r in listed if r["draft"] and r["tag_name"] == tag]
             return done, (work / "calls").read_text(encoding="utf-8").splitlines()
 
     def calls(self, calls, start):
@@ -207,6 +230,52 @@ class DevReleaseTest(unittest.TestCase):
         deletes = self.calls(calls, "api -X DELETE")
         self.assertEqual(deletes, ["api -X DELETE repos/owner/repo/releases/7"])
         self.assertEqual(self.drafts_left, [])
+
+    def test_a_published_release_sweeps_only_dev_drafts_older_than_a_day(self):
+        done, calls = self.run_step(refusals=0, releases=SWEPT_AND_KEPT)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(len(self.calls(calls, "release edit")), 1)
+        deletes = self.calls(calls, "api -X DELETE")
+        self.assertEqual(deletes, ["api -X DELETE repos/owner/repo/releases/11"])
+
+    def test_a_failed_sweep_only_warns(self):
+        done, calls = self.run_step(
+            refusals=0, releases=SWEPT_AND_KEPT, delete_error="HTTP 422: Validation Failed"
+        )
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertIn("::warning::", done.stdout + done.stderr)
+        self.assertEqual(len(self.calls(calls, "release edit")), 1)
+
+    def test_a_failed_list_to_sweep_only_warns(self):
+        done, calls = self.run_step(
+            refusals=0, releases=SWEPT_AND_KEPT, list_error="HTTP 422: Validation Failed"
+        )
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertIn("couldn't list the releases", done.stdout + done.stderr)
+        self.assertEqual(self.calls(calls, "api -X DELETE"), [])
+
+
+def release(release_id, tag, days_old, draft=True):
+    created = datetime.now(timezone.utc) - timedelta(days=days_old)
+    return {
+        "id": release_id,
+        "tag_name": tag,
+        "draft": draft,
+        "created_at": created.strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+
+
+# Only 11 is swept: a dev draft a day and more old. A fresh draft may be a running job's, a nightly
+# isn't a dev build, a published release is never touched, the tag must be a dev tag in full, and
+# this run's own tag (v0.1.0-dev.1) is never swept.
+SWEPT_AND_KEPT = (
+    release(11, "v0.1.0-dev.2859", 2),
+    release(12, "v0.1.0-dev.3400", 0.5),
+    release(13, "v0.1.0-nightly.20261101", 5),
+    release(14, "v0.1.0-dev.2860", 5, draft=False),
+    release(15, "v0.1.0-dev.2861-x", 5),
+    release(16, "v0.1.0-dev.1", 5),
+)
 
 
 if __name__ == "__main__":
