@@ -294,12 +294,18 @@ class Head:
 
 class Mark:
     """One marked eye: its middle, the head's outward normal there, its sideways and upward axes
-    across the surface, and its width and height along them."""
+    across the surface, and its width and height along them. A normal (nearly) along Z has no
+    sideways axis of its own (#2105): it raises, unless `level` gives one, which is then made
+    square to the normal."""
 
-    def __init__(self, points, normals):
+    def __init__(self, points, normals, level=None):
         self.middle = points.mean(axis=0)
         self.normal = _normal(normals)
         side = _side(self.normal)
+        if side is None and level is not None:
+            # A sideways axis given for a normal along Z, made square to it.
+            side = numpy.array(level, dtype=float) - (self.normal @ level) * self.normal
+            side = side / numpy.sqrt((side * side).sum())
         if side is None:
             raise ValueError("a mark at %s faces (nearly) along Z, normal %s: it has no sideways axis "
                              "across the surface, so no eye can sit there"
@@ -644,7 +650,9 @@ def fragments(skin, bone="head", weight=HEAD_WEIGHT, keep=()):
                 spot = spot[kept.flat[texels[spot]]]
             count = len(numpy.unique(texels[spot]))
             if count >= FRAGMENT_TEXELS:
-                mark = Mark(spots[spot], normals[spot])
+                # A fragment on a crown is still one (#2105): it only says where it is, so any
+                # sideways axis does.
+                mark = Mark(spots[spot], normals[spot], level=(1.0, 0.0, 0.0))
                 mark.count = count
                 marks.append(mark)
     return marks
