@@ -16,12 +16,12 @@ will have (#1858), and looked up only through ResourcePacks. It fails when
   resourcepacks/default/realms/, a quest in resourcepacks/default/quests/, a species directly in
   slices/species/data/, a catalogue under translations/, a
   tile blueprint in resourcepacks/default/tiles/, a loot table, harvest table or material in
-  the loot slice's data/loot_tables/, data/harvest_tables/ or data/materials/) is in the repository
-  but not in the manifest;
+  resourcepacks/default/loot_tables/, harvest_tables/ or materials/) is in the repository but not
+  in the manifest;
 - a quest's, species', loot table's, harvest table's or material's entry isn't its own file
   (resourcepacks/default/quests/<id>.jsonc, slices/species/data/<id>.jsonc,
-  slices/loot/data/loot_tables/<id>.jsonc, slices/loot/data/harvest_tables/<id>.jsonc,
-  slices/loot/data/materials/<id>.jsonc), so it's named
+  resourcepacks/default/loot_tables/<id>.jsonc, resourcepacks/default/harvest_tables/<id>.jsonc,
+  resourcepacks/default/materials/<id>.jsonc), so it's named
   after its file (#72);
 - a file of a kind already moved into the default pack's own folder at the repository's root
   (PACK_ROOT, #1978; MOVED) is listed outside it;
@@ -90,7 +90,16 @@ PACK_ROOT = "resourcepacks/default/"
 # ...and the kinds already moved into it, by their section, each with its own folder there (a
 # region's pieces lie beside the regions drawn whole); the move goes one kind at a time, and the
 # rest follow (#1978).
-MOVED = {"realms": "realms", "regions": "regions", "region_pieces": "regions", "tiles": "tiles", "quests": "quests"}
+MOVED = {
+    "realms": "realms",
+    "regions": "regions",
+    "region_pieces": "regions",
+    "tiles": "tiles",
+    "quests": "quests",
+    "loot_tables": "loot_tables",
+    "harvest_tables": "harvest_tables",
+    "materials": "materials",
+}
 # Where the default pack's realms, regions and region pieces lie (#1978).
 REALMS = f"{PACK_ROOT}realms"
 REGIONS = f"{PACK_ROOT}regions"
@@ -103,12 +112,12 @@ SPECIES = "slices/species/data"
 # Where the default pack's tile blueprints lie (#1901, #1978), and where they lay in the core before.
 TILES = f"{PACK_ROOT}tiles"
 OLD_TILES = "core/data/tiles"
-# Where the default pack's loot tables and materials lie (#1953): in the loot slice, which owns the
-# kinds and their schemas (#412), each in its own folder.
-LOOT_TABLES = "slices/loot/data/loot_tables"
-MATERIALS = "slices/loot/data/materials"
+# Where the default pack's loot tables and materials lie (#1953, #1978), each in its own folder;
+# their schemas stay in the loot slice, which owns the kinds (#412).
+LOOT_TABLES = f"{PACK_ROOT}loot_tables"
+MATERIALS = f"{PACK_ROOT}materials"
 # Harvest tables use the same format, one per species (#1990).
-HARVEST_TABLES = "slices/loot/data/harvest_tables"
+HARVEST_TABLES = f"{PACK_ROOT}harvest_tables"
 # Each kind of resource the manifest lists, by its section.
 KINDS: dict[str, Kind] = {
     "textures": Kind("texture", IMAGES, True, "assets"),
@@ -156,9 +165,7 @@ PATH = re.compile(
     + rf")|resourcepacks/{PATH_CHAR}+"
     + rf"|{SPECIES}/{NAME_CHAR}+\.jsonc"
     + rf"|translations/{PATH_CHAR}+?\.po"
-    + rf"|{TILES}/{PATH_CHAR}+|{OLD_TILES}(?:/{PATH_CHAR}*)?"
-    + rf"|{LOOT_TABLES}/{PATH_CHAR}+?\.jsonc|{MATERIALS}/{PATH_CHAR}+?\.jsonc"
-    + rf"|{HARVEST_TABLES}/{PATH_CHAR}+?\.jsonc)\1"
+    + rf"|{TILES}/{PATH_CHAR}+|{OLD_TILES}(?:/{PATH_CHAR}*)?)\1"
 )
 
 # Lookups around the resolver that name no path the check above could read (#1865): a uid://
@@ -169,8 +176,7 @@ PATH = re.compile(
 UID_STRING = re.compile(rf"([\"'])(?P<uid>uid://{PATH_CHAR}*)\1")
 # The species' folder also holds the abilities' folder, which isn't theirs.
 PACK_STRING = re.compile(
-    rf"([\"'])res://(?:(?:assets|resourcepacks|translations|{TILES}|{OLD_TILES}"
-    + rf"|{LOOT_TABLES}|{MATERIALS}|{HARVEST_TABLES})"
+    rf"([\"'])res://(?:(?:assets|resourcepacks|translations|{TILES}|{OLD_TILES})"
     + rf"(?:/{PATH_CHAR}*)?|{SPECIES}(?:/{NAME_CHAR}*)?)\1"
 )
 WHOLE_FILE = re.compile(rf"([\"'])res://{PATH_CHAR}+\.[A-Za-z0-9]+\1")
