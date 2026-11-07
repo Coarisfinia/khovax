@@ -3,10 +3,11 @@ extends RefCounted
 ## An instance's region (#36): which tiles exist, each one's kind (a tile blueprint, by its id in
 ## TileKinds, #116, #802), and where the players start. Rules ask the region, never the distance
 ## from the origin, so a region can have any shape. Regions are hand-made Markdown files
-## (regions/*.md, read by RegionDocument, #145, #824), or arranged from hand-made region pieces
-## (regions/<blueprint>/) by RegionArranger (#57). This class holds the region's data and its
-## geometry (turning, placing, fitting, reachability, hashing). Once loaded, only a rule changes
-## it, a few tiles' kinds in place (#530, GameState.change_tile).
+## (resourcepacks/default/regions/*.md, read by RegionDocument, #145, #824), or arranged from
+## hand-made region pieces (resourcepacks/default/regions/<blueprint>/) by RegionArranger (#57).
+## This class holds the region's data and its geometry (turning, placing, fitting, reachability,
+## hashing). Once loaded, only a rule changes it, a few tiles' kinds in place (#530,
+## GameState.change_tile).
 
 ## The built-in kinds' ids, the tile blueprints' file names; rock blocks sight (FogFeature).
 const GROUND: String = "ground"

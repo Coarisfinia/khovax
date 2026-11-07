@@ -1,5 +1,6 @@
-// The playground (#338), Senwel Sael: the hand-made region regions/senwel_sael.md. Only the tests
-// play it (#712): no exit leads to it, so they load it directly.
+// The playground (#338), Senwel Sael: the hand-made region
+// resourcepacks/default/regions/senwel_sael.md. Only the tests play it (#712): no exit leads to
+// it, so they load it directly.
 {
 	"id": "senwel_sael",
 	"name": "Senwel Sael",

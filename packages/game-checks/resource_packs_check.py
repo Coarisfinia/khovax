@@ -12,7 +12,8 @@ will have (#1858), and looked up only through ResourcePacks. It fails when
   resource or content file of the game's names its id as a string (but for the realms, the
   quests, species, catalogues, tile blueprints, loot and harvest tables and materials, which the
   game finds by listing the pack), or a file of its kind (an image, model or sound under
-  assets/, a region file or piece under regions/, a realm in resourcepacks/default/realms/, a quest in the quests
+  assets/, a region file or piece under resourcepacks/default/regions/, a realm in
+  resourcepacks/default/realms/, a quest in the quests
   slice's data/, a species directly in slices/species/data/, a catalogue under translations/, a
   tile blueprint in slices/resource_packs/data/tiles/, a loot table, harvest table or material in
   the loot slice's data/loot_tables/, data/harvest_tables/ or data/materials/) is in the repository
@@ -31,7 +32,7 @@ will have (#1858), and looked up only through ResourcePacks. It fails when
   instead of its id, so it would get around the resolver, and a pack could never override it (project.godot
   naming a catalogue for Godot to load gets around it too, #1902); or a script names anything by
   its uid://, loaded or kept for later (stricter than the pack needs: scripts never do; #1865,
-  #1919), or builds a path under assets/, regions/, resourcepacks/, translations/, the quests', the
+  #1919), or builds a path under assets/, resourcepacks/, translations/, the quests', the
   species', the tile blueprints', the loot tables', the harvest tables' or the materials' folder
   at runtime (#1865; the tools, which list the assets for the credits, may). A path may hold spaces (#1919).
 A catalogue the pack lists that leaves texts of the template untranslated, or holds texts the
@@ -86,11 +87,13 @@ class Kind:
 # The default pack's own folder at the repository's root (#1978), laid out like a player's pack,
 # which the game reaches through its link, res://resourcepacks/ (link_resource_packs.py)...
 PACK_ROOT = "resourcepacks/default/"
-# ...and the kinds already moved into it, each in its own folder there; the move goes one kind at
-# a time, and the rest follow (#1978).
-MOVED = ("realms",)
-# Where the default pack's realms lie (#1978).
+# ...and the kinds already moved into it, by their section, each with its own folder there (a
+# region's pieces lie beside the regions drawn whole); the move goes one kind at a time, and the
+# rest follow (#1978).
+MOVED = {"realms": "realms", "regions": "regions", "region_pieces": "regions"}
+# Where the default pack's realms, regions and region pieces lie (#1978).
 REALMS = f"{PACK_ROOT}realms"
+REGIONS = f"{PACK_ROOT}regions"
 # Where the default pack's quests lie (#1888): in the quests slice, which owns the kind and its
 # schema (#412).
 QUESTS = "slices/quests/data"
@@ -111,10 +114,10 @@ KINDS: dict[str, Kind] = {
     "textures": Kind("texture", IMAGES, True, "assets"),
     "models": Kind("model", MODELS, True, "assets"),
     "audio": Kind("sound", AUDIO, True, "assets"),
-    # A region drawn whole in one file, regions/<id>.md, and one arranged from the pieces in
-    # regions/<id>/ (#1861).
-    "regions": Kind("region", (".md",), False, "regions/*.md"),
-    "region_pieces": Kind("region", (".md",), False, "regions/*/*.md", lists=True),
+    # A region drawn whole in one file, REGIONS/<id>.md, and one arranged from the pieces in
+    # REGIONS/<id>/ (#1861).
+    "regions": Kind("region", (".md",), False, f"{REGIONS}/*.md"),
+    "region_pieces": Kind("region", (".md",), False, f"{REGIONS}/*/*.md", lists=True),
     # Every realm the pack has is played, so nothing names one to look it up (#1861).
     "realms": Kind("realm", (".md",), False, f"{REALMS}/*.md", listed=True),
     # Every quest the pack has is one the players can take, so nothing names one (#1888).
@@ -150,7 +153,7 @@ NAME_CHAR = r"(?:(?!\1)[^/])"
 PATH = re.compile(
     rf"([\"'])res://(?P<path>assets/{PATH_CHAR}+?\.(?:"
     + "|".join(ending[1:] for ending in IMAGES + MODELS + AUDIO)
-    + rf")|regions/{PATH_CHAR}+|resourcepacks/{PATH_CHAR}+|{QUESTS}/{PATH_CHAR}+?\.jsonc"
+    + rf")|resourcepacks/{PATH_CHAR}+|{QUESTS}/{PATH_CHAR}+?\.jsonc"
     + rf"|{SPECIES}/{NAME_CHAR}+\.jsonc"
     + rf"|translations/{PATH_CHAR}+?\.po"
     + rf"|{TILES}/{PATH_CHAR}+|{OLD_TILES}(?:/{PATH_CHAR}*)?"
@@ -167,7 +170,7 @@ UID_STRING = re.compile(rf"([\"'])(?P<uid>uid://{PATH_CHAR}*)\1")
 # The quests' folder also holds their schema, a whole file, which names no quest; the species'
 # folder also holds the abilities' folder, which isn't theirs.
 PACK_STRING = re.compile(
-    rf"([\"'])res://(?:(?:assets|regions|resourcepacks|translations|{QUESTS}|{TILES}|{OLD_TILES}"
+    rf"([\"'])res://(?:(?:assets|resourcepacks|translations|{QUESTS}|{TILES}|{OLD_TILES}"
     + rf"|{LOOT_TABLES}|{MATERIALS}|{HARVEST_TABLES})"
     + rf"(?:/{PATH_CHAR}*)?|{SPECIES}(?:/{NAME_CHAR}*)?)\1"
 )
@@ -253,18 +256,18 @@ def unreferenced(kind: Kind, entries: Entries, named: set[str], files: list[str]
 
 def misplaced_regions(whole: Entries, pieces: Entries) -> Problems:
     """The region files listed under another region's id: a region drawn whole is
-    regions/<id>.md, and a region's pieces lie in regions/<id>/, so variants, which match pieces by
+    REGIONS/<id>.md, and a region's pieces lie in REGIONS/<id>/, so variants, which match pieces by
     file name (#1590), never borrow another region's."""
     problems: Problems = [
-        (f"region {region_id}'s file is {paths}, not regions/{region_id}.md", MANIFEST.as_posix())
+        (f"region {region_id}'s file is {paths}, not {REGIONS}/{region_id}.md", MANIFEST.as_posix())
         for region_id, paths in whole.items()
-        if paths != [f"regions/{region_id}.md"]
+        if paths != [f"{REGIONS}/{region_id}.md"]
     ]  # fmt: skip
     for region_id, paths in pieces.items():
         problems += [
-            (f"region {region_id}'s piece {path} isn't in regions/{region_id}/", MANIFEST.as_posix())
+            (f"region {region_id}'s piece {path} isn't in {REGIONS}/{region_id}/", MANIFEST.as_posix())
             for path in paths
-            if not path.startswith(f"regions/{region_id}/") or path.count("/") != 2
+            if not path.startswith(f"{REGIONS}/{region_id}/") or path.count("/") != REGIONS.count("/") + 2
         ]  # fmt: skip
         if len(set(paths)) != len(paths):
             problems.append((f"region {region_id} lists a piece twice", MANIFEST.as_posix()))
@@ -275,12 +278,12 @@ def outside_root(entries: dict[str, Entries]) -> Problems:
     """The files of a kind already moved (MOVED) that the manifest lists outside its folder in
     the default pack's own folder (PACK_ROOT)."""
     return [
-        (f"{KINDS[name].noun} {entry_id}'s file {path} lies outside {PACK_ROOT}{name}/: move it there"
-         " (#1978)", MANIFEST.as_posix())
-        for name in MOVED
+        (f"{KINDS[name].noun} {entry_id}'s file {path} lies outside {PACK_ROOT}{folder}/: move it"
+         " there (#1978)", MANIFEST.as_posix())
+        for name, folder in MOVED.items()
         for entry_id, paths in entries[name].items()
         for path in paths
-        if not path.startswith(f"{PACK_ROOT}{name}/")
+        if not path.startswith(f"{PACK_ROOT}{folder}/")
     ]  # fmt: skip
 
 
@@ -401,7 +404,7 @@ def main() -> int:
             if paths != [f"{folder}/{entry_id}.jsonc"]
         ]
     tracked = set(
-        git_files("assets", "regions", REALMS, "translations", QUESTS, SPECIES, TILES, LOOT_TABLES, MATERIALS, HARVEST_TABLES)
+        git_files("assets", REGIONS, REALMS, "translations", QUESTS, SPECIES, TILES, LOOT_TABLES, MATERIALS, HARVEST_TABLES)
     )
     models = {path for paths in entries["models"].values() for path in paths}
     used_by_models = model_images(sorted(models & tracked))
@@ -417,7 +420,7 @@ def main() -> int:
             path
             for path in git_files(kind.files)
             if path.endswith(kind.endings) and path not in used_by_models
-            and (kind.files != "regions/*.md" or path.count("/") == 1)
+            and (name != "regions" or path.count("/") == REGIONS.count("/") + 1)
             and (name != "species" or os.path.dirname(path) == SPECIES)
         )
         problems += unresolved(kind, entries[name], tracked)

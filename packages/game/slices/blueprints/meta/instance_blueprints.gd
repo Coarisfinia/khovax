@@ -1,15 +1,16 @@
 class_name InstanceBlueprints
 extends RefCounted
 ## Instance blueprints (#117): what an instance is loaded from, by name. A blueprint is a region and
-## the features an instance has. The region is a fixed region file, regions/<name>.md, or region
-## pieces in regions/<name>/ that the seed arranges and, if the blueprint is turned, turns (#57,
-## #127). The players start on the region's starts. A blueprint switches game rules on and off by
-## naming a rule set and the rules it adds or drops (Blueprint.features, #941), what its region
-## holds brings the features that run it (RegionFeatures), and they can change during a session;
-## each slice builds its own feature (FeatureFactories). What tells blueprints apart is content
-## data, one file each (Blueprint, #823). The game names no instance: the realms say where the world
-## starts and where each exit leads (#865), and only the tests and tools name the ones they load
-## (#915).
+## the features an instance has. The region is a fixed region file,
+## resourcepacks/default/regions/<name>.md, or region pieces in
+## resourcepacks/default/regions/<name>/ that the seed arranges and, if the blueprint is turned,
+## turns (#57, #127). The players start on the region's starts. A blueprint switches game rules on
+## and off by naming a rule set and the rules it adds or drops (Blueprint.features, #941), what its
+## region holds brings the features that run it (RegionFeatures), and they can change during a
+## session; each slice builds its own feature (FeatureFactories). What tells blueprints apart is
+## content data, one file each (Blueprint, #823). The game names no instance: the realms say where
+## the world starts and where each exit leads (#865), and only the tests and tools name the ones
+## they load (#915).
 
 ## The region piece an arranged region starts from, holding the players' starts.
 const START_PIECE: String = "start.md"

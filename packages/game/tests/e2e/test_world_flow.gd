@@ -1629,9 +1629,10 @@ func _check_start_variants() -> String:
 	return ""
 
 
-## Every region file and region piece (regions/ and its folders) has its walkable tiles in one
-## connected part, its starts, connectors and exits among them (#205): a blocking tile (rock, water,
-## a boulder) never cuts part of a piece off, but for a guide's seal, which they open (#1590).
+## Every region file and region piece (resourcepacks/default/regions/ and its folders) has its
+## walkable tiles in one connected part, its starts, connectors and exits among them (#205): a
+## blocking tile (rock, water, a boulder) never cuts part of a piece off, but for a guide's seal,
+## which they open (#1590).
 func _check_pieces_connected() -> String:
 	for path: String in _region_files():
 		var piece: Region = InstanceBlueprints.read_region(FileAccess.get_file_as_string(path))

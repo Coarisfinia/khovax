@@ -1,8 +1,9 @@
 # gdstyle:ignore-file=quality/no-debug-print
 # The tool reports its measurements on stdout; that is what it is for.
 extends SceneTree
-## The load test (#101): the load instance, Thudren Orl (regions/thudren_orl.md, a big region full
-## of wild monsters, with the same rules as every instance) under four players walking by script.
+## The load test (#101): the load instance, Thudren Orl (resourcepacks/default/regions/
+## thudren_orl.md, a big region full of wild monsters, with the same rules as every instance) under
+## four players walking by script.
 ##
 ## Headless, it times the simulation: every tick (on an untimed pass) and every feature's share (on
 ## a timed one), leaving out a warm-up, and checks both passes end in the same state hash:
