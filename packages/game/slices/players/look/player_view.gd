@@ -19,6 +19,9 @@ const MODEL: String = "model_player_body"
 ## The clip library the body plays (#1935): the body carries no clips, the library holds them on
 ## the same skeleton.
 const CLIP_LIBRARY: String = "model_player_clips"
+## The scale the body is drawn at: the player's height on the world's scale (#1837), which the
+## world-scale check measures it against, standing in IDLE.
+const MODEL_SCALE: float = 1.28
 const IDLE: StringName = &"Idle"
 const MOVE: StringName = &"Run"
 ## The clip a knocked-down player plays (#479, #488): down on the ground until revived.
@@ -64,6 +67,7 @@ var circle: PlayerCircle
 func _ready() -> void:
 	super()
 	model = ResourcePacks.model(MODEL).instantiate() as Node3D
+	model.scale = Vector3.ONE * MODEL_SCALE
 	add_child(model)
 	# Only in the game: in the editor, the copies would be saved into the scene.
 	if not Engine.is_editor_hint():
