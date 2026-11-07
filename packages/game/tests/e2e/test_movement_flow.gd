@@ -58,6 +58,11 @@ const TRIGGERS: Dictionary[StringName, JoyAxis] = {
 	&"survey_zoom_in": JOY_AXIS_TRIGGER_RIGHT,
 	&"survey_zoom_out": JOY_AXIS_TRIGGER_LEFT,
 }
+## How long each tick takes on the slow device the flow plays (#2097): longer than the tick's own
+## share of real time, as on a web build that runs GDScript several times slower.
+const SLOW_TICK_USEC: int = 60_000
+## Frames the slow device plays after a hitch.
+const SLOW_FRAMES: int = 6
 const ARROW_KEYS: Dictionary[String, Key] = {
 	"move_up": KEY_UP,
 	"move_down": KEY_DOWN,
@@ -864,7 +869,11 @@ func _check_key_survives_touch() -> String:
 func _check_driver_timing() -> String:
 	var tick_seconds: float = 1.0 / Simulation.TICKS_PER_SECOND
 	var start: int = _driver.state.tick
+	# A stopped clock: the frame's ticks take no time, so only the cap stops them.
+	var real_clock: Callable = _driver.clock
+	_driver.clock = _stopped_clock
 	_driver.advance(60.0)
+	_driver.clock = real_clock
 	var long_frame_ticks: int = _driver.state.tick - start
 	# The capped frame leaves exactly one tick's time, which the next frame runs.
 	_driver.advance(0.0)
@@ -887,7 +896,41 @@ func _check_driver_timing() -> String:
 			carried_ticks,
 			carried_fraction,
 		]
+	return _check_slow_device()
+
+
+## A device whose ticks take longer than their real time (#2097) runs one tick a frame, not
+## MAX_TICKS_PER_FRAME: catching up there would only lengthen every frame, which falls further
+## behind, so each would run the full cap. Each frame is handed the real time the last one took,
+## starting from a hitch, as Godot hands `_process` its delta.
+func _check_slow_device() -> String:
+	var slow: Callable = _slow_tick
+	if _driver.ticked.connect(slow) != OK:
+		return "couldn't slow the driver's ticks down"
+	var delta: float = float(GameDriver.MAX_TICKS_PER_FRAME) / Simulation.TICKS_PER_SECOND
+	var per_frame: Array[int] = []
+	for _frame: int in SLOW_FRAMES:
+		var began: int = Time.get_ticks_usec()
+		var before: int = _driver.state.tick
+		_driver.advance(delta)
+		per_frame.append(_driver.state.tick - before)
+		delta = (Time.get_ticks_usec() - began) / 1_000_000.0
+	_driver.ticked.disconnect(slow)
+	if per_frame.count(1) != SLOW_FRAMES:
+		return "a device whose ticks are slower than real time ran %s ticks a frame, not 1" % [
+			per_frame,
+		]
 	return _check_tick_events()
+
+
+## A clock that never moves.
+func _stopped_clock() -> int:
+	return 0
+
+
+## Takes as long as a slow device's tick, after the tick ran.
+func _slow_tick(_tick: int, _events: Array[RefCounted]) -> void:
+	OS.delay_usec(SLOW_TICK_USEC)
 
 
 ## Views learn about each tick's one-shot events from the driver: every tick exactly once and in
