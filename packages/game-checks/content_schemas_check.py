@@ -2,12 +2,13 @@
 comments with the game's own stripper, then jv checks each kind's files against its schema: the
 core's (#506), core/data/<kind>/, against core/data/schemas/<kind>.schema.json, and a kind a slice
 owns (#412), slices/<slice>/data/<kind>/, against the <kind>.schema.json beside it. A core kind a
-resource pack holds (the tile blueprints, #1901) lies in the default pack's PACK_DATA/<kind>/,
-checked against the core's schema, which is the format every pack's files share. The slice's own
+resource pack holds (the tile blueprints, #1901) lies in the default pack's own folder,
+PACK_DATA/<kind>/ at the repository's root (#1978), which the game reaches through its link, and
+is checked against the core's schema, which is the format every pack's files share. The slice's own
 kind sits directly in its data/, beside <slice>.schema.json, so no folder repeats the slice's name
-(#442), or in the default pack's own folder at the repository's root, PACK/<slice>/ (the quests,
-#1978), still checked against the schema in its slice. A folder without its schema fails, so a slice's data never borrows another's schema; so
-does a schema without its data, which would sit unchecked, and a kind with two schemas.
+(#442), or in the default pack's own folder, PACK_DATA/<slice>/ (the quests, #1978), still
+checked against the schema in its slice. A folder without its schema fails, so a slice's data never
+borrows another's schema; so does a schema without its data, which would sit unchecked, and a kind with two schemas.
 
     [GODOT=<binary>] [JV=<binary>] uv run --locked --package khovax-game-checks \\
         packages/game-checks/content_schemas_check.py
@@ -24,11 +25,9 @@ from pathlib import Path
 from game_shared import log
 
 TARGET = Path("build/data-json")
-# The default resource pack's folder, where it keeps the core kinds it holds (#1901).
-PACK_DATA = Path("slices/resource_packs/data")
-# The default pack's own folder at the repository's root (#1978), through the game's link to it
-# (packages/game-build/link_resource_packs.py).
-PACK = Path("resourcepacks/default")
+# The default resource pack's own folder (#1978), where it keeps the core kinds it holds (#1901),
+# through the game's link to it (packages/game-build/link_resource_packs.py).
+PACK_DATA = Path("resourcepacks/default")
 # A script error can leave Godot running forever.
 TIMEOUT_SECONDS = 60
 
@@ -38,14 +37,14 @@ def schema_problems() -> tuple[dict[str, str], list[tuple[str, str | None]]]:
     with the file it's about, if any)."""
     problems: list[tuple[str, str | None]] = []
     # Of the pack's folders, those of the kinds held as JSONC: the rest (realms...) aren't content.
-    pack = [folder for folder in sorted(PACK.glob("*/")) if any(folder.glob("*.jsonc"))]
+    pack = [folder for folder in sorted(PACK_DATA.glob("*/")) if any(folder.glob("*.jsonc"))]
     for folder in sorted(Path("core/data").glob("*/")) + sorted(Path("slices").glob("*/data/*/")) + pack:
         if folder.as_posix() == "core/data/schemas":
             continue
         core_schema = Path(f"core/data/schemas/{folder.name}.schema.json")
-        if folder.parent in (PACK_DATA, PACK) and core_schema.is_file():
+        if folder.parent == PACK_DATA and core_schema.is_file():
             schema = core_schema
-        elif folder.parent == PACK:
+        elif folder.parent == PACK_DATA:
             # A slice's own kind the pack holds keeps its schema in its slice.
             schema = Path(f"slices/{folder.name}/data/{folder.name}.schema.json")
         elif folder.parts[0] == "slices":
@@ -67,9 +66,9 @@ def schema_problems() -> tuple[dict[str, str], list[tuple[str, str | None]]]:
         else:
             folder = schema.parent / name
         if folder == Path(f"slices/{name}/data/{name}"):
-            if not any(schema.parent.glob("*.jsonc")) and not any((PACK / name).glob("*.jsonc")):
+            if not any(schema.parent.glob("*.jsonc")) and not any((PACK_DATA / name).glob("*.jsonc")):
                 problems.append(
-                    (f"has no {schema.parent.as_posix()}/*.jsonc or {(PACK / name).as_posix()}/*.jsonc to check", path)
+                    (f"has no {schema.parent.as_posix()}/*.jsonc or {(PACK_DATA / name).as_posix()}/*.jsonc to check", path)
                 )
         elif not folder.is_dir():
             problems.append((f"has no {folder.as_posix()}/ folder to check", path))
@@ -101,7 +100,7 @@ def main() -> int:
         return 1
     # Godot exits 0 even when a script fails to compile, so check every file was converted.
     sources = [
-        *Path("core/data").rglob("*.jsonc"), *Path("slices").glob("*/data/**/*.jsonc"), *PACK.glob("*/*.jsonc")
+        *Path("core/data").rglob("*.jsonc"), *Path("slices").glob("*/data/**/*.jsonc"), *PACK_DATA.glob("*/*.jsonc")
     ]
     written = list(TARGET.rglob("*.json"))
     if len(sources) != len(written):

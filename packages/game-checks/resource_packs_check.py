@@ -15,7 +15,7 @@ will have (#1858), and looked up only through ResourcePacks. It fails when
   assets/, a region file or piece under resourcepacks/default/regions/, a realm in
   resourcepacks/default/realms/, a quest in resourcepacks/default/quests/, a species directly in
   slices/species/data/, a catalogue under translations/, a
-  tile blueprint in slices/resource_packs/data/tiles/, a loot table, harvest table or material in
+  tile blueprint in resourcepacks/default/tiles/, a loot table, harvest table or material in
   the loot slice's data/loot_tables/, data/harvest_tables/ or data/materials/) is in the repository
   but not in the manifest;
 - a quest's, species', loot table's, harvest table's or material's entry isn't its own file
@@ -26,7 +26,7 @@ will have (#1858), and looked up only through ResourcePacks. It fails when
 - a file of a kind already moved into the default pack's own folder at the repository's root
   (PACK_ROOT, #1978; MOVED) is listed outside it;
 - a tile blueprint lies outside the pack (in the core's old core/data/tiles/), or its entry isn't
-  slices/resource_packs/data/tiles/<id>.jsonc, so it's named after its file (#802);
+  resourcepacks/default/tiles/<id>.jsonc, so it's named after its file (#802);
 - a script, scene, resource or content file names a texture's, model's, sound's, region's, realm's, quest's,
   species', catalogue's, tile blueprint's, loot table's, harvest table's or material's res:// path
   instead of its id, so it would get around the resolver, and a pack could never override it (project.godot
@@ -90,7 +90,7 @@ PACK_ROOT = "resourcepacks/default/"
 # ...and the kinds already moved into it, by their section, each with its own folder there (a
 # region's pieces lie beside the regions drawn whole); the move goes one kind at a time, and the
 # rest follow (#1978).
-MOVED = {"realms": "realms", "regions": "regions", "region_pieces": "regions", "quests": "quests"}
+MOVED = {"realms": "realms", "regions": "regions", "region_pieces": "regions", "tiles": "tiles", "quests": "quests"}
 # Where the default pack's realms, regions and region pieces lie (#1978).
 REALMS = f"{PACK_ROOT}realms"
 REGIONS = f"{PACK_ROOT}regions"
@@ -100,8 +100,8 @@ QUESTS = f"{PACK_ROOT}quests"
 # Where the species lie (#1903): each directly in the species slice's data/, beside its schema and
 # its abilities' folder, which aren't species.
 SPECIES = "slices/species/data"
-# Where the default pack's tile blueprints lie (#1901), and where they lay in the core before.
-TILES = "slices/resource_packs/data/tiles"
+# Where the default pack's tile blueprints lie (#1901, #1978), and where they lay in the core before.
+TILES = f"{PACK_ROOT}tiles"
 OLD_TILES = "core/data/tiles"
 # Where the default pack's loot tables and materials lie (#1953): in the loot slice, which owns the
 # kinds and their schemas (#412), each in its own folder.
@@ -140,8 +140,8 @@ PROJECT = Path("project.godot")
 PROJECT_TRANSLATIONS = re.compile(r"^locale/translations=", re.MULTILINE)
 # What names a resource: the scripts, scenes and resources, and the content files (#1864).
 NAMING = ("*.gd", "*.tscn", "*.tres", "*.jsonc")
-# The resolver's own slice reads the manifest; it never names a resource, but for the tile
-# blueprints the default pack holds (#1901), which name their models like any content.
+# The resolver's own slice reads the manifest; it never names a resource. The tile blueprints
+# (#1901), which name their models like any content, lie in the default pack's folder (#1978).
 RESOLVER = "slices/resource_packs/"
 STRING = re.compile(r"\"([a-z][a-z0-9_]*)\"")
 # A path is a whole string: it runs from the string's quote to the same quote again, anything in
@@ -346,7 +346,7 @@ def main() -> int:
     naming = [
         file
         for file in git_files(*NAMING)
-        if not file.startswith(RESOLVER) or file.startswith(TILES + "/")
+        if not file.startswith(RESOLVER)
     ]
     for file in naming:
         problems += around_resolver(file, code_of(file))

@@ -323,9 +323,10 @@ background; only wait in the foreground for a result the very next step needs.
     `subagent-cleared` and `.github/workflows/approve-cleared.yml` approves it (#1874) as a
     separate reviewer GitHub App, but only
     when the agent bot or a human admin put the label on, only into the default branch, and never
-    for a pull request that changes or renames files that are always user-facing (the game's
-    `assets/`, `translations/`, `realms/` and `regions/`, and its scenes, resources, images,
-    models, sounds, fonts and shaders, outside its `tests/` and `tools/`), nor for one whose
+    for a pull request that changes or renames files that are always user-facing (everything
+    under `resourcepacks/` (#2111), the game's `assets/`, `translations/`, `realms/` and
+    `regions/`, and its scenes, resources, images, models, sounds, fonts and shaders, outside its
+    `tests/` and `tools/`), nor for one whose
     changed workflows could reach a secret's environment: a job with any environment but
     `github-pages`, or a job calling another workflow (`uses:`), which could reach one through
     it. The reviewer app's key lives in such an environment, so **a change to the guard, or to
@@ -349,15 +350,18 @@ background; only wait in the foreground for a result the very next step needs.
   (`REVIEW_DISMISSED`). Only the owner's or the agent bot's labelling counts. A change request
   after that needs a new clearance: label off and on again.
 - **Merging:** once the pull request may be queued (above), read it for unanswered comments (an
-  approval and a comment often arrive together), then enable auto-merge:
-  `agent-gh pr merge <n> --auto --squash`. It joins the merge queue, which tests it on top of the
-  pull requests queued before it and merges it once the required checks are green. Otherwise
-  never enable auto-merge. **If it doesn't merge** although it may be queued (above), CI is green
-  and it shows as clean and mergeable (GitHub's auto-merge sometimes stalls), merge it yourself:
-  `agent-gh pr merge <n> --squash` (owner, #99). The watcher reports an approved one as
-  `NOT_QUEUED` (`Flixbox/household-brain#311`: auto-merge on, approved, clean and green, yet
-  outside the queue after 5 minutes); run the `enqueuePullRequest` mutation the event names, with
-  `agent-gh`, which queues it at once. A pull request that isn't user-facing has no approval for
+  approval and a comment often arrive together), then enable auto-merge with
+  `agent-queue Coarisfinia/khovax <n>` (`Flixbox/household-brain#354`, `#356`), alone in its own
+  Bash call (no `cd … &&`, pipe, `2>&1` or variable in front), run from inside a worktree or clone
+  (or with `GH_REPO` set): it checks the queue rules itself and refuses otherwise. It joins the
+  merge queue, which tests it on top of the pull requests queued before it and merges it once the
+  required checks are green. Otherwise never enable auto-merge. **If it doesn't merge** although
+  it may be queued (above), CI is green and it shows as clean and mergeable (GitHub's auto-merge
+  sometimes stalls), merge it yourself: `agent-gh pr merge <n> --squash` (owner, #99). The watcher
+  reports an approved one as `NOT_QUEUED` (`Flixbox/household-brain#311`: auto-merge on, approved,
+  clean and green, yet outside the queue after 5 minutes); run the `enqueuePullRequest` mutation
+  the event names, with `agent-gh`, which queues it at once. A pull request that isn't
+  user-facing has no approval for
   the watcher to see, so check it yourself a few minutes after enabling auto-merge
   (GraphQL `pullRequest(number:<n>){mergeQueueEntry{position}}` is null while it is still open)
   and enqueue it the same way. The owner's approval stays valid
@@ -497,8 +501,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   `resourcepacks/default/quests/` (#1978), their schema in `slices/quests/data/`. The one exception: the
   tile blueprints, which the core's `TileKinds` needs, keep their format (schema) in the core,
   `core/data/schemas/`, and are read by `TileContent` in `core/io/` (#506), but are the default
-  pack's resources (#1901), in `slices/resource_packs/data/tiles/`: `game/` hands the core the
-  packs' list at start (`PackWiring`), since the core never names a slice. Not Godot resources
+  pack's resources (#1901), in `resourcepacks/default/tiles/` (#1978): `game/` hands the core
+  the packs' list at start (`PackWiring`), since the core never names a slice. Not Godot resources
   (owner, #72: no engine lock-in). A tile kind is named by its blueprint's file, never a hand-kept
   number (#802, like features, #784). **Tile traits are
   rules** (`TileKinds`): changing one (e.g. `walkable`) is a rule change, like any other (see the

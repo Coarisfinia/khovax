@@ -211,6 +211,10 @@ jobs:
         # The dev-release job only runs on main, so its failures would show only there (#1991).
         run: uv run --locked --package khovax-game-checks ../game-checks/test_dev_release.py
 
+      - name: "🛡️ Check the approval guard refuses always user-facing files"
+        # approve-cleared.yml runs only when a pull request is labelled, from main (#2111).
+        run: uv run --locked --package khovax-game-checks ../game-checks/test_approve_cleared.py
+
       - name: "📦 Build the default pack, and refuse a pack with code"
         # Every pack is a .pck from our own pack builder (#1868, #1869), the default one too, so
         # each push builds it, with the builder zipped as each release ships it to pack makers
@@ -325,6 +329,11 @@ jobs:
           echo "${UV_SHA256}  /tmp/uv.tar.gz" | sha256sum --check
           sudo tar xzf /tmp/uv.tar.gz -C /usr/local/bin --strip-components=1 \
             uv-x86_64-unknown-linux-gnu/uv
+
+      - name: "🔗 Link the resource packs"
+        # The footprint and world-scale checks read the tile blueprints, which lie in the default
+        # pack's folder at the root, through the game's link to it (#1978).
+        run: uv run --locked ../game-build/link_resource_packs.py
 
       - name: "🧪 Test which models a change checks"
         # A model's own files check it, what every model is built or checked by checks them all,
