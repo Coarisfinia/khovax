@@ -20,6 +20,9 @@ from pathlib import Path
 
 GAME = Path(__file__).resolve().parents[1] / "game"
 LINK = "resourcepacks"
+# Left out too: a local export copies the built default pack in here, and a run with one never
+# needs the link.
+BUILT = "packs"
 # What the message names: the link script, which says how to run it.
 NAMED = "link_resource_packs.py"
 # A run that names the missing link stops within this; one that loops runs until it's killed.
@@ -33,7 +36,7 @@ def run_without_link(*arguments: str) -> tuple[int | None, str]:
     with tempfile.TemporaryDirectory() as folder:
         project = Path(folder)
         for entry in GAME.iterdir():
-            if entry.name != LINK:
+            if entry.name not in (LINK, BUILT):
                 (project / entry.name).symlink_to(entry, target_is_directory=entry.is_dir())
         try:
             done = subprocess.run(

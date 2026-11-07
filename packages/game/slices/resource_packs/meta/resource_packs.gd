@@ -241,7 +241,10 @@ static func _default_pack() -> ResourcePack:
 
 
 ## Names the missing link and ends the run (#2123): without it the default pack's realms, regions
-## and tiles are missing, and the game would loop on script errors instead of saying why.
+## and tiles are missing, and the game would loop on script errors instead of saying why. The quit
+## is deferred to the frame's end, and a later quit in that frame sets the exit code instead.
+## The editor is only told: @tool scripts (PlayerView) reach this there, and quitting would close
+## it.
 static func _stop_without_link() -> void:
 	push_error(
 		(
@@ -250,7 +253,7 @@ static func _stop_without_link() -> void:
 		)
 	)
 	var tree: SceneTree = Engine.get_main_loop() as SceneTree
-	if tree != null:
+	if tree != null and not Engine.is_editor_hint():
 		tree.quit(1)
 
 
