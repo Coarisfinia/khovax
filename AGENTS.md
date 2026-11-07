@@ -499,8 +499,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   only through that slice's accessor; the core gets plain integers and ids. The one exception: the
   tile blueprints, which the core's `TileKinds` needs, keep their format (schema) in the core,
   `core/data/schemas/`, and are read by `TileContent` in `core/io/` (#506), but are the default
-  pack's resources (#1901), in `slices/resource_packs/data/tiles/`: `game/` hands the core the
-  packs' list at start (`PackWiring`), since the core never names a slice. Not Godot resources
+  pack's resources (#1901), in `resourcepacks/default/tiles/` (#1978): `game/` hands the core
+  the packs' list at start (`PackWiring`), since the core never names a slice. Not Godot resources
   (owner, #72: no engine lock-in). A tile kind is named by its blueprint's file, never a hand-kept
   number (#802, like features, #784). **Tile traits are
   rules** (`TileKinds`): changing one (e.g. `walkable`) is a rule change, like any other (see the

@@ -330,6 +330,11 @@ jobs:
           sudo tar xzf /tmp/uv.tar.gz -C /usr/local/bin --strip-components=1 \
             uv-x86_64-unknown-linux-gnu/uv
 
+      - name: "🔗 Link the resource packs"
+        # The footprint and world-scale checks read the tile blueprints, which lie in the default
+        # pack's folder at the root, through the game's link to it (#1978).
+        run: uv run --locked ../game-build/link_resource_packs.py
+
       - name: "🧪 Test which models a change checks"
         # A model's own files check it, what every model is built or checked by checks them all,
         # and anything else none (#2031).

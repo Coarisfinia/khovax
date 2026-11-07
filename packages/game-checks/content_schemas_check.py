@@ -2,8 +2,9 @@
 comments with the game's own stripper, then jv checks each kind's files against its schema: the
 core's (#506), core/data/<kind>/, against core/data/schemas/<kind>.schema.json, and a kind a slice
 owns (#412), slices/<slice>/data/<kind>/, against the <kind>.schema.json beside it. A core kind a
-resource pack holds (the tile blueprints, #1901) lies in the default pack's PACK_DATA/<kind>/,
-checked against the core's schema, which is the format every pack's files share. The slice's own
+resource pack holds (the tile blueprints, #1901) lies in the default pack's own folder,
+PACK_DATA/<kind>/ at the repository's root (#1978), which the game reaches through its link, and
+is checked against the core's schema, which is the format every pack's files share. The slice's own
 kind sits directly in its data/, beside <slice>.schema.json, so no folder repeats the slice's name
 (#442). A folder without its schema fails, so a slice's data never borrows another's schema; so
 does a schema without its data, which would sit unchecked, and a kind with two schemas.
@@ -23,8 +24,9 @@ from pathlib import Path
 from game_shared import log
 
 TARGET = Path("build/data-json")
-# The default resource pack's folder, where it keeps the core kinds it holds (#1901).
-PACK_DATA = Path("slices/resource_packs/data")
+# The default resource pack's own folder (#1978), where it keeps the core kinds it holds (#1901),
+# through the game's link to it (packages/game-build/link_resource_packs.py).
+PACK_DATA = Path("resourcepacks/default")
 # A script error can leave Godot running forever.
 TIMEOUT_SECONDS = 60
 
@@ -33,7 +35,9 @@ def schema_problems() -> tuple[dict[str, str], list[tuple[str, str | None]]]:
     """Each kind's schema by its name, and what's wrong with the schemas and their folders (each
     with the file it's about, if any)."""
     problems: list[tuple[str, str | None]] = []
-    for folder in sorted(Path("core/data").glob("*/")) + sorted(Path("slices").glob("*/data/*/")):
+    # Of the pack's folders, those of the kinds held as JSONC: the rest (realms...) aren't content.
+    pack = [folder for folder in sorted(PACK_DATA.glob("*/")) if any(folder.glob("*.jsonc"))]
+    for folder in sorted(Path("core/data").glob("*/")) + sorted(Path("slices").glob("*/data/*/")) + pack:
         if folder.as_posix() == "core/data/schemas":
             continue
         core_schema = Path(f"core/data/schemas/{folder.name}.schema.json")
@@ -89,7 +93,9 @@ def main() -> int:
         log.error("data_to_json.gd failed")
         return 1
     # Godot exits 0 even when a script fails to compile, so check every file was converted.
-    sources = [*Path("core/data").rglob("*.jsonc"), *Path("slices").glob("*/data/**/*.jsonc")]
+    sources = [
+        *Path("core/data").rglob("*.jsonc"), *Path("slices").glob("*/data/**/*.jsonc"), *PACK_DATA.glob("*/*.jsonc")
+    ]
     written = list(TARGET.rglob("*.json"))
     if len(sources) != len(written):
         log.error(f"{len(sources)} content files, but data_to_json.gd wrote {len(written)}")

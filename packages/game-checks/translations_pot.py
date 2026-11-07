@@ -293,11 +293,10 @@ def schema_of(data_file: str) -> str:
     parts = Path(data_file).parts
     if parts[0] == "core":
         return f"core/data/schemas/{parts[2]}.schema.json"
-    # A core kind the default resource pack holds (#1901) shares the core's schema.
-    if parts[:3] == ("slices", "resource_packs", "data") and len(parts) == 5:
-        core = f"core/data/schemas/{parts[3]}.schema.json"
-        if Path(core).is_file():
-            return core
+    # A core kind the default resource pack holds (#1901), in its own folder (#1978), shares the
+    # core's schema.
+    if parts[:2] == ("resourcepacks", "default") and len(parts) == 4:
+        return f"core/data/schemas/{parts[2]}.schema.json"
     # slices/<slice>/data/<file> belongs to the slice's own kind, named for the slice.
     kind = parts[1] if len(parts) == 4 else parts[3]
     return f"slices/{parts[1]}/data/{kind}.schema.json"
@@ -323,7 +322,12 @@ def entries() -> tuple[list[Entry], list[tuple[str, str]]]:
     and its file): one text with two plurals, or both with and without one, which gettext can't
     hold in one entry."""
     files = git_files(
-        "*.gd", "*.tscn", "core/data/*.jsonc", "slices/*/data/*.jsonc", "resourcepacks/default/realms/*.md"
+        "*.gd",
+        "*.tscn",
+        "core/data/*.jsonc",
+        "slices/*/data/*.jsonc",
+        "resourcepacks/default/realms/*.md",
+        "resourcepacks/default/tiles/*.jsonc",
     )
     # The tools and tests are never shown to a player.
     files = [path for path in files if not path.startswith(("tools/", "tests/"))]
