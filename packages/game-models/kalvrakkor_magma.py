@@ -8,7 +8,8 @@ our eyes (lib/marked_eyes.py).
 The generator's rig holds nine tails on two chains (the owner: "only two are rigged"), so every tail
 gets a chain of its own from the mesh (lib/tails.py), which moves in every clip. It names the
 generator's bones to the library's quadruped scheme, adds the ears a bone each, and animates every
-creature clip with the library's clips, its legs planted by lib/adopted.py.
+creature clip with the library's clips, its forelegs planted by lib/adopted.py and its hind legs
+bent at the knee (`limbs`, #2026).
 
     uv run --locked packages/game-models/blender.py --background --factory-startup \
         --python packages/game-models/kalvrakkor_magma.py -- packages/game/assets/kalvrakkor_magma/kalvrakkor_magma.glb
@@ -33,7 +34,7 @@ from mathutils import Vector
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-from lib import adopted, attachments, clips, frostfire, marked_eyes, metrics, rigged, scene, tails, tuning  # noqa: E402
+from lib import adopted, attachments, clips, frostfire, legs, marked_eyes, metrics, rigged, scene, tails, tuning  # noqa: E402
 from lib.materials import palette  # noqa: E402
 
 SOURCE = os.path.join(HERE, "sources", "kalvrakkor_magma.glb")
@@ -76,8 +77,12 @@ RENAMES = {
 }
 # The legs' tops hold much of the trunk's skin: above this height (metres) the shoulders' and the
 # haunches' skin goes to the chest and the hips, so a swinging leg doesn't drag the trunk thin (the
-# volume check), as Fohossa's legs give theirs up.
+# volume check), as Fohossa's legs give theirs up. So does every leg bone's skin nearer the midline
+# than BELLY (metres, from MIDDLE) above UNDERSIDE: the chest's underside between the forelegs, which
+# lies below the elbows, and the belly between the hind legs, which a leg swinging would draw up
+# toward the spine.
 TRUNK = 0.28
+BELLY, UNDERSIDE = 0.035, 0.22
 # The brisket, the upper arms' skin ahead of this depth (metres along Y), goes to the chest too, so
 # the neck's base keeps its depth as a foreleg steps out (as quadruped.bind_underside's `brisket`).
 BRISKET = -0.215
@@ -85,6 +90,13 @@ BRISKET = -0.215
 # move down to these heights (metres), along the leg, and each leg's skin goes to the bone at its
 # height, blended over BLEND either side of a joint, so the leg bends where a hound's does.
 ELBOW, WRIST, BLEND = 0.27, 0.10, 0.02
+# The generator's legs stand straight, and a straight leg's joint swings far for a small move of
+# its paw and snaps straight as it reaches (the motion check's jitter, #2026; the model skill's
+# Tolvakkor trap): each shoulder's joint moves forward and each elbow back (metres), so the foreleg
+# stands bent at the elbow; each hip's joint moves back over the paw and each knee forward, so the
+# hind leg stays bent as it reaches back. The skin stays where it is.
+SHOULDER_FORWARD, ELBOW_BACK = 0.14, 0.06
+HIP_BACK, KNEE_FORWARD = 0.07, 0.06
 # The heel's skin below this height (metres) goes from the hock to the hind paw, so the whole sole
 # is the paw's and stays where the paw is planted as the hock turns.
 HEEL = 0.06
@@ -112,11 +124,16 @@ FOLLOW = {name: value for name, value in clips.FOLLOW.items() if not name.starts
 TILE = math.sqrt(3.0)
 WALK_SPEED = TILE / 0.8
 RUN_SPEED = TILE / 0.3
-WALK_TILES, RUN_TILES = 0.3, 1.0
-WALK_DUTY, WALK_LIFT, WALK_CURL, WALK_ROLL, WALK_BOB = 0.4, 0.15, 0.4, 0.05, 0.4
-RUN_DUTY, RUN_FOLD, RUN_SPINE_FLEX, RUN_ROLL, RUN_BOB = 0.3, 0.6, 0.06, 0.0, 0.4
-GAIT = ("WALK_TILES", "WALK_DUTY", "WALK_LIFT", "WALK_CURL", "WALK_ROLL", "WALK_BOB", "RUN_TILES", "RUN_DUTY",
-        "RUN_FOLD", "RUN_SPINE_FLEX", "RUN_ROLL", "RUN_BOB")
+WALK_TILES, RUN_TILES = 0.6, 1.0
+WALK_DUTY, WALK_LIFT, WALK_CURL, WALK_ROLL, WALK_BOB = 0.22, 0.18, 0.4, 0.02, 0.2
+RUN_DUTY, RUN_FOLD, RUN_SPINE_FLEX, RUN_ROLL, RUN_BOB = 0.12, 0.35, 0.03, 0.0, 0.4
+# Its paws stand only briefly in either gait, so a walking paw runs with the ground for longer as
+# it lifts and lands (clips.gait's `matched`), and a galloping one runs on only so far past where it
+# lifts and lands (`overshoot`): a leg as short as its would otherwise swing up level with its belly.
+WALK_MATCHED, RUN_OVERSHOOT = 0.4, 0.16
+GAIT = ("SHOULDER_FORWARD", "ELBOW_BACK", "HIP_BACK", "KNEE_FORWARD", "WALK_TILES", "WALK_DUTY", "WALK_LIFT",
+        "WALK_CURL", "WALK_ROLL", "WALK_BOB", "WALK_MATCHED", "RUN_TILES", "RUN_DUTY", "RUN_FOLD", "RUN_SPINE_FLEX",
+        "RUN_ROLL", "RUN_BOB", "RUN_OVERSHOOT")
 OUT = tuning.arguments(globals(), GAIT)
 WALK_FRAMES = clips.cycle_frames(WALK_SPEED, TILE * WALK_TILES, FPS)
 RUN_FRAMES = clips.cycle_frames(RUN_SPEED, TILE * RUN_TILES, FPS)
@@ -159,6 +176,9 @@ def rename(rig, skin):
     rigged.merge(skin, MERGES)
     rigged.merge(skin, {"1_leg_01": "chain1_01", "2_leg_01": "chain1_01", "3_leg_01": "hips", "4_leg_01": "hips"},
                  lambda vertex: vertex.co.z > TRUNK)
+    rigged.merge(skin, {"%d_leg_%02d" % (leg, number): "chain1_01" if leg < 3 else "hips"
+                        for leg in (1, 2, 3, 4) for number in (1, 2, 3, 4) if leg > 2 or number < 4},
+                 lambda vertex: vertex.co.z > UNDERSIDE and abs(vertex.co.x - MIDDLE) < BELLY)
     rigged.merge(skin, {"1_leg_01": "chain1_01", "2_leg_01": "chain1_01"}, lambda vertex: vertex.co.y < BRISKET)
     rigged.merge(skin, {"3_leg_03": "3_leg_04", "4_leg_03": "4_leg_04"}, lambda vertex: vertex.co.z < HEEL)
     for name in MERGES:
@@ -178,9 +198,17 @@ def rename(rig, skin):
     for leg in ("1", "2"):
         upper, fore, paw = (edit["%s_leg_%02d" % (leg, number)] for number in (1, 2, 3))
         elbow, wrist = at_height(upper, fore, paw, height=ELBOW), at_height(upper, fore, paw, height=WRIST)
+        elbow += Vector((0.0, ELBOW_BACK, 0.0))
+        upper.head.y -= SHOULDER_FORWARD
         upper.tail = elbow
         fore.head, fore.tail = elbow, wrist
         paw.head = wrist
+    for leg in ("3", "4"):
+        thigh, shin = edit["%s_leg_01" % leg], edit["%s_leg_02" % leg]
+        knee = thigh.tail - Vector((0.0, KNEE_FORWARD, 0.0))
+        thigh.head.y += HIP_BACK
+        thigh.tail = knee
+        shin.head = knee
     hips, chest, neck, head = edit["hips"], edit["chain1_01"], edit["stalk_01"], edit["stalk_02"]
     # Everything behind the middle hangs from the hips, not from a spine bone, so the spine bends
     # without moving the hind legs' tops.
@@ -205,6 +233,15 @@ def rename(rig, skin):
     bpy.ops.object.mode_set(mode="OBJECT")
     rigged.rename(rig, skin, RENAMES)
     rigged.roll(rig)
+
+
+def limbs(rig):
+    """The legs for the clips: adopted's forelegs; each hind leg bends at its knee, its hock turning
+    with its thigh (clips.LEGS' pantograph). adopted's bends it at the hock, where the generator's
+    leg runs almost straight from the hip, and it can't reach back far enough for a longer stride."""
+    out = [leg for leg in adopted.limbs(rig) if not leg.paw.startswith("hind_paw")]
+    return out + [legs.Leg("thigh." + side, "shin." + side, "hind_paw." + side, follower="hock." + side)
+                  for side in ("L", "R")]
 
 
 def ears(rig, skin):
@@ -301,16 +338,17 @@ def build(out):
     clips.animate(rig, {
         "Idle": clips.idle(),
         "Walk": clips.gait(WALK_FRAMES, WALK_STRIDE, body, clips.WALK, duty=WALK_DUTY, fold=0.0, lift=WALK_LIFT,
-                           curl=WALK_CURL, roll=WALK_ROLL, bob=WALK_BOB),
+                           curl=WALK_CURL, roll=WALK_ROLL, bob=WALK_BOB, matched=WALK_MATCHED),
         "Run": clips.gait(RUN_FRAMES, RUN_STRIDE, body, clips.GALLOP, duty=RUN_DUTY, fold=RUN_FOLD,
-                          spine_flex=RUN_SPINE_FLEX, roll=RUN_ROLL, bob=RUN_BOB, planted=False),
+                          spine_flex=RUN_SPINE_FLEX, roll=RUN_ROLL, bob=RUN_BOB, planted=False,
+                          overshoot=RUN_OVERSHOOT),
         "Attack": adopted.lesser(clips.attack(), SHARE),
         "Hit": adopted.lesser(clips.hit(), SHARE),
         "Faint": adopted.lesser(clips.faint(BELLY_HEIGHT, forepaws=FAINT_FOREPAWS), SHARE),
         **{name: adopted.lesser(clip, SHARE) for name, clip in clips.channel().items()},
         "Feed": clips.feed(forepaws=0.04),
         "Sleep": clips.sleep(clips.curled(BELLY_HEIGHT), SLEEP_PAWS),
-    }, SCALE, ground_meshes=[skin], chains=FOLLOW, limbs=adopted.limbs(rig), overlays=[lids.shut, fan.move])
+    }, SCALE, ground_meshes=[skin], chains=FOLLOW, limbs=limbs(rig), overlays=[lids.shut, fan.move])
     scene.export_glb(out)
     print("MODEL", out, "triangles", scene.triangles(skin), "bones", len(rig.data.bones),
           "materials", len(skin.data.materials))
