@@ -53,6 +53,10 @@ HEAD_WEIGHT = 0.5
 STEPS = 6
 # Grid cells the head's longest side is cut into to group the marked samples into spots.
 CELLS = 40
+# How far a mark's normal must lean off the Z axis (the sine of the angle between them) for the mark
+# to have a sideways axis across the surface (#2105): one along Z (a spot on a crown or under a
+# chin) has none, or one a rounding error turns any way.
+UPRIGHT = 0.01
 # A spot with fewer samples is noise (a speck of shadow in the paint), not an eye.
 MIN_SAMPLES = 8
 # How far apart the left mark and the right one mirrored may lie, as a share of their mean width,
@@ -294,10 +298,13 @@ class Mark:
 
     def __init__(self, points, normals):
         self.middle = points.mean(axis=0)
-        normal = normals.mean(axis=0)
-        self.normal = normal / numpy.sqrt((normal * normal).sum())
-        side = numpy.cross((0.0, 0.0, 1.0), self.normal)
-        self.side = side / numpy.sqrt((side * side).sum())
+        self.normal = _normal(normals)
+        side = _side(self.normal)
+        if side is None:
+            raise ValueError("a mark at %s faces (nearly) along Z, normal %s: it has no sideways axis "
+                             "across the surface, so no eye can sit there"
+                             % (tuple(self.middle.round(3)), tuple(self.normal.round(3))))
+        self.side = side
         self.up = numpy.cross(self.normal, self.side)
         offset = points - self.middle
         # The samples lie inside the oval: its edge is a little past the outermost, by about the
@@ -314,6 +321,20 @@ class Mark:
         upward = (offset @ self.up) / (self.height / 2.0)
         through = (offset @ self.normal) / (self.width / 2.0)
         return numpy.sqrt(across * across + upward * upward + through * through)
+
+
+def _normal(normals):
+    """The unit mean of `normals`."""
+    normal = normals.mean(axis=0)
+    return normal / numpy.sqrt((normal * normal).sum())
+
+
+def _side(normal):
+    """The unit sideways axis across the surface for a unit `normal`: level, at right angles to it
+    and to Z; or None when `normal` lies (nearly) along Z (`UPRIGHT`)."""
+    side = numpy.cross((0.0, 0.0, 1.0), normal)
+    length = numpy.sqrt((side * side).sum())
+    return side / length if length >= UPRIGHT else None
 
 
 def _spots(points, cell):
@@ -370,7 +391,14 @@ def placed(skin, spot, width, height, middle=0.0):
         mark = Mark(numpy.array([(skin.matrix_world @ location)[:]]), numpy.array([(turn @ normal)[:]]))
         mark.width, mark.height = width, height
         marks.append(mark)
-    return tuple(marks)
+    # A spot off the surface may snap to a point near the middle, or across it (#2105).
+    left, right = marks
+    if min(left.middle[0] - middle, middle - right.middle[0]) <= width / 2.0:
+        raise ValueError("a placed left eye's point on %s's surface, %s nearest %s, must lie left (+X) of "
+                         "the middle, x = %.3f, by more than half its width, and its mirror image's right of it: "
+                         "place it nearer the surface"
+                         % (skin.name, tuple(left.middle.round(3)), tuple(spot.round(3)), middle))
+    return left, right
 
 
 def find(head, marked=DARK):
@@ -382,8 +410,10 @@ def find(head, marked=DARK):
     if len(points) == 0:
         raise ValueError("no marked eye on the head's colour: " + WAYS_ON)
     cell = numpy.ptp(head.points, axis=0).max() / CELLS
-    marks = [Mark(points[group], head.normals[picked][group]) for group in _spots(points, cell)
-             if len(group) >= MIN_SAMPLES]
+    normals = head.normals[picked]
+    # A spot facing along Z (a dark crown) has no sideways axis, and is no eye (#2105).
+    marks = [Mark(points[group], normals[group]) for group in _spots(points, cell)
+             if len(group) >= MIN_SAMPLES and _side(_normal(normals[group])) is not None]
     middle = marked.middle
     # A spot across the middle (a mouth, a nose) is no eye.
     marks = [mark for mark in marks if abs(mark.middle[0] - middle) > mark.width / 2.0]
