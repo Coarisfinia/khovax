@@ -193,20 +193,20 @@
 		"tormaesk_escort": "resourcepacks/default/quests/tormaesk_escort.jsonc"
 	},
 	// Each species (#1903), every one of which is in the game: its stats, moves, ascension and the
-	// ids it names (abilities, loot, model), read as text.
+	// ids it names (abilities, loot, model), read as text, in the pack's own folder (#1978).
 	"species": {
-		"kalvrakkor": "slices/species/data/kalvrakkor.jsonc",
-		"kavrikka": "slices/species/data/kavrikka.jsonc",
-		"korvakkar": "slices/species/data/korvakkar.jsonc",
-		"nuvvoluvvo": "slices/species/data/nuvvoluvvo.jsonc",
-		"ombulumo": "slices/species/data/ombulumo.jsonc",
-		"ombuwomo": "slices/species/data/ombuwomo.jsonc",
-		"tikazzelu": "slices/species/data/tikazzelu.jsonc",
-		"tikazzir": "slices/species/data/tikazzir.jsonc",
-		"tolvakkor": "slices/species/data/tolvakkor.jsonc",
-		"vynakiir": "slices/species/data/vynakiir.jsonc",
-		"vynnimu": "slices/species/data/vynnimu.jsonc",
-		"wobulumu": "slices/species/data/wobulumu.jsonc"
+		"kalvrakkor": "resourcepacks/default/species/kalvrakkor.jsonc",
+		"kavrikka": "resourcepacks/default/species/kavrikka.jsonc",
+		"korvakkar": "resourcepacks/default/species/korvakkar.jsonc",
+		"nuvvoluvvo": "resourcepacks/default/species/nuvvoluvvo.jsonc",
+		"ombulumo": "resourcepacks/default/species/ombulumo.jsonc",
+		"ombuwomo": "resourcepacks/default/species/ombuwomo.jsonc",
+		"tikazzelu": "resourcepacks/default/species/tikazzelu.jsonc",
+		"tikazzir": "resourcepacks/default/species/tikazzir.jsonc",
+		"tolvakkor": "resourcepacks/default/species/tolvakkor.jsonc",
+		"vynakiir": "resourcepacks/default/species/vynakiir.jsonc",
+		"vynnimu": "resourcepacks/default/species/vynnimu.jsonc",
+		"wobulumu": "resourcepacks/default/species/wobulumu.jsonc"
 	},
 	// Each language's catalogue (#1902), translations/<locale>.po, registered at start; none yet,
 	// so every text shows as its English source. The template they start from, khovax.pot, stays

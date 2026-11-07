@@ -334,6 +334,7 @@ def entries() -> tuple[list[Entry], list[tuple[str, str]]]:
         "resourcepacks/default/realms/*.md",
         "resourcepacks/default/tiles/*.jsonc",
         "resourcepacks/default/quests/*.jsonc",
+        "resourcepacks/default/species/*.jsonc",
     )
     # The tools and tests are never shown to a player.
     files = [path for path in files if not path.startswith(("tools/", "tests/"))]
