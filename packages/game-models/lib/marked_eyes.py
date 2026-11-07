@@ -309,7 +309,7 @@ class Mark:
         if side is None:
             raise ValueError("a mark at %s faces (nearly) along Z, normal %s: it has no sideways axis "
                              "across the surface, so no eye can sit there"
-                             % (tuple(self.middle.round(3)), tuple(self.normal.round(3))))
+                             % (_at(self.middle), _at(self.normal)))
         self.side = side
         self.up = numpy.cross(self.normal, self.side)
         offset = points - self.middle
@@ -327,6 +327,11 @@ class Mark:
         upward = (offset @ self.up) / (self.height / 2.0)
         through = (offset @ self.normal) / (self.width / 2.0)
         return numpy.sqrt(across * across + upward * upward + through * through)
+
+
+def _at(point):
+    """`point` rounded to plain numbers for a message."""
+    return tuple(round(float(v), 3) for v in point)
 
 
 def _normal(normals):
@@ -403,7 +408,7 @@ def placed(skin, spot, width, height, middle=0.0):
         raise ValueError("a placed left eye's point on %s's surface, %s nearest %s, must lie left (+X) of "
                          "the middle, x = %.3f, by more than half its width, and its mirror image's right of it: "
                          "place it nearer the surface"
-                         % (skin.name, tuple(left.middle.round(3)), tuple(spot.round(3)), middle))
+                         % (skin.name, _at(left.middle), _at(spot), middle))
     return left, right
 
 
