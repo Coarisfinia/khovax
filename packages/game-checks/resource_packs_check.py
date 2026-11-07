@@ -88,7 +88,7 @@ class Kind:
 PACK_ROOT = "resourcepacks/default/"
 # ...and the kinds already moved into it, each in its own folder there; the move goes one kind at
 # a time, and the rest follow (#1978).
-MOVED = ("realms",)
+MOVED = ("realms", "quests")
 # Where the default pack's realms lie (#1978).
 REALMS = f"{PACK_ROOT}realms"
 # Where the default pack's quests lie (#1888): in the quests slice, which owns the kind and its
