@@ -98,6 +98,9 @@ MOVED = {
     "quests": "quests",
     "species": "species",
     "audio": "audio",
+    "loot_tables": "loot_tables",
+    "harvest_tables": "harvest_tables",
+    "materials": "materials",
 }
 # Where the default pack's realms, regions and region pieces lie (#1978).
 REALMS = f"{PACK_ROOT}realms"
