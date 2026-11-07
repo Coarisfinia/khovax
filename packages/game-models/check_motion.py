@@ -37,10 +37,13 @@ standing still. A model with a Walk or Run clip but no speed for it fails there 
 check its gait standing still. A foot no frame finds on the ground (no part of the mesh follows
 it) fails its clip rather than passing unseen (#2128); a rig without a body, such as the player's
 clip library, is measured by its feet's joints instead. A model without a rig or clips passes:
-nothing moves; one with clips whose rig has no animation data to play them on fails (#2132). A
-clip or join that still fails today waits in KNOWN with the issue that fixes it (lib/known.py's
-way; not with `--summary`, whose verdict is the raw one): it prints its numbers and doesn't fail
-the check, and fails once it passes until it's taken off. CI runs it on every .glb."""
+nothing moves; one with clips whose rig has no animation data to play them on fails (#2132). Each
+rig is checked on the clips it plays, so a model's second rig counts too, and a clip that drives
+only shape keys passes, as nothing for bones to measure; a clip that moves neither a rig nor shape
+keys fails, beside the clips a rig plays too (#2141). A clip or join that still fails today waits
+in KNOWN with the issue that fixes it (lib/known.py's way; not with `--summary`, whose verdict is
+the raw one): it prints its numbers and doesn't fail the check, and fails once it passes until
+it's taken off. CI runs it on every .glb."""
 
 import math
 import os
@@ -271,12 +274,12 @@ def joins(ends, loops, misses):
     return lines, passed
 
 
-def check(rig, meshes, fps, loops, speeds, misses):
-    """Lines per clip and join, and whether every one passes; `misses` (summary.Misses) collects
-    each limit a clip misses."""
+def check(rig, actions, meshes, fps, loops, speeds, misses):
+    """Lines per clip (of `actions`, the rig's) and join, and whether every one passes; `misses`
+    (summary.Misses) collects each limit a clip misses."""
     feet, bodiless = foot_bones(rig, meshes)
     lines, passed, ends = [], True, {}
-    for action in sorted(bpy.data.actions, key=lambda a: a.name):
+    for action in actions:
         start, end = imported.play(rig, action)
         # A clip that starts after time 0 holds its first pose until then in the game: a pause
         # at every loop's seam (#1089).
@@ -314,6 +317,29 @@ def check(rig, meshes, fps, loops, speeds, misses):
         lines.append("%s %s%s: %s" % ("FAIL" if fails else "ok", action.name, " (loop)" if loop else "", text))
     joined, joins_pass = joins(ends, loops, misses)
     return lines + joined, passed and joins_pass
+
+
+def shapes_only(action):
+    """Whether `action` drives only shape keys (a mesh's, not a bone)."""
+    return bool(action.slots) and all(found.target_id_type == "KEY" for found in action.slots)
+
+
+def sorted_clips(rigs):
+    """Per rig that plays clips, the rig, its clips and the meshes it deforms; the clips that
+    drive only shape keys; and the clips nothing of either moves."""
+    actions = sorted(bpy.data.actions, key=lambda a: a.name)
+    played = []
+    for rig in rigs:
+        own = [action for action in actions if imported.slot(action, rig) is not None]
+        if own:
+            rig.animation_data.use_nla = False
+            meshes = [obj for obj in ground.skinned(bpy.data.objects)
+                      if any(m.type == "ARMATURE" and m.object == rig for m in obj.modifiers)]
+            played.append((rig, own, meshes))
+    playing = {action for _rig, own, _meshes in played for action in own}
+    shaped = [action for action in actions if action not in playing and shapes_only(action)]
+    stray = [action for action in actions if action not in playing and action not in shaped]
+    return played, shaped, stray
 
 
 def judge(model, line):
@@ -357,21 +383,35 @@ def main():
         pairs = built + pairs
     speeds = {name: float(value) for name, value in pairs}
     fps, loops = imported.settings(glb)
-    rig = imported.load_view(glb, fps)
-    if rig is None or not bpy.data.actions:
+    imported.load_view(glb, fps)
+    rigs = [obj for obj in bpy.data.objects if obj.type == "ARMATURE"]
+    if not rigs or not bpy.data.actions:
         # A prop: no rig or no clips, nothing moves.
         log.info("MOTION %s no rig or clips: nothing to check" % model)
         log.info("MOTION CHECK: PASS (at %d fps)" % fps)
         sys.exit(0)
-    if rig.animation_data is None:
-        # The clips move something else, or nothing: the rig can't play them, so none is checked.
+    played, shaped, stray = sorted_clips(rigs)
+    if not played and stray:
+        # The clips move something else, or nothing: no rig can play them, so none is checked.
         log.error("MOTION %s has clips but its rig has no animation data to play them on" % model, glb)
         log.info("MOTION CHECK: FAIL (at %d fps)" % fps)
         sys.exit(1)
     misses = summary.Misses()
-    lines, measured = check(rig, ground.skinned(bpy.data.objects), fps, loops, speeds, misses)
+    lines, measured = [], True
+    for rig, own, meshes in played:
+        if len(played) > 1:
+            log.info("MOTION %s rig %s plays %s" % (model, rig.name, " ".join(action.name for action in own)))
+        checked, passes = check(rig, own, meshes, fps, loops, speeds, misses)
+        lines += checked
+        measured = measured and passes
+    # A shape-key clip has no bones to measure: a face's or a body's blend, not a rig's motion.
+    lines += ["ok %s: drives only shape keys, no bones to measure" % action.name for action in shaped]
+    for action in stray:
+        misses.flag(action.name, "moves-no-rig")
+        lines.append("FAIL %s: moves neither a rig nor shape keys" % action.name)
+    measured = measured and not stray
     if short:
-        for line in summary.lines(misses, [action.name for action in bpy.data.actions]):
+        for line in summary.lines(misses, sorted({action.name for action in bpy.data.actions})):
             log.info("MOTION " + line)
         passed = measured
         lines = []

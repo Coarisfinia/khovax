@@ -1,7 +1,8 @@
 """Tests check_motion.py's verdict on models built here that it can't measure (#2132): a prop (a
 box, no rig, no clips) passes, and so does a rig with a clip it plays; a rig beside a clip that
 moves something else (an empty), so the rig has nothing to play it on, fails, where it used to pass
-as "no rig or clips".
+as "no rig or clips". Two that used to fail with that reason pass (#2141): a clip playing on a
+second rig beside a still first one, and a rig beside a clip that drives only a mesh's shape keys.
 
     uv run --locked packages/game-models/blender.py --background --factory-startup \
         --python packages/game-models/test_motion.py
@@ -31,10 +32,10 @@ def box():
     return bpy.context.active_object
 
 
-def rig():
+def rig(name="rig"):
     """An armature of one upright bone."""
-    armature = bpy.data.armatures.new("rig")
-    obj = bpy.data.objects.new("rig", armature)
+    armature = bpy.data.armatures.new(name)
+    obj = bpy.data.objects.new(name, armature)
     bpy.context.scene.collection.objects.link(obj)
     bpy.context.view_layer.objects.active = obj
     bpy.ops.object.mode_set(mode="EDIT")
@@ -52,7 +53,11 @@ def keyed(obj, path, frames):
     target = obj.path_resolve(path.rsplit(".", 1)[0]) if "." in path else obj
     name = path.rsplit(".", 1)[-1]
     for frame in frames:
-        getattr(target, name)[0] = 0.001 * frame
+        value = getattr(target, name)
+        if isinstance(value, float):
+            setattr(target, name, 0.1 * frame / max(frames))
+        else:
+            value[0] = 0.001 * frame
         target.keyframe_insert(name, frame=frame)
 
 
@@ -72,12 +77,29 @@ def elsewhere():
     keyed(holder, "location", (0, 10))
 
 
+def second():
+    # The importer lists the objects by name: the still rig comes first.
+    rig("rig_a")
+    obj = rig("rig_b")
+    keyed(obj, 'pose.bones["body"].location', (0, 10))
+
+
+def shapes():
+    rig()
+    mesh = box()
+    mesh.shape_key_add(name="Basis")
+    mesh.shape_key_add(name="Open").data[0].co.z += 0.02
+    keyed(mesh.data.shape_keys, 'key_blocks["Open"].value', (0, 10))
+
+
 # Case: (how it builds the model, whether the check passes it, what it must print to say why), so
 # a crash, which exits 1 too, never passes for the failure.
 CASES = {
     "prop": (prop, True, "no rig or clips: nothing to check"),
     "played": (played, True, "ok Idle:"),
     "elsewhere": (elsewhere, False, "has clips but its rig has no animation data to play them on"),
+    "second": (second, True, "ok Idle:"),
+    "shapes": (shapes, True, "ok Idle: drives only shape keys"),
 }
 
 
