@@ -108,7 +108,7 @@ def points(meshes, across=False):
         mesh.vertices.foreach_get("co", coords)
         if across:
             mesh.calc_loop_triangles()
-            corners = numpy.empty(len(mesh.loop_triangles) * 3, dtype=numpy.int64)
+            corners = numpy.empty(len(mesh.loop_triangles) * 3, dtype=numpy.int32)
             mesh.loop_triangles.foreach_get("vertices", corners)
             corners = corners.reshape(-1, 3)
             ends = numpy.concatenate([corners[:, [0, 1]], corners[:, [1, 2]], corners[:, [2, 0]]])
