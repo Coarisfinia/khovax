@@ -97,6 +97,7 @@ MOVED = {
     "tiles": "tiles",
     "quests": "quests",
     "species": "species",
+    "audio": "audio",
 }
 # Where the default pack's realms, regions and region pieces lie (#1978).
 REALMS = f"{PACK_ROOT}realms"
