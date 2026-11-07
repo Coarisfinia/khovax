@@ -52,7 +52,7 @@
 			"required": ["yields", "becomes", "takes"],
 			"properties": {
 				"yields": {
-					"description": "The id of the tile table it drops (a loot table of kind tile, in the loot slice's data/loot_tables/).",
+					"description": "The id of the tile table it drops (a loot table of kind tile, in resourcepacks/default/loot_tables/).",
 					"type": "string",
 					"pattern": "^[a-z][a-z0-9_]*$"
 				},
