@@ -54,8 +54,10 @@ func show_state() -> void:
 		return
 	for target: String in survey.driver.state.region.exit_blueprints:
 		var holder: String = Territory.holder(flags, target)
-		var middle: Vector2 = _middle_shown(survey, target)
-		if not holder.is_empty() and middle.is_finite():
+		# Only a held one is looked for on the Survey: going through every neighbour's ground on
+		# every frame was a large share of it (#2096).
+		var middle: Vector2 = Vector2.INF if holder.is_empty() else _middle_shown(survey, target)
+		if middle.is_finite():
 			held_by[target] = holder
 			held_at[target] = middle
 
