@@ -178,7 +178,8 @@ jobs:
         uses: ./.github/actions/setup-godot
 
       - name: "📜 Check CREDITS.md matches the assets"
-        # tools/godot/credits.gd writes it from every assets/<pack>/SOURCE.md; a difference means an asset
+        # tools/godot/credits.gd writes it from every assets/<pack>/SOURCE.md (and the default pack's moved
+        # ones, resourcepacks/default/<kind>/<pack>/, #1978); a difference means an asset
         # was added or changed without regenerating the credits.
         run: |
           # Godot exits 0 on a script error, which would leave an old CREDITS.md looking current.
@@ -194,7 +195,7 @@ jobs:
           fi
 
       - name: "📦 Check every asset is used"
-        # Commit only what the game uses (AGENTS.md, #69): every file under assets/ is named by a
+        # Commit only what the game uses (AGENTS.md, #69): every file under assets/ (or resourcepacks/default/audio/, #1978) is named by a
         # scene, script, content file or setting, or by a glTF that is (#320).
         run: uv run --locked --package khovax-game-checks ../game-checks/unused_assets.py
 

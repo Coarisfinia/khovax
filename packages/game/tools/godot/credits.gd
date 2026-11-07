@@ -2,7 +2,9 @@
 # The tool reports to whoever runs it (CI) on stderr; that is what it is for.
 extends SceneTree
 ## Writes CREDITS.md from the source note every asset pack keeps next to its files
-## (assets/<pack>/SOURCE.md): its title and its author, source and license lines (#70). CI runs it
+## (assets/<pack>/SOURCE.md, or for a kind moved into the default pack's own folder, #1978,
+## resourcepacks/default/<kind>/<pack>/SOURCE.md): its title and its author, source and license
+## lines (#70), every pack in the order of its folder's name. CI runs it
 ## and fails when the committed CREDITS.md differs, so the credits can't drift from the assets:
 ## godot --headless --path packages/game -s res://tools/godot/credits.gd
 ##
@@ -13,7 +15,11 @@ extends SceneTree
 ## unless its note has an `- **Owner's OK:**` line naming where the owner allowed it. The author's
 ## models taken from Poly Pizza while it showed them as CC0 (assets/quaternius-items/) stay allowed.
 
-const ASSETS: String = "res://assets/"
+## The folders holding asset packs, from res://: assets/, and the default pack's folders of the
+## kinds already moved there (#1978), which the game reaches through its link, res://resourcepacks/
+## (link_resource_packs.py; named in parts, so no check takes it for a lookup around the resolver).
+const PACKS: String = "res://resourcepacks/"
+const FOLDERS: Array[String] = ["res://assets/", PACKS + "default/audio/"]
 const TARGET: String = "res://CREDITS.md"
 ## The lines of a source note that go into the credits, by their start; each may continue on
 ## indented lines below it.
@@ -23,8 +29,9 @@ const LICENSE: String = "- **License:**"
 const OWNERS_OK: String = "- **Owner's OK:**"
 const HEADER: String = """# Credits
 
-The assets this game uses, with their authors and licenses. Generated from each pack's
-`assets/<pack>/SOURCE.md` by `tools/godot/credits.gd`; don't edit it by hand.
+The assets this game uses, with their authors and licenses. Generated from each pack's `SOURCE.md`
+(`assets/<pack>/`, or `resourcepacks/default/<kind>/<pack>/`) by `tools/godot/credits.gd`; don't
+edit it by hand.
 """
 
 ## The author's own license by any of its names ("Quaternius Asset License", "Quaternius's own
@@ -37,21 +44,20 @@ var _qal: RegEx = RegEx.create_from_string(
 func _init() -> void:
 	var text: String = HEADER
 	var failed: int = 0
-	var packs: PackedStringArray = DirAccess.get_directories_at(ASSETS)
-	packs.sort()
+	var packs: Array[String] = _packs()
 	if packs.is_empty():
 		printerr("no asset packs in assets/: the credits would be empty")
 		failed += 1
 	for pack: String in packs:
 		var entry: String = _entry(pack)
 		if entry.is_empty():
-			printerr("assets/%s/SOURCE.md lacks its title, author, source or license" % pack)
+			printerr("%s/SOURCE.md lacks its title, author, source or license" % pack)
 			failed += 1
 		text += "\n" + entry
 		for reason: String in _qal_refusals(pack):
 			printerr(
 				(
-					"assets/%s/SOURCE.md: %s (#1954): it forbids redistributing the asset, so it"
+					"%s/SOURCE.md: %s (#1954): it forbids redistributing the asset, so it"
 					+ " stays out of the repository and every pack unless the owner allows it"
 					+ " (an `- **Owner's OK:**` line naming where)"
 				)
@@ -65,12 +71,24 @@ func _init() -> void:
 	quit(1 if failed > 0 else 0)
 
 
+## Every asset pack's folder, from res:// without it (assets/<pack>), in the order of the pack's
+## folder's name wherever it lies, so moving a pack keeps its place in the credits.
+func _packs() -> Array[String]:
+	var packs: Array[String] = []
+	for folder: String in FOLDERS:
+		if DirAccess.dir_exists_absolute(folder):
+			for pack: String in DirAccess.get_directories_at(folder):
+				packs.append((folder + pack).trim_prefix("res://"))
+	packs.sort_custom(func(a: String, b: String) -> bool: return a.get_file() < b.get_file())
+	return packs
+
+
 ## One pack's credits from its source note, or "" when the note lacks a title or a field.
 func _entry(pack: String) -> String:
 	var lines: PackedStringArray = _note_lines(pack)
 	if lines.is_empty() or not lines[0].begins_with("# "):
 		return ""
-	var entry: String = "## %s\n\n- **Files:** `assets/%s/`\n" % [lines[0].trim_prefix("# "), pack]
+	var entry: String = "## %s\n\n- **Files:** `%s/`\n" % [lines[0].trim_prefix("# "), pack]
 	for field: String in FIELDS:
 		var found: String = _field(lines, field)
 		if found.is_empty():
@@ -93,7 +111,7 @@ func _qal_refusals(pack: String) -> Array[String]:
 		found.append("its source is the author's own, whose files are under the QAL")
 	if _qal.search(_every_field(lines, LICENSE)) != null:
 		found.append("its license is the Quaternius Asset License (QAL)")
-	for path: String in _license_files(ASSETS + pack):
+	for path: String in _license_files("res://" + pack):
 		if _qal.search(FileAccess.get_file_as_string(path)) != null:
 			found.append("its license file %s is the Quaternius Asset License (QAL)" % path)
 	return found
@@ -123,7 +141,7 @@ func _license_files(folder: String) -> Array[String]:
 ## The pack's source note, line by line.
 func _note_lines(pack: String) -> PackedStringArray:
 	# Line endings normalized, so a note saved on Windows gives the same credits.
-	var path: String = ASSETS + pack + "/SOURCE.md"
+	var path: String = "res://" + pack + "/SOURCE.md"
 	return FileAccess.get_file_as_string(path).replace("\r", "").split("\n")
 
 

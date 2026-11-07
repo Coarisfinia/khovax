@@ -109,9 +109,10 @@
 		"model_trees_b_small": "assets/kaykit-hexagon/trees_B_small.gltf",
 		"model_wobulumu": "assets/wobulumu/wobulumu.glb"
 	},
-	// Each sound (#2014), looked up by its id, so a player's pack can replace or add one.
+	// Each sound (#2014), looked up by its id, so a player's pack can replace or add one, in the pack's
+	// own folder (#1978): each in its asset pack's folder, with its SOURCE.md and licence.
 	"audio": {
-		"music_exploration": "assets/exploration-theme/exploration_theme.ogg"
+		"music_exploration": "resourcepacks/default/audio/exploration-theme/exploration_theme.ogg"
 	},
 	// Each region drawn whole in one file (#1861), in the pack's own folder (#1978).
 	"regions": {

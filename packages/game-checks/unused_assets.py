@@ -1,4 +1,5 @@
-"""Fails on assets that nothing uses (#320). A file under assets/ is used when its res:// path is
+"""Fails on assets that nothing uses (#320). A file under assets/, or under the default pack's own
+folder of a kind of asset already moved there (resourcepacks/default/audio/, #1978), is used when its res:// path is
 named in a script, scene, resource, content file or the project settings, or listed in the default
 resource pack (#1860, its models since #1864, its sounds since #2014), through which the game
 looks it up by its id; when
@@ -29,13 +30,16 @@ from game_shared.resource_packs import (
 NOTES = re.compile(r".*\.import|.*/SOURCE\.md|.*/LICENSE[^/]*")
 PLAIN = re.compile(r"[A-Za-z0-9._/-]*")
 NAMED = re.compile(rb"res://(assets/[A-Za-z0-9._/-]+)")
+# The default pack's own folders of the kinds of asset already moved there (#1978), reached through
+# the game's link, resourcepacks/.
+MOVED = ("resourcepacks/default/audio",)
 NAMING = ("*.gd", "*.tscn", "*.tres", "*.godot", "*.cfg", "*.jsonc")
 
 
 def main() -> int:
     # The game's project folder (#1101): every path below is relative to it.
     os.chdir(Path(__file__).resolve().parents[1] / "game")
-    assets = [path for path in git_files("assets") if not NOTES.fullmatch(path)]
+    assets = [path for path in git_files("assets", *MOVED) if not NOTES.fullmatch(path)]
     odd = [path for path in assets if not PLAIN.fullmatch(path)]
     if odd:
         log.error(f"asset paths keep to letters, digits and ._/-: {', '.join(odd)}")
