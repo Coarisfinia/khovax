@@ -13,6 +13,7 @@ lib/skeleton.py), naming each difference: a clip made on another rig would bend 
 CI builds it with every model (check_rebuild.py), so a clip from another rig fails there."""
 
 import glob
+import math
 import os
 import sys
 
@@ -31,6 +32,11 @@ CLIPS = os.path.join(SOURCES, "clips")
 # every frame, one foot is flat on the ground (lib/planted_feet.py). The others leave the ground on
 # purpose: running, sitting, falling, getting up.
 GROUNDED = ["HarvestBush", "Hit", "Idle", "PickUp", "Talk", "Throw", "Wave"]
+# The game's pace for the player (metres a second, for the motion check, #2128): a tile (sqrt(3)
+# apart) every Tuning.MOVE_TICKS, 6 ticks at 20 a second. The player has that one pace, so the
+# walk and the run are both checked at it, whichever the body's view plays while moving.
+TILE = math.sqrt(3.0)
+WALK_SPEED = RUN_SPEED = TILE / 0.3
 
 
 def mismatches(clips):
@@ -73,6 +79,7 @@ def build(out):
         raise RuntimeError("standing clips off the ground (GROUND lines): %s"
                            % ", ".join(sorted(set(floating))))
     print("PLAYER CLIPS: %d clips on %d bones" % (len(clips), len(rig.data.bones)))
+    print("SPEEDS Walk=%.3f Run=%.3f" % (WALK_SPEED, RUN_SPEED))
     clip_sources.prepare(rig)
     scene.export_glb(out)
 
