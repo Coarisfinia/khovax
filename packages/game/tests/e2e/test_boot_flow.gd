@@ -270,8 +270,8 @@ func _check_grid(main: Node) -> String:
 	var grid: HexGrid = main.get_node_or_null("Instance/HexGrid") as HexGrid
 	if grid == null:
 		return "no HexGrid"
-	# The basic instance's region, regions/senwel_sael.md: a disc of 3 rings and the water by its
-	# beach.
+	# The basic instance's region, resourcepacks/default/regions/senwel_sael.md: a disc of 3 rings
+	# and the water by its beach.
 	if grid.tile_count() != 42:
 		return "the grid has %d tiles, expected the basic region's 42" % grid.tile_count()
 	var mesh: CylinderMesh = grid.tile_mesh()

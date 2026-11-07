@@ -338,8 +338,9 @@ jobs:
         # only at the models a pull request changes: its model script, source, .glb or its .import
         # (whose clip rate the checks sample at). A change to what every model is built or checked
         # by (the model library and checks, Blender's pin, this workflow) or measured by (the
-        # slices' look/ scripts and the scenes, #1652, the default pack's manifest, #1864) checks
-        # every model, and so does a failing diff (packages/game-models/changed_models.py, #2031).
+        # slices' look/ folders and the scenes, #1652, any game script, whose constants a view may
+        # name, #2072, the default pack's manifest, #1864) checks every model, and so does a
+        # failing diff (packages/game-models/changed_models.py, #2031).
         # It reads the change against the parent, or on a push to main against the commit before
         # the push, fetched here, so a push of several commits counts them all; main checks every
         # model whenever one changed.
@@ -1424,3 +1425,14 @@ jobs:
           done
           retry gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false
           published=1
+          # Sweep dev drafts that a run left and that no run of their tag will finish: one killed at
+          # its time limit, or a failure before #2024's cleanup (#2024). Only drafts of a full dev
+          # tag other than this one, made more than a day ago, so a running job's draft is safe; a
+          # published release is never a draft. Best effort: this release is out, so a failure warns.
+          stale=$(retry gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
+            --jq ".[] | select(.draft and .tag_name != \"${tag}\" and (.tag_name | test(\"^v[0-9]+[.][0-9]+[.][0-9]+-dev[.][0-9]+\$\")) and (.created_at | fromdateiso8601) < now - 86400) | .id") \
+            || { stale=; echo "::warning::couldn't list the releases to sweep stale dev drafts" >&2; }
+          for id in $stale; do
+            retry gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/${id}" \
+              || echo "::warning::couldn't delete stale dev draft ${id}" >&2
+          done

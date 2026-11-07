@@ -2,7 +2,7 @@
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://github.com/Coarisfinia/khovax/slices/blueprints/data/blueprints.schema.json",
 	"title": "Instance blueprint",
-	"description": "An instance blueprint (#117, #823): what an instance is loaded from besides its region, regions/<id>.md or the region pieces in regions/<id>/. One file per blueprint, named after its id. Saved worlds and quests name an instance by its id, so an id is never reused or changed once shipped.",
+	"description": "An instance blueprint (#117, #823): what an instance is loaded from besides its region, resourcepacks/default/regions/<id>.md or the region pieces in resourcepacks/default/regions/<id>/. One file per blueprint, named after its id. Saved worlds and quests name an instance by its id, so an id is never reused or changed once shipped.",
 	"type": "object",
 	"additionalProperties": false,
 	"required": ["id", "name", "rules", "wild_species", "codex"],
@@ -77,7 +77,7 @@
 				"properties": {
 					"flag": { "description": "The world flag that chooses it.", "type": "string", "pattern": "\\S" },
 					"region": {
-						"description": "The region it's loaded with instead, a region file or a folder of region pieces in regions/; \"\" for the blueprint's own. A folder holds only the pieces it changes, the rest are the blueprint's own (#1590). A region with a codex entry and a name is a place of its own (#909); one without is the instance itself, changed, under the instance's name.",
+						"description": "The region it's loaded with instead, a region file or a folder of region pieces in resourcepacks/default/regions/; \"\" for the blueprint's own. A folder holds only the pieces it changes, the rest are the blueprint's own (#1590). A region with a codex entry and a name is a place of its own (#909); one without is the instance itself, changed, under the instance's name.",
 						"type": "string",
 						"pattern": "^([a-z][a-z0-9_]*)?$"
 					},

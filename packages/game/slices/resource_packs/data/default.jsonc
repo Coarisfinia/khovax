@@ -112,63 +112,63 @@
 	"audio": {
 		"music_exploration": "assets/exploration-theme/exploration_theme.ogg"
 	},
-	// Each region drawn whole in one file (#1861).
+	// Each region drawn whole in one file (#1861), in the pack's own folder (#1978).
 	"regions": {
-		"ivenwhal_wudhen": "regions/ivenwhal_wudhen.md",
-		"lymwen_hoall": "regions/lymwen_hoall.md",
-		"senwel_sael": "regions/senwel_sael.md",
-		"thudren_orl": "regions/thudren_orl.md"
+		"ivenwhal_wudhen": "resourcepacks/default/regions/ivenwhal_wudhen.md",
+		"lymwen_hoall": "resourcepacks/default/regions/lymwen_hoall.md",
+		"senwel_sael": "resourcepacks/default/regions/senwel_sael.md",
+		"thudren_orl": "resourcepacks/default/regions/thudren_orl.md"
 	},
-	// Each region arranged from pieces (#1861): its pieces, start.md among them unless it is a
-	// variant changing only some of its blueprint's pieces (#1590).
+	// Each region arranged from pieces (#1861), in the pack's own folder (#1978): its pieces, start.md
+	// among them unless it is a variant changing only some of its blueprint's pieces (#1590).
 	"region_pieces": {
 		"brekhal_varn": [
-			"regions/brekhal_varn/narrows.md",
-			"regions/brekhal_varn/saddle.md",
-			"regions/brekhal_varn/sealed.md",
-			"regions/brekhal_varn/start.md",
-			"regions/brekhal_varn/switchback.md"
+			"resourcepacks/default/regions/brekhal_varn/narrows.md",
+			"resourcepacks/default/regions/brekhal_varn/saddle.md",
+			"resourcepacks/default/regions/brekhal_varn/sealed.md",
+			"resourcepacks/default/regions/brekhal_varn/start.md",
+			"resourcepacks/default/regions/brekhal_varn/switchback.md"
 		],
 		"brekhal_varn_opened": [
-			"regions/brekhal_varn_opened/sealed.md"
+			"resourcepacks/default/regions/brekhal_varn_opened/sealed.md"
 		],
 		"dhorvone_stolm": [
-			"regions/dhorvone_stolm/courtyard.md",
-			"regions/dhorvone_stolm/hall.md",
-			"regions/dhorvone_stolm/keep.md",
-			"regions/dhorvone_stolm/start.md",
-			"regions/dhorvone_stolm/towers.md"
+			"resourcepacks/default/regions/dhorvone_stolm/courtyard.md",
+			"resourcepacks/default/regions/dhorvone_stolm/hall.md",
+			"resourcepacks/default/regions/dhorvone_stolm/keep.md",
+			"resourcepacks/default/regions/dhorvone_stolm/start.md",
+			"resourcepacks/default/regions/dhorvone_stolm/towers.md"
 		],
 		"edhra_tewk": [
-			"regions/edhra_tewk/north_hold.md",
-			"regions/edhra_tewk/south_hold.md",
-			"regions/edhra_tewk/start.md",
-			"regions/edhra_tewk/watch.md",
-			"regions/edhra_tewk/yard.md"
+			"resourcepacks/default/regions/edhra_tewk/north_hold.md",
+			"resourcepacks/default/regions/edhra_tewk/south_hold.md",
+			"resourcepacks/default/regions/edhra_tewk/start.md",
+			"resourcepacks/default/regions/edhra_tewk/watch.md",
+			"resourcepacks/default/regions/edhra_tewk/yard.md"
 		],
 		"hrovumel_stolm": [
-			"regions/hrovumel_stolm/cistern.md",
-			"regions/hrovumel_stolm/gallery.md",
-			"regions/hrovumel_stolm/shrine.md",
-			"regions/hrovumel_stolm/stair.md",
-			"regions/hrovumel_stolm/start.md"
+			"resourcepacks/default/regions/hrovumel_stolm/cistern.md",
+			"resourcepacks/default/regions/hrovumel_stolm/gallery.md",
+			"resourcepacks/default/regions/hrovumel_stolm/shrine.md",
+			"resourcepacks/default/regions/hrovumel_stolm/stair.md",
+			"resourcepacks/default/regions/hrovumel_stolm/start.md"
 		],
 		"hrunde_orl": [
-			"regions/hrunde_orl/start.md"
+			"resourcepacks/default/regions/hrunde_orl/start.md"
 		],
 		"lumwen_hoal": [
-			"regions/lumwen_hoal/hollow.md",
-			"regions/lumwen_hoal/meadow.md",
-			"regions/lumwen_hoal/pond.md",
-			"regions/lumwen_hoal/start.md",
-			"regions/lumwen_hoal/thicket.md"
+			"resourcepacks/default/regions/lumwen_hoal/hollow.md",
+			"resourcepacks/default/regions/lumwen_hoal/meadow.md",
+			"resourcepacks/default/regions/lumwen_hoal/pond.md",
+			"resourcepacks/default/regions/lumwen_hoal/start.md",
+			"resourcepacks/default/regions/lumwen_hoal/thicket.md"
 		],
 		"morwe_wudhen": [
-			"regions/morwe_wudhen/boulders.md",
-			"regions/morwe_wudhen/felling.md",
-			"regions/morwe_wudhen/grove.md",
-			"regions/morwe_wudhen/start.md",
-			"regions/morwe_wudhen/stream.md"
+			"resourcepacks/default/regions/morwe_wudhen/boulders.md",
+			"resourcepacks/default/regions/morwe_wudhen/felling.md",
+			"resourcepacks/default/regions/morwe_wudhen/grove.md",
+			"resourcepacks/default/regions/morwe_wudhen/start.md",
+			"resourcepacks/default/regions/morwe_wudhen/stream.md"
 		]
 	},
 	// Each realm (#1861), every one of which the game plays, in the pack's own folder (#1978).
