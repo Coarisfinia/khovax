@@ -435,6 +435,11 @@ def placed():
     return ok
 
 
+def _at(point):
+    """`point` rounded for a log line."""
+    return tuple(round(float(v), 3) for v in point)
+
+
 def along_z():
     """Whether `Mark` refuses a normal (nearly) along Z with a ValueError (#2105): it would have no
     sideways axis (`side` NaN, or turned any way by a rounding error)."""
@@ -464,7 +469,7 @@ def crown():
     try:
         with numpy.errstate(invalid="raise", divide="raise"):
             left, right = marked_eyes.find(marked_eyes.Head(skin, "head"))
-        message = "found eyes at %s and %s" % (tuple(left.middle.round(3)), tuple(right.middle.round(3)))
+        message = "found eyes at %s and %s" % (_at(left.middle), _at(right.middle))
         good = left.middle[0] > 0.0 > right.middle[0] and left.middle[2] < CROWN.z - CROWN_RADIUS
     except (ValueError, FloatingPointError) as error:
         message, good = "%s: %s" % (type(error).__name__, error), False
@@ -478,7 +483,7 @@ def placed_above():
     skin = build(None, False, 1.0, SKIN, PLACED_MIDDLE)
     try:
         marks = marked_eyes.placed(skin, PLACED_ABOVE, PLACED_WIDTH, PLACED_HEIGHT, middle=PLACED_MIDDLE)
-        message, good = "placed the left eye at %s" % (tuple(marks[0].middle.round(3)),), False
+        message, good = "placed the left eye at %s" % (_at(marks[0].middle),), False
     except ValueError as error:
         message, good = str(error), True
     (log.info if good else log.error)("%s placed_above: %s" % ("ok" if good else "FAIL", message))
