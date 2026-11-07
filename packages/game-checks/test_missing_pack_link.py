@@ -2,8 +2,9 @@
 packages/game-build/link_resource_packs.py, #1978) fails fast and says so once, naming the link and
 the command that makes it (#2123), rather than looping on script errors until it's killed. The game
 runs from a copy of the project made of links to its files, the resource packs' link left out, so
-the checkout itself is never touched: the main scene, as the game boots, and a tool run with -s,
-the load test, as the headless tools start.
+the checkout itself is never touched: the main scene, as the game boots, and two tools run with
+-s, the load test and the in-game model render that render_media.py runs (#2131), as the headless
+tools start.
 
     [GODOT=<binary>] uv run --locked --package khovax-game-checks \\
         packages/game-checks/test_missing_pack_link.py
@@ -60,6 +61,14 @@ class MissingPackLinkTest(unittest.TestCase):
 
     def test_tool(self) -> None:
         self.assert_fails_naming_link("-s", "res://tools/godot/load_test.gd", "--", "ticks=10")
+
+    def test_model_render(self) -> None:
+        model = next(iter(sorted(GAME.glob("assets/*/*.glb"))))
+        with tempfile.TemporaryDirectory() as out:
+            self.assert_fails_naming_link(
+                "-s", "res://tools/models/render_in_game.gd", "--",
+                "res://" + model.relative_to(GAME).as_posix(), out, "--seed=0",
+            )
 
 
 if __name__ == "__main__":
