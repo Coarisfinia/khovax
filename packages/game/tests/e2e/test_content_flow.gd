@@ -2266,7 +2266,8 @@ func _check_pack_manifests() -> String:
 	var valid: String = (
 		start + " \"game_version\": \"0.1.0\", \"textures\": {\"%s\": \"%s\"},"
 		+ " \"models\": {\"m\": \"%s\"}, \"regions\": {\"r\": \"regions/r.md\"},"
-		+ " \"audio\": {\"b\": \"resourcepacks/default/audio/exploration-theme/exploration_theme.ogg\"},"
+		+ " \"audio\": {\"b\":"
+		+ " \"resourcepacks/default/audio/exploration-theme/exploration_theme.ogg\"},"
 		+ " \"region_pieces\": {\"q\": [\"regions/q/start.md\"]},"
 		+ " \"realms\": {\"w\": \"realms/w.md\"}, \"quests\": {\"u\": \"quests/u.jsonc\"},"
 		+ " \"species\": {\"s\": \"species/s.jsonc\"}, \"tiles\": {\"t\": \"tiles/t.jsonc\"},"
