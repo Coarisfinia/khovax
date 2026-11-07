@@ -13,13 +13,13 @@ will have (#1858), and looked up only through ResourcePacks. It fails when
   quests, species, catalogues, tile blueprints, loot and harvest tables and materials, which the
   game finds by listing the pack), or a file of its kind (an image, model or sound under
   assets/, a region file or piece under resourcepacks/default/regions/, a realm in
-  resourcepacks/default/realms/, a quest in resourcepacks/default/quests/, a species directly in
-  slices/species/data/, a catalogue under translations/, a
+  resourcepacks/default/realms/, a quest in resourcepacks/default/quests/, a species in
+  resourcepacks/default/species/, a catalogue under translations/, a
   tile blueprint in resourcepacks/default/tiles/, a loot table, harvest table or material in
   the loot slice's data/loot_tables/, data/harvest_tables/ or data/materials/) is in the repository
   but not in the manifest;
 - a quest's, species', loot table's, harvest table's or material's entry isn't its own file
-  (resourcepacks/default/quests/<id>.jsonc, slices/species/data/<id>.jsonc,
+  (resourcepacks/default/quests/<id>.jsonc, resourcepacks/default/species/<id>.jsonc,
   slices/loot/data/loot_tables/<id>.jsonc, slices/loot/data/harvest_tables/<id>.jsonc,
   slices/loot/data/materials/<id>.jsonc), so it's named
   after its file (#72);
@@ -104,9 +104,9 @@ REGIONS = f"{PACK_ROOT}regions"
 # Where the default pack's quests lie (#1888), in its own folder (#1978); their schema stays in the
 # quests slice, which owns the kind (#412).
 QUESTS = f"{PACK_ROOT}quests"
-# Where the species lie (#1903): each directly in the species slice's data/, beside its schema and
-# its abilities' folder, which aren't species.
-SPECIES = "slices/species/data"
+# Where the default pack's species lie (#1903, #1978); their schema and their abilities stay in
+# the species slice (#412).
+SPECIES = f"{PACK_ROOT}species"
 # Where the default pack's tile blueprints lie (#1901, #1978), and where they lay in the core before.
 TILES = f"{PACK_ROOT}tiles"
 OLD_TILES = "core/data/tiles"
@@ -155,13 +155,10 @@ STRING = re.compile(r"\"([a-z][a-z0-9_]*)\"")
 # between, so a file name with spaces or the other quote counts too (#1919), and prose outside
 # a string never does.
 PATH_CHAR = r"(?:(?!\1).)"
-# The same, but within one folder: a species' file, never its abilities' (#1903).
-NAME_CHAR = r"(?:(?!\1)[^/])"
 PATH = re.compile(
     rf"([\"'])res://(?P<path>assets/{PATH_CHAR}+?\.(?:"
     + "|".join(ending[1:] for ending in IMAGES + MODELS + AUDIO)
     + rf")|resourcepacks/{PATH_CHAR}+"
-    + rf"|{SPECIES}/{NAME_CHAR}+\.jsonc"
     + rf"|translations/{PATH_CHAR}+?\.po"
     + rf"|{TILES}/{PATH_CHAR}+|{OLD_TILES}(?:/{PATH_CHAR}*)?"
     + rf"|{LOOT_TABLES}/{PATH_CHAR}+?\.jsonc|{MATERIALS}/{PATH_CHAR}+?\.jsonc"
@@ -174,11 +171,10 @@ PATH = re.compile(
 # Any uid:// string, not only a load()'s or preload()'s argument: a threaded load, or a uid kept
 # in a constant and loaded later, gets around the resolver too (#1919).
 UID_STRING = re.compile(rf"([\"'])(?P<uid>uid://{PATH_CHAR}*)\1")
-# The species' folder also holds the abilities' folder, which isn't theirs.
 PACK_STRING = re.compile(
     rf"([\"'])res://(?:(?:assets|resourcepacks|translations|{TILES}|{OLD_TILES}"
     + rf"|{LOOT_TABLES}|{MATERIALS}|{HARVEST_TABLES})"
-    + rf"(?:/{PATH_CHAR}*)?|{SPECIES}(?:/{NAME_CHAR}*)?)\1"
+    + rf"(?:/{PATH_CHAR}*)?)\1"
 )
 WHOLE_FILE = re.compile(rf"([\"'])res://{PATH_CHAR}+\.[A-Za-z0-9]+\1")
 # The tools list the assets as files (the credits), never looking one up for the game.
@@ -427,7 +423,6 @@ def main() -> int:
             for path in git_files(kind.files)
             if path.endswith(kind.endings) and path not in used_by_models
             and (name != "regions" or path.count("/") == REGIONS.count("/") + 1)
-            and (name != "species" or os.path.dirname(path) == SPECIES)
         )
         problems += unresolved(kind, entries[name], tracked)
         problems += unreferenced(kind, entries[name], named, files)

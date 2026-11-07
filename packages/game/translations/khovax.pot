@@ -118,6 +118,150 @@ msgstr ""
 msgid "high land, heart land"
 msgstr ""
 
+#: resourcepacks/default/species/kalvrakkor.jsonc
+msgid "The frost-and-fire hound: a heavy hound split along its spine, one side dark basalt cracked with glowing magma, the other pale ice cracked with frost, and behind it a magma tail and an ice tail. Where it lies down, the snow melts on one side and freezes hard on the other. Its name is a beast-call, the sound it makes: the crack of ice in its k's, doubled where it splits, and the low growl of its molten side in l, v and r."
+msgstr ""
+
+#: resourcepacks/default/species/kalvrakkor.jsonc
+msgid "the crack of ice, the growl of fire"
+msgstr ""
+
+#: resourcepacks/default/species/kalvrakkor.jsonc
+msgid "Kalvrakkor"
+msgstr ""
+
+#: resourcepacks/default/species/kavrikka.jsonc
+msgid "A round-headed pup of the Kalvrakkor, already split along its spine: dark basalt cracked with glowing magma on one side, pale ice cracked with frost on the other, its one short tail half of each. It tumbles after its pack over the snow of the pass and snaps at whatever moves, and in time it ascends into a Kalvrakkor. Its name is a beast-call, its yip: its elder's k, v and r and the crack of its doubled k, made short and light."
+msgstr ""
+
+#: resourcepacks/default/species/kavrikka.jsonc
+msgid "the little crack that will growl"
+msgstr ""
+
+#: resourcepacks/default/species/kavrikka.jsonc
+msgid "Kavrikka"
+msgstr ""
+
+#: resourcepacks/default/species/korvakkar.jsonc
+msgid "What a Kalvrakkor becomes when its molten side wins: a lean black hound of cracked basalt, magma running in every seam, and behind it nine long tails of living magma fanned out like a burning sunrise, each tipped with an ember crystal. Snow never settles where it has passed. Its name is a beast-call, the sound it makes: its elder's k, v and r, the ice's crack gone out of them and only the deep growl left."
+msgstr ""
+
+#: resourcepacks/default/species/korvakkar.jsonc
+msgid "the growl with no frost left in it"
+msgstr ""
+
+#: resourcepacks/default/species/korvakkar.jsonc
+msgid "Korvakkar"
+msgstr ""
+
+#: resourcepacks/default/species/nuvvoluvvo.jsonc
+msgid "A big, round sleeper of the dream realm with long floppy ears, its whole hide a patch of night sky where small stars come and go. It floats a little above the ground and is nearly always asleep, curled up into a soft ball that rises and falls with its breath; a blow or a shout makes it roll over at most. Its name is a beast-call, its snore: the soft n and l of a breath let out, and the doubled v of the slow purr between."
+msgstr ""
+
+#: resourcepacks/default/species/nuvvoluvvo.jsonc
+msgid "the snore under the stars"
+msgstr ""
+
+#: resourcepacks/default/species/nuvvoluvvo.jsonc
+msgid "Nuvvoluvvo"
+msgstr ""
+
+#: resourcepacks/default/species/ombulumo.jsonc
+msgid "A round, soggy creature of still water that sits half-sunk in the shallows and booms at dusk, slow to rouse and hard to shift once it has. Its name is a beast-call, the sound it makes: round, soft b, m and l, and its o's and u's as deep as the boom."
+msgstr ""
+
+#: resourcepacks/default/species/ombulumo.jsonc
+msgid "the low boom from the shallows"
+msgstr ""
+
+#: resourcepacks/default/species/ombulumo.jsonc
+msgid "Ombulumo"
+msgstr ""
+
+#: resourcepacks/default/species/ombuwomo.jsonc
+msgid "A round bud of the Ombulumo, its spotted leaves folded shut around a soft body that peeks out between the front two. It has no legs: it hops and rocks its way over the wet ground of the shallows, and sits as still as a stone when it rests. In time it ascends into an Ombulumo. Its name is a beast-call, the sound of it: the Ombulumo's round start, with a soft w in the middle, the leaves wrapped round."
+msgstr ""
+
+#: resourcepacks/default/species/ombuwomo.jsonc
+msgid "the folded boom"
+msgstr ""
+
+#: resourcepacks/default/species/ombuwomo.jsonc
+msgid "Ombuwomo"
+msgstr ""
+
+#: resourcepacks/default/species/tikazzelu.jsonc
+msgid "A ball of pale ribbons wound round and round a faint violet glow, two stiff loops on its top for wings and two thin legs beneath. It flutters low after its elders through the reeds and ruins, more drifting than flying, and in time it ascends into a Tikazzir. Its name is a beast-call: its elder's clicks and buzz, then a soft trill as light as a ribbon in the wind."
+msgstr ""
+
+#: resourcepacks/default/species/tikazzelu.jsonc
+msgid "the click that flutters"
+msgstr ""
+
+#: resourcepacks/default/species/tikazzelu.jsonc
+msgid "Tikazzelu"
+msgstr ""
+
+#: resourcepacks/default/species/tikazzir.jsonc
+msgid "A small, quick flier with sharp eyes that darts low between the reeds and clicks as it turns, gone before it can be struck. Its name is a beast-call, the sound it makes: the clicks of its turns in t and k, and the buzz of its wings in the doubled z."
+msgstr ""
+
+#: resourcepacks/default/species/tikazzir.jsonc
+msgid "the click and buzz in the reeds"
+msgstr ""
+
+#: resourcepacks/default/species/tikazzir.jsonc
+msgid "Tikazzir"
+msgstr ""
+
+#: resourcepacks/default/species/tolvakkor.jsonc
+msgid "What a Kalvrakkor becomes when its frost wins: a broad hound armoured in plates of old blue ice, a helmet down over its muzzle and a crest of frozen feathers behind it. It walks slowly and it does not step aside. Its name keeps its line's crack and growl, with a heavy t and a round o for something that doesn't get out of the way."
+msgstr ""
+
+#: resourcepacks/default/species/tolvakkor.jsonc
+msgid "the crack of ice that holds"
+msgstr ""
+
+#: resourcepacks/default/species/tolvakkor.jsonc
+msgid "Tolvakkor"
+msgstr ""
+
+#: resourcepacks/default/species/vynakiir.jsonc
+msgid "A lean wolf of the high passes with a crystal on its brow and a crown of wisps turning above its head: a mana pup grown, whose crystal has hardened and whose mana has deepened into the arcane. It hunts by holding its prey still: it hums low while its crown closes on it, then snaps. Its name is a beast-call, the sound it makes: the hum in v, n and y, the howl that carries in its long ii, and the snap of its jaw in the k."
+msgstr ""
+
+#: resourcepacks/default/species/vynakiir.jsonc
+msgid "the hum that holds, then the howl"
+msgstr ""
+
+#: resourcepacks/default/species/vynakiir.jsonc
+msgid "Vynakiir"
+msgstr ""
+
+#: resourcepacks/default/species/vynnimu.jsonc
+msgid "A round, soft-footed pup of the Vynakiir, with a crystal only budding on its brow and a few wisps already drifting about its head, the start of the crown it will wear. It tumbles after its packmates through the mana moss and pounces on whatever moves, and in time it ascends into a Vynakiir, its mana deepening into the arcane. Its name is a beast-call, its whimper: the hum it shares with its elders in v, n and y, gone soft and small in the doubled n and the round u."
+msgstr ""
+
+#: resourcepacks/default/species/vynnimu.jsonc
+msgid "the little hum that will howl"
+msgstr ""
+
+#: resourcepacks/default/species/vynnimu.jsonc
+msgid "Vynnimu"
+msgstr ""
+
+#: resourcepacks/default/species/wobulumu.jsonc
+msgid "A round little tadpole of the Ombulumo, all head and belly, with a soft fin on its tail and a row of pale spots along each side. It wriggles over the wet ground of the shallows and nibbles at the weed there, and in time it ascends into an Ombuwomo, the bud that grows into an Ombulumo. Its name is a beast-call, the sound of it: the Ombulumo's round b, m and l with a wobble in front, for a little thing that wriggles."
+msgstr ""
+
+#: resourcepacks/default/species/wobulumu.jsonc
+msgid "the little wobble that will boom"
+msgstr ""
+
+#: resourcepacks/default/species/wobulumu.jsonc
+msgid "Wobulumu"
+msgstr ""
+
 #: slices/blueprints/data/brekhal_varn.jsonc
 msgid "The mountain pass southwest of Edhra Tewk. Its name is rocky to say, br and k, as the pass is to walk; Varn is the Land-speech word for a pass."
 msgstr ""
@@ -1942,150 +2086,6 @@ msgstr ""
 
 #: slices/species/data/abilities/wobulumu_wublu_wobla.jsonc
 msgid "Wublu-wobla"
-msgstr ""
-
-#: slices/species/data/kalvrakkor.jsonc
-msgid "The frost-and-fire hound: a heavy hound split along its spine, one side dark basalt cracked with glowing magma, the other pale ice cracked with frost, and behind it a magma tail and an ice tail. Where it lies down, the snow melts on one side and freezes hard on the other. Its name is a beast-call, the sound it makes: the crack of ice in its k's, doubled where it splits, and the low growl of its molten side in l, v and r."
-msgstr ""
-
-#: slices/species/data/kalvrakkor.jsonc
-msgid "the crack of ice, the growl of fire"
-msgstr ""
-
-#: slices/species/data/kalvrakkor.jsonc
-msgid "Kalvrakkor"
-msgstr ""
-
-#: slices/species/data/kavrikka.jsonc
-msgid "A round-headed pup of the Kalvrakkor, already split along its spine: dark basalt cracked with glowing magma on one side, pale ice cracked with frost on the other, its one short tail half of each. It tumbles after its pack over the snow of the pass and snaps at whatever moves, and in time it ascends into a Kalvrakkor. Its name is a beast-call, its yip: its elder's k, v and r and the crack of its doubled k, made short and light."
-msgstr ""
-
-#: slices/species/data/kavrikka.jsonc
-msgid "the little crack that will growl"
-msgstr ""
-
-#: slices/species/data/kavrikka.jsonc
-msgid "Kavrikka"
-msgstr ""
-
-#: slices/species/data/korvakkar.jsonc
-msgid "What a Kalvrakkor becomes when its molten side wins: a lean black hound of cracked basalt, magma running in every seam, and behind it nine long tails of living magma fanned out like a burning sunrise, each tipped with an ember crystal. Snow never settles where it has passed. Its name is a beast-call, the sound it makes: its elder's k, v and r, the ice's crack gone out of them and only the deep growl left."
-msgstr ""
-
-#: slices/species/data/korvakkar.jsonc
-msgid "the growl with no frost left in it"
-msgstr ""
-
-#: slices/species/data/korvakkar.jsonc
-msgid "Korvakkar"
-msgstr ""
-
-#: slices/species/data/nuvvoluvvo.jsonc
-msgid "A big, round sleeper of the dream realm with long floppy ears, its whole hide a patch of night sky where small stars come and go. It floats a little above the ground and is nearly always asleep, curled up into a soft ball that rises and falls with its breath; a blow or a shout makes it roll over at most. Its name is a beast-call, its snore: the soft n and l of a breath let out, and the doubled v of the slow purr between."
-msgstr ""
-
-#: slices/species/data/nuvvoluvvo.jsonc
-msgid "the snore under the stars"
-msgstr ""
-
-#: slices/species/data/nuvvoluvvo.jsonc
-msgid "Nuvvoluvvo"
-msgstr ""
-
-#: slices/species/data/ombulumo.jsonc
-msgid "A round, soggy creature of still water that sits half-sunk in the shallows and booms at dusk, slow to rouse and hard to shift once it has. Its name is a beast-call, the sound it makes: round, soft b, m and l, and its o's and u's as deep as the boom."
-msgstr ""
-
-#: slices/species/data/ombulumo.jsonc
-msgid "the low boom from the shallows"
-msgstr ""
-
-#: slices/species/data/ombulumo.jsonc
-msgid "Ombulumo"
-msgstr ""
-
-#: slices/species/data/ombuwomo.jsonc
-msgid "A round bud of the Ombulumo, its spotted leaves folded shut around a soft body that peeks out between the front two. It has no legs: it hops and rocks its way over the wet ground of the shallows, and sits as still as a stone when it rests. In time it ascends into an Ombulumo. Its name is a beast-call, the sound of it: the Ombulumo's round start, with a soft w in the middle, the leaves wrapped round."
-msgstr ""
-
-#: slices/species/data/ombuwomo.jsonc
-msgid "the folded boom"
-msgstr ""
-
-#: slices/species/data/ombuwomo.jsonc
-msgid "Ombuwomo"
-msgstr ""
-
-#: slices/species/data/tikazzelu.jsonc
-msgid "A ball of pale ribbons wound round and round a faint violet glow, two stiff loops on its top for wings and two thin legs beneath. It flutters low after its elders through the reeds and ruins, more drifting than flying, and in time it ascends into a Tikazzir. Its name is a beast-call: its elder's clicks and buzz, then a soft trill as light as a ribbon in the wind."
-msgstr ""
-
-#: slices/species/data/tikazzelu.jsonc
-msgid "the click that flutters"
-msgstr ""
-
-#: slices/species/data/tikazzelu.jsonc
-msgid "Tikazzelu"
-msgstr ""
-
-#: slices/species/data/tikazzir.jsonc
-msgid "A small, quick flier with sharp eyes that darts low between the reeds and clicks as it turns, gone before it can be struck. Its name is a beast-call, the sound it makes: the clicks of its turns in t and k, and the buzz of its wings in the doubled z."
-msgstr ""
-
-#: slices/species/data/tikazzir.jsonc
-msgid "the click and buzz in the reeds"
-msgstr ""
-
-#: slices/species/data/tikazzir.jsonc
-msgid "Tikazzir"
-msgstr ""
-
-#: slices/species/data/tolvakkor.jsonc
-msgid "What a Kalvrakkor becomes when its frost wins: a broad hound armoured in plates of old blue ice, a helmet down over its muzzle and a crest of frozen feathers behind it. It walks slowly and it does not step aside. Its name keeps its line's crack and growl, with a heavy t and a round o for something that doesn't get out of the way."
-msgstr ""
-
-#: slices/species/data/tolvakkor.jsonc
-msgid "the crack of ice that holds"
-msgstr ""
-
-#: slices/species/data/tolvakkor.jsonc
-msgid "Tolvakkor"
-msgstr ""
-
-#: slices/species/data/vynakiir.jsonc
-msgid "A lean wolf of the high passes with a crystal on its brow and a crown of wisps turning above its head: a mana pup grown, whose crystal has hardened and whose mana has deepened into the arcane. It hunts by holding its prey still: it hums low while its crown closes on it, then snaps. Its name is a beast-call, the sound it makes: the hum in v, n and y, the howl that carries in its long ii, and the snap of its jaw in the k."
-msgstr ""
-
-#: slices/species/data/vynakiir.jsonc
-msgid "the hum that holds, then the howl"
-msgstr ""
-
-#: slices/species/data/vynakiir.jsonc
-msgid "Vynakiir"
-msgstr ""
-
-#: slices/species/data/vynnimu.jsonc
-msgid "A round, soft-footed pup of the Vynakiir, with a crystal only budding on its brow and a few wisps already drifting about its head, the start of the crown it will wear. It tumbles after its packmates through the mana moss and pounces on whatever moves, and in time it ascends into a Vynakiir, its mana deepening into the arcane. Its name is a beast-call, its whimper: the hum it shares with its elders in v, n and y, gone soft and small in the doubled n and the round u."
-msgstr ""
-
-#: slices/species/data/vynnimu.jsonc
-msgid "the little hum that will howl"
-msgstr ""
-
-#: slices/species/data/vynnimu.jsonc
-msgid "Vynnimu"
-msgstr ""
-
-#: slices/species/data/wobulumu.jsonc
-msgid "A round little tadpole of the Ombulumo, all head and belly, with a soft fin on its tail and a row of pale spots along each side. It wriggles over the wet ground of the shallows and nibbles at the weed there, and in time it ascends into an Ombuwomo, the bud that grows into an Ombulumo. Its name is a beast-call, the sound of it: the Ombulumo's round b, m and l with a wobble in front, for a little thing that wriggles."
-msgstr ""
-
-#: slices/species/data/wobulumu.jsonc
-msgid "the little wobble that will boom"
-msgstr ""
-
-#: slices/species/data/wobulumu.jsonc
-msgid "Wobulumu"
 msgstr ""
 
 #: slices/species/ui/dominated_monsters_list.gd
