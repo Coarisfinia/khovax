@@ -248,7 +248,9 @@ background; only wait in the foreground for a result the very next step needs.
   holds `READY_TO_MERGE` for a draft the owner approved until CodeRabbit has reviewed its head;
   `Flixbox/household-brain#324` makes it wait only for a review that was asked for),
   `READY_APPROVED_DRAFTS=1` (owner, #1667: it marks a draft ready once the owner approves its head,
-  below), `RESOLVE_BOT_REVIEWS=coderabbitai` (owner, #1603: once CodeRabbit's change request on the head is
+  below), `CLEAR_QUESTION_LABEL=1` (owner, `Flixbox/household-brain#372`: it takes the `question`
+  label off a pull request once the owner has approved it, or once it merged or closed, and reports
+  `QUESTION_CLEARED`; it acts only while the `GH` token's viewer is a bot), `RESOLVE_BOT_REVIEWS=coderabbitai` (owner, #1603: once CodeRabbit's change request on the head is
   settled, every thread resolved and CI green, it posts `@coderabbitai resolve` whatever the merge
   risk, and reports `BOT_RESOLVE_ASKED`) and `CLEARED_LABEL=subagent-cleared`
   (`Flixbox/household-brain#331`: with `DISMISS_STALE_BOT_REVIEWS=1` it dismisses settled
