@@ -12,7 +12,8 @@ that too, which tells whether a pull request's .glb is what its script builds.
 script is one here that exports through scene.export_glb, and its .glb is the tracked one under
 the game's assets/ named like it (mana_wolf.py builds assets/mana-wolf/mana_wolf.glb); a model
 script without one fails. `--keep` copies each model's build into the folder, named like its .glb,
-so CI can offer the build it compared. `--only` builds only the models whose .glb is in the list
+so CI can offer the build it compared, and the speeds its build prints (its `SPEEDS` line) beside
+it as `<name>.glb.speeds`, which the motion check takes (#2117). `--only` builds only the models whose .glb is in the list
 (NUL-separated, as changed_models.py writes it, #2031), while a model script without a .glb still
 fails. Several models build at once, two Blenders each, as many as the machine has cores for.
 It prints `REBUILD CHECK: PASS` or `FAIL`. On a difference it names what differs, the JSON part
@@ -41,6 +42,8 @@ MODELS = Path(__file__).resolve().parent
 BLENDER = MODELS / "blender.py"
 # A model script's export call, as a statement of its own.
 EXPORT = re.compile(r"^\s*scene\.export_glb\(", re.MULTILINE)
+# The speeds a model script prints for the motion check (`SPEEDS Walk=... Run=...`).
+SPEEDS = re.compile(r"^SPEEDS (.*)$", re.MULTILINE)
 WIDTHS = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4, "MAT2": 4, "MAT3": 9, "MAT4": 16}
 FORMATS = {5120: "b", 5121: "B", 5122: "h", 5123: "H", 5125: "I", 5126: "f"}
 # One model reports at a time, so the lines of models built at once never mix.
@@ -150,6 +153,9 @@ def compare(script: Path, script_path: str, committed: Path | None, keep: Path |
     if keep is not None and committed is not None:
         keep.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(outs[0], keep / committed.name)
+        speeds = SPEEDS.search(outputs[0].read_text())
+        if speeds:
+            (keep / (committed.name + ".speeds")).write_text(speeds.group(1) + "\n")
     same = True
     pairs = [(f"{script.name}: the two builds", outs[0], outs[1], script_path)]
     if committed is not None:

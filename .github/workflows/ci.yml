@@ -482,6 +482,17 @@ jobs:
             ../game-models/blender.py --background --factory-startup \
             --python ../game-models/check_volume.py --
 
+      - name: "🐾 Check every model's clips move cleanly"
+        # Every frame of every clip of each .glb listed above (#2117): paw sliding at the speeds
+        # its build prints (kept by the rebuild check above), jitter, loop seams and joins
+        # (check_motion.py, #1071); a model without a rig or clips passes. One Blender per model,
+        # several at once.
+        if: steps.models.outputs.changed == 'true'
+        timeout-minutes: 8
+        run: |
+          uv run --locked --package khovax-game-models ../game-models/blender_each.py /tmp/models.list \
+            ../game-models/check_motion.py --speeds /tmp/rebuilt
+
       - name: "🧪 Test the volume check on an upright neck"
         # A nod of an upright neck's head keeps its girth and passes; a squeezed neck fails
         # (#1680).

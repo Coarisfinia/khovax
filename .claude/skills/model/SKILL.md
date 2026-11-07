@@ -811,7 +811,9 @@ clips. Ask the owner only when it's unclear what should move how.
    prints>` must print
    `MOTION CHECK: PASS`, and `packages/game-models/plot_motion.py` plots each clip the PR changes
    against the previous build (`git show main:<model.glb>`, with its `.import` beside it). Both
-   go into the PR, before and after.
+   go into the PR, before and after. A clip that still fails waits in its `KNOWN` list with the
+   issue that fixes it, and a fix takes it off. CI runs it on every `.glb` (#2117), at the speeds
+   the rebuild check's build prints (step 14, `--speeds`).
 
 14. **Rebuild (#1085):** `uv run --locked --package khovax-game-models
    packages/game-models/check_rebuild.py packages/game-models/<name>.py packages/game/assets/<name>/<name>.glb` builds the model twice,

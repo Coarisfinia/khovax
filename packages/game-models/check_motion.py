@@ -3,7 +3,7 @@ seam and jitter, as numbers with limits that fail the build.
 
     uv run --locked packages/game-models/blender.py --background --factory-startup \
         --python packages/game-models/check_motion.py -- \
-        <model.glb> [<Clip>=<speed> ...] [--summary]
+        <model.glb> [<Clip>=<speed> ...] [--speeds <folder>] [--summary]
 
 - **Foot sliding:** how fast a paw moves over the ground while it stands on it (its lowest point
   within CONTACT of the ground), in metres a second. The ground runs back under the model at the
@@ -28,7 +28,14 @@ seam and jitter, as numbers with limits that fail the build.
 It prints a line per clip and `MOTION CHECK: PASS` or `FAIL` (and exits 1 on a fail), through
 game_shared.log (#1115): a failing line is an error on the .glb. With `--summary` (#1524) it prints
 only each limit a clip misses and by how much, one line each (lib/summary.py). The clip rate and the loops come
-from the .glb's .import, as the game imports it."""
+from the .glb's .import, as the game imports it.
+
+`--speeds <folder>` (#2117) also takes the speeds from `<folder>/<model.glb>.speeds`, which
+check_rebuild.py's `--keep` writes from each build's `SPEEDS` line, so CI checks every model at
+the speeds its build prints; a model without one (a prop, the player's clips) is checked standing
+still. A model without a rig or clips passes: nothing moves. A clip or join that still fails today
+waits in KNOWN with the issue that fixes it (lib/known.py's way): it prints its numbers and doesn't
+fail the check, and fails once it passes until it's taken off. CI runs it on every .glb."""
 
 import math
 import os
@@ -42,7 +49,7 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "game-shared"))
 
 from game_shared import log  # noqa: E402
-from lib import ground, imported, summary  # noqa: E402
+from lib import ground, imported, known, summary  # noqa: E402
 
 # A paw this close to the ground (metres) stands on it.
 CONTACT = 0.02
@@ -53,6 +60,38 @@ SLIDE_LIMIT = 0.2
 SEAM_POSE_LIMIT = 0.5
 SEAM_SHIFT_LIMIT = 0.002
 JITTER_LIMIT = 15.0
+
+# (model, clip) that fails today, with the issue that fixes it; that issue takes its entries off.
+# A join is named after its lead with " join" (`("mana_wolf", "WalkStart join")`).
+KNOWN = {
+    ("fohossa", "Run"): 1629,
+    ("fohossa", "Walk"): 1629,
+    ("frostfire_hound", "ChannelStart join"): 2127,
+    ("frostfire_hound", "Run"): 2127,
+    ("frostfire_hound", "Walk"): 2127,
+    ("kalvrakkor_magma", "ChannelStart join"): 2026,
+    ("kalvrakkor_magma", "Run"): 2026,
+    ("kalvrakkor_magma", "Walk"): 2026,
+    ("kavrikka", "Attack"): 1780,
+    ("kavrikka", "Run"): 1780,
+    ("kavrikka", "Walk"): 1780,
+    **{("player_clips", clip): 2128
+       for clip in ("GetUp", "HarvestBush", "Hit", "KnockedDown", "PickUp", "Run", "Throw", "Walk")},
+    # The third-party Rogue's every clip (#2129).
+    **{("Rogue", clip): 2129 for clip in (
+        "1H_Melee_Attack_Chop", "1H_Melee_Attack_Slice_Diagonal", "1H_Melee_Attack_Slice_Horizontal",
+        "1H_Melee_Attack_Stab", "1H_Ranged_Aiming", "1H_Ranged_Reload", "1H_Ranged_Shoot",
+        "1H_Ranged_Shooting", "2H_Melee_Attack_Chop", "2H_Melee_Attack_Slice", "2H_Melee_Attack_Spin",
+        "2H_Melee_Attack_Spinning", "2H_Melee_Attack_Stab", "2H_Ranged_Aiming", "2H_Ranged_Shoot",
+        "2H_Ranged_Shooting", "Block", "Block_Attack", "Cheer", "Death_A", "Death_B", "Dodge_Backward",
+        "Dodge_Forward", "Dodge_Left", "Dodge_Right", "Dualwield_Melee_Attack_Chop",
+        "Dualwield_Melee_Attack_Slice", "Dualwield_Melee_Attack_Stab", "Hit_A", "Hit_B", "Lie_Down",
+        "Lie_StandUp", "Running_A", "Running_B", "Running_Strafe_Left", "Running_Strafe_Right",
+        "Sit_Chair_Down", "Sit_Floor_Down", "Sit_Floor_StandUp", "Spellcast_Long", "Spellcast_Raise",
+        "Spellcast_Shoot", "Throw", "Unarmed_Melee_Attack_Kick", "Unarmed_Melee_Attack_Punch_A",
+        "Unarmed_Melee_Attack_Punch_B", "Walking_A", "Walking_B", "Walking_Backwards", "Walking_C",
+    )},
+}
 
 
 def spin(a, b):
@@ -219,25 +258,66 @@ def check(rig, meshes, fps, loops, speeds, misses):
     return lines + joined, passed and joins_pass
 
 
+def judge(model, line):
+    """A report line as KNOWN judges it (lib/known.py): the line and whether it fails the check.
+    A join's line (`ok WalkStart join: ...`) is keyed apart from its lead's own clip."""
+    words = line.split(" ", 3)
+    clip = words[1] + " join" if words[2:3] == ["join:"] else None
+    return known.judge(KNOWN, model, line, clip)
+
+
+def speeds_of(glb, folder):
+    """The `<Clip>=<speed>` pairs `folder/<model.glb>.speeds` holds, none without one."""
+    path = os.path.join(folder, os.path.basename(glb) + ".speeds")
+    if not os.path.isfile(path):
+        return []
+    with open(path, encoding="utf-8") as found:
+        return [arg.split("=", 1) for arg in found.read().split()]
+
+
 def main():
     args = sys.argv[sys.argv.index("--") + 1:]
     short = "--summary" in args
     args = [arg for arg in args if arg != "--summary"]
+    folder = None
+    if "--speeds" in args:
+        at = args.index("--speeds")
+        folder = args[at + 1]
+        args = args[:at] + args[at + 2:]
     glb = args[0]
-    speeds = {name: float(value) for name, value in (arg.split("=", 1) for arg in args[1:])}
+    model = os.path.splitext(os.path.basename(glb))[0]
+    pairs = [arg.split("=", 1) for arg in args[1:]]
+    if folder is not None:
+        built = speeds_of(glb, folder)
+        if built:
+            log.info("MOTION %s at the speeds its build prints: %s" % (model, " ".join("=".join(p) for p in built)))
+        else:
+            log.info("MOTION %s: its build prints no speeds, checked standing still" % model)
+        pairs = built + pairs
+    speeds = {name: float(value) for name, value in pairs}
     fps, loops = imported.settings(glb)
-    rig = imported.load(glb, fps)
+    rig = imported.load_view(glb, fps)
+    if rig is None or rig.animation_data is None or not bpy.data.actions:
+        # A prop: no rig or no clips, nothing moves.
+        log.info("MOTION %s no rig or clips: nothing to check" % model)
+        log.info("MOTION CHECK: PASS (at %d fps)" % fps)
+        sys.exit(0)
     misses = summary.Misses()
-    lines, passed = check(rig, ground.skinned(bpy.data.objects), fps, loops, speeds, misses)
+    lines, measured = check(rig, ground.skinned(bpy.data.objects), fps, loops, speeds, misses)
     if short:
         for line in summary.lines(misses, [action.name for action in bpy.data.actions]):
             log.info("MOTION " + line)
+        passed = measured
         lines = []
+    else:
+        passed = True
     for line in lines:
-        if line.startswith("FAIL"):
-            log.error("MOTION " + line, glb)
+        text, fails = judge(model, line)
+        passed = passed and not fails
+        if fails:
+            log.error("MOTION %s %s" % (model, text), glb)
         else:
-            log.info("MOTION " + line)
+            log.info("MOTION %s %s" % (model, text))
     log.info("MOTION CHECK: %s (at %d fps)" % ("PASS" if passed else "FAIL", fps))
     sys.exit(0 if passed else 1)
 
