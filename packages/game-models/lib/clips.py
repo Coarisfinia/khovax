@@ -116,7 +116,9 @@ def gait(frames, stride, body, phases, duty, fold, lift=0.0, curl=0.0, bob=0.4, 
             reach, lean = reaches[leg]
             if not planted and overshoot is not None and abs(ahead) > edge:
                 # tanh leaves the edge at the same speed and acceleration: no kink in the swing.
-                ahead = math.copysign(edge + overshoot * math.tanh((abs(ahead) - edge) / overshoot), ahead)
+                # An overshoot of 0 (or less) holds the paw at the edge.
+                run_on = overshoot * math.tanh((abs(ahead) - edge) / overshoot) if overshoot > 0 else 0.0
+                ahead = math.copysign(edge + run_on, ahead)
             slant = math.asin(max(-1.0, min(1.0, ahead / reach)))
             swings[leg, side] = (lean - slant, up)
             if planted:
