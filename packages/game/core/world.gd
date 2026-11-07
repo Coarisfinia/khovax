@@ -322,12 +322,32 @@ func entering(instance_name: String) -> GameState:
 ## A fingerprint of every loaded instance, in name order, each with its name and, if nobody is in
 ## it, when it was left behind, and the variant it was loaded from unless it's the plain one; then
 ## every purged blueprint's generation, then the flags. What isn't there mixes in nothing, so a
-## world without variants or flags hashes as it did before them.
+## world without variants or flags hashes as it did before them. Replays check it.
 func state_hash() -> int:
-	var result: int = StateHash.mix(StateHash.OFFSET, tick)
+	return _fingerprint(StateHash.mix(StateHash.OFFSET, tick), false)
+
+
+## The fingerprint co-op compares every tick (#2095): every value `state_hash` covers, put together
+## so that it costs no more with every instance loaded. The world's tick and its stores, which every
+## instance shares, go in once, then each loaded instance's world tick and own hash
+## (GameState.own_hash), which one nobody is in keeps until it changes, and the rest as in
+## `state_hash`. The same world gives the same number on every machine, though not `state_hash`'s.
+func sync_hash() -> int:
+	var shared: Array[int] = [tick]
+	shared.append_array(GameState.store_values(stores))
+	return _fingerprint(StateHash.of_values(shared), true)
+
+
+## `state_hash`, or with `synced` `sync_hash`, from `start`, the world's own values.
+func _fingerprint(start: int, synced: bool) -> int:
+	var result: int = start
 	for instance_name: String in sorted_names():
+		var state: GameState = instances[instance_name]
 		result = StateHash.mix(result, StateHash.name_code(instance_name))
-		result = StateHash.mix(result, instances[instance_name].state_hash())
+		if synced:
+			result = StateHash.mix(StateHash.mix(result, state.world_tick), state.own_hash())
+		else:
+			result = StateHash.mix(result, state.state_hash())
 		if left_at.has(instance_name):
 			result = StateHash.mix(result, left_at[instance_name])
 		var variant: String = WorldFlags.variant_of(self, instance_name)

@@ -430,7 +430,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   thousandths (`Fixed.ONE`), and every division rounds down through `Fixed` (`mul_div`, `ratio`,
   `scale`, `div_floor`), multiplying first and dividing last; never `/` on ints elsewhere.
   `GameState.state_hash()` fingerprints the whole state; a new value goes into the hash too
-  (`Feature.hash_values()` for a feature's).
+  (`Feature.hash_values()` for a feature's). Co-op's per-tick hash (`World.sync_hash`, #2095)
+  keeps each instance's own hash until it changes: whatever changes a state's fields outside a
+  tick and outside `GameState`'s own methods calls `GameState.touch()`.
 - **Every game rule is a feature** (owner's rule, #30): modular, and every one can be switched on or
   off per instance, also during a session (e.g. a boss phase). The core holds no game rule: only the
   tick, the seed, the region, the entities and the instance's features in their step order. A feature
