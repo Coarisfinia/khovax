@@ -3,7 +3,7 @@ extends Content
 ## The loot tables' content data (#90), which the loot slice owns (#412): one JSONC file per table,
 ## and one harvest table per species (#687), each checked against the schema beside it in CI.
 ## Both are the resource packs' (#1953, #1990): a player's pack can add or replace one.
-## The default pack's lie in data/loot_tables/ and data/harvest_tables/.
+## The default pack's lie in resourcepacks/default/loot_tables/ and harvest_tables/ (#1978).
 ## Everything else reads them through this.
 
 ## The loot tables' key in the content cache (ContentCatalog), and the source that reads them.

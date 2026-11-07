@@ -295,13 +295,13 @@ def schema_of(data_file: str) -> str:
     if parts[0] == "core":
         return f"core/data/schemas/{parts[2]}.schema.json"
     # A kind the default resource pack holds in its own folder (#1978) shares the core's schema
-    # when it is a core kind (the tiles, #1901), and otherwise keeps it in the slice that owns the
-    # kind (the quests).
+    # when it is a core kind (the tiles, #1901), and otherwise keeps it in the one slice that owns
+    # the kind (the quests in theirs, the loot tables and materials in the loot slice).
     if parts[:2] == ("resourcepacks", "default") and len(parts) == 4:
-        core = f"core/data/schemas/{parts[2]}.schema.json"
-        if Path(core).is_file():
-            return core
-        return f"slices/{parts[2]}/data/{parts[2]}.schema.json"
+        core = Path(f"core/data/schemas/{parts[2]}.schema.json")
+        if core.is_file():
+            return core.as_posix()
+        return next(Path("slices").glob(f"*/data/{parts[2]}.schema.json")).as_posix()
     # slices/<slice>/data/<file> belongs to the slice's own kind, named for the slice.
     kind = parts[1] if len(parts) == 4 else parts[3]
     return f"slices/{parts[1]}/data/{kind}.schema.json"
@@ -334,6 +334,9 @@ def entries() -> tuple[list[Entry], list[tuple[str, str]]]:
         "resourcepacks/default/realms/*.md",
         "resourcepacks/default/tiles/*.jsonc",
         "resourcepacks/default/quests/*.jsonc",
+        "resourcepacks/default/loot_tables/*.jsonc",
+        "resourcepacks/default/harvest_tables/*.jsonc",
+        "resourcepacks/default/materials/*.jsonc",
     )
     # The tools and tests are never shown to a player.
     files = [path for path in files if not path.startswith(("tools/", "tests/"))]

@@ -2,8 +2,9 @@ class_name MaterialContent
 extends Content
 ## The materials' content data (#774), which the loot slice owns (#412): one JSONC file per
 ## material, checked against materials.schema.json in CI. They're the resource packs' (#1953): the
-## ones the packs list, so a player's pack can add or replace one; the default pack's lie in the
-## slice's data/materials/. A material is an item a table gives that isn't a piece of gear
+## ones the packs list, so a player's pack can add or replace one; the default pack's lie in its
+## own folder, resourcepacks/default/materials/ (#1978). A material is an item a table gives that
+## isn't a piece of gear
 ## (GearContent); every item a table names is one of the two, which the content flow checks.
 
 ## The materials' key in the content cache (ContentCatalog).
