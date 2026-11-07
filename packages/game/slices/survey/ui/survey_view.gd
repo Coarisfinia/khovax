@@ -110,8 +110,13 @@ func _process(delta: float) -> void:
 	show_state()
 	var own: Vector2 = circles.get(_slot(), ground_of(Vector2i.ZERO))
 	_middle = _middle.lerp(own, 1.0 - exp(-GLIDE * delta))
-	changes.redraws += 1
-	queue_redraw()
+	# Its layers work out what they show first, so it knows which arrows they draw above it.
+	for layer: SurveyLayer in layers():
+		if layer.is_visible_in_tree():
+			layer.show_state()
+			layer.queue_redraw()
+	if changes.drawn_changed(_drawn()):
+		queue_redraw()
 
 
 func _draw() -> void:
@@ -180,15 +185,55 @@ func grey_arrow_box(key: String) -> Rect2:
 	return box.grow_individual(short.x / 2.0, short.y / 2.0, short.x / 2.0, short.y / 2.0)
 
 
-## Works out what is shown from the state. Called every frame while it shows; tests call it
-## directly.
+## Works out what is shown from the state: its ground only when what that's worked out from
+## changed (SurveyChanges, #2096), the players and the quests' targets each time. Called every frame
+## while it shows; tests call it directly.
 func show_state() -> void:
-	changes.rebuilds += 1
+	circles.clear()
+	quest_targets.clear()
+	if changes.ground_changed(self):
+		_show_ground()
+	if driver == null or driver.state == null:
+		return
+	var state: GameState = driver.state
+	for slot: int in GameState.MAX_PLAYERS:
+		var player: Entity = state.player(slot)
+		if player != null:
+			circles[slot] = _walked_ground(state, player)
+	quest_targets = quests.targets(state, _slot(), driver.local_instance_name())
+
+
+## Everything it draws from, to tell when it has to be drawn again (#2096): its ground, where its
+## middle and size put it, its zoom and looks, the players' circles in their colors, and the
+## quests' arrows it draws itself.
+func _drawn() -> Array:
+	var colors: Array[Color] = []
+	for slot: int in circles:
+		colors.append(PersonalColor.shown(driver, slot))
+	var own_arrows: Array[String] = []
+	for key: String in quest_targets:
+		if not drawn_above(key):
+			own_arrows.append(key)
+	return [
+		changes.rebuilds,
+		_middle,
+		size,
+		across,
+		backdrop,
+		bordered,
+		circles.duplicate(),
+		colors,
+		quest_targets.duplicate(),
+		own_arrows,
+		quests.arrow_color(),
+	]
+
+
+## Works out the tiles shown, those that block the way and the exits on them, here and next door.
+func _show_ground() -> void:
 	tiles.clear()
 	blocking.clear()
 	exits.clear()
-	circles.clear()
-	quest_targets.clear()
 	if driver == null or driver.state == null:
 		return
 	var state: GameState = driver.state
@@ -206,11 +251,6 @@ func show_state() -> void:
 		if tiles.has(Vector2i(exit.x, exit.y)):
 			exits[exit] = state.region.exit_blueprints[i]
 	_show_neighbours(state)
-	for slot: int in GameState.MAX_PLAYERS:
-		var player: Entity = state.player(slot)
-		if player != null:
-			circles[slot] = _walked_ground(state, player)
-	quest_targets = quests.targets(state, _slot(), driver.local_instance_name())
 
 
 ## The chevrons drawn for `exits`: one per exit, in its middle (#790), of a facing pair only the one
