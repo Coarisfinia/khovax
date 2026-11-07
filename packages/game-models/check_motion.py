@@ -33,11 +33,14 @@ from the .glb's .import, as the game imports it.
 `--speeds <folder>` (#2117) also takes the speeds from `<folder>/<model.glb>.speeds`, which
 check_rebuild.py's `--keep` writes from each build's `SPEEDS` line, so CI checks every model at
 the speeds its build prints; a model without one (a prop, the player's clips) is checked standing
-still. A model without a rig or clips passes: nothing moves; one with clips whose rig has no
-animation data to play them on fails (#2132). A clip or join that still fails today waits in KNOWN
-with the issue that fixes it (lib/known.py's way; not with `--summary`, whose verdict is the raw
-one): it prints its numbers and doesn't fail the check, and fails once it passes until it's taken
-off. CI runs it on every .glb."""
+still. A model whose build prints no speeds but has a Walk or Run clip fails there (#2128): CI would
+check its gait standing still. A foot the check can't find on the ground (no part of the mesh
+follows it) fails its clip rather than passing unseen (#2128). A model without a rig or clips
+passes: nothing moves; one with clips whose rig has no animation data to play them on fails
+(#2132). A clip or join that still fails today waits in KNOWN with the issue that fixes it
+(lib/known.py's way; not with `--summary`, whose verdict is the raw one): it prints its numbers
+and doesn't fail the check, and fails once it passes until it's taken off. CI runs it on every
+.glb."""
 
 import math
 import os
@@ -62,6 +65,8 @@ SLIDE_LIMIT = 0.2
 SEAM_POSE_LIMIT = 0.5
 SEAM_SHIFT_LIMIT = 0.002
 JITTER_LIMIT = 15.0
+# The clips the game glides a model at while they play: each needs the speed its build prints.
+GAITS = ("Walk", "Run")
 
 # (model, clip) that fails today, with the issue that fixes it; that issue takes its entries off.
 # A join is named after its lead with " join" (`("mana_wolf", "WalkStart join")`).
@@ -230,13 +235,17 @@ def check(rig, meshes, fps, loops, speeds, misses):
         late = start != 0
         loop = action.name in loops
         frames = sample(rig, meshes, feet, start, end)
+        # A foot no frame measures can't be seen to slide: that fails too (#2128).
+        unmeasured = sorted(name for name in feet if not any(name in spots for _t, _p, spots in frames))
         ends[action.name] = (frames[0], frames[-1])
         slide, mean, fastest = sliding(frames, feet, fps, speeds.get(action.name, 0.0))
         rough = roughness(spins(frames), loop)
         shake, shaking, at = jitter(rough, start)
-        fails = late or shake > JITTER_LIMIT or slide > SLIDE_LIMIT
+        fails = late or bool(unmeasured) or shake > JITTER_LIMIT or slide > SLIDE_LIMIT
         if late:
             misses.flag(action.name, "late-start")
+        for name in unmeasured:
+            misses.flag(action.name, name + "-unmeasured")
         misses.above(action.name, "slide", slide, SLIDE_LIMIT, "m/s")
         misses.above(action.name, "jitter", shake, JITTER_LIMIT, "deg/frame^2")
         text = "slide %.2f m/s (mean %.2f; %s)" % (
@@ -249,6 +258,8 @@ def check(rig, meshes, fps, loops, speeds, misses):
             text += "; seam %.2f deg, shift %.1f mm (%s), rough %.2f deg/frame^2 (%s)" % (
                 pose, shift * 1000, shifted, speed, jumping)
         text += "; jitter %.2f deg/frame^2 (%s, frame %d)" % (shake, shaking, at)
+        if unmeasured:
+            text += "; unmeasured (no part of the mesh follows the bone): %s" % ", ".join(unmeasured)
         if late:
             text += "; starts at frame %d, not 0: the game holds its first pose until then" % start
         passed = passed and not fails
@@ -315,6 +326,14 @@ def main():
         lines = []
     else:
         passed = True
+    if folder is not None:
+        # CI takes every speed from the build: a gait it has none for would be checked standing
+        # still, its slide meaning nothing (#2128).
+        unspeeded = [clip for clip in GAITS if clip in bpy.data.actions and clip not in speeds]
+        if unspeeded:
+            passed = False
+            log.error("MOTION %s: its build prints no speed for %s: print them in a SPEEDS line"
+                      % (model, ", ".join(unspeeded)), glb)
     for line in lines:
         text, fails = judge(model, line)
         passed = passed and not fails
