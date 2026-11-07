@@ -9,6 +9,103 @@ msgstr ""
 msgid "Loading the world…"
 msgstr ""
 
+#: resourcepacks/default/quests/bud_dew.jsonc
+msgid "Dew for an ${MONSTER:ombuwomo}"
+msgstr ""
+
+#: resourcepacks/default/quests/first_domination.jsonc
+msgid "Dominate your first monster"
+msgstr ""
+
+#: resourcepacks/default/quests/first_domination.jsonc
+msgid "beach"
+msgstr ""
+
+#: resourcepacks/default/quests/guild_charts_morwe_wudhen.jsonc
+msgid "Chart Morwe Wudhen for the ${FACTION:amvrel_velmarai}"
+msgstr ""
+
+#: resourcepacks/default/quests/guild_charts_morwe_wudhen.jsonc
+msgid "stream"
+msgstr ""
+
+#: resourcepacks/default/quests/guild_charts_morwe_wudhen.jsonc
+msgid "grove"
+msgstr ""
+
+#: resourcepacks/default/quests/guild_charts_morwe_wudhen.jsonc
+msgid "felling"
+msgstr ""
+
+#: resourcepacks/default/quests/guild_holds_edhra_tewk.jsonc
+msgid "Hold Edhra Tewk for the ${FACTION:amvrel_velmarai}"
+msgstr ""
+
+#: resourcepacks/default/quests/guild_holds_edhra_tewk.jsonc
+msgid "north hold"
+msgstr ""
+
+#: resourcepacks/default/quests/guild_holds_edhra_tewk.jsonc
+msgid "south hold"
+msgstr ""
+
+#: resourcepacks/default/quests/guild_holds_edhra_tewk.jsonc
+msgid "watch"
+msgstr ""
+
+#: resourcepacks/default/quests/hound_magma.jsonc
+msgid "A magma core for a ${MONSTER:kalvrakkor}"
+msgstr ""
+
+#: resourcepacks/default/quests/lumwen_hoal_fork.jsonc
+msgid "Pond or thicket"
+msgstr ""
+
+#: resourcepacks/default/quests/lumwen_hoal_fork.jsonc
+#: resourcepacks/default/quests/pond_chest.jsonc
+msgid "pond"
+msgstr ""
+
+#: resourcepacks/default/quests/lumwen_hoal_fork.jsonc
+msgid "thicket"
+msgstr ""
+
+#: resourcepacks/default/quests/pond_chest.jsonc
+msgid "The chest by the pond"
+msgstr ""
+
+#: resourcepacks/default/quests/pup_crystal.jsonc
+msgid "A crystal for a ${MONSTER:vynnimu}"
+msgstr ""
+
+#: resourcepacks/default/quests/pup_rime.jsonc
+msgid "A rime shard for a ${MONSTER:kavrikka}"
+msgstr ""
+
+#: resourcepacks/default/quests/sprite_ribbon.jsonc
+msgid "A wind ribbon for a ${MONSTER:tikazzelu}"
+msgstr ""
+
+#: resourcepacks/default/quests/tadpole_pondweed.jsonc
+msgid "Pondweed for a ${MONSTER:wobulumu}"
+msgstr ""
+
+#: resourcepacks/default/quests/three_ombulumo.jsonc
+msgid "Dominate two ${MONSTER:ombulumo}"
+msgstr ""
+
+#: resourcepacks/default/quests/tormaesk_escort.jsonc
+msgid "The way into ${PLACE:hrovumel_stolm}"
+msgstr ""
+
+#: resourcepacks/default/quests/tormaesk_escort.jsonc
+msgid "sealed passage"
+msgstr ""
+
+#: resourcepacks/default/quests/tormaesk_escort.jsonc
+msgid "inner shrine"
+msgstr ""
+
 #: resourcepacks/default/realms/ardvaun.md
 msgid "Ardvaun"
 msgstr ""
@@ -1005,103 +1102,6 @@ msgstr ""
 
 #: slices/paths/meta/path_mark.gd
 msgid "Harmony and supremacy"
-msgstr ""
-
-#: slices/quests/data/bud_dew.jsonc
-msgid "Dew for an ${MONSTER:ombuwomo}"
-msgstr ""
-
-#: slices/quests/data/first_domination.jsonc
-msgid "Dominate your first monster"
-msgstr ""
-
-#: slices/quests/data/first_domination.jsonc
-msgid "beach"
-msgstr ""
-
-#: slices/quests/data/guild_charts_morwe_wudhen.jsonc
-msgid "Chart Morwe Wudhen for the ${FACTION:amvrel_velmarai}"
-msgstr ""
-
-#: slices/quests/data/guild_charts_morwe_wudhen.jsonc
-msgid "stream"
-msgstr ""
-
-#: slices/quests/data/guild_charts_morwe_wudhen.jsonc
-msgid "grove"
-msgstr ""
-
-#: slices/quests/data/guild_charts_morwe_wudhen.jsonc
-msgid "felling"
-msgstr ""
-
-#: slices/quests/data/guild_holds_edhra_tewk.jsonc
-msgid "Hold Edhra Tewk for the ${FACTION:amvrel_velmarai}"
-msgstr ""
-
-#: slices/quests/data/guild_holds_edhra_tewk.jsonc
-msgid "north hold"
-msgstr ""
-
-#: slices/quests/data/guild_holds_edhra_tewk.jsonc
-msgid "south hold"
-msgstr ""
-
-#: slices/quests/data/guild_holds_edhra_tewk.jsonc
-msgid "watch"
-msgstr ""
-
-#: slices/quests/data/hound_magma.jsonc
-msgid "A magma core for a ${MONSTER:kalvrakkor}"
-msgstr ""
-
-#: slices/quests/data/lumwen_hoal_fork.jsonc
-msgid "Pond or thicket"
-msgstr ""
-
-#: slices/quests/data/lumwen_hoal_fork.jsonc
-#: slices/quests/data/pond_chest.jsonc
-msgid "pond"
-msgstr ""
-
-#: slices/quests/data/lumwen_hoal_fork.jsonc
-msgid "thicket"
-msgstr ""
-
-#: slices/quests/data/pond_chest.jsonc
-msgid "The chest by the pond"
-msgstr ""
-
-#: slices/quests/data/pup_crystal.jsonc
-msgid "A crystal for a ${MONSTER:vynnimu}"
-msgstr ""
-
-#: slices/quests/data/pup_rime.jsonc
-msgid "A rime shard for a ${MONSTER:kavrikka}"
-msgstr ""
-
-#: slices/quests/data/sprite_ribbon.jsonc
-msgid "A wind ribbon for a ${MONSTER:tikazzelu}"
-msgstr ""
-
-#: slices/quests/data/tadpole_pondweed.jsonc
-msgid "Pondweed for a ${MONSTER:wobulumu}"
-msgstr ""
-
-#: slices/quests/data/three_ombulumo.jsonc
-msgid "Dominate two ${MONSTER:ombulumo}"
-msgstr ""
-
-#: slices/quests/data/tormaesk_escort.jsonc
-msgid "The way into ${PLACE:hrovumel_stolm}"
-msgstr ""
-
-#: slices/quests/data/tormaesk_escort.jsonc
-msgid "sealed passage"
-msgstr ""
-
-#: slices/quests/data/tormaesk_escort.jsonc
-msgid "inner shrine"
 msgstr ""
 
 #: slices/quests/ui/quest_list_view.gd
