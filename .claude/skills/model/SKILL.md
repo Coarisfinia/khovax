@@ -595,7 +595,15 @@ body**, as a clip library of their own, so a later body plays the same clips:
    `BoneMap` with `SkeletonProfileHumanoid` (Meshy's Mixamo names, as Godot imports them, to the
    profile's bones), so its tracks turn `%GeneralSkeleton:<profile bone>`. Any body imported with
    such a map, Meshy's or not, plays the same clips. The boot flow checks the library loads with
-   its clips on the profile's bones (`UNWORN_CLIPS`) until the body's view plays it.
+   its clips on the profile's bones (`UNWORN_CLIPS`) until a body's view plays it.
+4. **The body plays the library** (#1827): `import_body.py -- <rigged.glb> <textured.glb>
+   packages/game/assets/player/player_body.glb` takes the rigged export's body and rig (no clips)
+   and moves the textured export's UVs and colour onto it corner by corner, when Meshy textured
+   the same mesh apart (it fails, saying how far off, when the two aren't the same triangles). Its
+   `.import` carries the library's `BoneMap`. `PlayerView` names the library (`CLIP_LIBRARY`) and
+   plays it on the body through `ClipLibrary`; the footprint and world-scale checks measure the
+   body in the library's clips, at the view's `MODEL_SCALE`, and `render_in_game.gd` renders it
+   with `library=<id> scale=<n>`.
 
 A new body still needs its contacts and clearances checked against the clips, since its
 proportions differ.
