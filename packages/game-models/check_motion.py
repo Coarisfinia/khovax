@@ -33,9 +33,11 @@ from the .glb's .import, as the game imports it.
 `--speeds <folder>` (#2117) also takes the speeds from `<folder>/<model.glb>.speeds`, which
 check_rebuild.py's `--keep` writes from each build's `SPEEDS` line, so CI checks every model at
 the speeds its build prints; a model without one (a prop, the player's clips) is checked standing
-still. A model without a rig or clips passes: nothing moves. A clip or join that still fails today
-waits in KNOWN with the issue that fixes it (lib/known.py's way): it prints its numbers and doesn't
-fail the check, and fails once it passes until it's taken off. CI runs it on every .glb."""
+still. A model without a rig or clips passes: nothing moves; one with clips whose rig has no
+animation data to play them on fails (#2132). A clip or join that still fails today waits in KNOWN
+with the issue that fixes it (lib/known.py's way; not with `--summary`, whose verdict is the raw
+one): it prints its numbers and doesn't fail the check, and fails once it passes until it's taken
+off. CI runs it on every .glb."""
 
 import math
 import os
@@ -297,11 +299,16 @@ def main():
     speeds = {name: float(value) for name, value in pairs}
     fps, loops = imported.settings(glb)
     rig = imported.load_view(glb, fps)
-    if rig is None or rig.animation_data is None or not bpy.data.actions:
+    if rig is None or not bpy.data.actions:
         # A prop: no rig or no clips, nothing moves.
         log.info("MOTION %s no rig or clips: nothing to check" % model)
         log.info("MOTION CHECK: PASS (at %d fps)" % fps)
         sys.exit(0)
+    if rig.animation_data is None:
+        # The clips move something else, or nothing: the rig can't play them, so none is checked.
+        log.error("MOTION %s has clips but its rig has no animation data to play them on" % model, glb)
+        log.info("MOTION CHECK: FAIL (at %d fps)" % fps)
+        sys.exit(1)
     misses = summary.Misses()
     lines, measured = check(rig, ground.skinned(bpy.data.objects), fps, loops, speeds, misses)
     if short:
