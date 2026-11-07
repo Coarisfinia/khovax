@@ -246,7 +246,9 @@ func _check_hash_cost() -> String:
 			counter.hashed,
 			HASH_TICKS,
 		]
-	# Every instance's own hash taken afresh gives the number the driver kept.
+	# A tick later, without the counter, every instance's own hash taken afresh gives the number the
+	# driver kept.
+	_run_frames(1)
 	var kept: int = _driver.hashes.get(_driver.world.tick, 0)
 	for each: GameState in _driver.world.instances.values():
 		each.touch()
