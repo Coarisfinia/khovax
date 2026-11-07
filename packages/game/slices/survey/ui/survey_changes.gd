@@ -37,9 +37,9 @@ func drawn_changed(drawn: Array) -> bool:
 
 
 ## Everything `survey`'s ground is worked out from, to compare: the instance and its region, which
-## tiles each player sees (FogFeature hands a new array whenever a player's sight changes),
-## revealed and changed in place, the ground next door and its neighbours, and how much this
-## machine's player explored here and next door, which only grows within a generation.
+## tiles each player sees (FogFeature hands a new array whenever a player's sight changes), which
+## are revealed and which changed in place, the ground next door and its neighbours, and how much
+## this machine's player explored here and next door, which only grows within a generation.
 static func ground_of(survey: SurveyView) -> Array:
 	var driver: Session = survey.driver
 	if driver == null or driver.state == null:
@@ -49,7 +49,7 @@ static func ground_of(survey: SurveyView) -> Array:
 	var key: Array = [state, state.region, driver.world, here, state.next_door_version]
 	var fog: FogFeature = state.feature(FogFeature.ID) as FogFeature
 	if fog != null:
-		key.append_array([fog.enabled, fog.visible.duplicate(), fog.revealed.size()])
+		key.append_array([fog.enabled, fog.visible.duplicate(), fog.revealed.duplicate()])
 	for tile: Vector2i in state.changed_tiles:
 		key.append_array([tile, state.region.terrain.get(tile, "")])
 	if survey.neighbours != null:
