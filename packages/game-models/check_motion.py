@@ -64,6 +64,33 @@ JITTER_LIMIT = 15.0
 # (model, clip) that fails today, with the issue that fixes it; that issue takes its entries off.
 # A join is named after its lead with " join" (`("mana_wolf", "WalkStart join")`).
 KNOWN = {
+    ("fohossa", "Run"): 1629,
+    ("fohossa", "Walk"): 1629,
+    ("frostfire_hound", "ChannelStart join"): 2127,
+    ("frostfire_hound", "Run"): 2127,
+    ("frostfire_hound", "Walk"): 2127,
+    ("kalvrakkor_magma", "ChannelStart join"): 2026,
+    ("kalvrakkor_magma", "Run"): 2026,
+    ("kalvrakkor_magma", "Walk"): 2026,
+    ("kavrikka", "Attack"): 1780,
+    ("kavrikka", "Run"): 1780,
+    ("kavrikka", "Walk"): 1780,
+    **{("player_clips", clip): 2128
+       for clip in ("GetUp", "HarvestBush", "Hit", "KnockedDown", "PickUp", "Run", "Throw", "Walk")},
+    # The third-party Rogue's every clip (#2129).
+    **{("Rogue", clip): 2129 for clip in (
+        "1H_Melee_Attack_Chop", "1H_Melee_Attack_Slice_Diagonal", "1H_Melee_Attack_Slice_Horizontal",
+        "1H_Melee_Attack_Stab", "1H_Ranged_Aiming", "1H_Ranged_Reload", "1H_Ranged_Shoot",
+        "1H_Ranged_Shooting", "2H_Melee_Attack_Chop", "2H_Melee_Attack_Slice", "2H_Melee_Attack_Spin",
+        "2H_Melee_Attack_Spinning", "2H_Melee_Attack_Stab", "2H_Ranged_Aiming", "2H_Ranged_Shoot",
+        "2H_Ranged_Shooting", "Block", "Block_Attack", "Cheer", "Death_A", "Death_B", "Dodge_Backward",
+        "Dodge_Forward", "Dodge_Left", "Dodge_Right", "Dualwield_Melee_Attack_Chop",
+        "Dualwield_Melee_Attack_Slice", "Dualwield_Melee_Attack_Stab", "Hit_A", "Hit_B", "Lie_Down",
+        "Lie_StandUp", "Running_A", "Running_B", "Running_Strafe_Left", "Running_Strafe_Right",
+        "Sit_Chair_Down", "Sit_Floor_Down", "Sit_Floor_StandUp", "Spellcast_Long", "Spellcast_Raise",
+        "Spellcast_Shoot", "Throw", "Unarmed_Melee_Attack_Kick", "Unarmed_Melee_Attack_Punch_A",
+        "Unarmed_Melee_Attack_Punch_B", "Walking_A", "Walking_B", "Walking_Backwards", "Walking_C",
+    )},
 }
 
 
