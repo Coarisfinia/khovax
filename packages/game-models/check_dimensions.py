@@ -35,7 +35,7 @@ def main():
             # A prop: no rig, so no limbs.
             log.info("DIMENSIONS %s no rig: nothing to check" % model)
             continue
-        lines, ok = dimensions.report(rig)
+        lines, ok = dimensions.report(rig, model)
         passed = passed and ok
         for line in lines:
             if line.startswith("FAIL"):

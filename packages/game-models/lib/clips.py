@@ -79,7 +79,7 @@ def _sink(reach, lean, slant, bob):
 
 
 def gait(frames, stride, body, phases, duty, fold, lift=0.0, curl=0.0, bob=0.4, roll=0.0, spine_flex=0.0,
-         planted=True):
+         planted=True, overshoot=None, matched=MATCHED):
     """A looping gait, posed on every frame: each paw is planted for `duty` of the cycle, running
     back `stride` x `duty` at the body's speed (`stride`: metres the body moves in one cycle, at
     `body`'s unscaled size, the quadruped.Proportions), then lifts (`lift` of its leg's reach at
@@ -93,7 +93,13 @@ def gait(frames, stride, body, phases, duty, fold, lift=0.0, curl=0.0, bob=0.4, 
     Not `planted`, the legs swing from their tops as a whole instead, their joints folding by
     `fold` radians at the top of the swing, and the paws slide a little as the legs lean: at a
     run's speed, legs that reach for planted paws turn their joints too sharply from one frame to
-    the next (#1073)."""
+    the next (#1073). A free paw runs on past where it lifts off and where it lands (it leaves and
+    meets the ground at the ground's speed); with an `overshoot` (metres) it runs on at most about
+    that far, easing smoothly into it: a leg short against its stride would otherwise swing up
+    level with the body, through the belly, and stop dead there as its reach runs out (#2026).
+    A planted paw runs with the ground as it rises and comes down for `matched` of how long it
+    stands (MATCHED): a gait whose paws stand only briefly needs a larger share, or its paws slide
+    as they lift and land."""
     reaches = {"front": _leg(body.front_leg), "hind": _leg(body.hind_leg)}
     length = abs(body.hips[1] - body.front_leg[0][1])
     neck = math.dist(body.chest, body.nose)
@@ -106,8 +112,13 @@ def gait(frames, stride, body, phases, duty, fold, lift=0.0, curl=0.0, bob=0.4, 
         for (leg, side), phase in phases.items():
             u = (t - phase) % 1.0
             # Free legs needn't run with the ground as they rise and come down.
-            ahead, up = _step(u, duty, sweep, MATCHED * duty / (1.0 - duty) if planted else 0.0)
+            ahead, up = _step(u, duty, sweep, matched * duty / (1.0 - duty) if planted else 0.0)
             reach, lean = reaches[leg]
+            if not planted and overshoot is not None and abs(ahead) > edge:
+                # tanh leaves the edge at the same speed and acceleration: no kink in the swing.
+                # An overshoot of 0 (or less) holds the paw at the edge.
+                run_on = overshoot * math.tanh((abs(ahead) - edge) / overshoot) if overshoot > 0 else 0.0
+                ahead = math.copysign(edge + run_on, ahead)
             slant = math.asin(max(-1.0, min(1.0, ahead / reach)))
             swings[leg, side] = (lean - slant, up)
             if planted:
