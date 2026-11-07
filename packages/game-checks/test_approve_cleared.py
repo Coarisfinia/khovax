@@ -100,6 +100,14 @@ class ApproveClearedTest(unittest.TestCase):
     def test_the_games_world_is_refused(self):
         self.assert_refused(("packages/game/realms/ardvaun.md", None))
 
+    def test_the_games_scenes_and_media_are_refused_outside_its_tests(self):
+        self.assert_refused(("packages/game/slices/board/look/hex_grid.tscn", None))
+        approved, log = self.check(("packages/game/tests/e2e/fixture.tscn", None))
+        self.assertTrue(approved, log)
+
+    def test_a_rename_of_a_games_asset_into_its_tests_is_refused(self):
+        self.assert_refused(("packages/game/tests/e2e/a.png", "packages/game/assets/a.png"))
+
     def test_a_resource_packs_file_is_refused(self):
         self.assert_refused(("resourcepacks/default/realms/ardvaun.md", None))
 

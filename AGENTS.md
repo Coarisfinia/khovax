@@ -323,9 +323,10 @@ background; only wait in the foreground for a result the very next step needs.
     `subagent-cleared` and `.github/workflows/approve-cleared.yml` approves it (#1874) as a
     separate reviewer GitHub App, but only
     when the agent bot or a human admin put the label on, only into the default branch, and never
-    for a pull request that changes or renames files that are always user-facing (the game's
-    `assets/`, `translations/`, `realms/` and `regions/`, and its scenes, resources, images,
-    models, sounds, fonts and shaders, outside its `tests/` and `tools/`), nor for one whose
+    for a pull request that changes or renames files that are always user-facing (everything
+    under `resourcepacks/` (#2111), the game's `assets/`, `translations/`, `realms/` and
+    `regions/`, and its scenes, resources, images, models, sounds, fonts and shaders, outside its
+    `tests/` and `tools/`), nor for one whose
     changed workflows could reach a secret's environment: a job with any environment but
     `github-pages`, or a job calling another workflow (`uses:`), which could reach one through
     it. The reviewer app's key lives in such an environment, so **a change to the guard, or to
