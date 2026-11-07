@@ -8,7 +8,7 @@ stand-in: one small triangle on its root bone, which nothing ever shows."""
 
 import bpy
 
-from lib import scene
+from lib import imported, scene
 
 # Meshy's clips are keyed at 30 frames a second, the game's clip rate too: imported at another
 # rate, the export would sample them between their keys.
@@ -39,6 +39,12 @@ def load(path):
         actions.append(data.action)
     if len(actions) > 1:
         raise RuntimeError("%s: %d clips, not one: a clip source holds one" % (path, len(actions)))
+    if actions:
+        # One glTF animation moving several objects is one action with a slot each (#2145): only
+        # the rig's stays, so the clip plays as the rig played it wherever it is stashed.
+        own = imported.slot(actions[0], rig)
+        for other in [found for found in actions[0].slots if own is not None and found != own]:
+            actions[0].slots.remove(other)
     if data:
         for track in list(data.nla_tracks):
             data.nla_tracks.remove(track)
@@ -58,7 +64,7 @@ def stash(rig, action, name):
     strip = track.strips.new(name, start, action)
     strip.name = name
     if action.slots:
-        strip.action_slot = action.slots[0]
+        strip.action_slot = imported.slot(action, rig) or action.slots[0]
 
 
 def stand_in(rig):

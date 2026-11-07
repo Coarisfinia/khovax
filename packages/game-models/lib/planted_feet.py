@@ -10,6 +10,8 @@ import math
 import bpy
 from mathutils import Matrix, Vector
 
+from lib import imported
+
 TOLERANCE = 0.02
 SIDES = ("Left", "Right")
 # The joints of a foot that touch the ground when it stands flat, per side, in Meshy's Mixamo
@@ -34,7 +36,7 @@ def _playing(rig, action):
             track.mute = True
         data.action = action
         if action.slots:
-            data.action_slot = action.slots[0]
+            data.action_slot = imported.slot(action, rig) or action.slots[0]
         yield
     finally:
         data.action = held

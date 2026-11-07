@@ -4,6 +4,8 @@ clip's pose sinks, eased, and `report` samples every frame of every clip, for ch
 
 import bpy
 
+from lib import imported
+
 # How far above the ground (metres) a pose's lowest point is lifted to: room for the export's
 # resampling.
 CLEARANCE = 0.005
@@ -114,7 +116,7 @@ def report(rig, meshes, tolerance, misses=None):
     for action in sorted(bpy.data.actions, key=lambda a: a.name):
         rig.animation_data.action = action
         if action.slots:
-            rig.animation_data.action_slot = action.slots[0]
+            rig.animation_data.action_slot = imported.slot(action, rig) or action.slots[0]
         start, end = (int(round(value)) for value in action.frame_range)
         mesh_low = float("inf")
         feet_low = {name: float("inf") for name in feet_names}
