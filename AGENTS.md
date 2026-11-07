@@ -77,7 +77,9 @@ is assigned to the owner (`--assignee "$OWNER"`, the login looked up as above).
 repositories). The container folder `project-khovax/` holds `main/` (the primary checkout, always on
 `main`) and one `<issue>-<slug>/` worktree per open branch, created
 with `git -C main worktree add ../<branch> -b <branch>` and removed once its pull request is merged.
-Never create or switch branches inside `main/`.
+Never create or switch branches inside `main/`. A new worktree runs `uv run --locked
+packages/game-build/link_resource_packs.py` before any Godot run: without that link, Godot stops at
+once (#2134).
 
 **Having 5 pull requests waiting for the owner's review at all times is the mandatory goal**
 (owner's rule, #1088), so the owner can go through them fast: whenever fewer than 5 wait, building

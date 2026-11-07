@@ -744,10 +744,11 @@ clips. Ask the owner only when it's unclear what should move how.
    uses (the boot flow, #992), from the clips the view lists in its `CLIPS` constant: a view that
    plays a new clip adds it there. A monster's model is worn by naming it in its species' data
    (`model`, #1223), and the boot flow checks it against the monster views' clips.
-5. **In game:** first re-import after every build (`godot --headless --path packages/game
-   --import`): Godot renders its imported copy of the `.glb`, and a stale one shows the previous
-   build, however much the Blender checks say changed (#1164). Then, with
-   `packages/game/tools/models/render_in_game.gd`, run off the desktop through
+5. **In game:** a new worktree first links the resource packs (`uv run --locked
+   packages/game-build/link_resource_packs.py`, #2134). Then re-import after every build (`godot
+   --headless --path packages/game --import`): Godot renders its imported copy of the `.glb`, and a
+   stale one shows the previous build, however much the Blender checks say changed (#1164). Then,
+   with `packages/game/tools/models/render_in_game.gd`, run off the desktop through
    `packages/game-offscreen/offscreen.py` (AGENTS.md's screenshot recipe; never a WSLg window), put
    the model in the game, under the game's
    cel shading and its top-down camera at play distance, on real terrain, next to the player for
@@ -942,10 +943,11 @@ clips. Ask the owner only when it's unclear what should move how.
   Publish them on the `assets` branch per AGENTS.md.
 - **One command for all of them (#1525):** `uv run --locked --package khovax-game-models
   packages/game-models/render_media.py packages/game/assets/<name>/<name>.glb --pr <n> [--tag v2]
-  [--quick]` renders the sheet, the in-game shots (desktop, phone, close-ups, points, the six
-  sides joined into one picture) and every clip's GIF in game and close up, Blender and Godot side
-  by side and Godot off the desktop, publishes them as `pr-<n>[-<tag>]-*` and prints the
-  description's media block, ready to paste. `--quick` renders only the fast-feedback pictures.
+  [--quick]` (in a new worktree, after `link_resource_packs.py` as in step 5) renders the sheet,
+  the in-game shots (desktop, phone, close-ups, points, the six sides joined into one picture)
+  and every clip's GIF in game and close up, Blender and Godot side by side and Godot off the
+  desktop, publishes them as `pr-<n>[-<tag>]-*` and prints the description's media block, ready
+  to paste. `--quick` renders only the fast-feedback pictures.
   When a render fails or hangs, the pictures that finished are still published, the block leaves
   the missing ones out and lists them with their logs, and the run exits 1 (#1694).
   It also leaves each clip's middle pose as a Blender sheet (`poses/`) and four frames of each clip
