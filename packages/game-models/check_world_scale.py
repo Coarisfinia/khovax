@@ -42,10 +42,7 @@ FIGURE_VIEW = "PlayerView"
 
 # (model, measure: "height" or "length") that fails today, with the issue that fixes it; that
 # issue takes its entries off.
-KNOWN = {
-    # The gate the player walks through stands below the player (#1907).
-    ("tentacle_gate", "height"): 1907,
-}
+KNOWN = {}
 
 
 def size(rig, meshes, standing=None):
