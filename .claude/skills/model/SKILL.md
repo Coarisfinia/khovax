@@ -763,9 +763,14 @@ clips. Ask the owner only when it's unclear what should move how.
    **Before and after from one camera (#2107):** a view's camera frames where the model moves over
    the clip, so it re-frames on every build and a before GIF doesn't line up with its after. Each
    clip run from a view (`from=<view>`) writes where its camera stood beside its frames
-   (`<Clip>.camera`). Render the previous build first, then the new one with
-   `camera=<the first run's out_dir>`: each clip's camera stands where it stood before. Or render
-   both with `camera=rest`, which frames the model standing at rest, as the still sides do (the
+   (`<Clip>.camera`). Render the previous build first, then the new build with the first run's
+   command, changed only in its out_dir (the same seed, `--seed=0`, the same instance and launch
+   options, the same `size=`, `from=` and `clip=`), plus `camera=<the first run's out_dir>`: each
+   clip's camera stands where it stood before. The saved camera is a place in the world, so a run
+   that puts the model anywhere else gets a camera pointed at a different spot (#2133). `camera=`
+   is used only for clip shots: with `from=` but no `clip=` the run takes its still sides and
+   ignores it.
+   Or render both with `camera=rest`, which frames the model standing at rest, as the still sides do (the
    same camera only while the build leaves the rest pose alone). The game camera already stays put.
 7. **Budget:** report the triangles, bones, materials, texture sizes and `.glb` size. Medium-poly
    means a few thousand triangles for a monster (a Meshy download about 6,000, #1671); justify
