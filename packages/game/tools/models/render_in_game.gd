@@ -22,13 +22,17 @@ extends SceneTree
 ## `camera=<dir>` where that folder's `<Clip>.camera` says for each clip, e.g. a previous run's
 ## out_dir.
 ##
+## A body without clips of its own (the player's, #1827) plays a clip library's with
+## `library=<id>` (its id in the resource packs, ClipLibrary), and `scale=<n>` draws the model at
+## the scale its view does (PlayerView.MODEL_SCALE).
+##
 ## Render it off the desktop and silent, as AGENTS.md's screenshot recipe says:
 ##   uv run --locked packages/game-offscreen/offscreen.py -- --path packages/game \
 ##     -s res://tools/models/render_in_game.gd -- \
 ##     res://assets/<name>/<name>.glb <out_dir> [size=1280x720] \
 ##     [clip=<Clip>[,<Clip>...] [from=<view> [camera=rest|<file>|<dir>]]] [points] [agitated] \
 ##     [type=<type>] \
-##     [leaning=harmony|supremacy] \
+##     [leaning=harmony|supremacy] [library=<id>] [scale=<n>] \
 ##     --seed=0
 ## The launch options after it (LaunchOptions) start the world as the game would. No `--user-dir`
 ## is needed: offscreen.py gives every run its own throwaway `user://` folder (#1188).
@@ -183,6 +187,12 @@ func _place() -> void:
 	_piece = HexPiece.new()
 	_piece.base_offset = 0.0
 	var model: Node3D = (load(OS.get_cmdline_user_args()[0]) as PackedScene).instantiate() as Node3D
+	var scale: String = _option("scale")
+	if not scale.is_empty():
+		model.scale = Vector3.ONE * scale.to_float()
+	var library: String = _option("library")
+	if not library.is_empty():
+		var _played: AnimationPlayer = ClipLibrary.play_on(model, library)
 	Toon.apply_to_model(model)
 	var glow: EyeGlow = EyeGlow.add_to(model)
 	_glow_as_asked(glow)
