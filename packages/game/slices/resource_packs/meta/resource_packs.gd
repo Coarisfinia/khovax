@@ -12,6 +12,11 @@ const DEFAULT: String = "res://slices/resource_packs/data/default.jsonc"
 ## The default pack's .pck, built by the pack builder like any pack, which every build carries and
 ## mounts like one (#1941). A run from the project has none and reads the files DEFAULT names.
 const BUILT_DEFAULT: String = "res://packs/default.pck"
+## Where a run from the project finds the default pack's moved files (#1978): the repository's
+## resourcepacks/, which the project reaches only through an untracked link a checkout must make.
+const LINKED: String = "res://resourcepacks/"
+## What makes that link, run from the repository's root.
+const LINK_COMMAND: String = "uv run --locked packages/game-build/link_resource_packs.py"
 
 ## The loaded packs, in lookup order, the default pack last; read on the first lookup.
 static var _packs: Array[ResourcePack] = []
@@ -225,10 +230,31 @@ static func _default_pack() -> ResourcePack:
 				push_error("the build's default resource pack can't be used: " + _default.problem)
 				_default = null
 		if _default == null:
+			# A build that carries the default pack has no checkout to link.
+			if (not FileAccess.file_exists(BUILT_DEFAULT)
+					and not DirAccess.dir_exists_absolute(LINKED)):
+				_stop_without_link()
 			_default = ResourcePack.parse(Content.text_in(DEFAULT), "res://")
 			if not _default.problem.is_empty():
 				push_error("the default resource pack can't be read: " + _default.problem)
 	return _default
+
+
+## Names the missing link and ends the run (#2123): without it the default pack's realms, regions
+## and tiles are missing, and the game would loop on script errors instead of saying why. The quit
+## is deferred to the frame's end, and a later quit in that frame sets the exit code instead.
+## The editor is only told: @tool scripts (PlayerView) reach this there, and quitting would close
+## it.
+static func _stop_without_link() -> void:
+	push_error(
+		(
+			"%s is missing: this checkout has no link to the resource packs. Make it with `%s`."
+			% [LINKED, LINK_COMMAND]
+		)
+	)
+	var tree: SceneTree = Engine.get_main_loop() as SceneTree
+	if tree != null and not Engine.is_editor_hint():
+		tree.quit(1)
 
 
 ## Reads the packs again on the next lookup, and forgets every resource looked up, so packs added
