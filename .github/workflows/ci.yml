@@ -262,6 +262,14 @@ jobs:
         # checked in parallel and every failing one is named (#923).
         run: GODOT=~/godot/godot uv run --locked --package khovax-game-checks ../game-checks/script_check.py
 
+      - name: "🔗 Check a checkout without the resource packs' link stops, naming it"
+        # A fresh worktree has no link (link_resource_packs.py): the game and the tools must say
+        # so once and stop, not loop on script errors until they're killed (#2123). The test runs
+        # a copy of the project without the link, so this checkout keeps its own.
+        run: |
+          GODOT=~/godot/godot uv run --locked --package khovax-game-checks \
+            ../game-checks/test_missing_pack_link.py
+
       - name: "🧪 Run the headless e2e tests"
         # timeout guards against a script error in the runner leaving the SceneTree running forever.
         # Godot names what leaked only once it exits, after the runner's own verdict, so its log is
