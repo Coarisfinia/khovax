@@ -11,8 +11,7 @@ The texts come from:
   items, the combinators and if/then/else, so a new player-facing field is marked once, where it's
   declared;
 - realms: the name (its title, #1710), codex entry and gloss of each realm,
-  resourcepacks/default/realms/<id>.md (#1978);
-- quests: their content fields, as above, resourcepacks/default/quests/<id>.jsonc (#1978).
+  resourcepacks/default/realms/<id>.md (#1978).
 
 Texts are kept as written, text tags (${…}) included: a tag is resolved after the line is
 translated. Each entry names the files it comes from, without line numbers, so moving a line
@@ -299,10 +298,6 @@ def schema_of(data_file: str) -> str:
         core = f"core/data/schemas/{parts[3]}.schema.json"
         if Path(core).is_file():
             return core
-    # A slice's own kind the default pack holds in its own folder (the quests, #1978) keeps its
-    # schema in its slice.
-    if parts[:2] == ("resourcepacks", "default") and len(parts) == 4:
-        return f"slices/{parts[2]}/data/{parts[2]}.schema.json"
     # slices/<slice>/data/<file> belongs to the slice's own kind, named for the slice.
     kind = parts[1] if len(parts) == 4 else parts[3]
     return f"slices/{parts[1]}/data/{kind}.schema.json"
@@ -328,12 +323,7 @@ def entries() -> tuple[list[Entry], list[tuple[str, str]]]:
     and its file): one text with two plurals, or both with and without one, which gettext can't
     hold in one entry."""
     files = git_files(
-        "*.gd",
-        "*.tscn",
-        "core/data/*.jsonc",
-        "slices/*/data/*.jsonc",
-        "resourcepacks/default/realms/*.md",
-        "resourcepacks/default/quests/*.jsonc",
+        "*.gd", "*.tscn", "core/data/*.jsonc", "slices/*/data/*.jsonc", "resourcepacks/default/realms/*.md"
     )
     # The tools and tests are never shown to a player.
     files = [path for path in files if not path.startswith(("tools/", "tests/"))]

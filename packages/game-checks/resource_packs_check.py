@@ -12,14 +12,13 @@ will have (#1858), and looked up only through ResourcePacks. It fails when
   resource or content file of the game's names its id as a string (but for the realms, the
   quests, species, catalogues, tile blueprints, loot and harvest tables and materials, which the
   game finds by listing the pack), or a file of its kind (an image, model or sound under
-  assets/, a region file or piece under regions/, a realm in resourcepacks/default/realms/, a
-  quest in resourcepacks/default/quests/, a species directly in slices/species/data/, a catalogue
-  under translations/, a
+  assets/, a region file or piece under regions/, a realm in resourcepacks/default/realms/, a quest in the quests
+  slice's data/, a species directly in slices/species/data/, a catalogue under translations/, a
   tile blueprint in slices/resource_packs/data/tiles/, a loot table, harvest table or material in
   the loot slice's data/loot_tables/, data/harvest_tables/ or data/materials/) is in the repository
   but not in the manifest;
 - a quest's, species', loot table's, harvest table's or material's entry isn't its own file
-  (resourcepacks/default/quests/<id>.jsonc, slices/species/data/<id>.jsonc,
+  (slices/quests/data/<id>.jsonc, slices/species/data/<id>.jsonc,
   slices/loot/data/loot_tables/<id>.jsonc, slices/loot/data/harvest_tables/<id>.jsonc,
   slices/loot/data/materials/<id>.jsonc), so it's named
   after its file (#72);
@@ -32,7 +31,7 @@ will have (#1858), and looked up only through ResourcePacks. It fails when
   instead of its id, so it would get around the resolver, and a pack could never override it (project.godot
   naming a catalogue for Godot to load gets around it too, #1902); or a script names anything by
   its uid://, loaded or kept for later (stricter than the pack needs: scripts never do; #1865,
-  #1919), or builds a path under assets/, regions/, resourcepacks/, translations/, the
+  #1919), or builds a path under assets/, regions/, resourcepacks/, translations/, the quests', the
   species', the tile blueprints', the loot tables', the harvest tables' or the materials' folder
   at runtime (#1865; the tools, which list the assets for the credits, may). A path may hold spaces (#1919).
 A catalogue the pack lists that leaves texts of the template untranslated, or holds texts the
@@ -92,9 +91,9 @@ PACK_ROOT = "resourcepacks/default/"
 MOVED = ("realms", "quests")
 # Where the default pack's realms lie (#1978).
 REALMS = f"{PACK_ROOT}realms"
-# Where the default pack's quests lie (#1888), in its own folder (#1978); their schema stays in the
-# quests slice, which owns the kind (#412).
-QUESTS = f"{PACK_ROOT}quests"
+# Where the default pack's quests lie (#1888): in the quests slice, which owns the kind and its
+# schema (#412).
+QUESTS = "slices/quests/data"
 # Where the species lie (#1903): each directly in the species slice's data/, beside its schema and
 # its abilities' folder, which aren't species.
 SPECIES = "slices/species/data"
@@ -151,7 +150,7 @@ NAME_CHAR = r"(?:(?!\1)[^/])"
 PATH = re.compile(
     rf"([\"'])res://(?P<path>assets/{PATH_CHAR}+?\.(?:"
     + "|".join(ending[1:] for ending in IMAGES + MODELS + AUDIO)
-    + rf")|regions/{PATH_CHAR}+|resourcepacks/{PATH_CHAR}+"
+    + rf")|regions/{PATH_CHAR}+|resourcepacks/{PATH_CHAR}+|{QUESTS}/{PATH_CHAR}+?\.jsonc"
     + rf"|{SPECIES}/{NAME_CHAR}+\.jsonc"
     + rf"|translations/{PATH_CHAR}+?\.po"
     + rf"|{TILES}/{PATH_CHAR}+|{OLD_TILES}(?:/{PATH_CHAR}*)?"
@@ -165,9 +164,10 @@ PATH = re.compile(
 # Any uid:// string, not only a load()'s or preload()'s argument: a threaded load, or a uid kept
 # in a constant and loaded later, gets around the resolver too (#1919).
 UID_STRING = re.compile(rf"([\"'])(?P<uid>uid://{PATH_CHAR}*)\1")
-# The species' folder also holds the abilities' folder, which isn't theirs.
+# The quests' folder also holds their schema, a whole file, which names no quest; the species'
+# folder also holds the abilities' folder, which isn't theirs.
 PACK_STRING = re.compile(
-    rf"([\"'])res://(?:(?:assets|regions|resourcepacks|translations|{TILES}|{OLD_TILES}"
+    rf"([\"'])res://(?:(?:assets|regions|resourcepacks|translations|{QUESTS}|{TILES}|{OLD_TILES}"
     + rf"|{LOOT_TABLES}|{MATERIALS}|{HARVEST_TABLES})"
     + rf"(?:/{PATH_CHAR}*)?|{SPECIES}(?:/{NAME_CHAR}*)?)\1"
 )
