@@ -21,7 +21,8 @@ across (#1735): on a ball centred on x = 0 with `DARK`'s ovals, and on one off t
 hound's. On a ball with no painted eyes, `find`'s error names the ways on (#2100), and our eyes
 placed there by hand (`placed`) land at the given spot and size, mirrored across the given middle.
 A mark whose normal lies (nearly) along Z has no sideways axis, so `Mark` refuses it (#2105), while
-`find` passes over such a spot (a dark crown) and still finds the eyes; and `placed` refuses a spot
+`find` passes over such a spot (a dark flat crown) and still finds the eyes, `fragments` still reports a
+dim one there; and `placed` refuses a spot
 off the surface whose nearest point there lies within half the eye's width of the middle.
 
     uv run --locked packages/game-models/blender.py --background --factory-startup \
@@ -155,8 +156,9 @@ PLACED_MIDDLE, PLACED_WIDTH, PLACED_HEIGHT, PLACED_NEAR = 0.05, 0.12, 0.08, 0.05
 PLACED_ABOVE = (PLACED_MIDDLE + 0.07, -0.3, 2.0)
 # Normals along Z or nearly so (#2105): a mark has no sideways axis with them.
 ALONG_Z = {"up": (0.0, 0.0, 1.0), "down": (0.0, 0.0, -1.0), "nearly_up": (1e-4, 0.0, 1.0)}
-# A dark spot painted on the ball's crown, about its top (#2105), and how far around it reaches.
-CROWN, CROWN_RADIUS = Vector((0.0, 0.0, RADIUS)), 0.12
+# The ball's crown, cut flat this high (#2105), and how far around its middle the paint on it
+# reaches (inside the flat cut, about 0.22 across).
+CROWN, CROWN_RADIUS = Vector((0.0, 0.0, 0.45)), 0.12
 # What `find`'s error names when it finds no eyes: a beast's own `Marked`, the placement by hand
 # and the eye check's list of eyeless designs.
 FIND_OPTIONS = ("BEASTS", "placed", "EYELESS")
@@ -457,23 +459,58 @@ def along_z():
     return ok
 
 
-def crown():
-    """Whether `find` still finds `DARK`'s painted eyes on a ball with a dark spot on its crown too
-    (#2105), whose normal lies nearly along Z, without a mark with a NaN in it."""
-    skin = build((BLACK, BLACK), False, 1.0, SKIN, 0.0)
+def crowned(paint, colour):
+    """A ball of SKIN (`build` with `paint`) whose top is cut flat at CROWN (#2105), so every
+    triangle there faces exactly up, `colour` painted on it within CROWN_RADIUS of its middle; and
+    the sine of the angle to Z of the mean normal of the head's samples there, which must be under
+    `marked_eyes.UPRIGHT` for the case to test what it should."""
+    skin = build(paint, False, 1.0, SKIN, 0.0)
+    for vertex in skin.data.vertices:
+        vertex.co.z = min(vertex.co.z, CROWN.z)
+    skin.data.update()
     head = marked_eyes.Head(skin, "head")
     rows, columns, texels = marked_eyes._texels(head, numpy.ones(len(head.spots), dtype=bool))
     inside = numpy.sqrt(((texels - numpy.array(CROWN)) ** 2).sum(axis=1)) <= CROWN_RADIUS
-    head.pixels[rows[inside], columns[inside], :3] = BLACK
+    head.pixels[rows[inside], columns[inside], :3] = colour
     bpy.data.images["skin"].pixels.foreach_set(head.pixels.ravel())
+    on = numpy.sqrt(((head.points - numpy.array(CROWN)) ** 2).sum(axis=1)) <= CROWN_RADIUS
+    normal = head.normals[on].mean(axis=0)
+    normal = normal / numpy.sqrt((normal * normal).sum())
+    return skin, float(numpy.hypot(normal[0], normal[1]))
+
+
+def crown():
+    """Whether `find` still finds `DARK`'s painted eyes on a ball with a dark spot on its flat crown
+    too (#2105), whose normal lies along Z, without a mark with a NaN in it."""
+    skin, tilt = crowned((BLACK, BLACK), BLACK)
+    good = tilt < marked_eyes.UPRIGHT
+    message = "the crown's normal %.2g off Z (under %.2g)" % (tilt, marked_eyes.UPRIGHT)
     try:
         with numpy.errstate(invalid="raise", divide="raise"):
             left, right = marked_eyes.find(marked_eyes.Head(skin, "head"))
-        message = "found eyes at %s and %s" % (_at(left.middle), _at(right.middle))
-        good = left.middle[0] > 0.0 > right.middle[0] and left.middle[2] < CROWN.z - CROWN_RADIUS
+        message += ", found eyes at %s and %s" % (_at(left.middle), _at(right.middle))
+        good = good and left.middle[0] > 0.0 > right.middle[0] and left.middle[2] < CROWN.z - CROWN_RADIUS
     except (ValueError, FloatingPointError) as error:
-        message, good = "%s: %s" % (type(error).__name__, error), False
+        message, good = message + ", %s: %s" % (type(error).__name__, error), False
     (log.info if good else log.error)("%s crown: %s" % ("ok" if good else "FAIL", message))
+    return good
+
+
+def crown_fragment():
+    """Whether `fragments` still reports a dim fragment on a plain ball's flat crown (#2105), whose
+    normal lies along Z, as one spot there, rather than raising."""
+    skin, tilt = crowned(None, DIM)
+    good = tilt < marked_eyes.UPRIGHT
+    message = "the crown's normal %.2g off Z (under %.2g)" % (tilt, marked_eyes.UPRIGHT)
+    try:
+        with numpy.errstate(invalid="raise", divide="raise"):
+            found = marked_eyes.fragments(skin)
+        message += ", found %s" % [_at(mark.middle) for mark in found]
+        good = good and len(found) == 1 and float(numpy.sqrt(((found[0].middle - numpy.array(CROWN)) ** 2).sum())) \
+            <= CROWN_RADIUS
+    except (ValueError, FloatingPointError) as error:
+        message, good = message + ", %s: %s" % (type(error).__name__, error), False
+    (log.info if good else log.error)("%s crown_fragment: %s" % ("ok" if good else "FAIL", message))
     return good
 
 
@@ -522,6 +559,7 @@ def main():
     passed = placed() and passed
     passed = along_z() and passed
     passed = crown() and passed
+    passed = crown_fragment() and passed
     passed = placed_above() and passed
     log.info("PAINTED EYES TEST: %s" % ("PASS" if passed else "FAIL"))
     sys.exit(0 if passed else 1)
