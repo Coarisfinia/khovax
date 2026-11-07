@@ -735,17 +735,17 @@ clips. Ask the owner only when it's unclear what should move how.
    cost, and each pose gets its own folder (`<out_dir>/Attack_008/`).
 3. **Silhouette:** a flat black render from the game camera's angle. Is it readable as what it
    is, at the size it has on screen?
-4. **Godot import, in the game project:** after `godot --headless --path packages/game --import`,
-   run `godot --headless --path packages/game -s res://tools/models/check_glb.gd --
-   res://assets/<name>/<name>.glb <Clip> ...`. It goes through the repo's own import settings
-   (looping clips included) and must print `MODEL CHECK: PASS`: a skeleton with bones, every
+4. **Godot import, in the game project:** a new worktree first links the resource packs (`uv run
+   --locked packages/game-build/link_resource_packs.py`, #2134). Then, after `godot --headless
+   --path packages/game --import`, run `godot --headless --path packages/game -s
+   res://tools/models/check_glb.gd -- res://assets/<name>/<name>.glb <Clip> ...`. It goes through the
+   repo's own import settings (looping clips included) and must print `MODEL CHECK: PASS`: a skeleton with bones, every
    skinned mesh bound to it, every clip the game plays, and a centre of attack when it plays
    Attack; it lists the eyes and centres of attack. CI checks the same for every model a view
    uses (the boot flow, #992), from the clips the view lists in its `CLIPS` constant: a view that
    plays a new clip adds it there. A monster's model is worn by naming it in its species' data
    (`model`, #1223), and the boot flow checks it against the monster views' clips.
-5. **In game:** a new worktree first links the resource packs (`uv run --locked
-   packages/game-build/link_resource_packs.py`, #2134). Then re-import after every build (`godot
+5. **In game:** with the resource packs linked (step 4), first re-import after every build (`godot
    --headless --path packages/game --import`): Godot renders its imported copy of the `.glb`, and a
    stale one shows the previous build, however much the Blender checks say changed (#1164). Then,
    with `packages/game/tools/models/render_in_game.gd`, run off the desktop through
@@ -943,7 +943,7 @@ clips. Ask the owner only when it's unclear what should move how.
   Publish them on the `assets` branch per AGENTS.md.
 - **One command for all of them (#1525):** `uv run --locked --package khovax-game-models
   packages/game-models/render_media.py packages/game/assets/<name>/<name>.glb --pr <n> [--tag v2]
-  [--quick]` (in a new worktree, after `link_resource_packs.py` as in step 5) renders the sheet,
+  [--quick]` (in a new worktree, after `link_resource_packs.py` as in step 4) renders the sheet,
   the in-game shots (desktop, phone, close-ups, points, the six sides joined into one picture)
   and every clip's GIF in game and close up, Blender and Godot side by side and Godot off the
   desktop, publishes them as `pr-<n>[-<tag>]-*` and prints the description's media block, ready
