@@ -125,12 +125,14 @@ jobs:
               exit 0
             fi
           done <<< "$workflows"
-          # The game's assets, texts and world, and its scenes, resources and media, are always
-          # user-facing; its code is the review subagent's call (#2061). Its tests and tools never are.
-          user_facing=$(printf '%s\n' "$files" | cut -c2- | grep '^"packages/game/' |
+          # The resource packs (#1978, #2111), and the game's assets, texts and world, and its
+          # scenes, resources and media, are always user-facing; its code is the review subagent's
+          # call (#2061). The game's tests and tools never are.
+          user_facing=$(printf '%s\n' "$files" | cut -c2- |
             grep -v -e '^"packages/game/tests/' -e '^"packages/game/tools/' |
-            grep -i -e '^"packages/game/\(assets\|translations\|realms\|regions\)/' \
-              -e '\.\(tscn\|tres\|res\|import\|png\|svg\|jpg\|jpeg\|webp\|glb\|gltf\|bin\|ogg\|wav\|mp3\|ttf\|otf\|gdshader\|gdshaderinc\)"$' ||
+            grep -i -e '^"resourcepacks/' \
+              -e '^"packages/game/\(assets\|translations\|realms\|regions\)/' \
+              -e '^"packages/game/.*\.\(tscn\|tres\|res\|import\|png\|svg\|jpg\|jpeg\|webp\|glb\|gltf\|bin\|ogg\|wav\|mp3\|ttf\|otf\|gdshader\|gdshaderinc\)"$' ||
             true)
           if [ -n "$user_facing" ]; then
             echo "Not approving #$PR: it changes files that are always user-facing, which need the" \

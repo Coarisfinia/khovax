@@ -211,6 +211,10 @@ jobs:
         # The dev-release job only runs on main, so its failures would show only there (#1991).
         run: uv run --locked --package khovax-game-checks ../game-checks/test_dev_release.py
 
+      - name: "🛡️ Check the approval guard refuses always user-facing files"
+        # approve-cleared.yml runs only when a pull request is labelled, from main (#2111).
+        run: uv run --locked --package khovax-game-checks ../game-checks/test_approve_cleared.py
+
       - name: "📦 Build the default pack, and refuse a pack with code"
         # Every pack is a .pck from our own pack builder (#1868, #1869), the default one too, so
         # each push builds it, with the builder zipped as each release ships it to pack makers
