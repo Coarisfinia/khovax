@@ -3,6 +3,9 @@ box, no rig, no clips) passes, and so does a rig with a clip it plays; a rig bes
 moves something else (an empty), so the rig has nothing to play it on, fails, where it used to pass
 as "no rig or clips". Two that used to fail with that reason pass (#2141): a clip playing on a
 second rig beside a still first one, and a rig beside a clip that drives only a mesh's shape keys.
+A foot that lost its weights fails as unmeasured, beside a weighted one, where it used to be taken
+for a control and skipped; a rig's foot controls (the Rogue's IK-foot and control-foot-roll) are
+named as skipped (#2142).
 
     uv run --locked packages/game-models/blender.py --background --factory-startup \
         --python packages/game-models/test_motion.py
@@ -61,6 +64,27 @@ def keyed(obj, path, frames):
         target.keyframe_insert(name, frame=frame)
 
 
+def legged(weighted, bones=("body", "foot.L", "foot.R")):
+    """A rig of a body and the other `bones` hanging from it, standing on a box under each of its
+    feet (foot.L, foot.R); each box follows its foot when `weighted` names it, else the body (a
+    foot that lost its weights). Its clip moves the body."""
+    obj = rig()
+    bpy.ops.object.mode_set(mode="EDIT")
+    for index, name in enumerate(bones[1:]):
+        bone = obj.data.edit_bones.new(name)
+        bone.head, bone.tail = (0.1 * index, 0.0, 0.05), (0.1 * index, 0.0, 0.0)
+        bone.parent = obj.data.edit_bones["body"]
+    bpy.ops.object.mode_set(mode="OBJECT")
+    for name, x in (("foot.L", 0.0), ("foot.R", 0.1)):
+        foot = box()
+        foot.location.x = x
+        group = foot.vertex_groups.new(name=name if name in weighted else "body")
+        group.add([vertex.index for vertex in foot.data.vertices], 1.0, "REPLACE")
+        foot.parent = obj
+        foot.modifiers.new("rig", "ARMATURE").object = obj
+    keyed(obj, 'pose.bones["body"].location', (0, 10))
+
+
 def prop():
     box()
 
@@ -84,6 +108,15 @@ def second():
     keyed(obj, 'pose.bones["body"].location', (0, 10))
 
 
+def unweighted():
+    legged(("foot.L",))
+
+
+def controls():
+    # The Rogue's foot controls (#2142): an IK target and a foot roll move no vertex.
+    legged(("foot.L", "foot.R"), ("body", "foot.L", "foot.R", "IK-foot.L", "control-foot-roll.L"))
+
+
 def shapes():
     rig()
     mesh = box()
@@ -100,6 +133,8 @@ CASES = {
     "elsewhere": (elsewhere, False, "has clips but its rig has no animation data to play them on"),
     "second": (second, True, "ok Idle:"),
     "shapes": (shapes, True, "ok Idle: drives only shape keys"),
+    "unweighted": (unweighted, False, "unmeasured (no part of the mesh follows the bone): foot.R"),
+    "controls": (controls, True, "not feet but controls: IK-foot.L, control-foot-roll.L"),
 }
 
 

@@ -13,7 +13,6 @@ lib/skeleton.py), naming each difference: a clip made on another rig would bend 
 CI builds it with every model (check_rebuild.py), so a clip from another rig fails there."""
 
 import glob
-import math
 import os
 import sys
 
@@ -21,7 +20,7 @@ import bpy
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib import clip_sources, planted_feet, scene, skeleton  # noqa: E402
+from lib import clip_sources, pace, planted_feet, scene, skeleton  # noqa: E402
 
 # No body to size against the world (check_world_scale.py): the clips play on the stand-in rig.
 WORLD_SCALE = "clip_library"
@@ -32,11 +31,10 @@ CLIPS = os.path.join(SOURCES, "clips")
 # every frame, one foot is flat on the ground (lib/planted_feet.py). The others leave the ground on
 # purpose: running, sitting, falling, getting up.
 GROUNDED = ["HarvestBush", "Hit", "Idle", "PickUp", "Talk", "Throw", "Wave"]
-# The game's pace for the player (metres a second, for the motion check, #2128): a tile (sqrt(3)
-# apart) every Tuning.MOVE_TICKS, 6 ticks at 20 a second. The player has that one pace, so the
-# walk and the run are both checked at it, whichever the body's view plays while moving.
-TILE = math.sqrt(3.0)
-WALK_SPEED = RUN_SPEED = TILE / 0.3
+# The game's pace for the player (metres a second, for the motion check, #2128; lib/pace.py). The
+# player has that one pace, so the walk and the run are both checked at it, whichever the body's
+# view plays while moving.
+WALK_SPEED = RUN_SPEED = pace.player()
 
 
 def mismatches(clips):
