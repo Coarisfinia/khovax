@@ -15,11 +15,19 @@ extends SceneTree
 ## glow in that type's colour (TypeGlow), and with `leaning=<path>` in the shape of a player's
 ## leaning toward that path (#1063).
 ##
+## A clip seen from a view writes where its camera stood beside its frames (`<Clip>.camera`), and
+## `camera=` holds the camera still across builds, so before/after GIFs share one view (#2107):
+## `camera=rest` frames the model standing at rest, as the still sides do, rather than where it
+## moves over the clip; `camera=<file>` puts the camera where that `.camera` file says, and
+## `camera=<dir>` where that folder's `<Clip>.camera` says for each clip, e.g. a previous run's
+## out_dir.
+##
 ## Render it off the desktop and silent, as AGENTS.md's screenshot recipe says:
 ##   uv run --locked packages/game-offscreen/offscreen.py -- --path packages/game \
 ##     -s res://tools/models/render_in_game.gd -- \
 ##     res://assets/<name>/<name>.glb <out_dir> [size=1280x720] \
-##     [clip=<Clip>[,<Clip>...] [from=<view>]] [points] [agitated] [type=<type>] \
+##     [clip=<Clip>[,<Clip>...] [from=<view> [camera=rest|<file>|<dir>]]] [points] [agitated] \
+##     [type=<type>] \
 ##     [leaning=harmony|supremacy] \
 ##     --seed=0
 ## The launch options after it (LaunchOptions) start the world as the game would. No `--user-dir`
@@ -56,6 +64,8 @@ const KEPT_IN_SIDES: String = "HexGrid"
 const DEFAULT_FPS: float = 30.0
 ## Frames to wait after posing a shot before capturing it, so the pose has been drawn.
 const DRAW_FRAMES: int = 2
+## `camera=` this frames a clip's view on the model at rest.
+const REST: String = "rest"
 
 var _viewport: SubViewport
 var _main: Node3D
@@ -126,8 +136,8 @@ func _initialize() -> void:
 			_clip = arg.trim_prefix("clip=")
 		elif arg.begins_with("from="):
 			_from = arg.trim_prefix("from=")
-	if problem.is_empty() and not (_from == "game" or VIEWS.has(_from)):
-		problem = "no view " + _from
+	if problem.is_empty():
+		problem = _view_problem()
 	if problem.is_empty() and args.size() >= 2:
 		_out_dir = args[1]
 		var made: Error = DirAccess.make_dir_recursive_absolute(_out_dir)
@@ -148,6 +158,23 @@ func _initialize() -> void:
 	# sometimes reports it as resources still in use at exit.
 	_main.get_node("Music").free()
 	_viewport.add_child(_main)
+
+
+## What's wrong with the view a clip is seen from (`from=`) and its camera (`camera=`), or "".
+func _view_problem() -> String:
+	if not (_from == "game" or VIEWS.has(_from)):
+		return "no view " + _from
+	if not _option("camera").is_empty() and not VIEWS.has(_from):
+		return "camera= holds a view's camera: it needs from=<view>"
+	return ""
+
+
+## The value the command line gives the option `name=`, or "" when it gives none.
+func _option(name: String) -> String:
+	for arg: String in OS.get_cmdline_user_args().slice(2):
+		if arg.begins_with(name + "="):
+			return arg.trim_prefix(name + "=")
+	return ""
 
 
 ## Stands the model on the tile beside the player and lists the shots.
@@ -217,15 +244,58 @@ func _add_clip_shots(model: Node3D, animations: AnimationPlayer, glow: EyeGlow) 
 			animations.get_animation(StringName(clip)),
 			fps,
 		)
-		# A view's camera frames where the model moves over the whole clip, set on its first frame
-		# and kept for the rest; the game camera stays where the game has it.
-		var framed: PackedVector3Array = []
+		# A view's camera is placed on the clip's first frame and kept for the rest; the game
+		# camera stays where the game has it.
+		var place: Callable = Callable()
 		if VIEWS.has(_from):
-			framed = _posed_over(model, animations, clip, times)
+			place = _clip_camera(model, animations, clip, times)
+			if not place.is_valid():
+				quit(1)
+				return
 		for frame: int in times.size():
-			var pose: Callable = _pose_clip.bind(animations, glow, clip, times[frame], framed)
+			var pose: Callable = _pose_clip.bind(animations, glow, clip, times[frame], place)
 			_add_shot("%s_%03d" % [clip, frame], pose)
-			framed = []
+			place = Callable()
+
+
+## What places the view's camera for `clip`, as `camera=` asks: framing where the model moves over
+## the clip at `times`, framing it at rest, or where a `.camera` file holds it. Nothing (an
+## invalid Callable) when that file has no camera in it.
+func _clip_camera(
+		model: Node3D,
+		animations: AnimationPlayer,
+		clip: String,
+		times: PackedFloat32Array,
+) -> Callable:
+	var camera: String = _option("camera")
+	if camera.is_empty():
+		return _aim_side.bind(_from, _posed_over(model, animations, clip, times))
+	if camera == REST:
+		return _aim_side.bind(_from, _at_rest(_from))
+	var path: String = camera
+	if DirAccess.dir_exists_absolute(camera):
+		path = camera.path_join(clip + ".camera")
+	var held: Variant = str_to_var(FileAccess.get_file_as_string(path))
+	if held is not Transform3D:
+		printerr("no camera in %s: a clip run from a view writes one as <Clip>.camera" % path)
+		return Callable()
+	return _hold_side.bind(held)
+
+
+## Puts the side camera where `held` says.
+func _hold_side(held: Transform3D) -> void:
+	_side_camera.global_transform = held
+
+
+## Writes where the side camera stands as `clip`'s `.camera` file, for a later run's `camera=`,
+## and whether that worked.
+func _stored_camera(clip: String) -> bool:
+	var path: String = _out_dir.path_join(clip + ".camera")
+	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
+	if file == null or not file.store_line(var_to_str(_side_camera.global_transform)):
+		printerr("can't write %s: %s" % [path, FileAccess.get_open_error()])
+		return false
+	return true
 
 
 ## The rate the model's clips are imported at, as its `.import` gives it: their frames are captured
@@ -289,17 +359,20 @@ func _glow_as_asked(glow: EyeGlow) -> void:
 
 
 ## Poses `clip` at `time`, and the `glow` in the model's eyes with it. Its first frame starts the
-## clip, aims the camera at what it `framed` (unless that's empty), and flares an Attack's glow, as
-## the game does when the monster strikes.
+## clip, places the view's camera with `place` (when given) and writes where it stands, and flares
+## an Attack's glow, as the game does when the monster strikes.
 func _pose_clip(
 		animations: AnimationPlayer,
 		glow: EyeGlow,
 		clip: String,
 		time: float,
-		framed: PackedVector3Array,
+		place: Callable,
 ) -> void:
-	if not framed.is_empty():
-		_aim_side(_from, framed)
+	if place.is_valid():
+		place.call()
+		if not _stored_camera(clip):
+			quit(1)
+			return
 	if is_zero_approx(time):
 		animations.play(StringName(clip))
 		animations.pause()
@@ -338,7 +411,13 @@ func _beside(state: GameState, tile: Vector2i) -> Vector2i:
 ## ground, or on nothing at all for a close-up.
 func _pose_side(side: String) -> void:
 	_show_alone(side)
-	_aim_side(side, _close_ups[side] if CLOSE_UPS.has(side) else _corners(_bounds))
+	_aim_side(side, _at_rest(side))
+
+
+## What a still shot from `side` (VIEWS) frames of the model at rest: its outline (or its face's)
+## for a close-up, its bounds' corners for any other side.
+func _at_rest(side: String) -> PackedVector3Array:
+	return _close_ups[side] if CLOSE_UPS.has(side) else _corners(_bounds)
 
 
 ## Shows the model alone for `side` (VIEWS), through the side camera: on bare ground, or on

@@ -760,6 +760,13 @@ clips. Ask the owner only when it's unclear what should move how.
    (`clip=Idle,Walk,Attack,...` per view: the game starts once, which is most of a run's cost),
    each made with `packages/game-models/gif.py`. Check that loops don't jump, steps don't slide, and the
    attack and hit read at game zoom.
+   **Before and after from one camera (#2107):** a view's camera frames where the model moves over
+   the clip, so it re-frames on every build and a before GIF doesn't line up with its after. Each
+   clip run from a view (`from=<view>`) writes where its camera stood beside its frames
+   (`<Clip>.camera`). Render the previous build first, then the new one with
+   `camera=<the first run's out_dir>`: each clip's camera stands where it stood before. Or render
+   both with `camera=rest`, which frames the model standing at rest, as the still sides do (the
+   same camera only while the build leaves the rest pose alone). The game camera already stays put.
 7. **Budget:** report the triangles, bones, materials, texture sizes and `.glb` size. Medium-poly
    means a few thousand triangles for a monster (a Meshy download about 6,000, #1671); justify
    anything far above.
