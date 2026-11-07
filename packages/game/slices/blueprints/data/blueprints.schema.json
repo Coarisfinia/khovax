@@ -51,12 +51,12 @@
 			"default": false
 		},
 		"loot_table": {
-			"description": "Its instance loot table (the loot slice's data/loot_tables/): what a blank and the loot on its ground give (#90, #203).",
+			"description": "Its instance loot table (resourcepacks/default/loot_tables/): what a blank and the loot on its ground give (#90, #203).",
 			"type": "string",
 			"pattern": "^[a-z][a-z0-9_]*$"
 		},
 		"chest_table": {
-			"description": "Its chest loot table (the loot slice's data/loot_tables/): its treasure chests roll on it (#124, #694). A blueprint with one needs a loot_table too, for the loot on its ground.",
+			"description": "Its chest loot table (resourcepacks/default/loot_tables/): its treasure chests roll on it (#124, #694). A blueprint with one needs a loot_table too, for the loot on its ground.",
 			"type": "string",
 			"pattern": "^[a-z][a-z0-9_]*$"
 		},

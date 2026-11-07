@@ -9,6 +9,66 @@ msgstr ""
 msgid "Loading the world…"
 msgstr ""
 
+#: resourcepacks/default/materials/arcane_crystal.jsonc
+msgid "Arcane Crystal"
+msgstr ""
+
+#: resourcepacks/default/materials/berry.jsonc
+msgid "Berry"
+msgstr ""
+
+#: resourcepacks/default/materials/bone.jsonc
+msgid "Bone"
+msgstr ""
+
+#: resourcepacks/default/materials/copper.jsonc
+msgid "Copper"
+msgstr ""
+
+#: resourcepacks/default/materials/crystal.jsonc
+msgid "Crystal"
+msgstr ""
+
+#: resourcepacks/default/materials/dew.jsonc
+msgid "Dew"
+msgstr ""
+
+#: resourcepacks/default/materials/feather.jsonc
+msgid "Feather"
+msgstr ""
+
+#: resourcepacks/default/materials/hide.jsonc
+msgid "Hide"
+msgstr ""
+
+#: resourcepacks/default/materials/magma_core.jsonc
+msgid "Magma Core"
+msgstr ""
+
+#: resourcepacks/default/materials/moss.jsonc
+msgid "Moss"
+msgstr ""
+
+#: resourcepacks/default/materials/pondweed.jsonc
+msgid "Pondweed"
+msgstr ""
+
+#: resourcepacks/default/materials/revive_herb.jsonc
+msgid "Revive Herb"
+msgstr ""
+
+#: resourcepacks/default/materials/rime_shard.jsonc
+msgid "Rime Shard"
+msgstr ""
+
+#: resourcepacks/default/materials/stone.jsonc
+msgid "Stone"
+msgstr ""
+
+#: resourcepacks/default/materials/wind_ribbon.jsonc
+msgid "Wind Ribbon"
+msgstr ""
+
 #: resourcepacks/default/quests/bud_dew.jsonc
 msgid "Dew for an ${MONSTER:ombuwomo}"
 msgstr ""
@@ -980,66 +1040,6 @@ msgstr ""
 #: slices/input_prompts/ui/controls_tab.gd
 #: slices/settings/ui/settings_tab.gd
 msgid "Back"
-msgstr ""
-
-#: slices/loot/data/materials/arcane_crystal.jsonc
-msgid "Arcane Crystal"
-msgstr ""
-
-#: slices/loot/data/materials/berry.jsonc
-msgid "Berry"
-msgstr ""
-
-#: slices/loot/data/materials/bone.jsonc
-msgid "Bone"
-msgstr ""
-
-#: slices/loot/data/materials/copper.jsonc
-msgid "Copper"
-msgstr ""
-
-#: slices/loot/data/materials/crystal.jsonc
-msgid "Crystal"
-msgstr ""
-
-#: slices/loot/data/materials/dew.jsonc
-msgid "Dew"
-msgstr ""
-
-#: slices/loot/data/materials/feather.jsonc
-msgid "Feather"
-msgstr ""
-
-#: slices/loot/data/materials/hide.jsonc
-msgid "Hide"
-msgstr ""
-
-#: slices/loot/data/materials/magma_core.jsonc
-msgid "Magma Core"
-msgstr ""
-
-#: slices/loot/data/materials/moss.jsonc
-msgid "Moss"
-msgstr ""
-
-#: slices/loot/data/materials/pondweed.jsonc
-msgid "Pondweed"
-msgstr ""
-
-#: slices/loot/data/materials/revive_herb.jsonc
-msgid "Revive Herb"
-msgstr ""
-
-#: slices/loot/data/materials/rime_shard.jsonc
-msgid "Rime Shard"
-msgstr ""
-
-#: slices/loot/data/materials/stone.jsonc
-msgid "Stone"
-msgstr ""
-
-#: slices/loot/data/materials/wind_ribbon.jsonc
-msgid "Wind Ribbon"
 msgstr ""
 
 #: slices/loot/meta/material_content.gd

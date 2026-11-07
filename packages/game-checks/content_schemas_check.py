@@ -4,7 +4,9 @@ core's (#506), core/data/<kind>/, against core/data/schemas/<kind>.schema.json, 
 owns (#412), slices/<slice>/data/<kind>/, against the <kind>.schema.json beside it. A core kind a
 resource pack holds (the tile blueprints, #1901) lies in the default pack's own folder,
 PACK_DATA/<kind>/ at the repository's root (#1978), which the game reaches through its link, and
-is checked against the core's schema, which is the format every pack's files share. The slice's own
+is checked against the core's schema, which is the format every pack's files share; a slice's kind
+it holds there (the loot tables, #1953) against the schema of the slice that owns it,
+slices/<slice>/data/<kind>.schema.json. The slice's own
 kind sits directly in its data/, beside <slice>.schema.json, so no folder repeats the slice's name
 (#442), or in the default pack's own folder, PACK_DATA/<slice>/ (the quests, #1978), still
 checked against the schema in its slice. A folder without its schema fails, so a slice's data never
@@ -45,8 +47,10 @@ def schema_problems() -> tuple[dict[str, str], list[tuple[str, str | None]]]:
         if folder.parent == PACK_DATA and core_schema.is_file():
             schema = core_schema
         elif folder.parent == PACK_DATA:
-            # A slice's own kind the pack holds keeps its schema in its slice.
-            schema = Path(f"slices/{folder.name}/data/{folder.name}.schema.json")
+            # A slice's kind the pack holds keeps its schema in the one slice that owns it (the
+            # quests in theirs, the loot tables in the loot slice).
+            owners = sorted(Path("slices").glob(f"*/data/{folder.name}.schema.json"))
+            schema = owners[0] if len(owners) == 1 else Path(f"slices/*/data/{folder.name}.schema.json")
         elif folder.parts[0] == "slices":
             schema = folder.with_name(f"{folder.name}.schema.json")
         else:
@@ -65,6 +69,8 @@ def schema_problems() -> tuple[dict[str, str], list[tuple[str, str | None]]]:
                 folder = PACK_DATA / name
         else:
             folder = schema.parent / name
+            if not folder.is_dir() and (PACK_DATA / name).is_dir():
+                folder = PACK_DATA / name
         if folder == Path(f"slices/{name}/data/{name}"):
             if not any(schema.parent.glob("*.jsonc")) and not any((PACK_DATA / name).glob("*.jsonc")):
                 problems.append(
