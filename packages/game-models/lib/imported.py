@@ -66,10 +66,17 @@ def load_view(glb, fps, scale=1.0, library=None):
     return rig
 
 
+def slot(action, owner):
+    """The slot of `action` that `owner` (an object, or a mesh's shape keys) plays, or None: the
+    importer gives each thing a glTF animation moves its own slot of that action."""
+    return next((found for found in action.slots if owner in found.users()), None)
+
+
 def play(rig, action):
-    """Puts `action` on the rig and returns its first and last frames."""
+    """Puts `action` on the rig, in the rig's own slot (the first, when the rig has none), and
+    returns its first and last frames."""
     rig.animation_data.action = action
     if action.slots:
-        rig.animation_data.action_slot = action.slots[0]
+        rig.animation_data.action_slot = slot(action, rig) or action.slots[0]
     start, end = (int(round(value)) for value in action.frame_range)
     return start, end
