@@ -82,7 +82,9 @@ CASES = {
 
 
 def checked(folder, name, build):
-    """Builds the model, exports it and returns check_motion.py's exit code and output."""
+    """Builds the model, exports it and returns check_motion.py's exit code and the lines it logged
+    (game_shared.log prints to stdout; Blender's tracebacks go to stderr, so a crash's source lines
+    never count as the check's verdict)."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
     build()
     glb = os.path.join(folder, name + ".glb")
@@ -91,18 +93,21 @@ def checked(folder, name, build):
         found.write("animation/fps=30\n")
     command = [bpy.app.binary_path, "--python-exit-code", "1", "--background", "--factory-startup",
                "--python", os.path.join(HERE, "check_motion.py"), "--", glb]
-    run = subprocess.run(command, check=False, capture_output=True, text=True)
+    # Out of CI's annotations: the failure a case expects isn't an error of this run.
+    env = {key: value for key, value in os.environ.items() if key != "GITHUB_ACTIONS"}
+    run = subprocess.run(command, check=False, capture_output=True, text=True, env=env)
     print(run.stdout + run.stderr)
-    return run.returncode, run.stdout + run.stderr
+    return run.returncode, run.stdout.splitlines()
 
 
 def main():
     passed = True
     with tempfile.TemporaryDirectory() as folder:
         for name, (build, passes, says) in CASES.items():
-            code, output = checked(folder, name, build)
-            verdict = "MOTION CHECK: %s" % ("PASS" if passes else "FAIL")
-            right = (code == 0) == passes and verdict in output and says in output
+            code, lines = checked(folder, name, build)
+            verdict = "MOTION CHECK: %s " % ("PASS" if passes else "FAIL")
+            right = ((code == 0) == passes and any(line.startswith(verdict) for line in lines)
+                     and any(says in line for line in lines))
             passed = passed and right
             line = "%s %s: the check %s (exit %d), it should %s, saying \"%s\"" % (
                 "ok" if right else "FAIL", name, "passes" if code == 0 else "fails", code,
