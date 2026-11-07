@@ -68,6 +68,9 @@ SEAM_SHIFT_LIMIT = 0.002
 JITTER_LIMIT = 15.0
 # The clips the game glides a model at while they play: each needs the speed its build prints.
 GAITS = ("Walk", "Run")
+# A clip line's note on the feet no frame measures: a failure KNOWN never excuses, since a check
+# that can't see a foot says nothing about it.
+UNMEASURED = "; unmeasured (no part of the mesh follows the bone): "
 
 # (model, clip) that fails today, with the issue that fixes it; that issue takes its entries off.
 # A join is named after its lead with " join" (`("mana_wolf", "WalkStart join")`).
@@ -286,7 +289,7 @@ def check(rig, meshes, fps, loops, speeds, misses):
                 pose, shift * 1000, shifted, speed, jumping)
         text += "; jitter %.2f deg/frame^2 (%s, frame %d)" % (shake, shaking, at)
         if unmeasured:
-            text += "; unmeasured (no part of the mesh follows the bone): %s" % ", ".join(unmeasured)
+            text += UNMEASURED + ", ".join(unmeasured)
         if late:
             text += "; starts at frame %d, not 0: the game holds its first pose until then" % start
         passed = passed and not fails
@@ -297,7 +300,10 @@ def check(rig, meshes, fps, loops, speeds, misses):
 
 def judge(model, line):
     """A report line as KNOWN judges it (lib/known.py): the line and whether it fails the check.
-    A join's line (`ok WalkStart join: ...`) is keyed apart from its lead's own clip."""
+    A join's line (`ok WalkStart join: ...`) is keyed apart from its lead's own clip, and a clip
+    with a foot unmeasured fails whatever KNOWN says."""
+    if UNMEASURED in line:
+        return line, True
     words = line.split(" ", 3)
     clip = words[1] + " join" if words[2:3] == ["join:"] else None
     return known.judge(KNOWN, model, line, clip)
