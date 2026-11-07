@@ -11,12 +11,12 @@ will have (#1858), and looked up only through ResourcePacks. It fails when
 - a resource is unreferenced: the manifest lists it but no script (outside its comments), scene,
   resource or content file of the game's names its id as a string (but for the realms, the
   quests, species, catalogues, tile blueprints, loot and harvest tables and materials, which the
-  game finds by listing the pack), or a file of its kind (an image, model or sound under
-  assets/, a region file or piece under resourcepacks/default/regions/, a realm in
-  resourcepacks/default/realms/, a quest in resourcepacks/default/quests/, a species directly in
-  slices/species/data/, a catalogue under translations/, a
-  tile blueprint in resourcepacks/default/tiles/, a loot table, harvest table or material in
-  the loot slice's data/loot_tables/, data/harvest_tables/ or data/materials/) is in the repository
+  game finds by listing the pack), or a file of its kind (an image or model under assets/, a
+  sound under resourcepacks/default/audio/, a region file or piece under
+  resourcepacks/default/regions/, a realm in resourcepacks/default/realms/, a quest in
+  resourcepacks/default/quests/, a species directly in slices/species/data/, a catalogue under
+  translations/, a tile blueprint in resourcepacks/default/tiles/, a loot table, harvest table or
+  material in the loot slice's data/loot_tables/, data/harvest_tables/ or data/materials/) is in the repository
   but not in the manifest;
 - a quest's, species', loot table's, harvest table's or material's entry isn't its own file
   (resourcepacks/default/quests/<id>.jsonc, slices/species/data/<id>.jsonc,
@@ -90,7 +90,10 @@ PACK_ROOT = "resourcepacks/default/"
 # ...and the kinds already moved into it, by their section, each with its own folder there (a
 # region's pieces lie beside the regions drawn whole); the move goes one kind at a time, and the
 # rest follow (#1978).
-MOVED = {"realms": "realms", "regions": "regions", "region_pieces": "regions", "tiles": "tiles", "quests": "quests"}
+MOVED = {
+    "realms": "realms", "regions": "regions", "region_pieces": "regions", "tiles": "tiles", "quests": "quests",
+    "audio": "audio",
+}
 # Where the default pack's realms, regions and region pieces lie (#1978).
 REALMS = f"{PACK_ROOT}realms"
 REGIONS = f"{PACK_ROOT}regions"
@@ -100,6 +103,9 @@ QUESTS = f"{PACK_ROOT}quests"
 # Where the species lie (#1903): each directly in the species slice's data/, beside its schema and
 # its abilities' folder, which aren't species.
 SPECIES = "slices/species/data"
+# Where the default pack's sounds lie (#2014, #1978), each in its asset pack's folder, beside its
+# SOURCE.md and licence.
+SOUNDS = f"{PACK_ROOT}audio"
 # Where the default pack's tile blueprints lie (#1901, #1978), and where they lay in the core before.
 TILES = f"{PACK_ROOT}tiles"
 OLD_TILES = "core/data/tiles"
@@ -113,7 +119,7 @@ HARVEST_TABLES = "slices/loot/data/harvest_tables"
 KINDS: dict[str, Kind] = {
     "textures": Kind("texture", IMAGES, True, "assets"),
     "models": Kind("model", MODELS, True, "assets"),
-    "audio": Kind("sound", AUDIO, True, "assets"),
+    "audio": Kind("sound", AUDIO, True, SOUNDS),
     # A region drawn whole in one file, REGIONS/<id>.md, and one arranged from the pieces in
     # REGIONS/<id>/ (#1861).
     "regions": Kind("region", (".md",), False, f"{REGIONS}/*.md"),
@@ -403,7 +409,7 @@ def main() -> int:
             if paths != [f"{folder}/{entry_id}.jsonc"]
         ]
     tracked = set(
-        git_files("assets", REGIONS, REALMS, "translations", QUESTS, SPECIES, TILES, LOOT_TABLES, MATERIALS, HARVEST_TABLES)
+        git_files("assets", SOUNDS, REGIONS, REALMS, "translations", QUESTS, SPECIES, TILES, LOOT_TABLES, MATERIALS, HARVEST_TABLES)
     )
     models = {path for paths in entries["models"].values() for path in paths}
     used_by_models = model_images(sorted(models & tracked))

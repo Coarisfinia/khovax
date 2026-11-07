@@ -2266,7 +2266,8 @@ func _check_pack_manifests() -> String:
 	var valid: String = (
 		start + " \"game_version\": \"0.1.0\", \"textures\": {\"%s\": \"%s\"},"
 		+ " \"models\": {\"m\": \"%s\"}, \"regions\": {\"r\": \"regions/r.md\"},"
-		+ " \"audio\": {\"b\": \"assets/exploration-theme/exploration_theme.ogg\"},"
+		+ " \"audio\": {\"b\":"
+		+ " \"resourcepacks/default/audio/exploration-theme/exploration_theme.ogg\"},"
 		+ " \"region_pieces\": {\"q\": [\"regions/q/start.md\"]},"
 		+ " \"realms\": {\"w\": \"realms/w.md\"}, \"quests\": {\"u\": \"quests/u.jsonc\"},"
 		+ " \"species\": {\"s\": \"species/s.jsonc\"}, \"tiles\": {\"t\": \"tiles/t.jsonc\"},"
@@ -2353,7 +2354,7 @@ func _check_pack_translations() -> String:
 ## The broken manifests made from `valid` whose sound (#2014) is missing or of another kind, or
 ## without the section, by what's wrong with them; `other` is a file of another kind.
 func _sound_section_cases(valid: String, other: String) -> Dictionary[String, String]:
-	var track: String = "assets/exploration-theme/exploration_theme.ogg"
+	var track: String = "resourcepacks/default/audio/exploration-theme/exploration_theme.ogg"
 	return {
 		"a missing sound": valid.replace("exploration_theme.ogg", "no_theme.ogg"),
 		"an image as a sound": valid.replace(track, other),
