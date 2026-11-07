@@ -32,10 +32,11 @@ from the .glb's .import, as the game imports it.
 
 `--speeds <folder>` (#2117) also takes the speeds from `<folder>/<model.glb>.speeds`, which
 check_rebuild.py's `--keep` writes from each build's `SPEEDS` line, so CI checks every model at
-the speeds its build prints; a model without one (a prop, the player's clips) is checked standing
-still. A model whose build prints no speeds but has a Walk or Run clip fails there (#2128): CI would
-check its gait standing still. A foot the check can't find on the ground (no part of the mesh
-follows it) fails its clip rather than passing unseen (#2128). A model without a rig or clips
+the speeds its build prints; a model without one (a prop, the third-party Rogue) is checked
+standing still. A model with a Walk or Run clip but no speed for it fails there (#2128): CI would
+check its gait standing still. A foot no frame finds on the ground (no part of the mesh follows
+it) fails its clip rather than passing unseen (#2128); a rig without a body, such as the player's
+clip library, is measured by its feet's joints instead. A model without a rig or clips
 passes: nothing moves. A clip or join that still fails today
 waits in KNOWN with the issue that fixes it (lib/known.py's way): it prints its numbers and doesn't
 fail the check, and fails once it passes until it's taken off. CI runs it on every .glb."""
@@ -45,6 +46,7 @@ import os
 import sys
 
 import bpy
+from mathutils import Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 # Blender's own Python runs this, outside the uv environment: game_shared comes from its folder.
@@ -80,6 +82,7 @@ KNOWN = {
     ("kavrikka", "Attack"): 1780,
     ("kavrikka", "Run"): 1780,
     ("kavrikka", "Walk"): 1780,
+    # The player's clips jitter, and the walk and run slide at the game's pace (#2128).
     **{("player_clips", clip): 2128
        for clip in ("GetUp", "HarvestBush", "Hit", "KnockedDown", "PickUp", "Run", "Throw", "Walk")},
     # The third-party Rogue's every clip (#2129).
@@ -108,12 +111,34 @@ def spin(a, b):
     return axis * math.degrees(angle)
 
 
+def joints(rig, foot):
+    """A foot's joints: its bone and every bone below it (the toes and their tips)."""
+    bone = rig.pose.bones[foot]
+    return [bone] + list(bone.children_recursive)
+
+
+def jointed(rig, feet):
+    """Per foot, from its joints (a rig without a body, such as the player's clip library, #2128):
+    the lowest joint's height above its rest height, and their centre. Such a rig stands on the
+    floor at rest (lib/planted_feet.py), so a joint at its rest height is on the ground."""
+    spots = {}
+    for name in feet:
+        bones = joints(rig, name)
+        world = rig.matrix_world
+        heights = [(world @ bone.head).z - (world @ bone.bone.head_local).z for bone in bones]
+        centre = sum((world @ bone.head for bone in bones), Vector()) / len(bones)
+        spots[name] = (min(heights), centre.x, centre.y)
+    return spots
+
+
 def sample(rig, meshes, feet, start, end):
     """Every frame's local bone rotations and translations (metres: the model is built at its
-    scale) and, per foot, its lowest point and centre."""
+    scale) and, per foot, its lowest point and centre: of the part of the mesh it moves most or,
+    on a rig without a body (no mesh moves any foot), of its joints."""
     scene = bpy.context.scene
     depsgraph = bpy.context.evaluated_depsgraph_get()
     parts = {obj.name: ground.owned(obj, feet) for obj in meshes}
+    bodiless = bool(feet) and not any(indices for owned in parts.values() for indices in owned.values())
     frames = []
     for frame in range(start, end + 1):
         scene.frame_set(frame)
@@ -127,6 +152,9 @@ def sample(rig, meshes, feet, start, end):
             for name, indices in parts[obj.name].items():
                 points[name] += [world @ mesh.vertices[index].co for index in indices]
             evaluated.to_mesh_clear()
+        if bodiless:
+            frames.append((turns, places, jointed(rig, feet)))
+            continue
         # A foot may be split over several meshes: all of its parts count.
         spots = {}
         for name, found in points.items():
