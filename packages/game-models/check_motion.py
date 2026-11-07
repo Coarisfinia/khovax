@@ -35,7 +35,9 @@ check_rebuild.py's `--keep` writes from each build's `SPEEDS` line, so CI checks
 the speeds its build prints; a model without one (a prop, the third-party Rogue) is checked
 standing still. A model with a Walk or Run clip but no speed for it fails there (#2128): CI would
 check its gait standing still. A foot no frame finds on the ground (no part of the mesh follows
-it) fails its clip rather than passing unseen (#2128); a rig without a body, such as the player's
+it) fails its clip rather than passing unseen (#2128), also beside a weighted one: only a bone
+named as a control (CONTROLS, the Rogue's IK-foot and control-foot-roll) is skipped, and named
+(#2142); a rig without a body, such as the player's
 clip library, is measured by its feet's joints instead. A model without a rig or clips passes:
 nothing moves; one with clips whose rig has no animation data to play them on fails (#2132). Each
 rig is checked on the clips it plays, so a model's second rig counts too, and a clip that drives
@@ -71,6 +73,10 @@ SEAM_SHIFT_LIMIT = 0.002
 JITTER_LIMIT = 15.0
 # The clips the game glides a model at while they play: each needs the speed its build prints.
 GAITS = ("Walk", "Run")
+# The prefixes that name a rig's foot controls rather than its feet (an IK target, a foot roll:
+# the Rogue's IK-foot.l and control-foot-roll.l, #2142), in lower case. A bone named like a foot
+# that moves no vertex is still a foot, one that lost its weights, and fails as unmeasured.
+CONTROLS = ("ik-", "control-")
 # A clip line's note on the feet no frame measures: a failure KNOWN never excuses, since a check
 # that can't see a foot says nothing about it.
 UNMEASURED = "; unmeasured (no part of the mesh follows the bone): "
@@ -144,14 +150,17 @@ def weighs(obj, bone):
 
 def foot_bones(rig, meshes):
     """The rig's feet, and whether it has no body to measure them on. A bone named like a foot
-    that moves no vertex is a control (an IK target, a foot roll), not a foot; a rig whose feet
-    all move none has no body (the player's clip library, its stand-in only, #2128), and its
-    feet are measured by their joints."""
-    feet = ground.foot_bones(rig)
-    weighted = [name for name in feet if any(weighs(obj, name) for obj in meshes)]
-    if feet and not weighted:
-        return feet, True
-    return weighted, False
+    whose name starts like a control (CONTROLS) is skipped, and named; a rig whose feet all move
+    no vertex has no body (the player's clip library, its stand-in only, #2128), and its feet are
+    measured by their joints. A foot that moves no vertex beside one that does stays a foot: no
+    frame measures it, and its clips fail (#2142)."""
+    named = ground.foot_bones(rig)
+    controls = [name for name in named if name.lower().startswith(CONTROLS)]
+    if controls:
+        log.info("MOTION rig %s: not feet but controls: %s" % (rig.name, ", ".join(sorted(controls))))
+    feet = [name for name in named if name not in controls]
+    bodiless = bool(feet) and not any(weighs(obj, name) for name in feet for obj in meshes)
+    return feet, bodiless
 
 
 def sample(rig, meshes, feet, bodiless, start, end):
