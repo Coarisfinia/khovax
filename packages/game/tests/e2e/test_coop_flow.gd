@@ -9,7 +9,8 @@ extends RefCounted
 ## tiles each colored on the shared trail carry that mark too while they share the instance (#266).
 ## Each player's companion (#338) joins them, in a smaller circle of their color and marks, its eyes
 ## glowing in its type's colour and shaped by its player's leaning (#1063). An open
-## menu doesn't pause co-op (#362).
+## menu doesn't pause co-op (#362). The hash co-op keeps every tick reads only the instances the
+## players are in, however many more are loaded (#2095).
 ## Time is stepped by hand, one tick a frame.
 
 const STEP: float = 1.0 / Simulation.TICKS_PER_SECOND
@@ -17,6 +18,8 @@ const TICKS: int = 60
 const DELAY: int = 3
 ## Polls the late player's source misses before its commands arrive.
 const LATE_POLLS: int = 5
+## Ticks the per-tick hash's cost is watched over, with an instance nobody is in loaded (#2095).
+const HASH_TICKS: int = 20
 const EAST: int = 0
 
 var _tree: SceneTree
@@ -218,6 +221,26 @@ func _check_input_delay() -> String:
 		return "the driver keeps %d hashes, more than %d" % [
 			_driver.hashes.size(),
 			GameDriver.HASH_HISTORY,
+		]
+	return _check_hash_cost()
+
+
+## The hash co-op keeps every tick (#2095) costs no more with every instance loaded: one nobody is
+## in keeps its fingerprint until it changes, so the ticks go through only the instances the
+## players are in. A feature added to an instance loaded beside them counts how often the hash
+## reads it.
+func _check_hash_cost() -> String:
+	var idle: GameState = _driver.world.instance(FlowSteps.GLADE)
+	if idle == null or World.has_player(idle):
+		return "the co-op flow couldn't load the glade beside the players"
+	var counter: HashCounter = HashCounter.new()
+	idle.features.append(counter)
+	_run_frames(HASH_TICKS)
+	idle.features.erase(counter)
+	if counter.hashed > 1:
+		return "the per-tick hash read an instance nobody is in %d times in %d ticks, not once" % [
+			counter.hashed,
+			HASH_TICKS,
 		]
 	return ""
 
@@ -439,3 +462,18 @@ class ScriptedSource:
 			var move: int = moves[index] if index < moves.size() else Command.NO_MOVE
 			schedule.put(_next + schedule.delay, slot, _command(move))
 			_next += 1
+
+
+## A feature that only counts how often the state hash reads it.
+class HashCounter:
+	extends Feature
+
+	var hashed: int = 0
+
+	func id() -> String:
+		return "hash_counter"
+
+	func hash_values() -> Array[int]:
+		hashed += 1
+		var none: Array[int] = []
+		return none
