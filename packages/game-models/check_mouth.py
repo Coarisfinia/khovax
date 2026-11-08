@@ -28,10 +28,23 @@ MIN_OPEN_DEGREES = 15.0
 FLOAT = 5126
 
 # Creatures designed without a mouth, from the game's folder, each with why.
-MOUTHLESS = {}
+MOUTHLESS = {
+    "assets/drakkudor/drakkudor.glb": "a cracked bone plate for a face, with no mouth (#1476)",
+    "assets/tikazzelu/tikazzelu.glb": "a ball of ribbons round a glowing core, with no mouth (#1732)",
+}
 
 # Creatures whose mouth doesn't open yet, each with the issue that decides it.
-KNOWN = {}
+KNOWN = {
+    "assets/fohossa/fohossa.glb": "#2187",
+    "assets/frostfire_hound/frostfire_hound.glb": "#2183",
+    "assets/kalvrakkor_magma/kalvrakkor_magma.glb": "#2185",
+    "assets/kavrikka/kavrikka.glb": "#2184",
+    "assets/nuvvoluvvo/nuvvoluvvo.glb": "#2188",
+    "assets/ombulumo/ombulumo.glb": "#2195",
+    "assets/ombuwomo/ombuwomo.glb": "#2195",
+    "assets/tolvakkor/tolvakkor.glb": "#2186",
+    "assets/wobulumu/wobulumu.glb": "#2195",
+}
 
 
 def chunks(flat, width):
