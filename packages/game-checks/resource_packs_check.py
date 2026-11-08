@@ -92,6 +92,7 @@ PACK_ROOT = "resourcepacks/default/"
 # rest follow (#1978).
 MOVED = {
     "textures": "textures",
+    "models": "models",
     "realms": "realms",
     "regions": "regions",
     "region_pieces": "regions",
