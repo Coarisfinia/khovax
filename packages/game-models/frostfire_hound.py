@@ -101,8 +101,14 @@ WALK_SPEED = TILE / 0.8
 RUN_SPEED = TILE / 0.3
 WALK_TILES, RUN_TILES = 0.5, 1.25
 WALK_DUTY, WALK_LIFT, WALK_CURL, WALK_ROLL, WALK_BOB = 0.4, 0.2, 0.4, 0.05, 0.4
-RUN_DUTY, RUN_FOLD, RUN_SPINE_FLEX, RUN_ROLL, RUN_BOB = 0.3, 0.5, 0.06, 0.0, 0.4
-GAIT = ("WALK_TILES", "WALK_DUTY", "WALK_LIFT", "WALK_CURL", "WALK_ROLL", "WALK_BOB", "RUN_TILES", "RUN_DUTY",
+RUN_DUTY, RUN_FOLD, RUN_SPINE_FLEX, RUN_ROLL, RUN_BOB = 0.2, 0.25, 0.06, 0.0, 0.4
+# The long attack's shifts and paws are smaller than the other clips' and its lunge a little
+# larger against them: at the shared size the body is still coming back from reaching for its
+# paws when ChannelStart hands over to the loop, and the join breaks (#2127).
+CHANNEL_SHARE = 0.25
+LUNGE = 1.25
+GAIT = ("CHANNEL_SHARE", "LUNGE", "WALK_TILES", "WALK_DUTY", "WALK_LIFT", "WALK_CURL", "WALK_ROLL", "WALK_BOB",
+        "RUN_TILES", "RUN_DUTY",
         "RUN_FOLD", "RUN_SPINE_FLEX", "RUN_ROLL", "RUN_BOB")
 OUT = tuning.arguments(globals(), GAIT)
 WALK_FRAMES = clips.cycle_frames(WALK_SPEED, TILE * WALK_TILES, FPS)
@@ -114,6 +120,16 @@ BELLY_HEIGHT = 0.30
 SHARE = 0.5
 FAINT_FOREPAWS = 0.25
 SLEEP_PAWS = {"front_paw": (0.0, 0.0, 0.25), "hind_paw": (0.08, 0.0, -0.08)}
+
+
+def channel():
+    """The library's long attack at CHANNEL_SHARE, ChannelStart's lunge shifting the body `LUNGE`
+    times that."""
+    out = {name: adopted.lesser(clip, CHANNEL_SHARE) for name, clip in clips.channel().items()}
+    start = out["ChannelStart"]
+    frame, pose, *rest = start.keys[3]
+    start.keys[3] = (frame, dict(pose, root_loc=tuple(LUNGE * value for value in pose["root_loc"])), *rest)
+    return out
 
 
 # --- Paint -------------------------------------------------------------------------------------
@@ -229,7 +245,7 @@ def build(out):
         "Attack": adopted.lesser(clips.attack(), SHARE),
         "Hit": adopted.lesser(clips.hit(), SHARE),
         "Faint": adopted.lesser(clips.faint(BELLY_HEIGHT, forepaws=FAINT_FOREPAWS), SHARE),
-        **{name: adopted.lesser(clip, SHARE) for name, clip in clips.channel().items()},
+        **channel(),
         "Feed": clips.feed(forepaws=0.04),
         "Sleep": clips.sleep(clips.curled(BELLY_HEIGHT), SLEEP_PAWS),
     }, SCALE, ground_meshes=[skin], chains=FOLLOW, limbs=adopted.limbs(rig))
