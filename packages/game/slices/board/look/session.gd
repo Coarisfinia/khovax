@@ -23,6 +23,7 @@ var world: World
 ## The commands the last tick ran on, one per slot (null for a slot that gave none), for views that
 ## show what a command decided, like the walk held at an exit (ExitHoldHint, #1010). Only to read.
 var last_commands: Array[Command] = []
+
 ## The instance this machine's player is in now, which the views draw; null without a world.
 var state: GameState:
 	get:

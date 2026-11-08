@@ -10,16 +10,19 @@ extends Camera3D
 
 ## The target to follow; the camera starts centered on it.
 @export var target: Node3D
+
 ## Angle between the view direction and the ground: 90 is straight down.
 @export_range(45.0, 90.0) var pitch_degrees: float = 65.0:
 	set(value):
 		pitch_degrees = value
 		_place()
+
 ## Distance from the focus point on the ground to the camera.
 @export var distance: float = 11.0:
 	set(value):
 		distance = value
 		_place()
+
 ## The camera only moves once the target is further than this from its focus.
 @export var dead_zone_radius: float = 2.0
 ## World units per second: just above walking speed (a tile every MovementFeature.MOVE_TICKS ticks),
