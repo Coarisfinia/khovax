@@ -34,6 +34,7 @@ const CHANGE_SECONDS: float = 0.8
 		radius = value
 		if is_node_ready():
 			_build(_shown_region())
+
 ## The grid shows this driver's region; without one (e.g. in the editor), a disc of `radius` rings.
 @export var driver: Session
 
