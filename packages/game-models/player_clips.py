@@ -20,7 +20,7 @@ import bpy
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib import clip_sources, pace, planted_feet, scene, skeleton  # noqa: E402
+from lib import clip_smooth, clip_sources, pace, planted_feet, scene, skeleton  # noqa: E402
 
 # No body to size against the world (check_world_scale.py): the clips play on the stand-in rig.
 WORLD_SCALE = "clip_library"
@@ -31,6 +31,10 @@ CLIPS = os.path.join(SOURCES, "clips")
 # every frame, one foot is flat on the ground (lib/planted_feet.py). The others leave the ground on
 # purpose: running, sitting, falling, getting up.
 GROUNDED = ["HarvestBush", "Hit", "Idle", "PickUp", "Talk", "Throw", "Wave"]
+# The clips whose source pops and snaps (the motion check's jitter, #2153): the build runs their
+# curves through a Gaussian of SMOOTHING frames before it plants their feet.
+SMOOTHED = ["GetUp", "HarvestBush"]
+SMOOTHING = 1.0
 # The game's pace for the player (metres a second, for the motion check, #2128; lib/pace.py). The
 # player has that one pace, so the walk and the run are both checked at it, whichever the body's
 # view plays while moving.
@@ -62,6 +66,8 @@ def build(out):
         if action is None:
             raise RuntimeError("%s has no clip" % path)
         name = os.path.splitext(os.path.basename(path))[0]
+        if name in SMOOTHED:
+            clip_smooth.smooth(rig, action, SMOOTHING)
         clip_sources.stash(rig, action, name)
         # Its rig was only the clip's carrier: the clip now plays on the library's.
         armature = other.data
