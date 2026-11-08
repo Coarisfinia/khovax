@@ -32,7 +32,6 @@ const KNOWN_GAPS: Array[String] = [
 	"odun_kragothai/morwe_wudhen",
 	"odun_kragothai/senwel_sael",
 	"odun_kragothai/thudren_orl",
-	"odun_kragothai/planted_gap",
 	# #2176
 	"sorn_lumawenai/brekhal_varn",
 	"sorn_lumawenai/dhorvone_stolm",
