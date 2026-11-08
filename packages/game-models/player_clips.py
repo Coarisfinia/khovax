@@ -20,7 +20,8 @@ import bpy
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib import clip_smooth, clip_sources, pace, planted_feet, relaxed_hands, scene, skeleton, standing_feet  # noqa: E402
+from lib import (clip_smooth, clip_sources, pace, paced_gait, planted_feet, relaxed_hands, scene, skeleton,  # noqa: E402
+                 standing_feet)
 
 # No body to size against the world (check_world_scale.py): the clips play on the stand-in rig.
 WORLD_SCALE = "clip_library"
@@ -42,6 +43,9 @@ HELD = ["Hit", "KnockedDown", "PickUp", "Throw"]
 # doesn't play, can't reach that pace and stay a walk, so it's checked at a walking pace of its own.
 WALK_SPEED = 0.94
 RUN_SPEED = pace.player()
+# The walk loops, and pops like the one-shots: smoothed too, around its seam, then its standing
+# feet held at its pace (lib/paced_gait.py).
+WALK_SMOOTHING = 1.5
 
 
 def mismatches(clips):
@@ -71,6 +75,8 @@ def build(out):
         name = os.path.splitext(os.path.basename(path))[0]
         if name in SMOOTHED:
             clip_smooth.smooth(rig, action, SMOOTHING)
+        elif name == "Walk":
+            clip_smooth.smooth(rig, action, WALK_SMOOTHING, True)
         relaxed_hands.relax(action)
         clip_sources.stash(rig, action, name)
         # Its rig was only the clip's carrier: the clip now plays on the library's.
@@ -78,7 +84,9 @@ def build(out):
         bpy.data.objects.remove(other, do_unlink=True)
         bpy.data.armatures.remove(armature, do_unlink=True)
         print("CLIP %s: frames %d-%d" % (name, *action.frame_range))
-        if name in HELD:
+        if name == "Walk":
+            paced_gait.pace(rig, action, WALK_SPEED, clip_sources.FPS)
+        elif name in HELD:
             standing_feet.hold(rig, action, name in GROUNDED)
         elif name in GROUNDED:
             planted_feet.plant(rig, action)
