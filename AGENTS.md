@@ -278,17 +278,20 @@ background; only wait in the foreground for a result the very next step needs.
   The watcher's `reply-review-thread <pr> <comment-id|PRRT_id> <body>` helper
   (`Flixbox/household-brain#307`) sends such a reply through GraphQL (below) and waits out a rate
   limit once: `bun --env-file=.claude/watcher.env <watcher>/src/reply-review-thread.ts …`.
-- **A draft only when there is something to see** (owner, #1566, #1569): a pull request that
-  changes models (a `.glb`, its rig, clips or textures, `packages/game-models/`, the model skill)
-  or UI (anything the player sees or touches on screen) **and** shows the owner something in its
-  description (renders, screenshots, a before and after) is opened with `agent-gh pr create
-  --draft …` and stays a draft until the owner approves. Once the owner approves its head, the
-  watcher marks it ready itself and reports `DRAFT_READIED` (`Flixbox/household-brain#301`,
-  `Flixbox/household-brain#316`); only on `APPROVED_DRAFT` (an older head approved, or marking it
-  ready failed) run `agent-gh pr ready <n>` yourself, then queue it (below). Until
-  `Flixbox/household-brain#324` is live, the watcher's `REVIEW_BOTS` hold never reports
-  `READY_TO_MERGE` for such a draft without a CodeRabbit review: don't wait for that event, queue
-  it once it may be queued. Every other pull request is not a draft.
+- **A draft only while the core change is missing** (owner, #2093, #2114, replacing #1566's and
+  #1569's draft until approved): a pull request is a draft only while it lacks its core logic (only
+  its fail-first check pushed, or the fix still missing), and a draft gets neither the `question`
+  label nor a ping to the owner. One that waits for the owner is ready for review: a pull request
+  that changes models (a `.glb`, its rig, clips or textures, `packages/game-models/`, the model
+  skill) or UI (anything the player sees or touches on screen) and shows the owner something in its
+  description (renders, screenshots, a before and after) is marked ready once its core change is
+  in, and only then is the owner pinged with what there is to see. If the owner approves a draft's
+  head anyway, the watcher marks it ready itself and reports `DRAFT_READIED`
+  (`Flixbox/household-brain#301`, `Flixbox/household-brain#316`); only on `APPROVED_DRAFT` (an older
+  head approved, or marking it ready failed) run `agent-gh pr ready <n>` yourself, then queue it
+  (below). Until `Flixbox/household-brain#324` is live, the watcher's `REVIEW_BOTS` hold never
+  reports `READY_TO_MERGE` for such a draft without a CodeRabbit review: don't wait for that event,
+  queue it once it may be queued.
 - **Reply in a review thread through GraphQL, not REST** (#1573): the bot's REST calls (the
   `pulls/<n>/comments/<id>/replies` endpoint, review reads) got HTTP 403 "API rate limit exceeded
   for installation" in bursts while `rate_limit` still showed much of the hourly quota left: many
