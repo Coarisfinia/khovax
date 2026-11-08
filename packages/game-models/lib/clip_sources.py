@@ -19,8 +19,10 @@ STAND_IN = 0.01
 
 def load(path):
     """Imports the .glb at `path` into the scene and returns its armature and its one clip (None
-    when it has none), every other object it brought dropped."""
+    when it has none), every other object it brought dropped. A clip that never moves the rig is
+    an error, naming the clip (#2152)."""
     before = set(bpy.data.objects)
+    clips_before = set(bpy.data.actions)
     bpy.ops.import_scene.gltf(filepath=path)
     added = [obj for obj in bpy.data.objects if obj not in before]
     rigs = [obj for obj in added if obj.type == "ARMATURE"]
@@ -39,11 +41,16 @@ def load(path):
         actions.append(data.action)
     if len(actions) > 1:
         raise RuntimeError("%s: %d clips, not one: a clip source holds one" % (path, len(actions)))
+    # The importer gives the rig no action at all when a clip moves only other objects.
+    own = imported.slot(actions[0], rig) if actions else None
+    strays = actions or [action for action in bpy.data.actions if action not in clips_before]
+    if own is None and strays:
+        raise RuntimeError("%s: clip %s has no slot of the rig's own: it never moves the rig"
+                           % (path, ", ".join(action.name for action in strays)))
     if actions:
         # One glTF animation moving several objects is one action with a slot each (#2145): only
         # the rig's stays, so the clip plays as the rig played it wherever it is stashed.
-        own = imported.slot(actions[0], rig)
-        for other in [found for found in actions[0].slots if own is not None and found != own]:
+        for other in [found for found in actions[0].slots if found != own]:
             actions[0].slots.remove(other)
     if data:
         for track in list(data.nla_tracks):
