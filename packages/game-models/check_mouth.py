@@ -80,10 +80,13 @@ def widest_turn(gltf, binary, animation, jaw):
         target = channel["target"]
         if target.get("node") != jaw or target["path"] != "rotation":
             continue
-        accessor = gltf["accessors"][animation["samplers"][channel["sampler"]]["output"]]
+        sampler = animation["samplers"][channel["sampler"]]
+        accessor = gltf["accessors"][sampler["output"]]
         if accessor["componentType"] != FLOAT:
             return None
-        for key in chunks(values(gltf, binary, accessor), 4):
+        keys = chunks(values(gltf, binary, accessor), 4)
+        # A cubic spline stores each key between its two tangents, which aren't rotations.
+        for key in keys[1::3] if sampler.get("interpolation") == "CUBICSPLINE" else keys:
             alignment = min(1.0, abs(sum(a * b for a, b in zip(rest, key))))
             widest = max(widest, 2.0 * math.degrees(math.acos(alignment)))
     return widest
