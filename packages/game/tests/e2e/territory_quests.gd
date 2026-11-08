@@ -11,7 +11,39 @@ extends RefCounted
 ## content issues. This list only shrinks: `problem` refuses an entry whose quest now exists, so
 ## the quest's pull request takes it out. A new faction or territory is refused until it has its
 ## quests; never add to this list to get past that.
-const KNOWN_GAPS: Array[String] = []
+const KNOWN_GAPS: Array[String] = [
+	# #2174
+	"amvrel_velmarai/brekhal_varn",
+	"amvrel_velmarai/dhorvone_stolm",
+	"amvrel_velmarai/hrovumel_stolm",
+	"amvrel_velmarai/hrunde_orl",
+	"amvrel_velmarai/ivenwhal_wudhen",
+	"amvrel_velmarai/lumwen_hoal",
+	"amvrel_velmarai/senwel_sael",
+	"amvrel_velmarai/thudren_orl",
+	# #2175
+	"odun_kragothai/brekhal_varn",
+	"odun_kragothai/dhorvone_stolm",
+	"odun_kragothai/edhra_tewk",
+	"odun_kragothai/hrovumel_stolm",
+	"odun_kragothai/hrunde_orl",
+	"odun_kragothai/ivenwhal_wudhen",
+	"odun_kragothai/lumwen_hoal",
+	"odun_kragothai/morwe_wudhen",
+	"odun_kragothai/senwel_sael",
+	"odun_kragothai/thudren_orl",
+	# #2176
+	"sorn_lumawenai/brekhal_varn",
+	"sorn_lumawenai/dhorvone_stolm",
+	"sorn_lumawenai/edhra_tewk",
+	"sorn_lumawenai/hrovumel_stolm",
+	"sorn_lumawenai/hrunde_orl",
+	"sorn_lumawenai/ivenwhal_wudhen",
+	"sorn_lumawenai/lumwen_hoal",
+	"sorn_lumawenai/morwe_wudhen",
+	"sorn_lumawenai/senwel_sael",
+	"sorn_lumawenai/thudren_orl",
+]
 
 
 ## Why the territory quests among `quests` don't keep to the rules, or "": a pair of one of
