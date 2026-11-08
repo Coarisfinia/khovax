@@ -953,6 +953,30 @@ clips. Ask the owner only when it's unclear what should move how.
    that still fails waits in its `KNOWN` list with the issue that fixes it. Its lines go into the
    PR. CI runs it on every `.glb`, with its test (`test_world_scale.py`).
 
+24. **A properly rendered mouth (hard requirement, the owner on #2188, #2190):** every new
+   creature model we import (a new beast, a baby form or any other evolution) passes this before
+   its import may be merged. Props and the other non-creatures (`NOT_CREATURES` in
+   `check_clip_set.py`) don't take it, and models already in the game are handled in their own
+   issues (#2183 and its follow-ups). It checks the import, never the design: no creature prompt
+   gains a mouth line for it (#2052), and no check runs it yet, so the builder judges the renders.
+   - **What passes:** closed, the mouth reads as a mouth, with no holes, torn faces or stray
+     paint. Open, the mouth parts on a `jaw` bone with its own skin (the library's Attack and
+     Channel clips key `jaw`, and a rig without one stays shut, #2183), the inside shows its dark
+     lining rather than a hole through the single-sided skin, and the lower jaw and teeth stay
+     attached.
+   - **Evidence in the PR's description:** a picture of the mouth closed (the `face` close-up at
+     rest) and one of it open (the frame of Attack where the jaw is widest, its frame number
+     named), both rendered in Godot from one camera:
+     `render_in_game.gd`'s `clip=Attack from=face camera=rest` (step 5's offscreen recipe), the
+     closed one being that run's first frame. One line names the `jaw` bone.
+   - **A design with no mouth is exempt:** a face of bone plate (the Drakkudor) or a ball of
+     ribbons (the Tikazzelu) has none to check. The PR says so with the `face` close-up and links
+     the source that shows the design has no mouth. A mouth the source has and the import lost, or
+     one the rig can't open, is a failure, not an exemption.
+   - **On a failure the import stops:** the PR isn't marked ready and nothing else of the import
+     goes on until the mouth is fixed, or the owner decides otherwise on its issue (a `question`
+     with three numbered options and a star, as for any model that may need a fresh export).
+
 ## 5. PR
 - **Visuals (owner's rule), in this order:**
   1. **Every side as built:** the Blender sheet from step 1.
@@ -981,5 +1005,6 @@ clips. Ask the owner only when it's unclear what should move how.
 - **Splitting the work:** a model can come in two PRs: the model with its rig (visuals 1 and 2),
   then its clips (visual 3). Each PR shows what it adds.
 - **Numbers:** the budget from step 7, the `check_glb.gd` result, the proportions (step 10), the
-  comparison sheet with its numbers (step 11) and the blind review's table (step 12).
+  comparison sheet with its numbers (step 11), the blind review's table (step 12) and, for a new
+  creature, the mouth's evidence or exemption (step 24).
 - **Review:** Codex reviews the build script's diff, never the binary.
