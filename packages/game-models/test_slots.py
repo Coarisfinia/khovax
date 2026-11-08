@@ -9,7 +9,8 @@ that moves an empty and a rig imports as one action with a slot each, the empty'
   sinks; with the empty's slot on, the rig would stand still and pass.
 - planted feet: a standing clip plays on the rig in the rig's slot while its feet are planted.
 - clip sources: a clip source's clip goes into a clip library on the slot its rig played; stashing
-  a clip with several slots picks the rig's; a clip that never moves the rig doesn't load (#2152).
+  a clip with several slots picks the rig's; a clip that never moves the rig doesn't load (#2152),
+  nor does a second animation that moves only another object (#2159).
 
 It prints each case and `SLOT TEST: PASS` or `FAIL` (and exits 1 on a fail)."""
 
@@ -41,11 +42,11 @@ def rig(name):
     return obj
 
 
-def model(glb, rig_moves=True):
+def model(glb, rig_moves=True, empty_clip=None):
     """Exports to `glb` an empty and a rig skinning a 10 cm box, and one clip, Sink, moving both:
     the empty sideways, the rig's bone 5 cm down, so the box sinks into the ground. The importer
     lists the objects by name, so the empty's slot comes first. Without `rig_moves`, the clip moves
-    the empty alone."""
+    the empty alone. With `empty_clip`, the empty's keys are a second animation of that name."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
     holder = bpy.data.objects.new("a_holder", None)
     bpy.context.scene.collection.objects.link(holder)
@@ -61,7 +62,8 @@ def model(glb, rig_moves=True):
         moved.append((body, body.pose.bones["body"], 1, -0.05))
     for obj, target, axis, far in moved:
         obj.animation_data_create()
-        obj.animation_data.action = action
+        own_clip = empty_clip and obj is holder
+        obj.animation_data.action = bpy.data.actions.new(empty_clip) if own_clip else action
         for frame in (0, 10):
             target.location[axis] = far * frame / 10
             target.keyframe_insert("location", frame=frame)
@@ -112,15 +114,26 @@ def stashed(glb):
         len(action.slots), played.identifier, own.identifier)
 
 
-def refused(glb):
-    other = os.path.join(os.path.dirname(glb), "empty_only.glb")
-    model(other, rig_moves=False)
+def load_refusal(other, names):
+    """Whether loading the .glb at `other` fails, naming each of `names`, and the details."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
     try:
         _source, action = clip_sources.load(other)
     except RuntimeError as error:
-        return "Sink" in str(error), str(error)
+        return all(name in str(error) for name in names), str(error)
     return False, "loaded, with clip %s" % (action.name if action else None)
+
+
+def refused(glb):
+    other = os.path.join(os.path.dirname(glb), "empty_only.glb")
+    model(other, rig_moves=False)
+    return load_refusal(other, ["Sink"])
+
+
+def second_clip(glb):
+    other = os.path.join(os.path.dirname(glb), "two_clips.glb")
+    model(other, empty_clip="Drift")
+    return load_refusal(other, ["Sink", "Drift"])
 
 
 # Case: (what it checks, what it does with the model's .glb and returns as (right, details)).
@@ -130,6 +143,8 @@ CASES = {
     "sources": ("a clip source's clip is stashed on its rig's slot", sourced),
     "stash": ("stashing a clip with several slots picks the rig's", stashed),
     "no-slot": ("a clip that never moves the rig fails to load, naming the clip", refused),
+    "second-clip": ("a second animation moving only another object fails to load, naming both",
+                    second_clip),
 }
 
 
