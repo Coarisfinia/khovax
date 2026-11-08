@@ -94,7 +94,9 @@ MOUTH_CORNER = -0.345
 MOUTH_POINT = (0.10, -0.47, 0.685)
 MOUTH_RISE = 0.29
 JAW_BLEND = 0.03
-MOUTH_COLOUR = (0.05, 0.015, 0.025, 1.0)
+# How wide (texels) the patch of the painted texture the mouth's lining samples is, all of it dark:
+# the model keeps its one material, which is how the eye checks know its eyes are painted on.
+MOUTH_PATCH = 9
 
 # Its eyes, as the attachment points find them (the eye pieces' middles, filled in by `eyes`),
 # looking ahead and a little out; it bites with its muzzle's tip.
@@ -226,14 +228,15 @@ def rename(rig, skin):
     rigged.roll(rig)
 
 
-def mouth_lining():
-    """The dark inside of the mouth, matte and single-sided."""
-    lining = bpy.data.materials.new("frostfire_hound_mouth")
-    lining.use_backface_culling = True
-    shader = lining.node_tree.nodes["Principled BSDF"]
-    shader.inputs["Base Color"].default_value = MOUTH_COLOUR
-    shader.inputs["Roughness"].default_value = 1.0
-    return lining
+def darkest(image):
+    """Where (U, V) the middle of the darkest MOUTH_PATCH-wide patch of `image` lies."""
+    width, height = image.size
+    pixels = numpy.empty(width * height * 4, dtype=numpy.float32)
+    image.pixels.foreach_get(pixels)
+    bright = pixels.reshape(height, width, 4)[:, :, :3].max(axis=2)
+    worst = numpy.lib.stride_tricks.sliding_window_view(bright, (MOUTH_PATCH, MOUTH_PATCH)).max(axis=(2, 3))
+    row, column = numpy.unravel_index(numpy.argmin(worst), worst.shape)
+    return (column + MOUTH_PATCH / 2.0) / width, (row + MOUTH_PATCH / 2.0) / height
 
 
 def chain(edges):
@@ -252,10 +255,11 @@ def chain(edges):
         run.append(edge.other_vert(run[-1]))
 
 
-def cap(mesh, ring, down):
-    """Closes one side of the cut with the dark lining, facing the other side of the mouth."""
+def cap(mesh, ring, down, dark):
+    """Closes one side of the cut, on the texture's dark patch `dark`, facing the other side."""
     face = mesh.faces.new(ring)
-    face.material_index = 1
+    for loop in face.loops:
+        loop[mesh.loops.layers.uv.active].uv = dark
     made = bmesh.ops.triangulate(mesh, faces=[face], ngon_method="EAR_CLIP")["faces"]
     mesh.normal_update()
     wrong = sum(triangle.normal.z for triangle in made) > 0.0 if down else sum(
@@ -264,10 +268,10 @@ def cap(mesh, ring, down):
         bmesh.ops.reverse_faces(mesh, faces=made)
 
 
-def mouth(rig, skin):
-    """Cuts the snout open, lines both sides of the cut and hangs the lower jaw on a new bone from
-    the mouth's corners towards its chin."""
-    skin.data.materials.append(mouth_lining())
+def mouth(rig, skin, colour):
+    """Cuts the snout open, lines both sides of the cut with the darkest of the painted texture
+    `colour` and hangs the lower jaw on a new bone from the mouth's corners towards its chin."""
+    dark = darkest(colour)
     mesh = bmesh.new()
     mesh.from_mesh(skin.data)
     normal = Vector((0.0, -MOUTH_RISE, 1.0)).normalized()
@@ -292,8 +296,8 @@ def mouth(rig, skin):
     chin = min(lower, key=lambda vertex: vertex.co.y).co.copy()
     jaw = {vertex for face in mesh.faces if face.calc_center_median().y < MOUTH_CORNER and below(face)
            for vertex in face.verts} - set(corners)
-    cap(mesh, upper, True)
-    cap(mesh, lower, False)
+    cap(mesh, upper, True, dark)
+    cap(mesh, lower, False, dark)
     mesh.verts.index_update()
     jaw = {vertex.index for vertex in jaw}
     mesh.to_mesh(skin.data)
@@ -346,7 +350,7 @@ def build(out):
     spread(skin, part)
     spots = eyes(skin, part)
     rename(rig, skin)
-    mouth(rig, skin)
+    mouth(rig, skin, colour)
     points(rig, spots)
     body = adopted.Body(rig, MUZZLE)
     clips.animate(rig, {
