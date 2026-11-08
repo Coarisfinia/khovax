@@ -844,7 +844,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   Meshy plan with the Private license (#1476); its `LICENSE.md` is a copy of the root `LICENSE`, and
   its `SOURCE.md` names the project (or its contributors) as the author and says how the asset was
   made (the Fohossa, the Frostfire Hound and the Drakkudor show how). **Each pack lives in
-  `assets/<pack>/`** (a sound's in `resourcepacks/default/audio/<pack>/`, #1978) with its license file and a `SOURCE.md` (title, then `- **Author:**`,
+  `assets/<pack>/`** (a sound's in `resourcepacks/default/audio/<pack>/`, an image's in `resourcepacks/default/textures/<pack>/`, #1978) with its license file and a `SOURCE.md` (title, then `- **Author:**`,
   `- **Source:**`, `- **License:**`); `CREDITS.md` is generated from those by
   `tools/godot/credits.gd`, and CI fails when it's out of date (owner, #69/#70). Commit only what the game uses, not whole packs.
   Obtaining or importing any asset starts at the assets skill (`.claude/skills/assets/SKILL.md`, #2013).

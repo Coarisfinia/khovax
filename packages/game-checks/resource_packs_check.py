@@ -11,8 +11,8 @@ will have (#1858), and looked up only through ResourcePacks. It fails when
 - a resource is unreferenced: the manifest lists it but no script (outside its comments), scene,
   resource or content file of the game's names its id as a string (but for the realms, the
   quests, species, catalogues, tile blueprints, loot and harvest tables and materials, which the
-  game finds by listing the pack), or a file of its kind (an image or model under assets/, a
-  sound under resourcepacks/default/audio/, a region file or piece under
+  game finds by listing the pack), or a file of its kind (a model under assets/, an image under
+  resourcepacks/default/textures/, a sound under resourcepacks/default/audio/, a region file or piece under
   resourcepacks/default/regions/, a realm in resourcepacks/default/realms/, a quest in
   resourcepacks/default/quests/, a species in resourcepacks/default/species/, a catalogue under
   translations/, a tile blueprint in resourcepacks/default/tiles/, a loot table, harvest table or
@@ -91,6 +91,7 @@ PACK_ROOT = "resourcepacks/default/"
 # region's pieces lie beside the regions drawn whole); the move goes one kind at a time, and the
 # rest follow (#1978).
 MOVED = {
+    "textures": "textures",
     "realms": "realms",
     "regions": "regions",
     "region_pieces": "regions",
@@ -111,6 +112,9 @@ QUESTS = f"{PACK_ROOT}quests"
 # Where the default pack's species lie (#1903, #1978); their schema and their abilities stay in
 # the species slice (#412).
 SPECIES = f"{PACK_ROOT}species"
+# Where the default pack's textures lie (#1860, #1978), each in its asset pack's folder, beside its
+# SOURCE.md and licence; the images a model uses move with their models (#2080).
+TEXTURES = f"{PACK_ROOT}textures"
 # Where the default pack's sounds lie (#2014, #1978), each in its asset pack's folder, beside its
 # SOURCE.md and licence.
 SOUNDS = f"{PACK_ROOT}audio"
@@ -125,7 +129,7 @@ MATERIALS = f"{PACK_ROOT}materials"
 HARVEST_TABLES = f"{PACK_ROOT}harvest_tables"
 # Each kind of resource the manifest lists, by its section.
 KINDS: dict[str, Kind] = {
-    "textures": Kind("texture", IMAGES, True, "assets"),
+    "textures": Kind("texture", IMAGES, True, TEXTURES),
     "models": Kind("model", MODELS, True, "assets"),
     "audio": Kind("sound", AUDIO, True, SOUNDS),
     # A region drawn whole in one file, REGIONS/<id>.md, and one arranged from the pieces in
@@ -410,7 +414,7 @@ def main() -> int:
             if paths != [f"{folder}/{entry_id}.jsonc"]
         ]
     tracked = set(
-        git_files("assets", SOUNDS, REGIONS, REALMS, "translations", QUESTS, SPECIES, TILES, LOOT_TABLES, MATERIALS, HARVEST_TABLES)
+        git_files("assets", TEXTURES, SOUNDS, REGIONS, REALMS, "translations", QUESTS, SPECIES, TILES, LOOT_TABLES, MATERIALS, HARVEST_TABLES)
     )
     models = {path for paths in entries["models"].values() for path in paths}
     used_by_models = model_images(sorted(models & tracked))

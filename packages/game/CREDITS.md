@@ -55,7 +55,7 @@ edit it by hand.
 
 ## Game-icons.net
 
-- **Files:** `assets/game-icons/`
+- **Files:** `resourcepacks/default/textures/game-icons/`
 - **Author:** Lorc (http://lorcblog.blogspot.com): `cog.svg`, `evil-moon.svg`, `fist.svg`,
   `grab.svg`, `magic-shield.svg`, `magic-swirl.svg`, `magnifying-glass.svg`, `spiky-explosion.svg`,
   `sprout.svg`, `swap-bag.svg`, `tornado.svg`, `wolf-trap.svg`; Delapouite (http://delapouite.com):
@@ -118,7 +118,7 @@ edit it by hand.
 
 ## Input Prompts 1.5A
 
-- **Files:** `assets/kenney-input-prompts/`
+- **Files:** `resourcepacks/default/textures/kenney-input-prompts/`
 - **Author:** Kenney (www.kenney.nl)
 - **Source:** https://kenney.nl/assets/input-prompts (`kenney_input-prompts_1.5.zip`: `Keyboard &
   Mouse/Vector/keyboard_enter.svg`, `keyboard_escape.svg`, `keyboard_tab.svg`, `keyboard_1.svg` to

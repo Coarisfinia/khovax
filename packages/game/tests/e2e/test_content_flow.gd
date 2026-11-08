@@ -2275,14 +2275,14 @@ func _check_pack_manifests() -> String:
 		+ " \"harvest_tables\": {\"h\": \"harvest/h.jsonc\"},"
 		+ " \"translations\": {}%s}"
 	)
-	var cog: String = "assets/game-icons/cog.svg"
+	var cog: String = "resourcepacks/default/textures/game-icons/cog.svg"
 	var wolf: String = "assets/mana-wolf/mana_wolf.glb"
 	var cases: Dictionary[String, String] = {
 		"an unknown field": valid % ["p", "1.0.0", "a", cog, wolf, ", \"x\": 1"],
 		"a bad id": valid % ["P", "1.0.0", "a", cog, wolf, ""],
 		"a bad version": valid % ["p", "1.0", "a", cog, wolf, ""],
 		"a bad texture id": valid % ["p", "1.0.0", "A", cog, wolf, ""],
-		"a missing file": valid % ["p", "1.0.0", "a", "assets/game-icons/nothing.svg", wolf, ""],
+		"a missing file": valid % ["p", "1.0.0", "a", cog.replace("cog", "nothing"), wolf, ""],
 		"a file outside the pack": valid % ["p", "1.0.0", "a", "assets/../../" + cog, wolf, ""],
 		"a missing model": valid % ["p", "1.0.0", "a", cog, "assets/mana-wolf/no_wolf.glb", ""],
 		"an image as a model": valid % ["p", "1.0.0", "a", cog, cog, ""],

@@ -19,7 +19,11 @@ extends SceneTree
 ## kinds already moved there (#1978), which the game reaches through its link, res://resourcepacks/
 ## (link_resource_packs.py; named in parts, so no check takes it for a lookup around the resolver).
 const PACKS: String = "res://resourcepacks/"
-const FOLDERS: Array[String] = ["res://assets/", PACKS + "default/audio/"]
+const FOLDERS: Array[String] = [
+	"res://assets/",
+	PACKS + "default/audio/",
+	PACKS + "default/textures/",
+]
 const TARGET: String = "res://CREDITS.md"
 ## The lines of a source note that go into the credits, by their start; each may continue on
 ## indented lines below it.

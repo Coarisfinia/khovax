@@ -1,5 +1,5 @@
 """Fails on assets that nothing uses (#320). A file under assets/, or under the default pack's own
-folder of a kind of asset already moved there (resourcepacks/default/audio/, #1978), is used when its res:// path is
+folder of a kind of asset already moved there (resourcepacks/default/audio/ or textures/, #1978), is used when its res:// path is
 named in a script, scene, resource, content file or the project settings, or listed in the default
 resource pack (#1860, its models since #1864, its sounds since #2014), through which the game
 looks it up by its id; when
@@ -32,7 +32,7 @@ PLAIN = re.compile(r"[A-Za-z0-9._/-]*")
 NAMED = re.compile(rb"res://(assets/[A-Za-z0-9._/-]+)")
 # The default pack's own folders of the kinds of asset already moved there (#1978), reached through
 # the game's link, resourcepacks/.
-MOVED = ("resourcepacks/default/audio",)
+MOVED = ("resourcepacks/default/audio", "resourcepacks/default/textures")
 NAMING = ("*.gd", "*.tscn", "*.tres", "*.godot", "*.cfg", "*.jsonc")
 
 
