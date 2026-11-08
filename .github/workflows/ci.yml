@@ -350,6 +350,12 @@ jobs:
         timeout-minutes: 2
         run: uv run --locked --package khovax-game-models ../game-models/test_changed_models.py
 
+      - name: "🧪 Test the player's pace follows the game's ticks"
+        # The pace the motion check measures the player's walk and run at comes from
+        # Tuning.MOVE_TICKS and Simulation.TICKS_PER_SECOND: changing either changes it (#2142).
+        timeout-minutes: 2
+        run: uv run --locked --package khovax-game-models ../game-models/test_pace.py
+
       - name: "🔀 See which models changed"
         id: models
         # The checks below need Blender, so they run only where they can find something, and look
@@ -504,7 +510,8 @@ jobs:
 
       - name: "🧪 Test the motion check on models it can't measure"
         # A prop and a rig playing its clip pass; a rig beside clips it can't play fails
-        # (#2132).
+        # (#2132); a foot that lost its weights fails as unmeasured, and foot controls are
+        # named as skipped (#2142).
         if: steps.models.outputs.changed == 'true'
         timeout-minutes: 2
         run: |
