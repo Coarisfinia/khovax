@@ -32,11 +32,6 @@ from lib import ground, imported, known, volume  # noqa: E402
 
 # (model, clip) that fails today, with the issue that fixes it; that issue takes its entries off.
 KNOWN = {
-    ("fohossa", "Attack"): 1628,
-    ("fohossa", "Faint"): 1628,
-    ("fohossa", "Feed"): 1628,
-    ("fohossa", "Run"): 1628,
-    ("fohossa", "Sleep"): 1628,
     ("frostfire_hound", "Attack"): 1814,
     ("kavrikka", "Attack"): 1761,
     ("kavrikka", "Run"): 1761,
