@@ -83,9 +83,6 @@ jobs:
           gdstyle check --no-color --ignore quality/max-file-length .
           git ls-files -z '*.gd' ':!tests/' | xargs -0 gdstyle check --no-color --select quality/max-file-length
 
-      - name: "TEMPORARY (#1706): print the formatter's diff"
-        run: gdstyle fmt --diff --no-color . || true
-
       - name: "🎨 Check GDScript formatting"
         run: gdstyle fmt --check .
 
