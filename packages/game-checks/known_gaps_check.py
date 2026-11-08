@@ -14,18 +14,29 @@ import sys
 from game_shared import log
 
 FILE = "packages/game/tests/e2e/territory_quests.gd"
-LIST = re.compile(r"const KNOWN_GAPS: Array\[String\] = \[(.*?)\]", re.DOTALL)
-# GDScript writes a string in either quote; a comment's apostrophes aren't one.
-ENTRY = re.compile(r"""(["'])(.+?)\1""")
-COMMENT = re.compile(r"#[^\n]*")
+# A string or a comment, read in one pass so that neither is taken for the other.
+TOKEN = re.compile(r"""\"[^"\n]*"|'[^'\n]*'|#[^\n]*""")
+# The list, whose brackets only count outside its strings, and whose ] ends its line.
+LIST = re.compile(
+    r"""^const KNOWN_GAPS: Array\[String\] = \[((?:"[^"\n]*"|'[^'\n]*'|[^\]"'])*)\][ \t]*$""",
+    re.MULTILINE,
+)
+# GDScript writes a string in either quote.
+ENTRY = re.compile(r"""(["'])(.*?)\1""")
+
+
+def uncommented(text: str) -> str:
+    """The text without its comments, its strings as they were."""
+    return TOKEN.sub(lambda token: "" if token[0].startswith("#") else token[0], text)
 
 
 def entries(text: str) -> set[str] | None:
-    """The list's entries in a version of the file, or None when the file has no such list."""
-    found = LIST.search(text)
+    """The list's entries in a version of the file, or None when the file has no list that can be
+    read: a list followed by anything else on the line of its ] can't be."""
+    found = LIST.search(uncommented(text))
     if found is None:
         return None
-    return {entry[2] for entry in ENTRY.finditer(COMMENT.sub("", found[1]))}
+    return {entry[2] for entry in ENTRY.finditer(found[1])}
 
 
 def added(before: str, after: str) -> list[str] | None:
