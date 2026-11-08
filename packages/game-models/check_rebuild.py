@@ -4,13 +4,13 @@ that too, which tells whether a pull request's .glb is what its script builds.
 
     uv run --locked --package khovax-game-models packages/game-models/check_rebuild.py \
         packages/game-models/<name>.py \
-        [packages/game/assets/<name>/<name>.glb]
+        [resourcepacks/default/models/<name>/<name>.glb]
     uv run --locked --package khovax-game-models packages/game-models/check_rebuild.py --all \
         [--keep <folder>] [--only <list>]
 
 `--all` checks every scripted model against its committed .glb, as CI does (#1161): a model
 script is one here that exports through scene.export_glb, and its .glb is the tracked one under
-the game's assets/ named like it (mana_wolf.py builds assets/mana-wolf/mana_wolf.glb); a model
+the default pack's models/ named like it (mana_wolf.py builds resourcepacks/default/models/mana-wolf/mana_wolf.glb); a model
 script without one fails. `--keep` copies each model's build into the folder, named like its .glb,
 so CI can offer the build it compared, and the speeds its build prints (its `SPEEDS` line) beside
 it as `<name>.glb.speeds`, which the motion check takes (#2117). `--only` builds only the models whose .glb is in the list
@@ -115,8 +115,8 @@ def differences(a: Path, b: Path) -> list[str]:
 def scripted_models() -> list[tuple[str, str | None]]:
     """Every model script with the .glb it builds, both from the working directory: a model script
     is a script here that exports through scene.export_glb, and its .glb is the tracked one under
-    the game's assets/ named like it (None when there is none)."""
-    glbs = {Path(path).stem: path for path in git_files(str(MODELS.parent / "game" / "assets" / "*.glb"))}
+    the default pack's models/ named like it (None when there is none)."""
+    glbs = {Path(path).stem: path for path in git_files("resourcepacks/default/models/*.glb")}
     return [(os.path.relpath(script), glbs.get(script.stem)) for script in sorted(MODELS.glob("*.py"))
             if EXPORT.search(script.read_text())]
 
@@ -188,7 +188,7 @@ def main() -> int:
         unpaired = [script for script, glb in models if glb is None]
         for script in unpaired:
             # A renamed or deleted .glb would otherwise leave its model unchecked.
-            log.error("no tracked .glb under the game's assets/ is named like this model script", script)
+            log.error("no tracked .glb under the default pack's models/ is named like this model script", script)
         if not models or unpaired:
             if not models:
                 log.error("no model script calls scene.export_glb: nothing to check")

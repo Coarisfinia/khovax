@@ -2276,7 +2276,7 @@ func _check_pack_manifests() -> String:
 		+ " \"translations\": {}%s}"
 	)
 	var cog: String = "resourcepacks/default/textures/game-icons/cog.svg"
-	var wolf: String = "assets/mana-wolf/mana_wolf.glb"
+	var wolf: String = "resourcepacks/default/models/mana-wolf/mana_wolf.glb"
 	var cases: Dictionary[String, String] = {
 		"an unknown field": valid % ["p", "1.0.0", "a", cog, wolf, ", \"x\": 1"],
 		"a bad id": valid % ["P", "1.0.0", "a", cog, wolf, ""],
@@ -2284,7 +2284,7 @@ func _check_pack_manifests() -> String:
 		"a bad texture id": valid % ["p", "1.0.0", "A", cog, wolf, ""],
 		"a missing file": valid % ["p", "1.0.0", "a", cog.replace("cog", "nothing"), wolf, ""],
 		"a file outside the pack": valid % ["p", "1.0.0", "a", "assets/../../" + cog, wolf, ""],
-		"a missing model": valid % ["p", "1.0.0", "a", cog, "assets/mana-wolf/no_wolf.glb", ""],
+		"a missing model": valid % ["p", "1.0.0", "a", cog, wolf.replace("mana_wolf", "no_wolf"), ""],
 		"an image as a model": valid % ["p", "1.0.0", "a", cog, cog, ""],
 		"no models": (start + " \"game_version\": \"0.1.0\", \"textures\": {}}") % ["p", "1.0.0"],
 	}

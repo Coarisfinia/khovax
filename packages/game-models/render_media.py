@@ -2,7 +2,7 @@
 assets branch and prints the description's media block, ready to paste.
 
     uv run --locked --package khovax-game-models packages/game-models/render_media.py \
-        packages/game/assets/<name>/<name>.glb --pr <n> [--tag v2] [--quick] [--out <folder>] \
+        resourcepacks/default/models/<name>/<name>.glb --pr <n> [--tag v2] [--quick] [--out <folder>] \
         [--jobs 3] [--timeout 900] [--no-publish]
 
 It runs what a model pull request shows (the model skill's step 5), Blender and Godot side by side
@@ -104,8 +104,10 @@ def main() -> int:
     sys.stdout.reconfigure(line_buffering=True)
 
     model = args.model.resolve()
-    if not model.is_file() or GAME not in model.parents:
-        log.error(f"{args.model}: no .glb inside {GAME.relative_to(ROOT)}, where Godot can load it")
+    # The default pack lies at the root; Godot reaches it through the game's link (#1978).
+    packs = ROOT / "resourcepacks"
+    if not model.is_file() or (GAME not in model.parents and packs not in model.parents):
+        log.error(f"{args.model}: no .glb inside {GAME.relative_to(ROOT)} or {packs.relative_to(ROOT)}, where Godot can load it")
         return 1
     prefix = f"pr-{args.pr}" + (f"-{args.tag}" if args.tag else "")
     # Always a fresh folder, so no frames from an earlier render join a clip's GIF, and nothing
@@ -119,7 +121,7 @@ def main() -> int:
             return 1
     (out / "logs").mkdir(parents=True, exist_ok=True)
     clips = [] if args.quick else clips_of(model)
-    resource = "res://" + model.relative_to(GAME).as_posix()
+    resource = "res://" + model.relative_to(ROOT if packs in model.parents else GAME).as_posix()
 
     log.info("importing the game project, so the renders show this build")
     imported = run(["godot", "--headless", "--path", str(GAME), "--import"], out / "logs" / "import.log",

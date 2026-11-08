@@ -4,7 +4,7 @@ and animated. Built on the mana wolf's way (packages/game-models/mana_wolf.py) f
 library in packages/game-models/lib/ (model skill); only its parameters and its own parts live here.
 
     uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/mana_pup.py -- packages/game/assets/mana-pup/mana_pup.glb
+        --python packages/game-models/mana_pup.py -- resourcepacks/default/models/mana-pup/mana_pup.glb
 
 It prints the speeds the motion check (packages/game-models/check_motion.py) takes. `NAME=value`
 after the output path sets one of its GAIT values (lib/tuning.py), for the gait sweep

@@ -3,7 +3,7 @@ runes, rigged and animated. Only its parameters and its own parts live here; the
 are the shared library in packages/game-models/lib/ (model skill).
 
     uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/mana_wolf.py -- packages/game/assets/mana-wolf/mana_wolf.glb
+        --python packages/game-models/mana_wolf.py -- resourcepacks/default/models/mana-wolf/mana_wolf.glb
 
 It prints the speeds the motion check (packages/game-models/check_motion.py) takes. `NAME=value`
 after the output path sets one of its GAIT values (lib/tuning.py), for the gait sweep

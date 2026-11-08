@@ -3,7 +3,7 @@
 # Usage: uv run --locked packages/game-models/blender.py --background --factory-startup --python \
 #     .claude/skills/model/scripts/compare_sheet.py -- <model.glb> <reference> <out_dir> [views]
 # The reference is the last approved version of the model (a .glb, e.g. from
-# `git show <commit>:packages/game/assets/<name>/<name>.glb`), rendered the same way, or a concept image (.png:
+# `git show <commit>:resourcepacks/default/models/<name>/<name>.glb`), rendered the same way, or a concept image (.png:
 # its alpha, else everything unlike its corners, is the figure; one view only). `views` is a
 # comma-separated list of front, back, left, right, top and three_quarter (default left,front,top).
 # `three_quarter` is the in-game renders' three-quarter view (`render_in_game.gd`: from the

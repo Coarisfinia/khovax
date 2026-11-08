@@ -19,6 +19,7 @@ import unittest
 from pathlib import Path
 
 GAME = Path(__file__).resolve().parents[1] / "game"
+ROOT = GAME.parents[1]
 LINK = "resourcepacks"
 # Left out too: a local export copies the built default pack in here, and a run with one never
 # needs the link.
@@ -66,11 +67,11 @@ class MissingPackLinkTest(unittest.TestCase):
         self.assert_fails_naming_link("-s", "res://tools/godot/load_test.gd", "--", "ticks=10")
 
     def test_model_render(self) -> None:
-        model = next(iter(sorted(GAME.glob("assets/*/*.glb"))))
+        model = next(iter(sorted(ROOT.glob("resourcepacks/default/models/*/*.glb"))))
         with tempfile.TemporaryDirectory() as out:
             self.assert_fails_naming_link(
                 "-s", "res://tools/models/render_in_game.gd", "--",
-                "res://" + model.relative_to(GAME).as_posix(), out, "--seed=0",
+                "res://" + model.relative_to(ROOT).as_posix(), out, "--seed=0",
             )
 
 

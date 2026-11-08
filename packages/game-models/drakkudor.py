@@ -6,7 +6,7 @@ SOURCE.md); this script places it on its feet, rigs it as a hexapod (lib/hexapod
 every creature clip.
 
     uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/drakkudor.py -- packages/game/assets/drakkudor/drakkudor.glb
+        --python packages/game-models/drakkudor.py -- resourcepacks/default/models/drakkudor/drakkudor.glb
 
 It prints the speeds the motion check (packages/game-models/check_motion.py) takes. `NAME=value`
 after the output path sets one of its GAIT values (lib/tuning.py), for the gait sweep
