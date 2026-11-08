@@ -91,6 +91,7 @@ PACK_ROOT = "resourcepacks/default/"
 # region's pieces lie beside the regions drawn whole); the move goes one kind at a time, and the
 # rest follow (#1978).
 MOVED = {
+    "textures": "textures",
     "realms": "realms",
     "regions": "regions",
     "region_pieces": "regions",
