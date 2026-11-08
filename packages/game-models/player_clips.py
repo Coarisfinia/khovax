@@ -37,10 +37,11 @@ SMOOTHED = ["GetUp", "HarvestBush", "Hit", "KnockedDown", "PickUp", "Throw"]
 SMOOTHING = 1.0
 # The clips whose motion capture lets a standing foot creep (#2154): lib/standing_feet.py holds it.
 HELD = ["Hit", "KnockedDown", "PickUp", "Throw"]
-# The game's pace for the player (metres a second, for the motion check, #2128; lib/pace.py). The
-# player has that one pace, so the walk and the run are both checked at it, whichever the body's
-# view plays while moving.
-WALK_SPEED = RUN_SPEED = pace.player()
+# The speeds the motion check measures the gaits at (metres a second of the clips' own units,
+# #2128). The game moves the player at one pace and plays the run (lib/pace.py); the walk, which it
+# doesn't play, can't reach that pace and stay a walk, so it's checked at a walking pace of its own.
+WALK_SPEED = 0.94
+RUN_SPEED = pace.player()
 
 
 def mismatches(clips):
