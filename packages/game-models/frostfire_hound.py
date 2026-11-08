@@ -240,19 +240,27 @@ def darkest(image):
 
 
 def chain(edges):
-    """The vertices of an open run of edges, in order from one end to the other."""
+    """The vertices of an open run of edges, in order from one end to the other. The skin's
+    vertices are doubled along its UV seams, so the run is followed by where they are."""
+
+    def spot(vertex):
+        return tuple(round(value, 6) for value in vertex.co)
+
     links = {}
     for edge in edges:
         for vertex in edge.verts:
-            links.setdefault(vertex, []).append(edge)
-    run = [next(vertex for vertex, linked in links.items() if len(linked) == 1)]
-    used = set()
+            links.setdefault(spot(vertex), []).append((edge, vertex))
+    start = next(linked for linked in links.values() if len(linked) == 1)
+    run, used = [start[0][1]], set()
     while True:
-        edge = next((edge for edge in links[run[-1]] if edge not in used), None)
-        if edge is None:
+        step = next((edge for edge, _vertex in links[spot(run[-1])] if edge not in used), None)
+        if step is None:
+            if len(run) != len(edges) + 1:
+                raise ValueError("the mouth's cut is not one run: %d of %d edges" % (len(run) - 1, len(edges)))
             return run
-        used.add(edge)
-        run.append(edge.other_vert(run[-1]))
+        used.add(step)
+        here = spot(run[-1])
+        run.append(next(vertex for vertex in step.verts if spot(vertex) != here))
 
 
 def cap(mesh, ring, down, dark):
@@ -287,7 +295,10 @@ def mouth(rig, skin, colour):
     def below(face):
         return normal.dot(face.calc_center_median() - point) < 0.0
 
-    open_edges = [edge for edge in mesh.edges if edge.is_boundary]
+    # Only the cut's own edges: the generated skin has open edges of its own further back, and a
+    # lining closed over those would be a sheet inside the head.
+    open_edges = [edge for edge in mesh.edges if edge.is_boundary and all(
+        abs(normal.dot(vertex.co - point)) < 1e-5 for vertex in edge.verts)]
     upper = chain([edge for edge in open_edges if not below(edge.link_faces[0])])
     lower = chain([edge for edge in open_edges if below(edge.link_faces[0])])
     corners = [upper[0], upper[-1]]
