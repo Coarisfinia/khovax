@@ -682,27 +682,33 @@ func _check_territory_quests() -> String:
 	)
 	if not problem.is_empty():
 		return "the territory quests: " + problem
-	var one: Array[QuestDefinition] = [_territory_quest("q", "f", ["reached"] as Array[String])]
-	var cases: Array[Array] = [
-		[one, ["f"], ["t"], [], ""],
-		[one, ["f", "g"], ["t"], [], "1 without a territory quest: g/t"],
-		[one, ["f"], ["t", "u"], [], "1 without a territory quest: f/u"],
-		[one, ["f", "g"], ["t"], ["g/t"], ""],
-		[one, ["f"], ["t"], ["f/t"], "f/t is listed as a gap, but there's no such gap"],
-		[one, ["f"], ["t"], ["f/gone"], "f/gone is listed as a gap, but there's no such gap"],
-		[one, ["f", "g"], ["t"], ["g/t", "g/t"], "g/t is listed twice"],
+	var results: Array[String] = [
+		_gap_refusal(["f"], ["t"], [], ""),
+		_gap_refusal(["f", "g"], ["t"], [], "1 without a territory quest: g/t"),
+		_gap_refusal(["f"], ["t", "u"], [], "1 without a territory quest: f/u"),
+		_gap_refusal(["f", "g"], ["t"], ["g/t"], ""),
+		_gap_refusal(["f"], ["t"], ["f/t"], "f/t is listed as a gap, but there's no such gap"),
+		_gap_refusal(["f"], ["t"], ["f/x"], "f/x is listed as a gap, but there's no such gap"),
+		_gap_refusal(["f", "g"], ["t"], ["g/t", "g/t"], "g/t is listed twice"),
 	]
-	for row: Array in cases:
-		var factions_row: Array[String] = []
-		factions_row.assign(row[1])
-		var territories: Array[String] = []
-		territories.assign(row[2])
-		var gaps: Array[String] = []
-		gaps.assign(row[3])
-		var got: String = TerritoryQuests.problem(one, factions_row, territories, gaps)
-		if got != row[4]:
-			return "expected the territory quests' problem %s, got: %s" % [row[4], got]
+	for result: String in results:
+		if not result.is_empty():
+			return result
 	return _check_samey_quests()
+
+
+## Why one quest of the faction f for the territory t, among these `factions`, `territories` and
+## `gaps`, doesn't give the problem `expected`, or "".
+static func _gap_refusal(
+	factions: Array[String],
+	territories: Array[String],
+	gaps: Array[String],
+	expected: String,
+) -> String:
+	var kinds: Array[String] = ["reached"]
+	var one: Array[QuestDefinition] = [_territory_quest("q", "f", kinds)]
+	var got: String = TerritoryQuests.problem(one, factions, territories, gaps)
+	return "" if got == expected else "expected %s, got: %s" % [expected, got]
 
 
 ## Two quests of one territory are samey when their steps are the same kinds in the same order,
