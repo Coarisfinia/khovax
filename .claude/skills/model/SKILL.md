@@ -597,10 +597,12 @@ body**, as a clip library of their own, so a later body plays the same clips:
    **A clip source that pops gets its curves smoothed first** (`SMOOTHED`, `lib/clip_smooth.py`, #2153).
    **A one-shot whose capture lets a standing foot creep has it held** (`HELD`, `lib/standing_feet.py`, #2154):
    the feet are planted per stance and stepped between, through a leg IK, instead of `planted_feet.plant`.
+   **The Walk loops, so it is smoothed around its seam and its standing feet held at its pace** (`lib/paced_gait.py`, #2128).
    **Every clip's hands are relaxed** (`lib/relaxed_hands.py`, #2160): the held wrist bend comes out,
    since the rig has no fingers and the bent wrist reads as a cramped hand.
-   It prints the player's one pace for the motion check (`SPEEDS`, a tile every `Tuning.MOVE_TICKS`),
-   which measures the bodiless rig's feet by their joints against their rest heights (#2128).
+   It prints the speeds for the motion check (`SPEEDS`: the Run at the game's one pace, a tile every
+   `Tuning.MOVE_TICKS` in the clips' own units, so divided by the view's `MODEL_SCALE`; the Walk, which the game
+   doesn't play, at a walking pace of its own), which measures the bodiless rig's feet by their joints against their rest heights (#2128).
 3. **Godot maps the rig to its humanoid profile:** the library's `.import` gives its skeleton a
    `BoneMap` with `SkeletonProfileHumanoid` (Meshy's Mixamo names, as Godot imports them, to the
    profile's bones), so its tracks turn `%GeneralSkeleton:<profile bone>`. Any body imported with

@@ -266,7 +266,7 @@ def _poles(rig, frames):
     return _gauss(facing, POLE_SMOOTHING)
 
 
-def _own_knees(rig, side, frames, goals):
+def _own_knees(rig, side, frames, goals, loop=False):
     """Per frame, the way the clip's own knee points off the line from hip to goal, smoothed: on a
     clip that leaves the ground the body turns right over, and the knee follows the clip."""
     world = rig.matrix_world
@@ -277,7 +277,7 @@ def _own_knees(rig, side, frames, goals):
         aim = (goals[index] - hip).normalized()
         pole = (knee - hip) - aim * (knee - hip).dot(aim)
         raw.append(pole.normalized() if pole.length > 1e-3 else FORWARD.copy())
-    return _gauss(raw, POLE_SMOOTHING)
+    return clip_smooth.gauss(raw, POLE_SMOOTHING, raw[0] * 0.0, loop)
 
 
 def _bend(rig, side, target, pole):
@@ -311,16 +311,19 @@ def _lay(rig, side, heading, amount):
     bpy.context.view_layer.update()
 
 
-def _even_foot(action, side, flags, frames):
+def _even_foot(action, side, flags, frames, loop=False, part="Foot"):
     """Evens out one foot's turn while it steps, leaving its stances as they are."""
     found = clip_smooth.action_curves(action)
-    path = 'pose.bones["mixamorig:%sFoot"].rotation_quaternion' % side
+    path = 'pose.bones["mixamorig:%s%s"].rotation_quaternion' % (side, part)
     curves = [found[(path, channel)] for channel in range(4)]
     turns = [Vector([curve.evaluate(frame) for curve in curves]) for frame in frames]
     for index in range(1, len(turns)):
         if turns[index].dot(turns[index - 1]) < 0.0:
             turns[index] = -turns[index]
-    evened = _gauss(turns, FOOT_SMOOTHING)
+    evened = (clip_smooth.gauss(turns[:-1], FOOT_SMOOTHING, turns[0] * 0.0, True) + [turns[0] * 0.0]
+              if loop else _gauss(turns, FOOT_SMOOTHING))
+    if loop:
+        evened[-1] = evened[0]
     for index, (turn, even) in enumerate(zip(turns, evened)):
         near = min((abs(index - other) for other, stands in enumerate(flags) if stands), default=FOOT_EDGE)
         mixed = turn.lerp(even, _ease(near / FOOT_EDGE)).normalized()
