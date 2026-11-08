@@ -305,7 +305,7 @@ def mouth(rig, skin, colour):
     group = skin.vertex_groups.new(name="jaw")
     for index in jaw:
         vertex = skin.data.vertices[index]
-        share = min(1.0, (MOUTH_CORNER - vertex.co.y) / JAW_BLEND)
+        share = max(0.0, min(1.0, (MOUTH_CORNER - vertex.co.y) / JAW_BLEND))
         for entry in vertex.groups:
             entry.weight *= 1.0 - share
         group.add([index], share, "REPLACE")
