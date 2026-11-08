@@ -12,6 +12,8 @@ which its pup, the Kavrikka, shares), as the owner asked on the issue:
   swung a little out to its own side so both read;
 - **the soles:** the underside of every paw is a plain pad of its side's colour.
 
+The generator's snout is closed, so `mouth` cuts it open and hangs the lower jaw on a bone (#2183).
+
 It names the generator's bones to the library's quadruped scheme and animates every creature clip
 with the library's clips, its legs planted by lib/adopted.py.
 
@@ -30,6 +32,7 @@ import math
 import os
 import sys
 
+import bmesh
 import bpy
 import numpy
 from mathutils import Matrix, Vector
@@ -82,6 +85,16 @@ NECK = (0.62, -0.19)
 # and the shin's skin above it goes to the thigh.
 KNEE = (0.31, 0.30)
 KNEE_BLEND = 0.02
+
+# The mouth (#2183): the generator's snout is one closed shell, so it is cut open along a plane
+# round its front, behind which (Y, metres) it stays whole: the cut's ends are the mouth's corners
+# and the jaw's hinge. The plane passes through MOUTH_POINT, rising MOUTH_RISE towards the head per
+# metre; the lower jaw comes fully under the jaw bone over JAW_BLEND ahead of the corners.
+MOUTH_CORNER = -0.345
+MOUTH_POINT = (0.10, -0.47, 0.685)
+MOUTH_RISE = 0.29
+JAW_BLEND = 0.03
+MOUTH_COLOUR = (0.05, 0.015, 0.025, 1.0)
 
 # Its eyes, as the attachment points find them (the eye pieces' middles, filled in by `eyes`),
 # looking ahead and a little out; it bites with its muzzle's tip.
@@ -201,6 +214,92 @@ def rename(rig, skin):
     rigged.roll(rig)
 
 
+def mouth_lining():
+    """The dark inside of the mouth, matte and single-sided."""
+    lining = bpy.data.materials.new("frostfire_hound_mouth")
+    lining.use_backface_culling = True
+    shader = lining.node_tree.nodes["Principled BSDF"]
+    shader.inputs["Base Color"].default_value = MOUTH_COLOUR
+    shader.inputs["Roughness"].default_value = 1.0
+    return lining
+
+
+def chain(edges):
+    """The vertices of an open run of edges, in order from one end to the other."""
+    links = {}
+    for edge in edges:
+        for vertex in edge.verts:
+            links.setdefault(vertex, []).append(edge)
+    run = [next(vertex for vertex, linked in links.items() if len(linked) == 1)]
+    used = set()
+    while True:
+        edge = next((edge for edge in links[run[-1]] if edge not in used), None)
+        if edge is None:
+            return run
+        used.add(edge)
+        run.append(edge.other_vert(run[-1]))
+
+
+def cap(mesh, ring, down):
+    """Closes one side of the cut with the dark lining, facing the other side of the mouth."""
+    face = mesh.faces.new(ring)
+    face.material_index = 1
+    made = bmesh.ops.triangulate(mesh, faces=[face], ngon_method="EAR_CLIP")["faces"]
+    mesh.normal_update()
+    wrong = sum(triangle.normal.z for triangle in made) > 0.0 if down else sum(
+        triangle.normal.z for triangle in made) < 0.0
+    if wrong:
+        bmesh.ops.reverse_faces(mesh, faces=made)
+
+
+def mouth(rig, skin):
+    """Cuts the snout open, lines both sides of the cut and hangs the lower jaw on a new bone from
+    the mouth's corners towards its chin."""
+    skin.data.materials.append(mouth_lining())
+    mesh = bmesh.new()
+    mesh.from_mesh(skin.data)
+    normal = Vector((0.0, -MOUTH_RISE, 1.0)).normalized()
+    point = Vector(MOUTH_POINT)
+    snout = [face for face in mesh.faces if face.calc_center_median().y < MOUTH_CORNER]
+    geometry = list({vertex for face in snout for vertex in face.verts}) + list(
+        {edge for face in snout for edge in face.edges}) + snout
+    cut = bmesh.ops.bisect_plane(mesh, geom=geometry, plane_co=point, plane_no=normal)["geom_cut"]
+    edges = [element for element in cut if isinstance(element, bmesh.types.BMEdge)]
+    bmesh.ops.split_edges(mesh, edges=edges)
+    mesh.faces.ensure_lookup_table()
+
+    def below(face):
+        return normal.dot(face.calc_center_median() - point) < 0.0
+
+    open_edges = [edge for edge in mesh.edges if edge.is_boundary]
+    upper = chain([edge for edge in open_edges if not below(edge.link_faces[0])])
+    lower = chain([edge for edge in open_edges if below(edge.link_faces[0])])
+    corners = [upper[0], upper[-1]]
+    hinge = (corners[0].co + corners[1].co) / 2.0
+    tip = sum((vertex.co for vertex in lower), Vector()) / len(lower)
+    chin = min(lower, key=lambda vertex: vertex.co.y).co.copy()
+    jaw = {vertex.index for face in mesh.faces if face.calc_center_median().y < MOUTH_CORNER and below(face)
+           for vertex in face.verts} - {corner.index for corner in corners}
+    cap(mesh, upper, True)
+    cap(mesh, lower, False)
+    mesh.verts.index_update()
+    mesh.to_mesh(skin.data)
+    mesh.free()
+    group = skin.vertex_groups.new(name="jaw")
+    for index in jaw:
+        vertex = skin.data.vertices[index]
+        share = min(1.0, (MOUTH_CORNER - vertex.co.y) / JAW_BLEND)
+        for entry in vertex.groups:
+            entry.weight *= 1.0 - share
+        group.add([index], share, "REPLACE")
+    scene.select_only(rig)
+    bpy.ops.object.mode_set(mode="EDIT")
+    bone = rig.data.edit_bones.new("jaw")
+    bone.head, bone.tail, bone.parent = hinge, Vector((chin.x, chin.y, tip.z)), rig.data.edit_bones["head"]
+    bpy.ops.object.mode_set(mode="OBJECT")
+    rigged.roll(rig)
+
+
 def eyes(skin, part):
     """Each eye piece's middle, its side's eye point."""
     out = {}
@@ -234,6 +333,7 @@ def build(out):
     spread(skin, part)
     spots = eyes(skin, part)
     rename(rig, skin)
+    mouth(rig, skin)
     points(rig, spots)
     body = adopted.Body(rig, MUZZLE)
     clips.animate(rig, {
