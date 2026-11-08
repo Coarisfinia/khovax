@@ -311,12 +311,12 @@ def _lay(rig, side, heading, amount):
     bpy.context.view_layer.update()
 
 
-def _even_foot(action, side, flags):
+def _even_foot(action, side, flags, frames):
     """Evens out one foot's turn while it steps, leaving its stances as they are."""
     found = clip_smooth.action_curves(action)
     path = 'pose.bones["mixamorig:%sFoot"].rotation_quaternion' % side
     curves = [found[(path, channel)] for channel in range(4)]
-    turns = [Vector([curve.evaluate(frame) for curve in curves]) for frame in range(len(flags))]
+    turns = [Vector([curve.evaluate(frame) for curve in curves]) for frame in frames]
     for index in range(1, len(turns)):
         if turns[index].dot(turns[index - 1]) < 0.0:
             turns[index] = -turns[index]
@@ -372,4 +372,4 @@ def hold(rig, action, grounded):
             for side, part in keyed:
                 _bone(rig, side, part).keyframe_insert("rotation_quaternion", frame=frame)
         for side in SIDES:
-            _even_foot(action, side, flags[side])
+            _even_foot(action, side, flags[side], frames)
