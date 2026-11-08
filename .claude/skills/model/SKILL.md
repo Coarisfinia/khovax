@@ -966,9 +966,10 @@ clips. Ask the owner only when it's unclear what should move how.
      attached.
    - **Evidence in the PR's description:** a picture of the mouth closed (the `face` close-up at
      rest) and one of it open (the frame of Attack where the jaw is widest, its frame number
-     named), both rendered in Godot from one camera:
-     `render_in_game.gd`'s `clip=Attack from=face camera=rest` (step 5's offscreen recipe), the
-     closed one being that run's first frame. One line names the `jaw` bone.
+     named), both rendered in Godot with `render_in_game.gd` (step 5's offscreen recipe) and framed
+     alike: the closed one is a run without `clip=`, which writes the still `face`, and the open
+     one `clip=Attack from=face camera=rest`, which frames the model at rest as that still does.
+     One line names the `jaw` bone.
    - **A design with no mouth is exempt:** a face of bone plate (the Drakkudor) or a ball of
      ribbons (the Tikazzelu) has none to check. The PR says so with the `face` close-up and links
      the source that shows the design has no mouth. A mouth the source has and the import lost, or
