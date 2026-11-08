@@ -10,7 +10,7 @@ from known_gaps_check import added, entries
 
 BEFORE = """## "a/quoted" comment
 const KNOWN_GAPS: Array[String] = [
-	# #1
+	# #1: don't read this comment's apostrophes, or "this"
 	"f/t",
 	"f/u",
 ]
@@ -28,6 +28,9 @@ class KnownGapsTest(unittest.TestCase):
 
     def test_a_new_entry_is_named(self) -> None:
         self.assertEqual(added(BEFORE, BEFORE.replace('"f/u"', '"f/u", "g/t"')), ["g/t"])
+
+    def test_a_single_quoted_entry_is_named(self) -> None:
+        self.assertEqual(added(BEFORE, BEFORE.replace('"f/u"', "\"f/u\", 'g/t'")), ["g/t"])
 
     def test_a_missing_list_cant_be_compared(self) -> None:
         self.assertIsNone(added(BEFORE, "renamed"))

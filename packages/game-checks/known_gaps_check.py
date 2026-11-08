@@ -15,13 +15,17 @@ from game_shared import log
 
 FILE = "packages/game/tests/e2e/territory_quests.gd"
 LIST = re.compile(r"const KNOWN_GAPS: Array\[String\] = \[(.*?)\]", re.DOTALL)
-ENTRY = re.compile(r'"([^"]+)"')
+# GDScript writes a string in either quote; a comment's apostrophes aren't one.
+ENTRY = re.compile(r"""(["'])(.+?)\1""")
+COMMENT = re.compile(r"#[^\n]*")
 
 
 def entries(text: str) -> set[str] | None:
     """The list's entries in a version of the file, or None when the file has no such list."""
     found = LIST.search(text)
-    return None if found is None else set(ENTRY.findall(found[1]))
+    if found is None:
+        return None
+    return {entry[2] for entry in ENTRY.finditer(COMMENT.sub("", found[1]))}
 
 
 def added(before: str, after: str) -> list[str] | None:
