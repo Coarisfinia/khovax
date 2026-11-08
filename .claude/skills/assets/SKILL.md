@@ -21,7 +21,8 @@ from a free source also passes the license rules below.
 
 ## Before you download anything
 
-1. **Look for what's already here**, in `packages/game/assets/` and `packages/game-models/textures/`.
+1. **Look for what's already here**, in `packages/game/assets/`, `resourcepacks/default/textures/` and
+   `packages/game-models/textures/`.
    Reusing an asset costs no new license review.
 2. **Check the license of the exact file, on its source's own page.** A site's general statement
    tells you where to look, not what this file is under, and terms change: the Quaternius case
