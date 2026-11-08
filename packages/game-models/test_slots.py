@@ -8,7 +8,8 @@ that moves an empty and a rig imports as one action with a slot each, the empty'
 - ground: the rig's slot lowers its body into the ground, so check_ground.py's report says it
   sinks; with the empty's slot on, the rig would stand still and pass.
 - planted feet: a standing clip plays on the rig in the rig's slot while its feet are planted.
-- clip sources: a clip source's clip goes into a clip library on the slot its rig played.
+- clip sources: a clip source's clip goes into a clip library on the slot its rig played; stashing
+  a clip with several slots picks the rig's; a clip that never moves the rig doesn't load (#2152).
 
 It prints each case and `SLOT TEST: PASS` or `FAIL` (and exits 1 on a fail)."""
 
@@ -40,10 +41,11 @@ def rig(name):
     return obj
 
 
-def model(glb):
+def model(glb, rig_moves=True):
     """Exports to `glb` an empty and a rig skinning a 10 cm box, and one clip, Sink, moving both:
     the empty sideways, the rig's bone 5 cm down, so the box sinks into the ground. The importer
-    lists the objects by name, so the empty's slot comes first."""
+    lists the objects by name, so the empty's slot comes first. Without `rig_moves`, the clip moves
+    the empty alone."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
     holder = bpy.data.objects.new("a_holder", None)
     bpy.context.scene.collection.objects.link(holder)
@@ -54,7 +56,10 @@ def model(glb):
     box.modifiers.new("Armature", "ARMATURE").object = body
     box.parent = body
     action = bpy.data.actions.new("Sink")
-    for obj, target, axis, far in ((holder, holder, 0, 0.1), (body, body.pose.bones["body"], 1, -0.05)):
+    moved = [(holder, holder, 0, 0.1)]
+    if rig_moves:
+        moved.append((body, body.pose.bones["body"], 1, -0.05))
+    for obj, target, axis, far in moved:
         obj.animation_data_create()
         obj.animation_data.action = action
         for frame in (0, 10):
@@ -63,7 +68,7 @@ def model(glb):
     bpy.ops.export_scene.gltf(filepath=glb, export_format="GLB", export_animation_mode="ACTIONS")
 
 
-def imported(glb):
+def opened(glb):
     """`glb` imported into an empty scene: its rig, its one clip and the rig's slot of it."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.gltf(filepath=glb)
@@ -76,13 +81,13 @@ def imported(glb):
 
 
 def grounded(glb):
-    obj, _action, _own = imported(glb)
+    obj, _action, _own = opened(glb)
     lines, passed = ground.report(obj, ground.skinned(bpy.data.objects), 0.005)
     return not passed, "; ".join(lines)
 
 
 def planted(glb):
-    obj, action, own = imported(glb)
+    obj, action, own = opened(glb)
     with planted_feet._playing(obj, action):
         played = obj.animation_data.action_slot
     return played == own, "plays %s, the rig's is %s" % (played.identifier, own.identifier)
@@ -99,11 +104,32 @@ def sourced(glb):
         played.identifier, own.identifier)
 
 
+def stashed(glb):
+    obj, action, own = opened(glb)
+    clip_sources.stash(obj, action, "Stashed")
+    played = obj.animation_data.nla_tracks["Stashed"].strips[0].action_slot
+    return played == own, "%d slots, stashed on %s, the rig's is %s" % (
+        len(action.slots), played.identifier, own.identifier)
+
+
+def refused(glb):
+    other = os.path.join(os.path.dirname(glb), "empty_only.glb")
+    model(other, rig_moves=False)
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    try:
+        _source, action = clip_sources.load(other)
+    except RuntimeError as error:
+        return "Sink" in str(error), str(error)
+    return False, "loaded, with clip %s" % (action.name if action else None)
+
+
 # Case: (what it checks, what it does with the model's .glb and returns as (right, details)).
 CASES = {
     "ground": ("the ground check measures the rig's slot and says the box sinks", grounded),
     "planted": ("planting a clip's feet plays the rig's slot", planted),
     "sources": ("a clip source's clip is stashed on its rig's slot", sourced),
+    "stash": ("stashing a clip with several slots picks the rig's", stashed),
+    "no-slot": ("a clip that never moves the rig fails to load, naming the clip", refused),
 }
 
 
