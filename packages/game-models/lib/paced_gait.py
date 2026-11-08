@@ -58,7 +58,7 @@ def _stance(lows, ys, step):
     return max(runs, key=len)
 
 
-def _lower(rig, cycle, last, goals, stances):
+def _lower(rig, action, cycle, last, goals, stances):
     """Lowers the hips over the cycle as far as the standing legs need to reach their held ankles
     within REACH of their length, evenly, keying the hips on every frame."""
     world = rig.matrix_world
@@ -75,7 +75,9 @@ def _lower(rig, cycle, last, goals, stances):
             leg = REACH * (thigh.bone.length + shin.bone.length)
             hip, goal = world @ thigh.head, goals[side][0][index]
             across = (hip - goal).xy.length
-            drop = max(drop, hip.z - goal.z - math.sqrt(max(leg * leg - across * across, 0.0)))
+            if across >= leg:
+                raise RuntimeError("%s: %s ankle held out of reach on frame %d" % (action.name, side, index))
+            drop = max(drop, hip.z - goal.z - math.sqrt(leg * leg - across * across))
         drops.append(drop)
     count = len(drops)
     # Widened by a frame first, so the Gaussian doesn't take the peak back off.
@@ -144,7 +146,7 @@ def pace(rig, action, speed, fps):
             goals[side] = _targets(paths[side], stances[side], rest, step, last)
             # The stance's heading: a foot tipping onto its toes has a wild one of its own.
             turned[side] = sorted(headings[side][at] for at in stances[side])[len(stances[side]) // 2]
-        _lower(rig, cycle, last, goals, stances)
+        _lower(rig, action, cycle, last, goals, stances)
         for side in feet.SIDES:
             poles[side] = feet._own_knees(rig, side, cycle, goals[side][0], True)
         for frame in range(last + 1):
