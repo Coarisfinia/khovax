@@ -11,7 +11,7 @@ from mathutils import Quaternion, Vector
 CHANNELS = (("location", 3), ("rotation_quaternion", 4), ("scale", 3))
 
 
-def _curves(action):
+def action_curves(action):
     """The action's curves by (data path, index)."""
     found = {}
     for layer in action.layers:
@@ -39,7 +39,7 @@ def _gauss(values, sigma, zero):
 def smooth(rig, action, sigma):
     """Every bone's channels of one-shot `action` (keyed on every frame from 0, as Meshy's and the
     motion capture's are) through a Gaussian of `sigma` frames, keyed on every frame again."""
-    found = _curves(action)
+    found = action_curves(action)
     first, last = (int(round(frame)) for frame in action.frame_range)
     if first != 0:
         raise RuntimeError("%s starts at frame %d, not 0" % (action.name, first))

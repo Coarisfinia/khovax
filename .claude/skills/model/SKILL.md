@@ -595,6 +595,8 @@ body**, as a clip library of their own, so a later body plays the same clips:
    every foot that close to the ground flat, then fails, in `GROUND` lines, when a frame has no
    foot flat on the floor or a toe below it. A new clip played standing joins `GROUNDED`.
    **A clip source that pops gets its curves smoothed first** (`SMOOTHED`, `lib/clip_smooth.py`, #2153).
+   **Every clip's hands are relaxed** (`lib/relaxed_hands.py`, #2160): the held wrist bend comes out,
+   since the rig has no fingers and the bent wrist reads as a cramped hand.
    It prints the player's one pace for the motion check (`SPEEDS`, a tile every `Tuning.MOVE_TICKS`),
    which measures the bodiless rig's feet by their joints against their rest heights (#2128).
 3. **Godot maps the rig to its humanoid profile:** the library's `.import` gives its skeleton a

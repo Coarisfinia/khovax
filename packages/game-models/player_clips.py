@@ -20,7 +20,7 @@ import bpy
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib import clip_smooth, clip_sources, pace, planted_feet, scene, skeleton  # noqa: E402
+from lib import clip_smooth, clip_sources, pace, planted_feet, relaxed_hands, scene, skeleton  # noqa: E402
 
 # No body to size against the world (check_world_scale.py): the clips play on the stand-in rig.
 WORLD_SCALE = "clip_library"
@@ -68,6 +68,7 @@ def build(out):
         name = os.path.splitext(os.path.basename(path))[0]
         if name in SMOOTHED:
             clip_smooth.smooth(rig, action, SMOOTHING)
+        relaxed_hands.relax(action)
         clip_sources.stash(rig, action, name)
         # Its rig was only the clip's carrier: the clip now plays on the library's.
         armature = other.data
