@@ -22,7 +22,7 @@ def action_curves(action):
     return found
 
 
-def _gauss(values, sigma, zero):
+def gauss(values, sigma, zero):
     """`values` through a Gaussian of `sigma` frames, the ends held (a one-shot clip)."""
     reach = int(math.ceil(3.0 * sigma))
     weights = [math.exp(-0.5 * (offset / sigma) ** 2) for offset in range(-reach, reach + 1)]
@@ -60,7 +60,7 @@ def smooth(rig, action, sigma):
                     turns[index].negate()
         for path, (curves, samples) in values.items():
             zero = Quaternion((0.0, 0.0, 0.0, 0.0)) if path == "rotation_quaternion" else Vector((0.0, 0.0, 0.0))
-            smoothed = _gauss(samples, sigma, zero)
+            smoothed = gauss(samples, sigma, zero)
             if path == "rotation_quaternion":
                 smoothed = [turn.normalized() for turn in smoothed]
             for index, curve in enumerate(curves):

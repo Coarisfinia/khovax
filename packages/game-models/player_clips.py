@@ -20,7 +20,7 @@ import bpy
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib import clip_smooth, clip_sources, pace, planted_feet, relaxed_hands, scene, skeleton  # noqa: E402
+from lib import clip_smooth, clip_sources, pace, planted_feet, relaxed_hands, scene, skeleton, standing_feet  # noqa: E402
 
 # No body to size against the world (check_world_scale.py): the clips play on the stand-in rig.
 WORLD_SCALE = "clip_library"
@@ -33,8 +33,10 @@ CLIPS = os.path.join(SOURCES, "clips")
 GROUNDED = ["HarvestBush", "Hit", "Idle", "PickUp", "Talk", "Throw", "Wave"]
 # The clips whose source pops and snaps (the motion check's jitter, #2153): the build runs their
 # curves through a Gaussian of SMOOTHING frames before it plants their feet.
-SMOOTHED = ["GetUp", "HarvestBush"]
+SMOOTHED = ["GetUp", "HarvestBush", "Hit", "KnockedDown", "PickUp", "Throw"]
 SMOOTHING = 1.0
+# The clips whose motion capture lets a standing foot creep (#2154): lib/standing_feet.py holds it.
+HELD = ["Hit", "KnockedDown", "PickUp", "Throw"]
 # The game's pace for the player (metres a second, for the motion check, #2128; lib/pace.py). The
 # player has that one pace, so the walk and the run are both checked at it, whichever the body's
 # view plays while moving.
@@ -75,8 +77,11 @@ def build(out):
         bpy.data.objects.remove(other, do_unlink=True)
         bpy.data.armatures.remove(armature, do_unlink=True)
         print("CLIP %s: frames %d-%d" % (name, *action.frame_range))
-        if name in GROUNDED:
+        if name in HELD:
+            standing_feet.hold(rig, action, name in GROUNDED)
+        elif name in GROUNDED:
             planted_feet.plant(rig, action)
+        if name in GROUNDED:
             for line in planted_feet.problems(rig, action):
                 print("GROUND %s: %s" % (name, line))
                 floating.append(name)
