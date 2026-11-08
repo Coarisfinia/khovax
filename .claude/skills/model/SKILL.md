@@ -969,7 +969,8 @@ clips. Ask the owner only when it's unclear what should move how.
      named), both rendered in Godot with `render_in_game.gd` (step 5's offscreen recipe) and framed
      alike: the closed one is a run without `clip=`, which writes the still `face`, and the open
      one `clip=Attack from=face camera=rest`, which frames the model at rest as that still does.
-     One line names the `jaw` bone.
+     One line names the `jaw` bone. On a split import (section 5), the PR that adds Attack carries
+     the open picture, and the requirement holds until then.
    - **A design with no mouth is exempt:** a face of bone plate (the Drakkudor) or a ball of
      ribbons (the Tikazzelu) has none to check. The PR says so with the `face` close-up and links
      the source that shows the design has no mouth. A mouth the source has and the import lost, or
