@@ -14,7 +14,7 @@ its guide, and holds the license and source rules they share.
 |---|---|
 | A 3D model, rig, clip or texture: request, import or fix | `.claude/skills/model/SKILL.md`, and AGENTS.md's "If you need a new model" |
 | Sound effects, music or ambience | [`references/audio.md`](references/audio.md) |
-| Anything else (icons, fonts, images) | The rules below; `packages/game/assets/game-icons/` shows a pack of them |
+| Anything else (icons, fonts, images) | The rules below; `resourcepacks/default/textures/game-icons/` shows a pack of them |
 
 The rules for requesting a model stay there, and nothing here changes them. A prop or scenery model
 from a free source also passes the license rules below.
@@ -51,8 +51,8 @@ A claim on a source's page is the source's claim, so word it that way.
 
 ## What stays next to the file
 
-Each pack lives in `packages/game/assets/<pack>/` (a sound's in the default pack's own folder,
-`resourcepacks/default/audio/<pack>/`, #1978), with only what the game uses, never a whole
+Each pack lives in `packages/game/assets/<pack>/` (a sound's or an image's in the default pack's own
+folder, `resourcepacks/default/audio/<pack>/` or `resourcepacks/default/textures/<pack>/`, #1978), with only what the game uses, never a whole
 download:
 
 - **`LICENSE.md`:** the license's text, or the pack's own notice if it came with one.
