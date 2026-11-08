@@ -31,7 +31,8 @@ extends RefCounted
 ## and sound (#2014) resolving, and broken pack manifests are refused; the quests (#1888), the tile
 ## blueprints
 ## (#1901), the loot tables and materials (#1953), and harvest tables (#1990) are read from it, and
-## its files load in the background with progress (#1943).
+## its files load in the background with progress (#1943). Every faction has a quest for every
+## territory but the known gaps, and no territory has two samey quests (#639).
 
 ## A model a species can wear (#1223), by its id in the resource packs (#1864).
 const MODEL: String = "model_mana_wolf"
@@ -163,6 +164,7 @@ func run(tree: SceneTree) -> String:
 		_check_realms,
 		_check_tiles,
 		_check_quests,
+		_check_territory_quests,
 		_check_factions,
 		_check_people,
 		_check_dialogs,
@@ -660,6 +662,77 @@ func _check_target_steps(content: QuestContent) -> String:
 		quest % ["dominated", target.replace("old toad", " ") % "old_toad"]: "step 0: its name",
 	}
 	return _unrefused(cases, content)
+
+
+## The game's territory quests keep to TerritoryQuests' rules (#639), and what breaks them is
+## refused: a new faction or territory without a quest, a gap whose quest exists, one that doesn't
+## exist any more or comes twice, and two samey quests of one territory, whichever faction's.
+func _check_territory_quests() -> String:
+	var quests: Array[QuestDefinition] = []
+	quests.assign(QuestContent.load_quests().quests.values())
+	var factions: Array[String] = []
+	factions.assign(FactionContent.load_factions().factions.keys())
+	var problem: String = TerritoryQuests.problem(
+		quests, factions, InstanceBlueprints.names(), TerritoryQuests.KNOWN_GAPS
+	)
+	if not problem.is_empty():
+		return "the territory quests: " + problem
+	var one: Array[QuestDefinition] = [_territory_quest("q", "f", ["reached"] as Array[String])]
+	var cases: Array[Array] = [
+		[one, ["f"], ["t"], [], ""],
+		[one, ["f", "g"], ["t"], [], "1 without a territory quest: g/t"],
+		[one, ["f"], ["t", "u"], [], "1 without a territory quest: f/u"],
+		[one, ["f", "g"], ["t"], ["g/t"], ""],
+		[one, ["f"], ["t"], ["f/t"], "f/t is listed as a gap, but there's no such gap"],
+		[one, ["f"], ["t"], ["f/gone"], "f/gone is listed as a gap, but there's no such gap"],
+		[one, ["f", "g"], ["t"], ["g/t", "g/t"], "g/t is listed twice"],
+	]
+	for row: Array in cases:
+		var factions_row: Array[String] = []
+		factions_row.assign(row[1])
+		var territories: Array[String] = []
+		territories.assign(row[2])
+		var gaps: Array[String] = []
+		gaps.assign(row[3])
+		var got: String = TerritoryQuests.problem(one, factions_row, territories, gaps)
+		if got != row[4]:
+			return "expected the territory quests' problem %s, got: %s" % [row[4], got]
+	return _check_samey_quests()
+
+
+## Two quests of one territory are samey when their steps are the same kinds in the same order,
+## whichever faction each is for (#639); the same kinds in another order aren't.
+func _check_samey_quests() -> String:
+	var kinds: Array[String] = ["reached", "entered"]
+	var other: Array[String] = ["entered", "reached"]
+	var none: Array[String] = []
+	var samey: Array[QuestDefinition] = [
+		_territory_quest("a", "f", kinds), _territory_quest("b", "g", kinds),
+	]
+	var got: String = TerritoryQuests.problem(samey, none, none, none)
+	if got != "a and b are samey in t":
+		return "two samey territory quests weren't refused: " + got
+	var distinct: Array[QuestDefinition] = [
+		_territory_quest("a", "f", kinds), _territory_quest("b", "g", other),
+	]
+	got = TerritoryQuests.problem(distinct, none, none, none)
+	return "" if got.is_empty() else "two different territory quests were refused: " + got
+
+
+## A quest called `id` handing the territory t to `faction`, with a step of each of `kinds`.
+static func _territory_quest(
+	id: String, faction: String, kinds: Array[String]
+) -> QuestDefinition:
+	var quest: QuestDefinition = QuestDefinition.new()
+	quest.id = id
+	quest.territory = QuestTerritory.new()
+	quest.territory.instance = "t"
+	quest.territory.faction = faction
+	for kind: String in kinds:
+		var step: QuestStep = QuestStep.new()
+		step.condition = kind
+		quest.steps.append(step)
+	return quest
 
 
 ## Every tile blueprint the resource packs list reads (#1901), its id matching its file, and a
