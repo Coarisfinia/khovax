@@ -127,12 +127,32 @@ def withers(_name, poses, _loop):
 MIDLINE = 0.1
 # The trunk bone each leg's top hangs from, which takes the weights it gives up there.
 TRUNK = {"scapula": "spine_03", "upper_arm": "spine_03", "thigh": "pelvis", "shin": "pelvis"}
+# The chest's front above the forelegs (metres: this near the midline, this far ahead of the shoulder
+# joints, this high), which the shoulders would fold up inside the bowing neck (#1628).
+CHEST_SIDE, CHEST_AHEAD, CHEST_HEIGHT = 0.14, -0.42, 0.4
+# The belly's skin, already this much the spine's: a forearm's swing doesn't lift it (#1628).
+BELLY_SPINE = 0.3
+# The flank behind the elbows, which already holds this much of the spine: a folding foreleg doesn't
+# leave it inside the sinking chest (#1628).
+FLANK_SPINE, FLANK_BEHIND = 0.1, -0.3
 
 
 def keep_trunk(skin):
     """The legs' tops give up their weights near the midline to the trunk (MIDLINE, TRUNK)."""
     rigged.merge(skin, {"%s.%s" % (bone, side): trunk for bone, trunk in TRUNK.items() for side in ("L", "R")},
                  lambda vertex: abs(vertex.co.x) < MIDLINE)
+    upper = {"%s.%s" % (bone, side): "spine_03" for bone in ("scapula", "upper_arm") for side in ("L", "R")}
+    rigged.merge(skin, upper, lambda vertex: abs(vertex.co.x) < CHEST_SIDE and vertex.co.y < CHEST_AHEAD
+                 and vertex.co.z > CHEST_HEIGHT)
+    spine = skin.vertex_groups["spine_01"].index
+    rigged.merge(skin, {"upper_arm." + side: "spine_01" for side in ("L", "R")},
+                 lambda vertex: vertex.co.y > FLANK_BEHIND
+                 and sum(element.weight for element in vertex.groups if element.group == spine) >= FLANK_SPINE)
+    for trunk in ("spine_03", "spine_01"):
+        index = skin.vertex_groups[trunk].index
+        rigged.merge(skin, {"forearm." + side: trunk for side in ("L", "R")},
+                     lambda vertex: abs(vertex.co.x) < MIDLINE
+                     and sum(element.weight for element in vertex.groups if element.group == index) >= BELLY_SPINE)
 
 
 def rename(rig, skin):
