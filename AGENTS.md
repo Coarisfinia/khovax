@@ -40,7 +40,7 @@ way; add to it when something bites.
   ```sh
   git config user.name 'coarisfinia-ai-agent[bot]'
   git config user.email '343849075+coarisfinia-ai-agent[bot]@users.noreply.github.com'
-  git config credential.https://github.com.helper ''
+  git config --replace-all credential.https://github.com.helper ''
   git config --add credential.https://github.com.helper \
     '!f() { test "$1" = get || exit 0; echo username=x-access-token; echo "password=$(agent-gh-token)"; }; f'
   ```
