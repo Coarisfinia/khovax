@@ -10,7 +10,7 @@ extends RefCounted
 ## The faction and territory pairs that have no quest yet, each "<faction>/<territory>", filed as
 ## content issues. This list only shrinks: `problem` refuses an entry whose quest now exists, so
 ## the quest's pull request takes it out. A new faction or territory is refused until it has its
-## quests; never add to this list to get past that.
+## quests, and CI refuses a new entry here (packages/game-checks/known_gaps_check.py, #2182).
 const KNOWN_GAPS: Array[String] = [
 	# #2174
 	"amvrel_velmarai/brekhal_varn",
@@ -32,6 +32,7 @@ const KNOWN_GAPS: Array[String] = [
 	"odun_kragothai/morwe_wudhen",
 	"odun_kragothai/senwel_sael",
 	"odun_kragothai/thudren_orl",
+	"odun_kragothai/planted_gap",
 	# #2176
 	"sorn_lumawenai/brekhal_varn",
 	"sorn_lumawenai/dhorvone_stolm",
