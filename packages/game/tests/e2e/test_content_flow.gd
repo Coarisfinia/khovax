@@ -163,8 +163,7 @@ func run(tree: SceneTree) -> String:
 		_check_rule_sets,
 		_check_realms,
 		_check_tiles,
-		_check_quests,
-		_check_territory_quests,
+		_check_quest_content,
 		_check_factions,
 		_check_people,
 		_check_dialogs,
@@ -664,6 +663,12 @@ func _check_target_steps(content: QuestContent) -> String:
 	return _unrefused(cases, content)
 
 
+## The quests read, and the game's territory quests keep to their rules (#639).
+func _check_quest_content() -> String:
+	var problem: String = _check_quests()
+	return problem if not problem.is_empty() else _check_territory_quests()
+
+
 ## The game's territory quests keep to TerritoryQuests' rules (#639), and what breaks them is
 ## refused: a new faction or territory without a quest, a gap whose quest exists, one that doesn't
 ## exist any more or comes twice, and two samey quests of one territory, whichever faction's.
@@ -729,10 +734,15 @@ static func _territory_quest(
 	quest.territory.instance = "t"
 	quest.territory.faction = faction
 	for kind: String in kinds:
-		var step: QuestStep = QuestStep.new()
-		step.condition = kind
-		quest.steps.append(step)
+		quest.steps.append(_step_of(kind))
 	return quest
+
+
+## A quest step of the kind `kind`.
+static func _step_of(kind: String) -> QuestStep:
+	var step: QuestStep = QuestStep.new()
+	step.condition = kind
+	return step
 
 
 ## Every tile blueprint the resource packs list reads (#1901), its id matching its file, and a
