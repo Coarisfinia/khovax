@@ -86,8 +86,6 @@ UNMEASURED = "; unmeasured (no part of the mesh follows the bone): "
 KNOWN = {
     ("fohossa", "Run"): 1629,
     ("fohossa", "Walk"): 1629,
-    ("frostfire_hound", "ChannelStart join"): 2127,
-    ("frostfire_hound", "Run"): 2127,
     ("frostfire_hound", "Walk"): 2127,
     ("kavrikka", "Attack"): 1780,
     ("kavrikka", "Run"): 1780,
