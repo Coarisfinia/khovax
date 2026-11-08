@@ -89,13 +89,20 @@ def gltf_files(gltf: str) -> set[str]:
         if entry.get("uri")
     ]
     # Joined as text and resolved like `realpath -m`: an absolute-looking URI stays under the
-    # glTF's folder, and symlinks resolve.
+    # glTF's folder, and symlinks resolve. A file through the game's link to the resource packs
+    # (#1978) keeps the game's path, not the one climbing out of the project.
     folder = os.path.dirname(gltf)
-    return {
-        os.path.relpath(os.path.realpath(f"{folder}/{uri}"))
-        for uri in uris
-        if not uri.startswith("data:")
-    }
+    packs = os.path.realpath("resourcepacks")
+    files = set()
+    for uri in uris:
+        if uri.startswith("data:"):
+            continue
+        real = os.path.realpath(f"{folder}/{uri}")
+        if real.startswith(packs + os.sep):
+            files.add(os.path.join("resourcepacks", os.path.relpath(real, packs)))
+        else:
+            files.add(os.path.relpath(real))
+    return files
 
 
 def extracted_textures(model: str) -> set[str]:

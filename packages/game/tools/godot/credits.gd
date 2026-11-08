@@ -2,8 +2,8 @@
 # The tool reports to whoever runs it (CI) on stderr; that is what it is for.
 extends SceneTree
 ## Writes CREDITS.md from the source note every asset pack keeps next to its files
-## (resourcepacks/default/<kind>/<pack>/SOURCE.md, #1978): its title and its author, source and license
-## lines (#70), every pack in the order of its folder's name. CI runs it
+## (resourcepacks/default/<kind>/<pack>/SOURCE.md, #1978): its title and its author, source and
+## license lines (#70), every pack in the order of its folder's name. CI runs it
 ## and fails when the committed CREDITS.md differs, so the credits can't drift from the assets:
 ## godot --headless --path packages/game -s res://tools/godot/credits.gd
 ##
@@ -12,7 +12,7 @@ extends SceneTree
 ## as assets, which this public repository and a shareable resource pack do. A pack whose source
 ## names quaternius.com, whose license names the QAL, or whose license file is the QAL's text fails,
 ## unless its note has an `- **Owner's OK:**` line naming where the owner allowed it. The author's
-## models taken from Poly Pizza while it showed them as CC0 (the quaternius-items pack) stay allowed.
+## models taken from Poly Pizza while it showed them as CC0 (quaternius-items) stay allowed.
 
 ## The folders holding asset packs, from res://: the default pack's folders of each
 ## kind (#1978), which the game reaches through its link, res://resourcepacks/

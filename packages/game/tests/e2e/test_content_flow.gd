@@ -2373,7 +2373,7 @@ func _check_pack_manifests() -> String:
 		"a bad texture id": valid % ["p", "1.0.0", "A", cog, wolf, ""],
 		"a missing file": valid % ["p", "1.0.0", "a", cog.replace("cog", "nothing"), wolf, ""],
 		"a file outside the pack": valid % ["p", "1.0.0", "a", "assets/../../" + cog, wolf, ""],
-		"a missing model": valid % ["p", "1.0.0", "a", cog, wolf.replace("mana_wolf", "no_wolf"), ""],
+		"a missing model": valid % ["p", "1.0.0", "a", cog, wolf.replace("mana_", "no_"), ""],
 		"an image as a model": valid % ["p", "1.0.0", "a", cog, cog, ""],
 		"no models": (start + " \"game_version\": \"0.1.0\", \"textures\": {}}") % ["p", "1.0.0"],
 	}
