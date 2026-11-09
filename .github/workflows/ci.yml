@@ -435,13 +435,13 @@ jobs:
 
       - name: "👁️ Check no eye shows above its brow"
         # Every other frame of every clip of every .glb, each eye from the front, its side and
-        # straight on (the owner, on #1249); a model without eye points passes.
+        # straight on (the owner, on #1249); a model without eye points passes. One Blender per
+        # model, several at once (#2232).
         if: steps.models.outputs.changed == 'true'
         timeout-minutes: 5
         run: |
-          xargs -0 -r -a /tmp/models.list uv run --locked --package khovax-game-models \
-            ../game-models/blender.py --background --factory-startup \
-            --python ../game-models/check_brows.py --
+          uv run --locked --package khovax-game-models ../game-models/blender_each.py /tmp/models.list \
+            ../game-models/check_brows.py
 
       - name: "🧪 Test the covered-eye check on a ball"
         # Our eyes set clear of the skin pass; pushed into the head, or under a loose patch of skin,
@@ -455,13 +455,12 @@ jobs:
       - name: "👀 Check no body surface covers our eyes"
         # Every other frame of every clip of every .glb, each eye straight on: nothing but its own
         # pieces lies in front of it within its rim (the owner, on #1747 and #1758); a model
-        # without eye points passes.
+        # without eye points passes. One Blender per model, several at once (#2232).
         if: steps.models.outputs.changed == 'true'
         timeout-minutes: 8
         run: |
-          xargs -0 -r -a /tmp/models.list uv run --locked --package khovax-game-models \
-            ../game-models/blender.py --background --factory-startup \
-            --python ../game-models/check_eyes_covered.py --
+          uv run --locked --package khovax-game-models ../game-models/blender_each.py /tmp/models.list \
+            ../game-models/check_eyes_covered.py
 
       - name: "🧪 Test the painted-eye check on a ball"
         # Painted black or glowing eyes fail it, and a beast's own pale or hue-bounded ones (#1719);
@@ -496,13 +495,13 @@ jobs:
 
       - name: "🫁 Check every model keeps its volume where its spine and neck bend"
         # Every frame of every clip of every .glb, the body's depth and width along its spine and
-        # neck against rest (the owner, on #1305); a model without spine or neck bones passes.
+        # neck against rest (the owner, on #1305); a model without spine or neck bones passes. One
+        # Blender per model, several at once (#2232).
         if: steps.models.outputs.changed == 'true'
         timeout-minutes: 5
         run: |
-          xargs -0 -r -a /tmp/models.list uv run --locked --package khovax-game-models \
-            ../game-models/blender.py --background --factory-startup \
-            --python ../game-models/check_volume.py --
+          uv run --locked --package khovax-game-models ../game-models/blender_each.py /tmp/models.list \
+            ../game-models/check_volume.py
 
       - name: "🐾 Check every model's clips move cleanly"
         # Every frame of every clip of each .glb listed above (#2117): paw sliding at the speeds
