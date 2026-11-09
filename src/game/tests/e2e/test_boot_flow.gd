@@ -27,6 +27,8 @@ const UNPLACED_MODELS: Array[String] = ["model_starry_egg"]
 const UNWORN_CLIPS: Dictionary[String, Array] = {}
 ## The skeleton every humanoid clip library's tracks name, as Godot's retargeting calls it.
 const HUMANOID_SKELETON: String = "%GeneralSkeleton"
+## The one shader every water surface is drawn by (#1933).
+const WATER_SHADER: String = "res://slices/board/look/water.gdshader"
 
 
 func run(tree: SceneTree) -> String:
@@ -38,13 +40,33 @@ func run(tree: SceneTree) -> String:
 	await tree.process_frame
 	await tree.process_frame
 
-	var steps: Array[Callable] = [
+	var steps: Array[Callable] = _steps()
+	var result: String = ""
+	for step: Callable in steps:
+		result = step.call(main)
+		if not result.is_empty():
+			break
+	main.queue_free()
+	await tree.process_frame
+	if result.is_empty():
+		result = _check_launch_options()
+	if result.is_empty():
+		result = await _check_boot(tree)
+	if result.is_empty():
+		result = await _check_launched(tree)
+	return result
+
+
+## The steps the flow checks on the running game, in order.
+func _steps() -> Array[Callable]:
+	return [
 		_check_world_seed,
 		_check_neighbors,
 		_check_disc_sizes,
 		_check_known_positions,
 		_check_grid,
 		_check_grid_colors,
+		_check_water_surfaces,
 		_check_player_placement,
 		_check_player_model,
 		_check_view_models,
@@ -64,20 +86,6 @@ func run(tree: SceneTree) -> String:
 		_check_neighbour_cloud,
 		_check_remembered_ground,
 	]
-	var result: String = ""
-	for step: Callable in steps:
-		result = step.call(main)
-		if not result.is_empty():
-			break
-	main.queue_free()
-	await tree.process_frame
-	if result.is_empty():
-		result = _check_launch_options()
-	if result.is_empty():
-		result = await _check_boot(tree)
-	if result.is_empty():
-		result = await _check_launched(tree)
-	return result
 
 
 ## Launching (#243): the project starts in the boot scene, which shows thick fog over the whole
@@ -281,6 +289,63 @@ func _check_grid_colors(main: Node) -> String:
 	if not material.vertex_color_use_as_albedo:
 		return "the tile material ignores the per-instance colors"
 	return ""
+
+
+## One water for everything (#1933): the water tiles' surface, one instance per tile, and anything
+## else shown whose node or material is named after water, is drawn by the one water shader.
+func _check_water_surfaces(main: Node) -> String:
+	var grid: HexGrid = main.get_node("Instance/HexGrid") as HexGrid
+	var water_tiles: int = 0
+	for kind: String in grid.shown_region().terrain.values():
+		if TileKinds.is_drinkable(kind):
+			water_tiles += 1
+	if water_tiles == 0:
+		return "the basic region has no water tile to look at"
+	var surface: MultiMeshInstance3D = grid.get_node_or_null("Water") as MultiMeshInstance3D
+	if surface == null:
+		return "the grid draws no water surface over its water tiles"
+	if surface.multimesh.instance_count != water_tiles:
+		return "the water surface has %d tiles, expected %d" % [
+			surface.multimesh.instance_count,
+			water_tiles,
+		]
+	for node: Node in main.find_children("*", "GeometryInstance3D", true, false):
+		var shown: GeometryInstance3D = node as GeometryInstance3D
+		var materials: Array[Material] = _materials_of(shown)
+		var node_is_water: bool = String(shown.name).to_lower().contains("water")
+		if node_is_water and materials.is_empty():
+			return "%s is water with no material to check" % shown.get_path()
+		for material: Material in materials:
+			var named_water: bool = node_is_water
+			named_water = named_water or material.resource_name.to_lower().contains("water")
+			if named_water and not _is_water_material(material):
+				return "%s is water drawn by another material" % shown.get_path()
+	return "" if _is_water_material(surface.material_override) else "the tiles' water isn't the one"
+
+
+## The materials `shown` draws with: its override, or each of its mesh's surfaces'.
+func _materials_of(shown: GeometryInstance3D) -> Array[Material]:
+	var materials: Array[Material] = []
+	if shown.material_override != null:
+		materials.append(shown.material_override)
+	var part: MeshInstance3D = shown as MeshInstance3D
+	if part != null and part.mesh != null and shown.material_override == null:
+		for surface: int in part.mesh.get_surface_count():
+			var material: Material = part.get_active_material(surface)
+			if material != null:
+				materials.append(material)
+	var many: MultiMeshInstance3D = shown as MultiMeshInstance3D
+	if many != null and many.multimesh.mesh != null and shown.material_override == null:
+		for surface: int in many.multimesh.mesh.get_surface_count():
+			var material: Material = many.multimesh.mesh.surface_get_material(surface)
+			if material != null:
+				materials.append(material)
+	return materials
+
+
+func _is_water_material(material: Material) -> bool:
+	var shaded: ShaderMaterial = material as ShaderMaterial
+	return shaded != null and shaded.shader.resource_path == WATER_SHADER
 
 
 ## The player's character stands on its tile: centered on it, feet on the tile's top.
