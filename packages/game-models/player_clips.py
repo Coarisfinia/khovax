@@ -20,8 +20,8 @@ import bpy
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib import (clip_smooth, clip_sources, pace, paced_gait, planted_feet, relaxed_hands, scene, skeleton,  # noqa: E402
-                 standing_feet)
+from lib import (clip_smooth, clip_sources, pace, paced_gait, planted_feet, relaxed_hands, run_cycle, scene,  # noqa: E402
+                 skeleton, standing_feet)
 
 # No body to size against the world (check_world_scale.py): the clips play on the stand-in rig.
 WORLD_SCALE = "clip_library"
@@ -46,6 +46,9 @@ RUN_SPEED = pace.player()
 # The walk loops, and pops like the one-shots: smoothed too, around its seam, then its standing
 # feet held at its pace (lib/paced_gait.py).
 WALK_SMOOTHING = 1.5
+# The run's body and arms, retimed to its cycle and smoothed around its seam; its legs are built
+# whole (lib/run_cycle.py).
+RUN_SMOOTHING = 1.0
 
 
 def mismatches(clips):
@@ -77,6 +80,9 @@ def build(out):
             clip_smooth.smooth(rig, action, SMOOTHING)
         elif name == "Walk":
             clip_smooth.smooth(rig, action, WALK_SMOOTHING, True)
+        elif name == "Run":
+            run_cycle.retime(action, run_cycle.CYCLE)
+            clip_smooth.smooth(rig, action, RUN_SMOOTHING, True)
         relaxed_hands.relax(action)
         clip_sources.stash(rig, action, name)
         # Its rig was only the clip's carrier: the clip now plays on the library's.
@@ -86,6 +92,8 @@ def build(out):
         print("CLIP %s: frames %d-%d" % (name, *action.frame_range))
         if name == "Walk":
             paced_gait.pace(rig, action, WALK_SPEED, clip_sources.FPS)
+        elif name == "Run":
+            run_cycle.build(rig, action, RUN_SPEED, clip_sources.FPS)
         elif name in HELD:
             standing_feet.hold(rig, action, name in GROUNDED)
         elif name in GROUNDED:
