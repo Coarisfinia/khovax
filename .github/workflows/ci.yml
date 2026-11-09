@@ -160,6 +160,11 @@ jobs:
         # Never a generator's painted eyes (#1682): lib/marked_eyes.py swaps ours in on import (#1683).
         run: uv run --locked --package khovax-game-models ../game-models/check_eyes.py
 
+      - name: "👄 Check every creature model has a mouth that opens"
+        # A hard requirement for a new creature's import (#2190); a design with no mouth, and one
+        # still waiting for its mouth, is listed in the script.
+        run: uv run --locked --package khovax-game-models ../game-models/check_mouth.py
+
       - name: "🗃️ Check the export presets share their file filters and web loading page"
         run: uv run --locked --package khovax-game-checks ../game-checks/export_filters_check.py
 

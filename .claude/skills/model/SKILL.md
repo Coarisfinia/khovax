@@ -960,7 +960,9 @@ clips. Ask the owner only when it's unclear what should move how.
    its import may be merged. Props and the other non-creatures (`NOT_CREATURES` in
    `check_clip_set.py`) don't take it, and models already in the game are handled in their own
    issues (#2183 and its follow-ups). It checks the import, never the design: no creature prompt
-   gains a mouth line for it (#2052), and no check runs it yet, so the builder judges the renders.
+   gains a mouth line for it (#2052). `uv run --locked --package khovax-game-models packages/game-models/check_mouth.py`
+   (#2191, on every push in CI) fails a creature without a `jaw` bone that moves skin and opens in
+   Attack and ChannelStart; how the mouth looks, the builder still judges from the renders.
    - **What passes:** closed, the mouth reads as a mouth, with no holes, torn faces or stray
      paint. Open, the mouth parts on a `jaw` bone with its own skin (the library's Attack and
      Channel clips key `jaw`, and a rig without one stays shut, #2183), the inside shows its dark
@@ -975,7 +977,8 @@ clips. Ask the owner only when it's unclear what should move how.
      the open picture, and the requirement holds until then.
    - **A design with no mouth is exempt:** a face of bone plate (the Drakkudor) or a ball of
      ribbons (the Tikazzelu) has none to check. The PR says so with the `face` close-up and links
-     the source that shows the design has no mouth. A mouth the source has and the import lost, or
+     the source that shows the design has no mouth, and the model goes into `MOUTHLESS` in
+     `check_mouth.py` with its reason. A mouth the source has and the import lost, or
      one the rig can't open, is a failure, not an exemption.
    - **On a failure the import stops:** the PR isn't marked ready and nothing else of the import
      goes on until the mouth is fixed, or the owner decides otherwise on its issue (a `question`
