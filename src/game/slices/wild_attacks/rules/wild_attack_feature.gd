@@ -20,9 +20,9 @@ extends Feature
 ## monster is out (CompanionPassives): a self passive off its
 ## companion, a player passive off its player. A hit that lands still deals at least 1 (#702).
 ## A self passive that dodges (#1499, Zirki-kirki) makes its share of the hits on its companion
-## miss, on a roll from the feature's own random stream: a miss deals nothing, like a hit on an
-## invincible player, and its WildMonsterStruck says it was dodged. Only a companion with a dodge
-## rolls, so no other hit draws from the stream.
+## miss, by count and never on a roll (#2234, #1602): each hit adds the dodge to the companion's
+## count, and the hit that makes a whole misses, so a fifth is every fifth hit. A miss deals
+## nothing, like a hit on an invincible player, and its WildMonsterStruck says it was dodged.
 ##
 ## Encircled, it attacks only its ring: in a ring waiting for a totem (#423), it strikes the wall
 ## segment nearest to it, wherever that is, and once a segment is worn through, the ring breaks
@@ -50,6 +50,8 @@ var guards: Dictionary[String, int] = {}
 var dodges: Dictionary[String, int] = {}
 ## The damage each trail tile has taken, by tile; one never hit isn't here.
 var _wear: Dictionary[Vector2i, int] = {}
+## Each companion's count towards its next dodge, in thousandths, by id; one at nothing isn't here.
+var _dodge_counts: Dictionary[int, int] = {}
 ## The trail's feature, which the wear is read against (set in `start`).
 var _trail: TrailFeature = null
 ## Worked out again each tick, so neither hashed nor saved: the lowest id of a companion and of a
@@ -58,8 +60,6 @@ var _companion_at: Dictionary[Vector2i, int] = {}
 var _player_at: Dictionary[Vector2i, int] = {}
 var _ring_walls: Dictionary[Vector2i, bool] = {}
 var _ring_walls_found: bool = false
-## The feature's own random stream, which the dodges roll on (set in `start`).
-var _rng: Rng
 
 
 func _init(
@@ -105,7 +105,21 @@ func before() -> Array[String]:
 
 func start(state: GameState) -> void:
 	_trail = state.feature(TrailFeature.ID) as TrailFeature
-	_rng = Rng.new(state.rng_seed, stream())
+
+
+func entity_removed(_state: GameState, removed_id: int) -> void:
+	var _dropped: bool = _dodge_counts.erase(removed_id)
+
+
+## A companion's count towards its next dodge (#2234): walking through an exit doesn't reset it.
+func carry_out(_state: GameState, entity_id: int) -> Dictionary:
+	if not _dodge_counts.has(entity_id):
+		return {}
+	return { "dodge_count": _dodge_counts[entity_id] }
+
+
+func carry_in(_state: GameState, arrived: Entity, carried: Dictionary) -> void:
+	_dodge_counts[arrived.id] = carried["dodge_count"]
 
 
 ## Lets every wild monster strike, in id order, once every STRIKE_TICKS. Wear on tiles that left
@@ -283,16 +297,25 @@ func _guarded(state: GameState, target_id: int, on_companion: bool, damage: int)
 	return maxi(Fixed.scale(damage, Fixed.ONE - guard), 1)
 
 
-## Whether the companion `companion_id` dodges the hit on it (#1499): a roll on the feature's
-## stream, against the dodges of its passives working now together, less than a whole. One without
-## a dodge doesn't roll.
+## Whether the companion `companion_id` dodges this hit on it (#1499, #2234): the dodges of its
+## passives working now, together less than a whole, are added to its count, and the hit that makes
+## a whole is dodged. One without a dodge counts nothing.
 func _dodges(state: GameState, companion_id: int) -> bool:
 	if dodges.is_empty():
 		return false
 	var dodge: int = 0
 	for passive: String in _passives(state, companion_id, true):
 		dodge += dodges.get(passive, 0)
-	return dodge > 0 and _rng.below(Fixed.ONE) < mini(dodge, Fixed.ONE - 1)
+	if dodge == 0:
+		return false
+	var count: int = _dodge_counts.get(companion_id, 0) + mini(dodge, Fixed.ONE - 1)
+	var dodged: bool = count >= Fixed.ONE
+	count -= Fixed.ONE if dodged else 0
+	if count > 0:
+		_dodge_counts[companion_id] = count
+	else:
+		var _dropped: bool = _dodge_counts.erase(companion_id)
+	return dodged
 
 
 ## The passives working now (CompanionPassives) for the companion or player `target_id`: a
@@ -376,31 +399,39 @@ func hash_values() -> Array[int]:
 	var values: Array[int] = [tiles.size()]
 	for tile: Vector2i in tiles:
 		values.append_array([tile.x, tile.y, _wear[tile]])
-	values.append_array(_rng.hash_values())
+	var counts: Array[int] = DataReader.flat_pairs(_dodge_counts)
+	values.append(counts.size())
+	values.append_array(counts)
 	return values
 
 
-## The worn tiles, sorted, the wear on each, in the same order, and the stream's state.
+## The worn tiles, sorted, the wear on each, in the same order, and the companions' dodge counts.
 func save_values() -> Dictionary:
 	var tiles: Array[Vector2i] = _worn_tiles()
 	var wear: Array[int] = []
 	for tile: Vector2i in tiles:
 		wear.append(_wear[tile])
-	return { "tiles": DataReader.flat(tiles), "wear": wear, "rng": _rng.hash_values() }
+	return {
+		"tiles": DataReader.flat(tiles),
+		"wear": wear,
+		"dodge_counts": DataReader.flat_pairs(_dodge_counts),
+	}
 
 
-## Each worn tile must be on the restored trail, once, with less wear than gives way.
+## Each worn tile must be on the restored trail, once, with less wear than gives way, and each
+## dodge count on an entity there, less than a whole.
 func load_values(state: GameState, values: DataReader) -> void:
 	_wear.clear()
 	var tiles: Array[Vector2i] = values.tiles("tiles", state.region)
 	var wear: Array[int] = values.wholes("wear", 1, TILE_INTEGRITY - 1)
-	var restored: Rng = Rng.restored(values.wholes("rng", 0, Rng.MASK))
+	var counts: Dictionary[int, int] = values.pairs("dodge_counts", 1, DataReader.MOST)
 	if values.failed():
 		return
-	if restored == null:
-		values.fail("the wild attacks' random stream isn't four 32-bit words, not all zero")
-		return
-	_rng = restored
+	for companion_id: int in counts:
+		if state.entity(companion_id) == null or counts[companion_id] >= Fixed.ONE:
+			values.fail("entity %d's dodge count doesn't hold" % companion_id)
+			return
+	_dodge_counts = counts
 	if wear.size() != tiles.size():
 		values.fail("the worn tiles and their wear don't match")
 		return
