@@ -15,6 +15,7 @@ const SLICES: String = "res://slices/"
 ## resolver may (resource_packs_check.py).
 const PACKS: String = "res://resourcepacks/"
 const DEFAULT_PACK: String = "default/"
+const MANIFEST_KIND: String = "resource_packs"
 
 
 func _init() -> void:
@@ -27,6 +28,8 @@ func _init() -> void:
 	for folder: String in DirAccess.get_directories_at(pack):
 		if _holds_jsonc(pack + folder):
 			failed += _convert(pack, folder)
+	# The pack's manifest lies directly in its folder, and its schema is the resource packs'.
+	failed += _convert_files(pack, MANIFEST_KIND)
 	quit(1 if failed > 0 else 0)
 
 
