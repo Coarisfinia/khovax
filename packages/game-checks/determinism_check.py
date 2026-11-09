@@ -41,11 +41,13 @@ FORBIDDEN_IN_CODE = re.compile(
     "|".join(
         (
             r"\b(shuffle|pick_random)\s*\(|\bRandomNumberGenerator\b",
-            r"\bfloat\b|[0-9]\.[0-9]|[0-9][eE][-+]?[0-9]",
+            r"\bfloat\b|[0-9]\.[0-9]|(?<![\w.])[0-9][0-9_]*[eE][-+]?[0-9]",
             r"(?<![\w)\]])\.[0-9]",
             r"(?<![\w.])[0-9][0-9_]*\.(?:[eE][-+]?[0-9]|(?!\w))",
-            r"\b(sqrt|sin|cos|tan|asin|acos|atan|atan2|exp|log|pow|fmod|fposmod|lerp|lerpf"
-            r"|inverse_lerp|deg_to_rad|rad_to_deg|to_float)\s*\(",
+            r"\b(sqrt|sin|cos|tan|asin|acos|atan|atan2|sinh|cosh|tanh|exp|log|pow|fmod|fposmod"
+            r"|lerp|lerpf|lerp_angle|inverse_lerp|remap|smoothstep|move_toward|deg_to_rad"
+            r"|rad_to_deg|to_float|floor|ceil|round|floorf|ceilf|roundf|absf|signf|maxf|minf"
+            r"|clampf|snappedf|wrapf|is_nan|is_inf|is_equal_approx|is_zero_approx)\s*\(",
             r"\b(PI|TAU|INF|NAN)\b",
         )
     )
