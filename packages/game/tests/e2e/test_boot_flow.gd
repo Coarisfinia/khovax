@@ -40,7 +40,26 @@ func run(tree: SceneTree) -> String:
 	await tree.process_frame
 	await tree.process_frame
 
-	var steps: Array[Callable] = [
+	var steps: Array[Callable] = _steps()
+	var result: String = ""
+	for step: Callable in steps:
+		result = step.call(main)
+		if not result.is_empty():
+			break
+	main.queue_free()
+	await tree.process_frame
+	if result.is_empty():
+		result = _check_launch_options()
+	if result.is_empty():
+		result = await _check_boot(tree)
+	if result.is_empty():
+		result = await _check_launched(tree)
+	return result
+
+
+## The steps the flow checks on the running game, in order.
+func _steps() -> Array[Callable]:
+	return [
 		_check_world_seed,
 		_check_neighbors,
 		_check_disc_sizes,
@@ -67,20 +86,6 @@ func run(tree: SceneTree) -> String:
 		_check_neighbour_cloud,
 		_check_remembered_ground,
 	]
-	var result: String = ""
-	for step: Callable in steps:
-		result = step.call(main)
-		if not result.is_empty():
-			break
-	main.queue_free()
-	await tree.process_frame
-	if result.is_empty():
-		result = _check_launch_options()
-	if result.is_empty():
-		result = await _check_boot(tree)
-	if result.is_empty():
-		result = await _check_launched(tree)
-	return result
 
 
 ## Launching (#243): the project starts in the boot scene, which shows thick fog over the whole
