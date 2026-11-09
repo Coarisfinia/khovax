@@ -328,6 +328,10 @@ jobs:
           uv run --locked ../game-replays/load_test_compare.py /tmp/load-head.txt /tmp/load-base.txt \
             | tee -a "$GITHUB_STEP_SUMMARY"
 
+      - name: "📂 Check nothing is left in, or names, packages/"
+        # The folder is src/ now (#1979), and a path left behind reads nothing without saying so.
+        run: uv run --locked --package khovax-game-checks ../game-checks/no_packages_folder.py
+
   models:
     # The model checks (#1357): scripted models rebuilt and checked in Blender, which takes
     # minutes on its own, so it runs beside headless rather than inside its time limit. It always
