@@ -16,7 +16,7 @@ runs:
   steps:
     - name: "🧰 Install uv (the Python tooling's runner)"
       # Bump the version and the checksum together: the checksum is of the Linux release archive,
-      # from the release's .sha256 file. Bump uv_build in packages/game-shared/pyproject.toml with
+      # from the release's .sha256 file. Bump uv_build in src/game-shared/pyproject.toml with
       # them.
       shell: bash
       env:

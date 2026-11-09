@@ -1,0 +1,568 @@
+"""Tests lib/marked_eyes.py's `painted`, which check_painted_eyes.py runs (#1688), on a textured
+ball for a head: two flat black ovals or two glowing ones painted on its texture fail; a plain
+texture passes, and so does one where our own eyes sit (pieces of plain dark colour joined in,
+whose texels on the texture are black too), since only the texture's own faces count. A beast's
+own way of marking them (marked_eyes.BEASTS, #1719) finds what `DARK` and `GLOW` miss: Fohossa's
+pale eyes on a head weighted under HEAD_WEIGHT, the Frostfire Hound's amber and ice ones on an ice
+blue head off the middle. And each predicate picks the colours it should, and not its neighbours'.
+A fragment left beyond a pair (#1756), a dim spot by one eye only, fails too
+(marked_eyes.fragments), while a shade only a little darker than the skin passes; so does a dim
+speck a few texels across that lies between the head's samples, where no sample reads it (#1764),
+while a single dim texel passes, and so does that speck once `scrub` has painted it out (#1785);
+and a dim patch two texels square on a coarse texture over a low ball, whose texels lie farther
+apart on the surface than `fragments` groups by, fails as one spot (#1781), while two dim texels on each of two islands side by side on the texture, far apart
+on the head, pass: neither is a spot of FRAGMENT_TEXELS.
+A two-tone head whose right half is dark basalt, as the Kavrikka's, passes: that half is a tone of
+its own paint (#1782); a dim fragment on its pale half or a black one on its basalt fails, and so
+does a dim fragment on the pale side of a head mostly basalt, or a dim patch across the border
+between its tones (#1799), also one only a few texels across (#1811).
+`fit` sets our eyes where the marks it was given are, mirrored across the middle they were found
+across (#1735): on a ball centred on x = 0 with `DARK`'s ovals, and on one off the middle with the
+hound's. On a ball with no painted eyes, `find`'s error names the ways on (#2100), and our eyes
+placed there by hand (`placed`) land at the given spot and size, mirrored across the given middle.
+A mark whose normal lies (nearly) along Z has no sideways axis, so `Mark` refuses it (#2105), while
+`find` passes over such a spot (a dark flat crown) and still finds the eyes, `fragments` still reports a
+dim one there; and `placed` refuses a spot
+off the surface whose nearest point there lies within half the eye's width of the middle.
+
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/test_painted_eyes.py
+
+It prints each case and `PAINTED EYES TEST: PASS` or `FAIL` (and exits 1 on a fail)."""
+
+import os
+import sys
+
+import bmesh
+import bpy
+import numpy
+from mathutils import Matrix, Vector
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+# Blender's own Python runs this, outside the uv environment: game_shared comes from its folder.
+sys.path.insert(0, HERE)
+sys.path.insert(0, os.path.join(os.path.dirname(HERE), "game-shared"))
+
+from game_shared import log  # noqa: E402
+from lib import eyes, marked_eyes  # noqa: E402
+
+# The head: a ball this big, its texture this many texels square.
+RADIUS, SIZE = 0.5, 256
+# The skin's colour, a painted eye's flat black and its glow (sRGB).
+SKIN, BLACK, GLOW = (0.55, 0.4, 0.3), (0.05, 0.05, 0.05), (1.0, 0.6, 0.1)
+# A fragment's dim colour, darker than marked_eyes.FRAGMENT_RATIO of the skin but not `DARK`'s black,
+# and a shade of the skin only a little darker.
+DIM, SHADE = (0.3, 0.22, 0.16), (0.45, 0.33, 0.25)
+# Fohossa's: its warm grey skin and pale lantern eyes.
+GREY, PALE = (0.84, 0.81, 0.78), (0.98, 0.95, 0.9)
+# The Frostfire Hound's (frostfire_hound.py): its ice blue skin, its amber eye and its ice one.
+ICE, AMBER, ICE_EYE = (0.36, 0.60, 0.88), (1.0, 0.78, 0.30), (0.62, 0.96, 1.0)
+# Where the left eye sits (the model faces -Y, its left is +X; the right one mirrors it), and how
+# far around it the paint reaches.
+EYE, EYE_RADIUS = Vector((0.35, -1.0, 0.3)).normalized() * RADIUS, 0.09
+FOHOSSA = "resourcepacks/default/models/fohossa/fohossa.glb"
+HOUND = "resourcepacks/default/models/frostfire_hound/frostfire_hound.glb"
+# A texture this many texels square, whose texels the ball's triangles cover far more of than the
+# head samples (#1764), and the dim specks laid between those samples, each this many texels
+# square, with whether the check passes it and whether `scrub` runs first (#1785: it paints out a
+# speck no sample reads, far from any dark sample, so the check passes after it).
+SPECK_SIZE = 2048
+SPECKS = {"dim_speck": (3, False, False), "dim_texel": (1, True, False), "dim_speck_scrubbed": (3, True, True)}
+# A coarse texture this many texels square on a low ball of this many segments around and up, each
+# texel wider on the surface than two of the cells `fragments` groups by, and the dim patch this many
+# texels square on it, which must fail.
+COARSE_SIZE, COARSE_SEGMENTS, COARSE_ACROSS = 32, (8, 4), 2
+# A texture so coarse that the patch is more than marked_eyes.TONE_SHARE of the texels the head
+# touches: still a fragment, not a tone of the head's paint (#1782).
+TINY_SIZE = 6
+# Two islands on a texture of COARSE_SIZE texels: flat squares facing forward at either side of the
+# head, the left one's UVs ending a little short of texel column ISLAND_EDGE and the right one's
+# starting a little past it, so their texels touch on the texture. Each has two dim texels at that
+# edge, on rows ISLAND_ROWS.
+ISLAND_EDGE, ISLAND_ROWS = 10, (4, 5)
+# A two-tone head (#1782), as lib/frostfire.py paints the Kavrikka: dark basalt right of a border
+# (-X), the right half of it at x = 0, most of it at x = MOSTLY or a little less than half at
+# x = -MOSTLY (#1799).
+BASALT = (0.17, 0.11, 0.10)
+MOSTLY = 0.05
+# Where the patches go: by the left eye, by the right one (on the basalt), and on the border at x =
+# 0, level with the eyes.
+RIGHT_EYE, ON_BORDER = Vector((-EYE.x, EYE.y, EYE.z)), Vector((-MOSTLY, EYE.y, EYE.z)).normalized() * RADIUS
+# A small fragment touching the basalt of the head split at x = 0 (#1811): a dim patch this wide
+# (about 4 texels across and 7 up), its middle half its radius off the border on the pale side.
+SMALL = EYE_RADIUS / 4.0
+BY_BORDER = Vector((SMALL / 2.0, EYE.y, EYE.z)).normalized() * RADIUS
+# Name: (the border's x, the patches painted on it, each (its colour, its middle, its radius), and
+# whether the check passes it).
+TWO_TONES = {
+    "two_tone": (0.0, [], True),
+    "two_tone_dim_fragment": (0.0, [(DIM, EYE, EYE_RADIUS / 2.0)], False),
+    "two_tone_black_fragment": (0.0, [(BLACK, RIGHT_EYE, EYE_RADIUS / 2.0)], False),
+    # The basalt is most of the head, so the head's median is the basalt's (#1799).
+    "mostly_basalt": (MOSTLY, [], True),
+    "mostly_basalt_dim_fragment": (MOSTLY, [(DIM, EYE, EYE_RADIUS / 2.0)], False),
+    # A dim patch touching the basalt is one spot with it (#1799).
+    "two_tone_dim_across": (-MOSTLY, [(DIM, ON_BORDER, EYE_RADIUS)], False),
+    # Too small to outlast marked_eyes.EDGE's thinning, but one flat colour, as no blend is (#1811).
+    "two_tone_dim_small": (0.0, [(DIM, BY_BORDER, SMALL)], False),
+}
+# A beast's own small dark marking (#1765): a dim spot of this radius on the middle of the forehead,
+# and the box named around it, a little wider. Name: (whether the box is named, whether a dim
+# fragment lies by the left eye too, and whether the check passes it).
+MARKING, MARKING_RADIUS = Vector((0.0, -0.6, 0.8)).normalized() * RADIUS, 0.05
+MARKING_BOX = (tuple(v - 0.07 for v in MARKING), tuple(v + 0.07 for v in MARKING))
+MARKINGS = {
+    "marking_unnamed": (False, False, False),
+    "marking": (True, False, True),
+    "marking_dim_fragment": (True, True, False),
+}
+
+# Name: (the paint on the left eye and the right one (either may be None), or None, whether our eyes are joined in,
+# the head's weight to "head", the skin's colour, the beast in BEASTS whose own marking the check
+# adds, or None, and whether the check passes it).
+CASES = {
+    "plain": (None, False, 1.0, SKIN, None, True),
+    "black_ovals": ((BLACK, BLACK), False, 1.0, SKIN, None, False),
+    "glowing_eyes": ((GLOW, GLOW), False, 1.0, SKIN, None, False),
+    "our_eyes": (None, True, 1.0, SKIN, None, True),
+    # Pale eyes are neither black nor saturated: only Fohossa's own marking sees them, and only
+    # with its lower head weight.
+    "pale_eyes_unlisted": ((PALE, PALE), False, 0.4, GREY, None, True),
+    "pale_eyes_fohossa": ((PALE, PALE), False, 0.4, GREY, FOHOSSA, False),
+    "plain_fohossa": (None, False, 0.4, GREY, FOHOSSA, True),
+    # The ice blue glows all over, so `GLOW` sees one spot across the middle and no pair; the
+    # hound's own marking sees its amber eye and its ice one, mirrored across its middle.
+    "hound_eyes_unlisted": ((ICE_EYE, AMBER), False, 1.0, ICE, None, True),
+    "hound_eyes": ((ICE_EYE, AMBER), False, 1.0, ICE, HOUND, False),
+    "plain_hound": (None, False, 1.0, ICE, HOUND, True),
+    # No pair: only the fragments see a dim spot by one eye, and a shade isn't one.
+    "dim_fragment": ((DIM, None), True, 1.0, SKIN, None, False),
+    "shade": ((SHADE, None), True, 1.0, SKIN, None, True),
+}
+
+# Name: (the paint on the left eye and the right one, the skin's colour, and the beast in BEASTS
+# whose own marking finds them, or None for `DARK`): `fit` must set our eyes on these marks.
+FITS = {
+    "fit_middle": ((BLACK, BLACK), SKIN, None),
+    # Off the middle, mirrored across x = 0.068: our eyes mirrored across x = 0 would land that far
+    # off theirs (#1735).
+    "fit_hound": ((ICE_EYE, AMBER), ICE, HOUND),
+}
+# Our eyes placed by hand on a plain ball off the middle (#2100): its middle, and the left eye's
+# width and height there; and how far off the given size our eyeball may be, as a share of it.
+PLACED_MIDDLE, PLACED_WIDTH, PLACED_HEIGHT, PLACED_NEAR = 0.05, 0.12, 0.08, 0.05
+# Off the surface (#2105): left of the middle by more than half the eye's width, yet so far above the
+# ball that its nearest point there lies within it.
+PLACED_ABOVE = (PLACED_MIDDLE + 0.07, -0.3, 2.0)
+# Normals along Z or nearly so (#2105): a mark has no sideways axis with them.
+ALONG_Z = {"up": (0.0, 0.0, 1.0), "down": (0.0, 0.0, -1.0), "nearly_up": (1e-4, 0.0, 1.0)}
+# The ball's crown, cut flat this high (#2105), and how far around its middle the paint on it
+# reaches (inside the flat cut, about 0.22 across).
+CROWN, CROWN_RADIUS = Vector((0.0, 0.0, 0.45)), 0.12
+# What `find`'s error names when it finds no eyes: a beast's own `Marked`, the placement by hand
+# and the eye check's list of eyeless designs.
+FIND_OPTIONS = ("BEASTS", "placed", "EYELESS")
+# How far our eye's iris may lie from its mark's middle, as a share of the mark's width: the iris
+# stands a little out from the surface, and `clear` may move it a little further.
+FIT_NEAR = 0.2
+
+# Predicate: (colours it picks, colours it leaves).
+PICKS = {
+    "DARK": (marked_eyes.DARK, [BLACK], [SKIN, GREY, ICE]),
+    "GLOW": (marked_eyes.GLOW, [GLOW, AMBER, ICE], [SKIN, GREY, PALE, BLACK]),
+    "PALE": (marked_eyes.PALE, [PALE, (1.0, 1.0, 1.0)], [GREY, SKIN, ICE_EYE, AMBER, BLACK]),
+    "fohossa": (marked_eyes.BEASTS[FOHOSSA], [PALE], [GREY, SKIN, BLACK]),
+    # The amber one and the ice one, not the ice skin, the amber cracks' red rim, nor a red or a
+    # green glow.
+    "hound": (marked_eyes.BEASTS[HOUND], [AMBER, ICE_EYE],
+              [ICE, (0.42, 0.67, 0.92), (0.95, 0.38, 0.08), (1.0, 0.2, 0.2), (0.3, 1.0, 0.3), PALE]),
+}
+
+
+def material(name, image=None, colour=(0.0, 0.0, 0.0)):
+    """A material whose base colour is `image`, or the plain `colour`."""
+    made = bpy.data.materials.new(name)
+    shader = made.node_tree.nodes["Principled BSDF"]
+    if image is None:
+        shader.inputs["Base Color"].default_value = colour + (1.0,)
+    else:
+        node = made.node_tree.nodes.new("ShaderNodeTexImage")
+        node.image = image
+        made.node_tree.links.new(node.outputs["Color"], shader.inputs["Base Color"])
+    return made
+
+
+def ball(name, radius, at, weight=1.0, segments=(64, 32)):
+    """A UV ball mesh object of `radius` at `at`, of `segments` around and up, its every vertex
+    weighted `weight` to "head".
+    The mesh itself is moved there and the object left at the origin, as an adopted skin is (the
+    eyes look for the skin's surface in its own space)."""
+    mesh = bpy.data.meshes.new(name)
+    built = bmesh.new()
+    built.loops.layers.uv.new("UVMap")
+    bmesh.ops.create_uvsphere(built, u_segments=segments[0], v_segments=segments[1], radius=radius, calc_uvs=True)
+    built.to_mesh(mesh)
+    built.free()
+    mesh.transform(Matrix.Translation(at))
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.scene.collection.objects.link(obj)
+    obj.vertex_groups.new(name="head").add(range(len(mesh.vertices)), weight, "REPLACE")
+    return obj
+
+
+def build(paint, ours, weight, colour, middle, size=SIZE, segments=(64, 32)):
+    """The head: a ball of `colour`, weighted `weight` to "head" and centred on x = `middle`, with
+    its texture, `paint`'s left and right colours laid over the eyes' spots on it (or nothing), and
+    our eyes joined in when `ours`, their UVs on a black texel of the texture (`size` texels square);
+    the ball has `segments` around and up."""
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    image = bpy.data.images.new("skin", size, size)
+    pixels = numpy.empty((size, size, 4), dtype=numpy.float32)
+    pixels[:, :] = colour + (1.0,)
+    pixels[0, 0] = BLACK + (1.0,)
+    image.pixels.foreach_set(pixels.ravel())
+    skin = ball("Head", RADIUS, (middle, 0.0, 0.0), weight, segments)
+    skin.data.materials.append(material("skin", image))
+    spots = [Vector((middle + EYE.x, EYE.y, EYE.z)), Vector((middle - EYE.x, EYE.y, EYE.z))]
+    if paint is not None:
+        head = marked_eyes.Head(skin, "head", weight)
+        rows, columns, texels = marked_eyes._texels(head, numpy.ones(len(head.spots), dtype=bool))
+        for eye, colour in ((eye, colour) for eye, colour in zip(spots, paint) if colour is not None):
+            inside = numpy.sqrt(((texels - numpy.array(eye)) ** 2).sum(axis=1)) <= EYE_RADIUS
+            head.pixels[rows[inside], columns[inside], :3] = colour
+        image.pixels.foreach_set(head.pixels.ravel())
+    if ours:
+        dark = material("dark", colour=BLACK)
+        pieces = [ball("Eye", EYE_RADIUS, eye) for eye in spots]
+        for piece in pieces:
+            piece.data.materials.append(dark)
+            for loop in piece.data.uv_layers.active.data:
+                loop.uv = (0.5 / size, 0.5 / size)
+        bpy.ops.object.select_all(action="DESELECT")
+        for piece in pieces:
+            piece.select_set(True)
+        skin.select_set(True)
+        bpy.context.view_layer.objects.active = skin
+        bpy.ops.object.join()
+    return skin
+
+
+def speck(name, across, passes, scrubbed):
+    """Whether the check passes a plain ball as it should with a dim speck `across` texels square
+    by the left eye, where no head sample reads it (#1764), once `scrub` has run if `scrubbed`."""
+    skin = build(None, False, 1.0, SKIN, 0.0, SPECK_SIZE)
+    head = marked_eyes.Head(skin, "head")
+    rows, columns, texels = marked_eyes._texels(head, numpy.ones(len(head.spots), dtype=bool))
+    # A texel each speck may start at: near the eye, with no sample reading any texel of the speck.
+    sampled = numpy.zeros((SPECK_SIZE + across, SPECK_SIZE + across), dtype=numpy.int64)
+    numpy.add.at(sampled, (head.texels[0], head.texels[1]), 1)
+    seen = sum(sampled[row:row + SPECK_SIZE, column:column + SPECK_SIZE]
+               for row in range(across) for column in range(across))
+    near = numpy.sqrt(((texels - numpy.array(EYE)) ** 2).sum(axis=1)) <= EYE_RADIUS
+    free = near & (seen[rows, columns] == 0) & (rows < SPECK_SIZE - across) & (columns < SPECK_SIZE - across)
+    if not free.any():
+        log.error("FAIL %s: no texel by the eye lies between the head's samples" % name)
+        return False
+    # The lowest such texel, row first: the head's triangles come in no fixed order.
+    row, column = min(zip(rows[free].tolist(), columns[free].tolist()))
+    head.pixels[row:row + across, column:column + across, :3] = DIM
+    head.image.pixels.foreach_set(head.pixels.ravel())
+    if scrubbed:
+        marked_eyes.scrub(skin)
+    found = sorted(marked_eyes.painted(skin)) + (["FRAGMENTS"] if marked_eyes.fragments(skin) else [])
+    ok = (not found) == passes
+    (log.info if ok else log.error)("%s %s: %s at texel (%d, %d), %s" % (
+        "ok" if ok else "FAIL", name, "found " + ", ".join(found) if found else "nothing found", row, column,
+        "should pass" if passes else "should fail"))
+    return ok
+
+
+def coarse(name, size):
+    """Whether the check fails a dim patch COARSE_ACROSS texels square by the left eye on a coarse
+    texture `size` texels square over a low ball, whose texels lie farther apart than `fragments`
+    groups by on the surface (#1781): side by side on the texture, they are one spot."""
+    skin = build(None, False, 1.0, SKIN, 0.0, size, COARSE_SEGMENTS)
+    head = marked_eyes.Head(skin, "head")
+    rows, columns, texels = marked_eyes._texels(head, numpy.ones(len(head.spots), dtype=bool))
+    nearest = numpy.sqrt(((texels - numpy.array(EYE)) ** 2).sum(axis=1)).argmin()
+    # The patch stays on the texture.
+    row, column = (min(int(at), size - COARSE_ACROSS) for at in (rows[nearest], columns[nearest]))
+    head.pixels[row:row + COARSE_ACROSS, column:column + COARSE_ACROSS, :3] = DIM
+    head.image.pixels.foreach_set(head.pixels.ravel())
+    found = marked_eyes.fragments(skin)
+    ok = bool(found)
+    (log.info if ok else log.error)("%s %s: %s at texel (%d, %d), should fail" % (
+        "ok" if ok else "FAIL", name, "found %s texels" % [mark.count for mark in found] if found else "nothing found",
+        row, column))
+    return ok
+
+
+def islands():
+    """Whether the check passes two islands side by side on the texture that lie far apart on the
+    head, each with two dim texels where they touch (#1781): neither is a spot of FRAGMENT_TEXELS."""
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    size = COARSE_SIZE
+    image = bpy.data.images.new("skin", size, size)
+    pixels = numpy.empty((size, size, 4), dtype=numpy.float32)
+    pixels[:, :] = SKIN + (1.0,)
+    for row in ISLAND_ROWS:
+        for column in (ISLAND_EDGE - 1, ISLAND_EDGE):
+            pixels[row, column, :3] = DIM
+    image.pixels.foreach_set(pixels.ravel())
+    near, far = (ISLAND_EDGE - 0.1) / size, (ISLAND_EDGE + 0.1) / size
+    squares = [(-0.5, -0.3, 0.0, near), (0.3, 0.5, far, 2.0 * ISLAND_EDGE / size)]
+    corners, faces, uvs = [], [], []
+    for left, right, start, end in squares:
+        first = len(corners)
+        corners += [(left, -0.5, 0.0), (right, -0.5, 0.0), (right, -0.5, 0.2), (left, -0.5, 0.2)]
+        faces.append((first, first + 1, first + 2, first + 3))
+        uvs += [(start, 0.0), (end, 0.0), (end, ISLAND_EDGE / size), (start, ISLAND_EDGE / size)]
+    mesh = bpy.data.meshes.new("Head")
+    mesh.from_pydata(corners, [], faces)
+    mesh.uv_layers.new(name="UVMap")
+    for loop, uv in zip(mesh.uv_layers.active.data, uvs):
+        loop.uv = uv
+    skin = bpy.data.objects.new("Head", mesh)
+    bpy.context.scene.collection.objects.link(skin)
+    skin.vertex_groups.new(name="head").add(range(len(corners)), 1.0, "REPLACE")
+    skin.data.materials.append(material("skin", image))
+    found = marked_eyes.fragments(skin)
+    ok = not found
+    (log.info if ok else log.error)("%s islands: %s, should pass" % (
+        "ok" if ok else "FAIL", "found %s texels" % [mark.count for mark in found] if found else "nothing found"))
+    return ok
+
+
+def two_tone(name, border, patches, passes):
+    """Whether the check passes as it should a ball that is basalt right of x = `border`, a tone of
+    its own paint (#1782), with each of `patches` (colour, middle, radius) painted over it."""
+    skin = build(None, False, 1.0, SKIN, 0.0)
+    head = marked_eyes.Head(skin, "head")
+    rows, columns, texels = marked_eyes._texels(head, numpy.ones(len(head.spots), dtype=bool))
+    head.pixels[rows[texels[:, 0] < border], columns[texels[:, 0] < border], :3] = BASALT
+    for colour, middle, radius in patches:
+        near = numpy.sqrt(((texels - numpy.array(middle)) ** 2).sum(axis=1)) <= radius
+        head.pixels[rows[near], columns[near], :3] = colour
+    head.image.pixels.foreach_set(head.pixels.ravel())
+    found = sorted(marked_eyes.painted(skin)) + (["FRAGMENTS"] if marked_eyes.fragments(skin) else [])
+    ok = (not found) == passes
+    (log.info if ok else log.error)("%s %s: %s, %s" % (
+        "ok" if ok else "FAIL", name, "found " + ", ".join(found) if found else "nothing found",
+        "should pass" if passes else "should fail"))
+    return ok
+
+
+def marking(name, named, fragment, passes):
+    """Whether the check passes as it should a ball with a small dim marking of its own on its
+    forehead (#1765), its box named to `fragments` if `named`, and a dim fragment by the left eye
+    if `fragment`."""
+    skin = build(((DIM, None) if fragment else None), False, 1.0, SKIN, 0.0)
+    head = marked_eyes.Head(skin, "head")
+    rows, columns, texels = marked_eyes._texels(head, numpy.ones(len(head.spots), dtype=bool))
+    near = numpy.sqrt(((texels - numpy.array(MARKING)) ** 2).sum(axis=1)) <= MARKING_RADIUS
+    head.pixels[rows[near], columns[near], :3] = DIM
+    head.image.pixels.foreach_set(head.pixels.ravel())
+    keep = [marked_eyes.Box(*MARKING_BOX)] if named else []
+    left = marked_eyes.fragments(skin, keep=keep)
+    found = sorted(marked_eyes.painted(skin)) + (["FRAGMENTS %s" % [mark.count for mark in left]] if left else [])
+    ok = (not found) == passes
+    (log.info if ok else log.error)("%s %s: %s, %s" % (
+        "ok" if ok else "FAIL", name, "found " + ", ".join(found) if found else "nothing found",
+        "should pass" if passes else "should fail"))
+    return ok
+
+
+def fits(name, paint, colour, beast):
+    """Whether `fit` sets our left eye on the left mark and our right one on the right mark, on a
+    ball centred on the marking's middle, painted with `paint`."""
+    marked = marked_eyes.BEASTS[beast] if beast else marked_eyes.DARK
+    skin = build(paint, False, 1.0, colour, marked.middle)
+    marks = marked_eyes.find(marked_eyes.Head(skin, "head", marked.weight), marked)
+    mats = {"dark": material("dark", colour=BLACK), "glow": material("glow", colour=GLOW),
+            "skin": material("lid", colour=colour)}
+    pieces = marked_eyes.fit(skin, marks, mats, "head", middle=marked.middle)
+    ok = True
+    for side, mark in zip("LR", marks):
+        iris = eyes.spot([piece for piece in pieces if piece.name.startswith("Eye.%s." % side)])
+        off = float(numpy.sqrt(((numpy.array(iris) - mark.middle) ** 2).sum()))
+        near = off <= FIT_NEAR * mark.width
+        ok = ok and near
+        (log.info if near else log.error)("%s %s: eye %s at %s, its mark at %s, %.3f off (at most %.3f)" % (
+            "ok" if near else "FAIL", name, side, tuple(round(v, 3) for v in iris),
+            tuple(round(float(v), 3) for v in mark.middle), off, FIT_NEAR * mark.width))
+    return ok
+
+
+def placed():
+    """Whether `find`'s error on a ball with no painted eyes names FIND_OPTIONS, and our eyes
+    placed by hand there (`placed`, #2100) land at the given spot and size: the marks at the spot
+    on the surface and its mirror image across PLACED_MIDDLE, as wide and high as given, and `fit`
+    setting each eye's iris on its mark, its eyeball as wide as the mark."""
+    skin = build(None, False, 1.0, SKIN, PLACED_MIDDLE)
+    try:
+        marked_eyes.find(marked_eyes.Head(skin, "head"))
+        message = "found eyes"
+    except ValueError as error:
+        message = str(error)
+    named = all(option in message for option in FIND_OPTIONS)
+    ok = named
+    (log.info if named else log.error)("%s placed: find says %r, naming %s" % (
+        "ok" if named else "FAIL", message, ", ".join(FIND_OPTIONS)))
+    spot = (PLACED_MIDDLE + EYE.x, EYE.y, EYE.z)
+    marks = marked_eyes.placed(skin, spot, PLACED_WIDTH, PLACED_HEIGHT, middle=PLACED_MIDDLE)
+    spots = [numpy.array(spot), numpy.array((PLACED_MIDDLE - EYE.x, EYE.y, EYE.z))]
+    mats = {"dark": material("dark", colour=BLACK), "glow": material("glow", colour=GLOW),
+            "skin": material("lid", colour=SKIN)}
+    pieces = marked_eyes.fit(skin, marks, mats, "head", middle=PLACED_MIDDLE)
+    for side, mark, given in zip("LR", marks, spots):
+        mine = [piece for piece in pieces if piece.name.startswith("Eye.%s." % side)]
+        eyeball = next(piece for piece in mine if piece.name.endswith(".eyeball"))
+        corners = numpy.array([(eyeball.matrix_world @ vertex.co)[:] for vertex in eyeball.data.vertices])
+        # The eyeball's widest radius is its size, half the mark's width (fit): it is never taller
+        # than wide (marked_eyes.ALMOND tops at 1) and shallower still.
+        wide = 2.0 * float(numpy.sqrt(((corners - corners.mean(axis=0)) ** 2).sum(axis=1)).max())
+        iris = numpy.array(eyes.spot(mine))
+        checks = {
+            "mark at the spot": float(numpy.sqrt(((mark.middle - given) ** 2).sum())) <= FIT_NEAR * PLACED_WIDTH,
+            "mark's size": (abs(mark.width - PLACED_WIDTH) < 1e-9 and abs(mark.height - PLACED_HEIGHT) < 1e-9),
+            "iris on the mark": float(numpy.sqrt(((iris - given) ** 2).sum())) <= FIT_NEAR * PLACED_WIDTH,
+            "eyeball's width": abs(wide - PLACED_WIDTH) <= PLACED_NEAR * PLACED_WIDTH,
+        }
+        for what, good in checks.items():
+            ok = ok and good
+            (log.info if good else log.error)("%s placed: eye %s, %s (mark at %s, %.3f by %.3f; iris at %s; "
+                                              "eyeball %.3f wide)" % (
+                "ok" if good else "FAIL", side, what, tuple(round(float(v), 3) for v in mark.middle),
+                mark.width, mark.height, tuple(round(float(v), 3) for v in iris), wide))
+    return ok
+
+
+def _at(point):
+    """`point` rounded for a log line."""
+    return tuple(round(float(v), 3) for v in point)
+
+
+def along_z():
+    """Whether `Mark` refuses a normal (nearly) along Z with a ValueError (#2105): it would have no
+    sideways axis (`side` NaN, or turned any way by a rounding error)."""
+    ok = True
+    for name, normal in ALONG_Z.items():
+        try:
+            with numpy.errstate(all="ignore"):
+                mark = marked_eyes.Mark(numpy.array([EYE[:]]), numpy.array([normal]))
+            message = "made a mark, side %s" % (tuple(round(float(v), 3) for v in mark.side),)
+            good = False
+        except ValueError as error:
+            message, good = str(error), True
+        ok = ok and good
+        (log.info if good else log.error)("%s along_z %s: %s" % ("ok" if good else "FAIL", name, message))
+    return ok
+
+
+def crowned(paint, colour):
+    """A ball of SKIN (`build` with `paint`) whose top is cut flat at CROWN (#2105), so every
+    triangle there faces exactly up, `colour` painted on it within CROWN_RADIUS of its middle; and
+    the sine of the angle to Z of the mean normal of the head's samples there, which must be under
+    `marked_eyes.UPRIGHT` for the case to test what it should."""
+    skin = build(paint, False, 1.0, SKIN, 0.0)
+    for vertex in skin.data.vertices:
+        vertex.co.z = min(vertex.co.z, CROWN.z)
+    skin.data.update()
+    head = marked_eyes.Head(skin, "head")
+    rows, columns, texels = marked_eyes._texels(head, numpy.ones(len(head.spots), dtype=bool))
+    inside = numpy.sqrt(((texels - numpy.array(CROWN)) ** 2).sum(axis=1)) <= CROWN_RADIUS
+    head.pixels[rows[inside], columns[inside], :3] = colour
+    bpy.data.images["skin"].pixels.foreach_set(head.pixels.ravel())
+    on = numpy.sqrt(((head.points - numpy.array(CROWN)) ** 2).sum(axis=1)) <= CROWN_RADIUS
+    normal = head.normals[on].mean(axis=0)
+    normal = normal / numpy.sqrt((normal * normal).sum())
+    return skin, float(numpy.hypot(normal[0], normal[1]))
+
+
+def crown():
+    """Whether `find` still finds `DARK`'s painted eyes on a ball with a dark spot on its flat crown
+    too (#2105), whose normal lies along Z, without a mark with a NaN in it."""
+    skin, tilt = crowned((BLACK, BLACK), BLACK)
+    good = tilt < marked_eyes.UPRIGHT
+    message = "the crown's normal %.2g off Z (under %.2g)" % (tilt, marked_eyes.UPRIGHT)
+    try:
+        with numpy.errstate(invalid="raise", divide="raise"):
+            left, right = marked_eyes.find(marked_eyes.Head(skin, "head"))
+        message += ", found eyes at %s and %s" % (_at(left.middle), _at(right.middle))
+        good = good and left.middle[0] > 0.0 > right.middle[0] and left.middle[2] < CROWN.z - CROWN_RADIUS
+    except (ValueError, FloatingPointError) as error:
+        message, good = message + ", %s: %s" % (type(error).__name__, error), False
+    (log.info if good else log.error)("%s crown: %s" % ("ok" if good else "FAIL", message))
+    return good
+
+
+def crown_fragment():
+    """Whether `fragments` still reports a dim fragment on a plain ball's flat crown (#2105), whose
+    normal lies along Z, as one spot there, rather than raising."""
+    skin, tilt = crowned(None, DIM)
+    good = tilt < marked_eyes.UPRIGHT
+    message = "the crown's normal %.2g off Z (under %.2g)" % (tilt, marked_eyes.UPRIGHT)
+    try:
+        with numpy.errstate(invalid="raise", divide="raise"):
+            found = marked_eyes.fragments(skin)
+        message += ", found %s" % [_at(mark.middle) for mark in found]
+        good = good and len(found) == 1 and float(numpy.sqrt(((found[0].middle - numpy.array(CROWN)) ** 2).sum())) \
+            <= CROWN_RADIUS
+    except (ValueError, FloatingPointError) as error:
+        message, good = message + ", %s: %s" % (type(error).__name__, error), False
+    (log.info if good else log.error)("%s crown_fragment: %s" % ("ok" if good else "FAIL", message))
+    return good
+
+
+def placed_above():
+    """Whether `placed` refuses a spot off the surface whose nearest point there lies within half the
+    eye's width of the middle (#2105), though the spot itself lies far enough off it."""
+    skin = build(None, False, 1.0, SKIN, PLACED_MIDDLE)
+    try:
+        marks = marked_eyes.placed(skin, PLACED_ABOVE, PLACED_WIDTH, PLACED_HEIGHT, middle=PLACED_MIDDLE)
+        message, good = "placed the left eye at %s" % (_at(marks[0].middle),), False
+    except ValueError as error:
+        message, good = str(error), True
+    (log.info if good else log.error)("%s placed_above: %s" % ("ok" if good else "FAIL", message))
+    return good
+
+
+def main():
+    passed = True
+    for name, (picks, yes, no) in PICKS.items():
+        got = picks(numpy.array(yes + no, dtype=float))
+        ok = got.tolist() == [True] * len(yes) + [False] * len(no)
+        passed = passed and ok
+        (log.info if ok else log.error)("%s %s picks %s" % ("ok" if ok else "FAIL", name, got.tolist()))
+    for name, (paint, ours, weight, colour, beast, passes) in CASES.items():
+        own = marked_eyes.BEASTS[beast] if beast else None
+        skin = build(paint, ours, weight, colour, own.middle if own else 0.0)
+        found = marked_eyes.painted(skin, own=own)
+        if marked_eyes.fragments(skin, weight=own.weight if own else marked_eyes.HEAD_WEIGHT):
+            found["FRAGMENTS"] = ()
+        ok = (not found) == passes
+        passed = passed and ok
+        line = "%s %s: %s, %s" % ("ok" if ok else "FAIL", name, "found " + ", ".join(sorted(found)) if found
+                                  else "nothing found", "should pass" if passes else "should fail")
+        (log.info if ok else log.error)(line)
+    for name, (across, passes, scrubbed) in SPECKS.items():
+        passed = speck(name, across, passes, scrubbed) and passed
+    passed = coarse("coarse_patch", COARSE_SIZE) and passed
+    passed = coarse("tiny_patch", TINY_SIZE) and passed
+    passed = islands() and passed
+    for name, (border, patches, passes) in TWO_TONES.items():
+        passed = two_tone(name, border, patches, passes) and passed
+    for name, (named, fragment, passes) in MARKINGS.items():
+        passed = marking(name, named, fragment, passes) and passed
+    for name, (paint, colour, beast) in FITS.items():
+        passed = fits(name, paint, colour, beast) and passed
+    passed = placed() and passed
+    passed = along_z() and passed
+    passed = crown() and passed
+    passed = crown_fragment() and passed
+    passed = placed_above() and passed
+    log.info("PAINTED EYES TEST: %s" % ("PASS" if passed else "FAIL"))
+    sys.exit(0 if passed else 1)
+
+
+main()

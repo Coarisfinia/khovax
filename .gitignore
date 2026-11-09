@@ -5,8 +5,8 @@ export_presets.cfg.local
 *.translation
 
 # Builds (Godot's relative export paths are the project's, #1101)
-/packages/game/build/
-/packages/game/export/
+/src/game/build/
+/src/game/export/
 
 # OS / editor
 .DS_Store
@@ -15,16 +15,16 @@ Thumbs.db
 *.tmp
 
 # A local render's window settings (AGENTS.md, "Before you push"); never committed.
-/packages/game/override.cfg
+/src/game/override.cfg
 
 # uv's environment for the Python tooling (pyproject.toml)
 .venv/
-# Python bytecode from the Blender model scripts (packages/game-models/lib/).
+# Python bytecode from the Blender model scripts (src/game-models/lib/).
 __pycache__/
 
 # The default pack's .pck a build carries (#1941): CI builds it before exporting.
-/packages/game/packs/
+/src/game/packs/
 
 # The game's link to the resource packs at the root (#1978), made by
-# packages/game-build/link_resource_packs.py: a symlink, or on Windows a junction.
-/packages/game/resourcepacks
+# src/game-build/link_resource_packs.py: a symlink, or on Windows a junction.
+/src/game/resourcepacks

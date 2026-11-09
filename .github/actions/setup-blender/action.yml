@@ -1,6 +1,6 @@
 name: Set up Blender
 description: >-
-  Blender's Linux build on the PATH as `blender`, for the model scripts in packages/game-models
+  Blender's Linux build on the PATH as `blender`, for the model scripts in src/game-models
   (#1161). The one place CI pins Blender's version and checksum; the model skill names the same
   version, and a bump changes both. Blender runs inside a pinned Ubuntu 24.04 container: its
   geometry goes through the C library's maths, and the runner's newer C library rounds a few

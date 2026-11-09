@@ -78,7 +78,7 @@ repositories). The container folder `project-khovax/` holds `main/` (the primary
 `main`) and one `<issue>-<slug>/` worktree per open branch, created
 with `git -C main worktree add ../<branch> -b <branch>` and removed once its pull request is merged.
 Never create or switch branches inside `main/`. A new worktree runs `uv run --locked
-packages/game-build/link_resource_packs.py` before any Godot run: without that link, Godot stops at
+src/game-build/link_resource_packs.py` before any Godot run: without that link, Godot stops at
 once (#2134).
 
 **Having 5 pull requests waiting for the owner's review at all times is the mandatory goal**
@@ -197,7 +197,7 @@ background; only wait in the foreground for a result the very next step needs.
 
 - **Run gdstyle's check before every push** (owner's rule, #761; it's instant), after `gdstyle fmt
   .`: `gdstyle check --no-color --ignore quality/max-file-length .` and, for the file length outside
-  the game's `tests/`, `git ls-files -z '*.gd' ':!packages/game/tests/' | xargs -0 gdstyle check
+  the game's `tests/`, `git ls-files -z '*.gd' ':!src/game/tests/' | xargs -0 gdstyle check
   --no-color --select quality/max-file-length`. Fix what it finds.
 - **Don't run other tests or lint locally** (owner's rule): CI takes care of them. The script check,
   the e2e tests, the unused code and asset checks and the load test all run on every push, so push
@@ -209,14 +209,14 @@ background; only wait in the foreground for a result the very next step needs.
   that never shows a window on the owner's desktop (owner's rule: the owner works on the same PC,
   and under WSL every window on WSLg's display, even a one-pixel one, becomes a Windows window that
   takes the focus from their typing). Run it on a private virtual display instead, through
-  `uv run --locked packages/game-offscreen/offscreen.py -- --path packages/game -s res://<script>.gd --
+  `uv run --locked src/game-offscreen/offscreen.py -- --path src/game -s res://<script>.gd --
   <args>`
   (Xvfb, the Compatibility renderer, silent audio; nothing reaches the desktop, so no
   `override.cfg`). Never `--display-driver wayland`, never the desktop's `DISPLAY`. The script runs
   the main scene inside a `SubViewport` (`UPDATE_ALWAYS`, its own `msaa_3d`) and saves
   `get_texture().get_image()` as a PNG after enough frames for the camera to settle. Publish it on
   the `assets` branch (an orphan branch that is never merged) with `uv run --locked --package
-  khovax-game-visuals packages/game-visuals/publish.py pr-<n>-<what>.png ...`, which prints the
+  khovax-game-visuals src/game-visuals/publish.py pr-<n>-<what>.png ...`, which prints the
   link for the description: `![what it shows](https://github.com/Coarisfinia/khovax/blob/assets/pr-<n>-<what>.png?raw=true)`.
   **Never publish through a shared checkout of `assets`, and never reset one** (#1428): agents
   publish at the same time, and a reset drops another agent's pictures. The script commits without
@@ -282,7 +282,7 @@ background; only wait in the foreground for a result the very next step needs.
   #1569's draft until approved): a pull request is a draft only while it lacks its core logic (only
   its fail-first check pushed, or the fix still missing), and a draft gets neither the `question`
   label nor a ping to the owner. One that waits for the owner is ready for review: a pull request
-  that changes models (a `.glb`, its rig, clips or textures, `packages/game-models/`, the model
+  that changes models (a `.glb`, its rig, clips or textures, `src/game-models/`, the model
   skill) or UI (anything the player sees or touches on screen) and shows the owner something in its
   description (renders, screenshots, a before and after) is marked ready once its core change is
   in, and only then is the owner pinged with what there is to see. If the owner approves a draft's
@@ -388,7 +388,7 @@ background; only wait in the foreground for a result the very next step needs.
 Game logic and control logic are strictly separated (owner's rule, #26), so that the same start
 and the same commands always give the same game: for replays, lockstep co-op and tests. The game's
 paths in this file (`core/`, `slices/`, `game/`, `tests/`, `tools/godot/`) are inside
-the game's project, `packages/game/` (#1101), where `res://` starts.
+the game's project, `src/game/` (#1101), where `res://` starts.
 
 ```
 devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameState -> look/, ui/
@@ -403,9 +403,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   commands, only in `slices/controls/`, #514) and `meta/` (profile, content
   and saves, under the rules for lasting data below). The split between them holds inside every slice. Shared
   slices (the trail, loot tables) come before the ones that use them: **a slice names only the
-  slices before it** in the order `packages/game-checks/import_rules.py` declares once (CI, #821;
+  slices before it** in the order `src/game-checks/import_rules.py` declares once (CI, #821;
   today's back-edges are listed there, each with its issue), so a new slice takes its place in it. **The core never depends on
-  a slice** (CI, `packages/game-checks/import_rules.py`: no script in `core/` names a class declared in
+  a slice** (CI, `src/game-checks/import_rules.py`: no script in `core/` names a class declared in
   `slices/` or names a `slices/` path in its code, even one built from parts, #526): data the core holds (a
   region's exits) and events it reads (`ExitTaken`, which the `World` moves a player through) stay
   in the core, and only the rules that run them move; what a slice places on a region (people,
@@ -426,7 +426,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   integers only, durations in ticks (`Simulation.TICKS_PER_SECOND`). No nodes, `Input`, `Time`,
   `Engine`, `OS`, global randomness, frame `delta`, `float` or float-backed types (`Vector2`, `Color`,
   `Rect2` and the like; `Vector2i` and `Rect2i` are fine), `FileAccess`, `DirAccess` or `JSON`:
-  CI greps for them (`packages/game-checks/determinism_check.py`, #572). A file that can't pass yet is
+  CI greps for them (`src/game-checks/determinism_check.py`, #572). A file that can't pass yet is
   exempt only with a reason, in its top comment lines (owner, #515), and gets an issue to drop the marker:
   `# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (reason)`. Randomness comes
   from `Rng` (#32, xoshiro128** in integers): each feature that rolls owns its own stream,
@@ -523,7 +523,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   by a `res://` path (`resource_packs_check.py` in CI).
   **The default pack's files lie in one folder at the repository's root, `resourcepacks/default/`**
   (owner, #1978), laid out like a player's pack; the schemas and the code stay in their slices. The game reaches it through `res://resourcepacks/`, an untracked link
-  (`packages/game-build/link_resource_packs.py`; a tracked symlink is a text file in a Windows
+  (`src/game-build/link_resource_packs.py`; a tracked symlink is a text file in a Windows
   checkout), and `resource_packs_check.py` fails on a file listed outside its kind's folder there (`MOVED`).
   **Whatever new is built, consider whether it belongs in the default pack** (owner's ground rule,
   on #1887), and say in the pull request which you chose and why: content a player's pack could
@@ -715,18 +715,18 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   content field the player reads is marked `"x-translate": true` in its schema, and
   `translations/khovax.pot` is written again after a text changes (README, "Translations"); CI
   fails when it's out of date. CI also fails on a text shown to the player that doesn't go
-  through `tr()` with a literal (`packages/game-checks/hardcoded_texts.py`, #1693): today's hits
+  through `tr()` with a literal (`src/game-checks/hardcoded_texts.py`, #1693): today's hits
   wait in its known list, each with the issue that moves it over, and that list only shrinks; a
   deliberate exception goes into its allow list with a reason. A text with two or more values
   names them (`tr("{a} of {b}").format({…})`), so a translation can reorder them; CI fails on a
-  `tr()` literal with two or more `%` placeholders (`packages/game-checks/tr_placeholders.py`,
+  `tr()` literal with two or more `%` placeholders (`src/game-checks/tr_placeholders.py`,
   #1704).
 - **Never color alone** (owner's rule, #68): whatever the player tells apart by color (types,
   teams, states) also gets a symbol or a shape, so the game stays colorblind friendly. Every tile
   kind names its symbol in its data (#334; the schema requires it), which the Survey draws.
 - **Models follow the model skill** (owner): every 3D model is placed, rigged, textured and
   checked from all sides and in game by the playbook in `.claude/skills/model/SKILL.md` (Blender
-  5.2.2 headless from a committed script in `packages/game-models/`, then Godot).
+  5.2.2 headless from a committed script in `src/game-models/`, then Godot).
 - **New models come only from the owner** (owner's base rule, #1568): agents never make a new model
   from scratch. Its source (the mesh, and the rig if it has one) comes from the owner, or for a
   prop or scenery from a free source (B below); agents import, rig, animate, check and fix it, and
@@ -857,7 +857,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   and no separate unit tests while the flows already check the same things (owner, #61).
 - **Exactly one e2e flow runs on the devices** (owner's rule, #61, #102, #113):
   `tests/apk/apk_flow.gd`, on an Android emulator (`apk-e2e`), in headless Chrome (`web-e2e`,
-  the repository's `packages/game-web-e2e/web_e2e.py`) and on the Linux build under a virtual display (`linux-e2e`) in CI,
+  the repository's `src/game-web-e2e/web_e2e.py`) and on the Linux build under a virtual display (`linux-e2e`) in CI,
   started by `game/test_mode.gd` in the test builds only (the `e2e_test` export feature). It
   starts from a fixed seed, scripts its touches per tick, and must end in the same state hash as
   the same flow played headless for the same commit (`tests/e2e/test_apk_flow.gd`, in the
@@ -877,9 +877,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   each gets its own throwaway `user://` folder (#1188), since a `-s` script touches `user://`
   before `--user-dir` applies.
 - **A fresh checkout or worktree needs its link to the resource packs**
-  (`uv run --locked packages/game-build/link_resource_packs.py`, #1978) before Godot opens it:
+  (`uv run --locked src/game-build/link_resource_packs.py`, #1978) before Godot opens it:
   without it the default pack's files are missing.
-- **A fresh checkout needs `godot --headless --path packages/game --import`** before headless
+- **A fresh checkout needs `godot --headless --path src/game --import`** before headless
   runs, and so does a worktree after a rebase brings in a new `class_name` script: with a stale class cache, the
   flows fail to load or log errors that have nothing to do with the change.
 - **A script error in the runner itself leaves the SceneTree running forever.** Every CI step that
@@ -901,7 +901,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   a test can't signal success by returning nothing. The runner counts logged errors during each test
   (a `Logger` added with `OS.add_logger`) and fails the test if any appeared.
 - **Commit the `.uid` files** Godot creates next to scripts and resources. Godot only writes them on an
-  import, so after adding a script run `godot --headless --path packages/game --import` before
+  import, so after adding a script run `godot --headless --path src/game --import` before
   committing. It generates files rather than checking anything, so it doesn't fall under not rerunning CI locally.
 - **Pushing anything under `.github/workflows/` needs workflow rights.** The bot has them through the
   App's Workflows permission. For the owner's own login it is the `workflow` scope
@@ -933,7 +933,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **Golden replays** (`tests/replays/*.replay`) hold only their inputs, the start and the
   commands, never a hash or the rules (#876): nothing a build computes is committed. CI's
   `rules-compare` job plays them and the APK flow on the commit and on its parent
-  (`packages/game-replays/rules_compare.py`, run from the parent's checkout) and fails a difference that
+  (`src/game-replays/rules_compare.py`, run from the parent's checkout) and fails a difference that
   comes without a new rule change file. If the change is on purpose, add its file to `core/rules_changes/`
   (`<issue>-<slug>.md`: only the `issue` in its frontmatter, then one line on what plays
   differently linking the issue; no `pr`, which CI refuses: the squash commit that added the file
@@ -945,7 +945,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **Point to the source, never enumerate it** (owner's rule, #99): a list that exists somewhere
   (the presets, the assets, the content files) is read from there, not copied into a workflow, a
   doc or a comment, where it would drift. E.g. CI unpacks the templates
-  `packages/game-build/export_templates.py` reads from `export_presets.cfg`, and `CREDITS.md` is
+  `src/game-build/export_templates.py` reads from `export_presets.cfg`, and `CREDITS.md` is
   generated from the assets.
 - **No measured numbers in docs or comments** (durations, sizes, counts): they go stale. They belong
   in the PR or issue that measured them.
@@ -1014,7 +1014,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 ### Toolchain
 
 - **The repository is a uv workspace of packages** (#1036, #1101): the root's `pyproject.toml`
-  and its `uv.lock`, and one folder per package in `packages/`. `packages/game/` is the Godot
+  and its `uv.lock`, and one folder per package in `src/`. `src/game/` is the Godot
   project (open it in the editor; its `.godot/` cache is per worktree); the others are the Python
   tooling, one workspace member per job: `game-checks/` (CI's checks of the game), `game-replays/`
   (comparing replays, load tests and the APK flow), `game-build/` (export helpers), `game-models/`
@@ -1026,14 +1026,14 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   lines elsewhere, never a workflow command of their own. **Any package related to the game gets the
   `game-` prefix** (owner, #1114: *"any package related to the game gets the game- prefix"*), so
   names like `web` or `site` stay free for other parts of the project, such as a website; the game
-  itself is `packages/game/`, and a member's uv name is `khovax-<its folder>`. A member with dependencies runs with `--package <its name>`, which installs them. The GDScript tools Godot runs stay in the
-  game, in `packages/game/tools/` (`godot/`, and `models/` for the model checks and renders),
+  itself is `src/game/`, and a member's uv name is `khovax-<its folder>`. A member with dependencies runs with `--package <its name>`, which installs them. The GDScript tools Godot runs stay in the
+  game, in `src/game/tools/` (`godot/`, and `models/` for the model checks and renders),
   since Godot only runs scripts under `res://`. `tools/scoop/` holds the pinned scoop manifests.
   New tooling is Python, run with uv from the repository's root (`uv run --locked
-  packages/<package>/<script>.py`). Godot commands name the project: `--path packages/game`.
+  src/<package>/<script>.py`). Godot commands name the project: `--path src/game`.
 - **Only the file endings on the list** (owner, #1095: *"I would like all currently used file
   endings to be allowed, except for .sh and .bat. A new entry requires signoff."*): CI refuses a
-  tracked file whose ending isn't in `ENDINGS` in `packages/game-checks/file_endings.py`. **An agent
+  tracked file whose ending isn't in `ENDINGS` in `src/game-checks/file_endings.py`. **An agent
   never adds an ending without the owner's approval on its issue.** The shell scripts still tracked wait
   in its exception list, each with the issue that ports it, and that list only shrinks.
 - **Install tools with scoop** (owner's rule). The development machine runs Windows, so Homebrew isn't

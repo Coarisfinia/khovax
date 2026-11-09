@@ -32,22 +32,22 @@ scoop install "$(cygpath -w "$PWD/tools/scoop/gdstyle.json")"
 ```
 
 On macOS and Linux, install uv with [Homebrew](https://brew.sh): `brew install uv`. uv runs the Python
-tooling in `packages/` (`uv run packages/<package>/<script>.py`, from the repository's root) with the
+tooling in `src/` (`uv run src/<package>/<script>.py`, from the repository's root) with the
 Python version `pyproject.toml` pins, which it downloads itself.
 
-The game is the Godot project in `packages/game/`; every command below runs from the repository's
-root and names it with `--path packages/game`.
+The game is the Godot project in `src/game/`; every command below runs from the repository's
+root and names it with `--path src/game`.
 
 `gdstyle` (the GDScript linter and formatter) isn't in a scoop bucket, so the repository carries its
 manifest, and scoop needs its absolute path (the `cygpath` above is for Git Bash).
 
 Once per checkout, link the game to the resource packs at the repository's root
 (`resourcepacks/`, where the default pack's files lie): `uv run --locked
-packages/game-build/link_resource_packs.py`. It makes `packages/game/resourcepacks` a symlink, or on
+src/game-build/link_resource_packs.py`. It makes `src/game/resourcepacks` a symlink, or on
 Windows a directory junction, which needs no admin rights.
 
-Open the project in Godot (`godot --path packages/game --editor`), or run it directly with
-`godot --path packages/game`.
+Open the project in Godot (`godot --path src/game --editor`), or run it directly with
+`godot --path src/game`.
 
 ## On an Android phone
 
@@ -99,11 +99,11 @@ the "immutable release tags" ruleset.
 The e2e tests run headless. A fresh checkout needs one import first:
 
 ```sh
-godot --headless --path packages/game --import
-godot --headless --path packages/game -s res://tests/e2e/run_e2e.gd -- --seed=0
+godot --headless --path src/game --import
+godot --headless --path src/game -s res://tests/e2e/run_e2e.gd -- --seed=0
 ```
 
-Every `packages/game/tests/e2e/test_*.gd` runs; the exit code is non-zero when one fails. CI runs the same on every
+Every `src/game/tests/e2e/test_*.gd` runs; the exit code is non-zero when one fails. CI runs the same on every
 pull request and every push to `main`.
 
 Every checkout of the project shares one `user://` folder, so runs in parallel worktrees overwrite
@@ -121,10 +121,10 @@ with Playwright's ffmpeg, which `playwright install ffmpeg` fetches once; `EXPEC
 state hash the headless run of the same flow ends in:
 
 ```sh
-godot --headless --path packages/game --export-release "Web Test" build/web-test/index.html
+godot --headless --path src/game --export-release "Web Test" build/web-test/index.html
 uv run --locked --package khovax-game-web-e2e playwright install ffmpeg
 CHROME=<path to chrome-headless-shell> EXPECTED_HASH=<hash> \
-  uv run --locked --package khovax-game-web-e2e packages/game-web-e2e/web_e2e.py packages/game/build/web-test
+  uv run --locked --package khovax-game-web-e2e src/game-web-e2e/web_e2e.py src/game/build/web-test
 ```
 
 ### Load test
@@ -135,8 +135,8 @@ end in the same state; CI runs that on every push (2000 ticks) and compares the 
 branch's. Rendered, on demand, it times frames, uncapped:
 
 ```sh
-godot --headless --path packages/game -s res://tools/godot/load_test.gd -- ticks=2000
-godot --path packages/game -s res://tools/godot/load_test.gd -- rendered seconds=20
+godot --headless --path src/game -s res://tools/godot/load_test.gd -- ticks=2000
+godot --path src/game -s res://tools/godot/load_test.gd -- rendered seconds=20
 ```
 
 Measurements go into the pull request or issue that made them, not into docs.
@@ -150,28 +150,28 @@ gdstyle check .    # lint
 
 Every gdstyle rule is an error (`gdstyle.toml`), and so is every Godot GDScript warning
 (`project.godot`). A script with a warning fails to load. CI lints, checks the formatting, and checks
-every script with `godot --headless --path packages/game --check-only -s res://<script>`.
+every script with `godot --headless --path src/game --check-only -s res://<script>`.
 
 ## Translations
 
 The game's texts are translated with gettext, the English text being the key (#1608).
-`packages/game/translations/khovax.pot`, the template every language's `.po` starts from, is
+`src/game/translations/khovax.pot`, the template every language's `.po` starts from, is
 written from the texts the player reads; CI fails when it's out of date. A language's catalogue,
 `resourcepacks/default/translations/<locale>.po`, is listed under `translations` in the default resource pack's manifest
 (`resourcepacks/default/pack.jsonc`), and the game registers it at start (#1902). After changing a text,
 write it again and commit it:
 
 ```sh
-uv run --locked --package khovax-game-checks packages/game-checks/translations_pot.py
+uv run --locked --package khovax-game-checks src/game-checks/translations_pot.py
 ```
 
 A new player-facing field in content data gets `"x-translate": true` in its schema, and a text in a
 script goes through `tr()` with a literal string, so the template picks it up. CI fails on a text shown
-to the player without it (`packages/game-checks/hardcoded_texts.py`, #1693); a deliberate
+to the player without it (`src/game-checks/hardcoded_texts.py`, #1693); a deliberate
 exception goes into its `ALLOWED` list with a reason.
 
 A text with two or more values names them, so a translation can put them in its own order:
 `tr("Carried {place}: {monster}").format({"place": place, "monster": shown})`, never
 `tr("Carried %d: %s") % [place, shown]`, since `%` fills its values in the order written. A text
 with one value may keep its `%`. CI fails on a `tr()` literal with two or more `%` placeholders
-(`packages/game-checks/tr_placeholders.py`, #1704).
+(`src/game-checks/tr_placeholders.py`, #1704).
