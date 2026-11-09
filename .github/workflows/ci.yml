@@ -37,7 +37,7 @@ env:
   JV_VERSION: 6.0.3
   JV_SHA256: 36e9ab8481cc8e2cb27c8336decc9abdcbd606b05792ca88d6188e01ec28766b
   # The web e2e flow's browser (#102); the checksum is of its Linux archive. Playwright, which
-  # drives it, is locked in uv.lock (packages/game-web-e2e, #1041).
+  # drives it, is locked in uv.lock (src/game-web-e2e, #1041).
   CHROME_VERSION: 156.0.8078.12
   CHROME_SHA256: f56185000c18aa2471911e2b8fbd96c3175bcc7553e78c002371bb18a9fa69e9
   # Playwright's own ffmpeg build, which records the run's video; the revision is the one the
@@ -53,7 +53,7 @@ jobs:
     # git paths are its own; the Python tooling is beside it, in ../<package>/.
     defaults:
       run:
-        working-directory: packages/game
+        working-directory: src/game
     steps:
       - name: "📥 Check out the code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -191,11 +191,11 @@ jobs:
           timeout 60 ~/godot/godot --headless --path . -s res://tools/godot/credits.gd 2>&1 | tee /tmp/credits.log
           test "${PIPESTATUS[0]}" -eq 0
           if grep -q "SCRIPT ERROR" /tmp/credits.log; then
-            echo "::error file=packages/game/tools/godot/credits.gd::the credits tool hit a script error"
+            echo "::error file=src/game/tools/godot/credits.gd::the credits tool hit a script error"
             exit 1
           fi
           if ! git diff --exit-code CREDITS.md || [ -n "$(git status --porcelain CREDITS.md)" ]; then
-            echo "::error file=packages/game/CREDITS.md::out of date: run tools/godot/credits.gd and commit the result"
+            echo "::error file=src/game/CREDITS.md::out of date: run tools/godot/credits.gd and commit the result"
             exit 1
           fi
 
@@ -301,8 +301,11 @@ jobs:
           if [ "${{ github.event_name }}" = pull_request ]; then
             git fetch -q --depth=1 origin "${{ github.base_ref }}"
             git worktree add -q /tmp/base FETCH_HEAD
-            # The base's game: in packages/game, or at its root before the move there (#1101).
-            base=/tmp/base/packages/game
+            # The base's game: in src/game, packages/ before that rename (#1979), or at its root
+            # before the move there (#1101).
+            tools=/tmp/base/src
+            [ -d "$tools" ] || tools=/tmp/base/packages
+            base=$tools/game
             [ -f "$base/project.godot" ] || base=/tmp/base
             # A base that fails its own load test is the base's problem: this branch is then
             # reported without a comparison, and nothing of the failed run is compared.
@@ -318,6 +321,10 @@ jobs:
           uv run --locked ../game-replays/load_test_compare.py /tmp/load-head.txt /tmp/load-base.txt \
             | tee -a "$GITHUB_STEP_SUMMARY"
 
+      - name: "📂 Check nothing is left in, or names, packages/"
+        # The folder is src/ now (#1979), and a path left behind reads nothing without saying so.
+        run: uv run --locked --package khovax-game-checks ../game-checks/no_packages_folder.py
+
   models:
     # The model checks (#1357): scripted models rebuilt and checked in Blender, which takes
     # minutes on its own, so it runs beside headless rather than inside its time limit. It always
@@ -326,7 +333,7 @@ jobs:
     timeout-minutes: 20
     defaults:
       run:
-        working-directory: packages/game
+        working-directory: src/game
     steps:
       - name: "📥 Check out the code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -364,7 +371,7 @@ jobs:
         # by (the model library and checks, Blender's pin, this workflow) or measured by (the
         # slices' look/ folders and the scenes, #1652, any game script, whose constants a view may
         # name, #2072, the default pack's manifest, #1864) checks every model, and so does a
-        # failing diff (packages/game-models/changed_models.py, #2031).
+        # failing diff (src/game-models/changed_models.py, #2031).
         # It reads the change against the parent, or on a push to main against the commit before
         # the push, fetched here, so a push of several commits counts them all; main checks every
         # model whenever one changed.
@@ -622,7 +629,7 @@ jobs:
     timeout-minutes: 25
     defaults:
       run:
-        working-directory: packages/game
+        working-directory: src/game
     steps:
       - name: "📥 Check out the code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -690,7 +697,7 @@ jobs:
     # git paths are its own; the Python tooling is beside it, in ../<package>/.
     defaults:
       run:
-        working-directory: packages/game
+        working-directory: src/game
     steps:
       - name: "📥 Check out the code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -741,11 +748,14 @@ jobs:
         run: |
           git worktree add -q /tmp/parent HEAD^1
           # Its own link to the resource packs, once it has them (#1978).
-          if [ -f /tmp/parent/packages/game-build/link_resource_packs.py ]; then
-            uv run --locked --project /tmp/parent /tmp/parent/packages/game-build/link_resource_packs.py
+          # The parent's folders: src/, or packages/ before that rename (#1979).
+          tools=/tmp/parent/src
+          [ -d "$tools" ] || tools=/tmp/parent/packages
+          if [ -f "$tools/game-build/link_resource_packs.py" ]; then
+            uv run --locked --project /tmp/parent "$tools/game-build/link_resource_packs.py"
           fi
-          # The parent's game: in packages/game, or at its root before the move there (#1101).
-          game=/tmp/parent/packages/game
+          # The parent's game: in its folder, or at its root before the move there (#1101).
+          game=$tools/game
           [ -f "$game/project.godot" ] || game=/tmp/parent
           timeout 120 ~/godot/godot --headless --path "$game" --import > /dev/null
           timeout 300 ~/godot/godot --headless --path "$game" -s res://tests/replays/outcomes.gd \
@@ -772,7 +782,7 @@ jobs:
       - name: "🔖 Check a different outcome comes with a rules change"
         # The comparison runs from the parent's checkout, with the parent's uv project, so a pull
         # request can't weaken its own check. Only the pull requests that add the script (#876),
-        # move it (#1037, #1101, #1114) and port it to Python (#1039) run their own. It reads git
+        # move it (#1037, #1101, #1114, #1979) and port it to Python (#1039) run their own. It reads git
         # from the repository's root.
         if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
         working-directory: .
@@ -781,12 +791,12 @@ jobs:
         run: |
           set -o pipefail
           project=/tmp/parent
-          if [ ! -f "$project/packages/game-replays/rules_compare.py" ]; then
-            echo "::notice::The parent has no packages/game-replays/rules_compare.py yet (it moved there in #1114), so this commit's own runs."
+          if [ ! -f "$project/src/game-replays/rules_compare.py" ]; then
+            echo "::notice::The parent has no src/game-replays/rules_compare.py yet (it moved there in #1979), so this commit's own runs."
             project=.
           fi
           uv run --locked --project "$project" --package khovax-game-replays \
-            "$project/packages/game-replays/rules_compare.py" \
+            "$project/src/game-replays/rules_compare.py" \
             /tmp/outcomes-parent.json /tmp/outcomes/outcomes.json HEAD^1 | tee -a "$GITHUB_STEP_SUMMARY"
 
   export:
@@ -799,7 +809,7 @@ jobs:
     # git paths are its own; the Python tooling is beside it, in ../<package>/.
     defaults:
       run:
-        working-directory: packages/game
+        working-directory: src/game
     outputs:
       # The version the builds carry, which dev-release tags them with (#744).
       tag: ${{ steps.version.outputs.tag }}
@@ -902,7 +912,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: khovax-debug-apk
-          path: packages/game/build/khovax.apk
+          path: src/game/build/khovax.apk
           retention-days: 14
 
       - name: "🪟 Windows: export the release build"
@@ -927,7 +937,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: khovax-linux
-          path: packages/game/build/khovax.x86_64
+          path: src/game/build/khovax.x86_64
           retention-days: 14
 
       - name: "🧪 🐧 Linux: export the test build"
@@ -942,7 +952,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: khovax-linux-test
-          path: packages/game/build/khovax-test.x86_64
+          path: src/game/build/khovax-test.x86_64
           retention-days: 3
 
       - name: "🌐 Web: export the release build"
@@ -959,7 +969,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: khovax-web
-          path: packages/game/build/web/
+          path: src/game/build/web/
           retention-days: 14
 
       - name: "🧪 🌐 Web: export the test build"
@@ -975,21 +985,21 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: khovax-web-test
-          path: packages/game/build/web-test/
+          path: src/game/build/web-test/
           retention-days: 3
 
       - name: "⬆️ 🪟 Windows build: upload (khovax-windows)"
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: khovax-windows
-          path: packages/game/build/khovax.exe
+          path: src/game/build/khovax.exe
           retention-days: 14
 
       - name: "⬆️ 🧪 Android test APK: upload (khovax-test-apk)"
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: khovax-test-apk
-          path: packages/game/build/khovax-test.apk
+          path: src/game/build/khovax-test.apk
           retention-days: 3
 
       - name: "🔎 Check no export leaked objects at exit"
@@ -1116,7 +1126,7 @@ jobs:
           # uniforms below what Godot's Compatibility shaders need, so they failed to link (#114).
           emulator-options: -no-window -gpu swangle_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          script: timeout 480 uv run --locked packages/game-replays/apk_e2e.py build/khovax-test.apk "$EXPECTED_HASH"
+          script: timeout 480 uv run --locked src/game-replays/apk_e2e.py build/khovax-test.apk "$EXPECTED_HASH"
 
   linux-e2e:
     # The same device flow on the Linux build (#113), played by the runner itself under a virtual
@@ -1209,7 +1219,7 @@ jobs:
         # activation that isn't exactly false, and an error log download that fails or never
         # finishes each fail the run.
         timeout-minutes: 2
-        run: uv run --locked --package khovax-game-web-e2e packages/game-web-e2e/test_web_e2e.py
+        run: uv run --locked --package khovax-game-web-e2e src/game-web-e2e/test_web_e2e.py
 
       - name: "📦 Install Mesa's software renderer"
         # WebGL 2 comes from Mesa's llvmpipe (#252): on Chrome's own SwiftShader the page sometimes
@@ -1224,7 +1234,7 @@ jobs:
           export CHROME="$HOME/tools/chrome-headless-shell-linux64/chrome-headless-shell"
           export PLAYWRIGHT_BROWSERS_PATH="$HOME/tools/playwright"
           export CHROME_GL=mesa
-          timeout 300 uv run --locked --package khovax-game-web-e2e packages/game-web-e2e/web_e2e.py build/web-test
+          timeout 300 uv run --locked --package khovax-game-web-e2e src/game-web-e2e/web_e2e.py build/web-test
 
       - name: "⬆️ 🎬 Web e2e video: upload (web-e2e-video)"
         # The run on film (owner, #115), also when it failed.
@@ -1243,33 +1253,75 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [headless, models, export, apk-e2e, web-e2e]
     runs-on: ubuntu-26.04
-    timeout-minutes: 10
+    # Room for both deploy steps: deploy-pages caps its own `timeout` at 10 minutes, and this limit
+    # must not end the job before the step's timeout does.
+    timeout-minutes: 25
     # One deploy at a time: one under way is never cancelled, and a newer one waiting replaces an
-    # older one waiting, since only the latest build matters.
+    # older one waiting, since only the latest build matters. The jobs can still start out of
+    # order, which the first step guards against.
     concurrency:
       group: pages
       cancel-in-progress: false
     permissions:
+      contents: read
+      deployments: read
       pages: write
       id-token: write
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      url: ${{ steps.deploy.outputs.page_url || steps.deploy-retry.outputs.page_url }}
     steps:
+      - name: "🔎 🌐 Web build: skip it if a newer commit is already live"
+        id: live
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # A build older than the one live would take the site back (#2220). When GitHub can't
+          # say, deploy: a lookup that fails must not hold back a deploy.
+          query='query($o:String!,$n:String!){repository(owner:$o,name:$n){deployments(environments:["github-pages"],first:30,orderBy:{field:CREATED_AT,direction:DESC}){nodes{state commitOid}}}}'
+          live=$(gh api graphql -f query="$query" -f o="${GITHUB_REPOSITORY%/*}" -f n="${GITHUB_REPOSITORY#*/}" \
+            --jq '[.data.repository.deployments.nodes[] | select(.state == "ACTIVE") | .commitOid][0] // ""') || live=""
+          relation=""
+          if [ -n "$live" ]; then
+            relation=$(gh api "repos/$GITHUB_REPOSITORY/compare/$GITHUB_SHA...$live" --jq .status) || relation=""
+          fi
+          if [ "$relation" = "ahead" ]; then
+            echo "::notice::Not deploying $GITHUB_SHA: the live site already has the newer $live."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: "⬇️ 🌐 Web build: download (khovax-web)"
+        if: steps.live.outputs.skip != 'true'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: khovax-web
           path: site
 
       - name: "📦 🌐 Web build: package it for GitHub Pages"
+        if: steps.live.outputs.skip != 'true'
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: site
+          # Per attempt: deploy-pages refuses a run holding two artifacts of one name, and an
+          # earlier attempt's stays, so a rerun of this job could never deploy (#2220).
+          name: github-pages-${{ github.run_attempt }}
 
       - name: "🚀 🌐 Web build: deploy to GitHub Pages"
         id: deploy
+        if: steps.live.outputs.skip != 'true'
+        # A deploy can sit in GitHub's syncing_files until the timeout (#2220), and the same build
+        # then goes through at once, so one failure gets a second try below.
+        continue-on-error: true
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}
+
+      - name: "🔁 🌐 Web build: deploy to GitHub Pages, second try"
+        id: deploy-retry
+        if: steps.deploy.outcome == 'failure'
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}
 
   dev-release:
     # A dev release on every push to main whose checks all pass (#1312, #747: one kept prerelease per
@@ -1292,7 +1344,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          sparse-checkout: packages/game/project.godot
+          sparse-checkout: src/game/project.godot
           sparse-checkout-cone-mode: false
 
       - name: "⬇️ 📦 Builds: download (khovax-debug-apk, khovax-windows, khovax-linux, khovax-web)"
@@ -1394,7 +1446,7 @@ jobs:
           fi
           # Named after the game's display name, as release.yml names its files.
           name=$(awk -F'"' '/^\[/ { section = $0 } section == "[application]" && /^config\/name="/ { print $2 }' \
-            packages/game/project.godot | tr ' ' '-' | tr -cd 'A-Za-z0-9._-' | sed 's/^[-.]*//')
+            src/game/project.godot | tr ' ' '-' | tr -cd 'A-Za-z0-9._-' | sed 's/^[-.]*//')
           name=${name:-khovax}
           mkdir upload
           cp builds/khovax-debug-apk/khovax.apk "upload/${name}-${tag}-android.apk"
