@@ -47,7 +47,11 @@ FORBIDDEN_IN_CODE = re.compile(
             r"\b(sqrt|sin|cos|tan|asin|acos|atan|atan2|sinh|cosh|tanh|exp|log|pow|fmod|fposmod"
             r"|lerp|lerpf|lerp_angle|inverse_lerp|remap|smoothstep|move_toward|deg_to_rad"
             r"|rad_to_deg|to_float|floor|ceil|round|floorf|ceilf|roundf|absf|signf|maxf|minf"
-            r"|clampf|snappedf|wrapf|is_nan|is_inf|is_equal_approx|is_zero_approx)\s*\(",
+            r"|clampf|snapped|snappedf|wrapf|is_nan|is_inf|is_finite|is_equal_approx"
+            r"|is_zero_approx|ease|pingpong|asinh|acosh|atanh|angle_difference|rotate_toward"
+            r"|bezier_interpolate|bezier_derivative|cubic_interpolate|cubic_interpolate_angle"
+            r"|cubic_interpolate_in_time|cubic_interpolate_angle_in_time|db_to_linear"
+            r"|linear_to_db)\s*\(",
             r"\b(PI|TAU|INF|NAN)\b",
         )
     )
