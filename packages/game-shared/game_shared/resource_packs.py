@@ -1,6 +1,7 @@
 """The default resource pack's manifest (#1860), as the checks read it: the pack that describes the
 game's own resources, which ResourcePacks (slices/resource_packs/meta/) resolves every lookup
-through. Paths are relative to the game's project folder, packages/game, where res:// starts.
+through. Its file names its paths from its own folder, like a player's pack (#1978); read_manifest
+gives them relative to the game's project folder, packages/game, where res:// starts.
 """
 
 import glob
@@ -9,8 +10,9 @@ import os
 import re
 from pathlib import Path
 
-# The default pack's manifest; its files are named from res://, the pack's root.
-MANIFEST = Path("slices/resource_packs/data/default.jsonc")
+# The default pack's folder (#1978), reached through the game's link, and its manifest there.
+PACK_FOLDER = "resourcepacks/default/"
+MANIFEST = Path(f"{PACK_FOLDER}pack.jsonc")
 # A JSON string (kept), a // line comment or a /* */ block comment (dropped, its line breaks kept),
 # as the game's Jsonc.strip reads them.
 JSONC_TOKEN = re.compile(r'"(?:\\.|[^"\\])*"|//[^\n]*|/\*.*?\*/', re.DOTALL)
@@ -28,7 +30,8 @@ def strip_jsonc(text: str) -> str:
 
 def read_manifest(path: Path = MANIFEST) -> dict[str, object]:
     """The manifest at `path` as a JSON object; ValueError when it isn't one, or names a key twice
-    (which JSON would silently let the last one win)."""
+    (which JSON would silently let the last one win). The default pack's has its files named from
+    the game's project folder (_from_game)."""
 
     def unique(pairs: list[tuple[str, object]]) -> dict[str, object]:
         keys = [key for key, _ in pairs]
@@ -40,7 +43,22 @@ def read_manifest(path: Path = MANIFEST) -> dict[str, object]:
     data = json.loads(strip_jsonc(path.read_text(encoding="utf-8")), object_pairs_hook=unique)
     if not isinstance(data, dict):
         raise ValueError("isn't a JSON object")
-    return data
+    return _from_game(data) if path.as_posix().endswith(MANIFEST.as_posix()) else data
+
+
+def _from_game(manifest: dict[str, object]) -> dict[str, object]:
+    """The default pack's manifest with each section's files named from the game's project folder,
+    not the pack's. What isn't a file's name is left for section and file_lists to refuse."""
+
+    def named(value: object) -> object:
+        if isinstance(value, list):
+            return [named(item) for item in value]
+        return PACK_FOLDER + value if isinstance(value, str) else value
+
+    return {
+        key: {name: named(entry) for name, entry in value.items()} if isinstance(value, dict) else value
+        for key, value in manifest.items()
+    }
 
 
 def section(manifest: dict[str, object], kind: str) -> dict[str, str]:

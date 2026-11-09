@@ -1,6 +1,6 @@
 """Gathers the game's default resource pack (#1860) into a pack folder build_pack.py builds (#1869):
-its manifest as pack.jsonc, and every file it lists (a glTF's buffers and images too) at the same
-path, each with the game's import settings, so the pack imports as the game does.
+its manifest as pack.jsonc, and every file it lists (a glTF's buffers and images too) at its path
+in the pack, each with the game's import settings, so the pack imports as the game does.
 
     uv run --locked --package khovax-game-pack-builder packages/game-pack-builder/default_pack.py <out>
 
@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 from game_shared import log
-from game_shared.resource_packs import MANIFEST, file_lists, gltf_files, read_manifest, section
+from game_shared.resource_packs import MANIFEST, PACK_FOLDER, file_lists, gltf_files, read_manifest, section
 
 GAME = Path(__file__).resolve().parents[1] / "game"
 # The default pack's own folder at the repository's root (#1978), which the game reaches through
@@ -62,12 +62,11 @@ def gather(out: Path) -> None:
     shutil.copyfile(MANIFEST, out / "pack.jsonc")
     for path in listed(manifest):
         source = Path(path)
-        # Only the game's own plain files, its project's or its pack folder's, each to its own place
-        # in the pack.
-        inside = source.resolve().is_relative_to(GAME) or source.resolve().is_relative_to(PACK_ROOT)
+        # Only the pack folder's own plain files, each to its own place in the pack.
+        inside = source.resolve().is_relative_to(PACK_ROOT)
         if source.is_symlink() or not inside or not source.is_file():
-            raise ValueError(f"{path} isn't a plain file in the game")
-        target = (out / path).resolve()
+            raise ValueError(f"{path} isn't a plain file in the default pack")
+        target = (out / path.removeprefix(PACK_FOLDER)).resolve()
         if not target.is_relative_to(out):
             raise ValueError(f"{path} lies outside the pack")
         target.parent.mkdir(parents=True, exist_ok=True)

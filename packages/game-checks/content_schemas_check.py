@@ -30,6 +30,8 @@ TARGET = Path("build/data-json")
 # The default resource pack's own folder (#1978), where it keeps the core kinds it holds (#1901),
 # through the game's link to it (packages/game-build/link_resource_packs.py).
 PACK_DATA = Path("resourcepacks/default")
+# The kind of the pack's manifest, which lies directly in PACK_DATA (#1978).
+MANIFEST_KIND = "resource_packs"
 # A script error can leave Godot running forever.
 TIMEOUT_SECONDS = 60
 
@@ -72,7 +74,8 @@ def schema_problems() -> tuple[dict[str, str], list[tuple[str, str | None]]]:
             if not folder.is_dir() and (PACK_DATA / name).is_dir():
                 folder = PACK_DATA / name
         if folder == Path(f"slices/{name}/data/{name}"):
-            if not any(schema.parent.glob("*.jsonc")) and not any((PACK_DATA / name).glob("*.jsonc")):
+            manifest = name == MANIFEST_KIND and (PACK_DATA / "pack.jsonc").is_file()
+            if not manifest and not any(schema.parent.glob("*.jsonc")) and not any((PACK_DATA / name).glob("*.jsonc")):
                 problems.append(
                     (f"has no {schema.parent.as_posix()}/*.jsonc or {(PACK_DATA / name).as_posix()}/*.jsonc to check", path)
                 )
@@ -106,7 +109,7 @@ def main() -> int:
         return 1
     # Godot exits 0 even when a script fails to compile, so check every file was converted.
     sources = [
-        *Path("core/data").rglob("*.jsonc"), *Path("slices").glob("*/data/**/*.jsonc"), *PACK_DATA.glob("*/*.jsonc")
+        *Path("core/data").rglob("*.jsonc"), *Path("slices").glob("*/data/**/*.jsonc"), *PACK_DATA.glob("*.jsonc"), *PACK_DATA.glob("*/*.jsonc")
     ]
     written = list(TARGET.rglob("*.json"))
     if len(sources) != len(written):

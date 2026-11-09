@@ -15,7 +15,7 @@ will have (#1858), and looked up only through ResourcePacks. It fails when
   resourcepacks/default/models/, an image under resourcepacks/default/textures/, a sound under resourcepacks/default/audio/, a region file or piece under
   resourcepacks/default/regions/, a realm in resourcepacks/default/realms/, a quest in
   resourcepacks/default/quests/, a species in resourcepacks/default/species/, a catalogue under
-  translations/, a tile blueprint in resourcepacks/default/tiles/, a loot table, harvest table or
+  resourcepacks/default/translations/, a tile blueprint in resourcepacks/default/tiles/, a loot table, harvest table or
   material in resourcepacks/default/loot_tables/, harvest_tables/ or materials/) is in the
   repository but not in the manifest;
 - a quest's, species', loot table's, harvest table's or material's entry isn't its own file
@@ -103,7 +103,10 @@ MOVED = {
     "loot_tables": "loot_tables",
     "harvest_tables": "harvest_tables",
     "materials": "materials",
+    "translations": "translations",
 }
+# Where the default pack's manifest lay before it moved into the pack's own folder (#1978).
+OLD_MANIFEST = Path("slices/resource_packs/data/default.jsonc")
 # Where the default pack's realms, regions and region pieces lie (#1978).
 REALMS = f"{PACK_ROOT}realms"
 REGIONS = f"{PACK_ROOT}regions"
@@ -146,9 +149,9 @@ KINDS: dict[str, Kind] = {
     "quests": Kind("quest", (".jsonc",), False, f"{QUESTS}/*.jsonc", listed=True),
     # Every species the packs have is in the game, so nothing names one to look it up (#1903).
     "species": Kind("species", (".jsonc",), False, f"{SPECIES}/*.jsonc", listed=True),
-    # Every language's catalogue, translations/<locale>.po, registered at start, so nothing names
+    # Every language's catalogue, resourcepacks/default/translations/<locale>.po, registered at start, so nothing names
     # one either (#1902). The template, khovax.pot, stays beside them, where its tool writes it.
-    "translations": Kind("translation", (".po",), False, "translations/*.po", listed=True),
+    "translations": Kind("translation", (".po",), False, f"{PACK_ROOT}translations/*.po", listed=True),
     # Every tile kind the pack has is one the rules know, so nothing names one (#1901).
     "tiles": Kind("tile", (".jsonc",), False, f"{TILES}/*.jsonc", listed=True),
     # Every loot table and material the packs have is read whole, so nothing names one to look it
@@ -288,6 +291,14 @@ def misplaced_regions(whole: Entries, pieces: Entries) -> Problems:
     return problems
 
 
+def old_manifest() -> Problems:
+    """The default pack's manifest where it lay before it moved into the pack's own folder."""
+    if not OLD_MANIFEST.is_file():
+        return []
+    return [(f"the default pack's manifest lies at {OLD_MANIFEST.as_posix()}: move it to"
+             f" {PACK_ROOT}pack.jsonc, its paths relative to it (#1978)", OLD_MANIFEST.as_posix())]
+
+
 def outside_root(entries: dict[str, Entries]) -> Problems:
     """The files of a kind already moved (MOVED) that the manifest lists outside its folder in
     the default pack's own folder (PACK_ROOT)."""
@@ -369,6 +380,7 @@ def main() -> int:
     entries, read_problems = manifest_sections()
     problems += read_problems
     problems += outside_root(entries)
+    problems += old_manifest()
     problems += [
         (f"region {region_id} is both drawn whole and in pieces", MANIFEST.as_posix())
         for region_id in sorted(entries["regions"].keys() & entries["region_pieces"].keys())
@@ -390,9 +402,9 @@ def main() -> int:
         if paths != [f"{SPECIES}/{species_id}.jsonc"]
     ]
     problems += [
-        (f"translation {locale}'s file is {paths}, not translations/{locale}.po", MANIFEST.as_posix())
+        (f"translation {locale}'s file is {paths}, not {PACK_ROOT}translations/{locale}.po", MANIFEST.as_posix())
         for locale, paths in entries["translations"].items()
-        if paths != [f"translations/{locale}.po"]
+        if paths != [f"{PACK_ROOT}translations/{locale}.po"]
     ]
     if PROJECT.is_file() and PROJECT_TRANSLATIONS.search(PROJECT.read_text(encoding="utf-8")):
         problems.append(
@@ -418,7 +430,7 @@ def main() -> int:
             if paths != [f"{folder}/{entry_id}.jsonc"]
         ]
     tracked = set(
-        git_files(MODEL_FILES, TEXTURES, SOUNDS, REGIONS, REALMS, "translations", QUESTS, SPECIES, TILES, LOOT_TABLES, MATERIALS, HARVEST_TABLES)
+        git_files(MODEL_FILES, TEXTURES, SOUNDS, REGIONS, REALMS, f"{PACK_ROOT}translations", QUESTS, SPECIES, TILES, LOOT_TABLES, MATERIALS, HARVEST_TABLES)
     )
     models = {path for paths in entries["models"].values() for path in paths}
     used_by_models = model_images(sorted(models & tracked))
