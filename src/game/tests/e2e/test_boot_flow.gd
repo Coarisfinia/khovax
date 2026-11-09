@@ -311,8 +311,12 @@ func _check_water_surfaces(main: Node) -> String:
 		]
 	for node: Node in main.find_children("*", "GeometryInstance3D", true, false):
 		var shown: GeometryInstance3D = node as GeometryInstance3D
-		for material: Material in _materials_of(shown):
-			var named_water: bool = String(shown.name).to_lower().contains("water")
+		var materials: Array[Material] = _materials_of(shown)
+		var node_is_water: bool = String(shown.name).to_lower().contains("water")
+		if node_is_water and materials.is_empty():
+			return "%s is water with no material to check" % shown.get_path()
+		for material: Material in materials:
+			var named_water: bool = node_is_water
 			named_water = named_water or material.resource_name.to_lower().contains("water")
 			if named_water and not _is_water_material(material):
 				return "%s is water drawn by another material" % shown.get_path()
@@ -328,6 +332,12 @@ func _materials_of(shown: GeometryInstance3D) -> Array[Material]:
 	if part != null and part.mesh != null and shown.material_override == null:
 		for surface: int in part.mesh.get_surface_count():
 			var material: Material = part.get_active_material(surface)
+			if material != null:
+				materials.append(material)
+	var many: MultiMeshInstance3D = shown as MultiMeshInstance3D
+	if many != null and many.multimesh.mesh != null and shown.material_override == null:
+		for surface: int in many.multimesh.mesh.get_surface_count():
+			var material: Material = many.multimesh.mesh.surface_get_material(surface)
 			if material != null:
 				materials.append(material)
 	return materials
