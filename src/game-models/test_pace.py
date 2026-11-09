@@ -3,7 +3,7 @@ at, follows the game's own Tuning.MOVE_TICKS, Simulation.TICKS_PER_SECOND (#2142
 MODEL_SCALE (#2128): a copy of the game's scripts with any of them changed changes the pace, so
 the check never goes on measuring the old one.
 
-    uv run --locked --package khovax-game-models packages/game-models/test_pace.py
+    uv run --locked --package khovax-game-models src/game-models/test_pace.py
 
 It prints each case and `PACE TEST: PASS` or `FAIL` (and exits 1 on a fail)."""
 

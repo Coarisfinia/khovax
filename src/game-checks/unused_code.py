@@ -7,7 +7,7 @@ fails when its name appears nowhere but in its own declaration. Comments don't c
 does a scene naming a script's path for a class. A name shared with something else counts as used,
 so it never fails wrongly. Engine callbacks are used by the engine, so they're left out.
 
-    uv run --locked --package khovax-game-checks packages/game-checks/unused_code.py
+    uv run --locked --package khovax-game-checks src/game-checks/unused_code.py
 """
 
 import os

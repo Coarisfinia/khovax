@@ -9,8 +9,8 @@ script draws them in (`DRAW_TURN`, `DRAW_REACH`): each turns towards the arch's 
 less far out over the ground, keeping its rise, until the whole gate stands within its two hexes
 (a prop's limits in lib/footprint.py, #1641).
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/tentacle_gate.py -- resourcepacks/default/models/tentacle_gate/tentacle_gate.glb
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/tentacle_gate.py -- resourcepacks/default/models/tentacle_gate/tentacle_gate.glb
 
 The generator rigged it as a character (#1634): one chain holds both left tentacles, and the arch's
 crown is taken for a leg. A gate needs neither, so this script drops that rig and builds its own

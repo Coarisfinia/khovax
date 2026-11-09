@@ -1,11 +1,11 @@
 """The mana wolf (#990, #995): a wolf-like quadruped with a mane, mana crystals, glowing veins and
 runes, rigged and animated. Only its parameters and its own parts live here; the building blocks
-are the shared library in packages/game-models/lib/ (model skill).
+are the shared library in src/game-models/lib/ (model skill).
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/mana_wolf.py -- resourcepacks/default/models/mana-wolf/mana_wolf.glb
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/mana_wolf.py -- resourcepacks/default/models/mana-wolf/mana_wolf.glb
 
-It prints the speeds the motion check (packages/game-models/check_motion.py) takes. `NAME=value`
+It prints the speeds the motion check (src/game-models/check_motion.py) takes. `NAME=value`
 after the output path sets one of its GAIT values (lib/tuning.py), for the gait sweep
 (sweep_gait.py).
 

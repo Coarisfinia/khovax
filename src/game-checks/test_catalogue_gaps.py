@@ -3,7 +3,7 @@ over continued lines, escapes and plurals; the header, obsolete entries, fuzzy o
 translations translate nothing; and a catalogue's gaps against the template (texts it leaves
 untranslated, and texts the template no longer has) are reported as warnings.
 
-    uv run --locked --package khovax-game-checks packages/game-checks/test_catalogue_gaps.py
+    uv run --locked --package khovax-game-checks src/game-checks/test_catalogue_gaps.py
 """
 
 import unittest

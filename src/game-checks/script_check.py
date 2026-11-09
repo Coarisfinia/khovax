@@ -4,7 +4,7 @@ only the first. A script fails when Godot exits non-zero or when its output has 
 even with exit 0 (such as a load cycle through a preloaded scene, #964).
 
     [GODOT=<binary>] uv run --locked --package khovax-game-checks \\
-        packages/game-checks/script_check.py
+        src/game-checks/script_check.py
 
 GODOT defaults to `godot`.
 """

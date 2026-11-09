@@ -3,7 +3,7 @@
 takes focus from the owner's session, even a one-pixel one, so every Godot run that draws
 (screenshots, in-game renders, a GIF's frames) goes through this. Headless runs need nothing.
 
-    uv run --locked packages/game-offscreen/offscreen.py -- --path packages/game -s res://<script>.gd \
+    uv run --locked src/game-offscreen/offscreen.py -- --path src/game -s res://<script>.gd \
         -- <args>
 
 Everything after the first `--` goes to Godot, which also gets `--display-driver x11`,

@@ -18,7 +18,7 @@ const BUILT_DEFAULT: String = "res://packs/default.pck"
 ## resourcepacks/, which the project reaches only through an untracked link a checkout must make.
 const LINKED: String = "res://resourcepacks/"
 ## What makes that link, run from the repository's root.
-const LINK_COMMAND: String = "uv run --locked packages/game-build/link_resource_packs.py"
+const LINK_COMMAND: String = "uv run --locked src/game-build/link_resource_packs.py"
 
 ## The loaded packs, in lookup order, the default pack last; read on the first lookup.
 static var _packs: Array[ResourcePack] = []

@@ -2,8 +2,8 @@
 against each other and against how high the body stands, at rest, per body plan, from
 lib/dimensions.py, where the measures and their ranges are documented.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/check_dimensions.py -- <model.glb> [<model.glb> ...]
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/check_dimensions.py -- <model.glb> [<model.glb> ...]
 
 It prints a line per measure (its value and its range) and `DIMENSIONS CHECK: PASS` or `FAIL` (and
 exits 1 on a fail), through game_shared.log (#1115): a failing line is an error on the .glb. A

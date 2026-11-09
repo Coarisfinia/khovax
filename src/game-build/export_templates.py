@@ -2,9 +2,9 @@
 export_presets.cfg need, one per line, so CI and the release unpack exactly those and nothing
 names the platforms twice.
 
-    uv run --locked packages/game-build/export_templates.py [<export_presets.cfg>]
+    uv run --locked src/game-build/export_templates.py [<export_presets.cfg>]
 
-Without an argument it reads the game's, packages/game/export_presets.cfg (#1101).
+Without an argument it reads the game's, src/game/export_presets.cfg (#1101).
 """
 
 import re

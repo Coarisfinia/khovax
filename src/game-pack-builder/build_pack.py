@@ -3,7 +3,7 @@
 <id>.desktop.pck and <id>.mobile.pck, imported with the game's import settings by the Godot version
 the game is built with.
 
-    uv run --locked --package khovax-game-pack-builder packages/game-pack-builder/build_pack.py <pack> <out>
+    uv run --locked --package khovax-game-pack-builder src/game-pack-builder/build_pack.py <pack> <out>
 
 or, from the zip each release ships (release_zip.py), python3 build_pack.py <pack> <out>.
 

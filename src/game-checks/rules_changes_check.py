@@ -4,10 +4,10 @@ format_changes/ folder): each file's name and frontmatter, and that the folders 
 names of the files in core/rules_changes/) an id that older rules may already have had, and saves
 name their format changes (FormatChanges), so a build without one could no longer read them.
 Whether a change needs a new rule change file is the rules-compare job's
-(packages/game-replays/rules_compare.py).
+(src/game-replays/rules_compare.py).
 <base> is the commit the change is compared with, e.g. HEAD^1 of a pull request's merge commit.
 
-    uv run --locked --package khovax-game-checks packages/game-checks/rules_changes_check.py <base>
+    uv run --locked --package khovax-game-checks src/game-checks/rules_changes_check.py <base>
 """
 
 import os
@@ -33,9 +33,11 @@ def is_change(path: str) -> bool:
 
 def names(commit: str) -> set[str] | None:
     """The change files' paths at that commit, relative to the game's folder, or None when git
-    can't list them. The folder is the game's: under packages/game, or at the root in a commit from
-    before the move there (#1101), so the commit that moves it compares names, not paths."""
-    game = "packages/game" if git("cat-file", "-e", f"{commit}:packages/game/project.godot") else ""
+    can't list them. The folder is the game's: under src/game, under packages/ before that rename
+    (#1979), or at the root in a commit from before the move there (#1101), so the commit that
+    moves it compares names, not paths."""
+    tops = ("src", "packages")
+    game = next((f"{top}/game" for top in tops if git("cat-file", "-e", f"{commit}:{top}/game/project.godot")), "")
     listing = subprocess.run(
         ["git", "ls-tree", "-r", "-z", "--full-tree", "--name-only", f"{commit}:{game}"],
         stdout=subprocess.PIPE,

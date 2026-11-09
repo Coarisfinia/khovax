@@ -10,8 +10,8 @@ fragments the repaint left beyond a pair, spots much darker than the head's medi
 the rest without it (#1782, #1799); a beast's own small dark markings, which marked_eyes.MARKINGS
 boxes in, are left out (#1765).
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/check_painted_eyes.py -- <model.glb> [<model.glb> ...]
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/check_painted_eyes.py -- <model.glb> [<model.glb> ...]
 
 A model without a rig, a creature check_clip_set.py's NOT_CREATURES leaves out (the tentacle
 gate's eye is part of its design, #1642), and a skin without a texture or a head bone pass: nothing

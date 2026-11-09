@@ -15,10 +15,10 @@ asset's SOURCE.md), with the owner's fixes:
 
 It is rigged and animated as a limbless body without a tail (lib/limbless.py).
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/ombuwomo.py -- resourcepacks/default/models/ombuwomo/ombuwomo.glb
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/ombuwomo.py -- resourcepacks/default/models/ombuwomo/ombuwomo.glb
 
-It prints the speeds the motion check (packages/game-models/check_motion.py) takes. `NAME=value`
+It prints the speeds the motion check (src/game-models/check_motion.py) takes. `NAME=value`
 after the output path sets one of its GAIT values (lib/tuning.py), for the gait sweep
 (sweep_gait.py).
 

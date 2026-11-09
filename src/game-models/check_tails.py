@@ -2,8 +2,8 @@
 are rigged"): found on the mesh, not the bones, each moved by bones of its own, a bend of them moving
 only that tail, and moving in every clip (lib/tails.py).
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/check_tails.py -- <model.glb> [<model.glb> ...]
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/check_tails.py -- <model.glb> [<model.glb> ...]
 
 It prints a line per tail and clip and `TAILS CHECK: PASS` or `FAIL` (and exits 1 on a fail), through
 game_shared.log (#1115): a failing line is an error on the .glb. A model not in TAILS passes, so CI

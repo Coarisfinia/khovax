@@ -1,7 +1,7 @@
 """One compact report on a generated model's download (#1523), so an agent reads one screen
 instead of measuring the mesh by hand before import_source.py and the model script:
 
-    uv run --locked packages/game-models/inspect_meshy.py <download.glb>
+    uv run --locked src/game-models/inspect_meshy.py <download.glb>
 
 It starts Blender itself (through blender.py) and prints only the report:
 - **file:** its size, the glTF's generator and whether it carries AI-generation markers (a

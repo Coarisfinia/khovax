@@ -3,8 +3,8 @@ a clip library of its own, apart from the body. A later body loads the same clip
 rig's bones to its humanoid skeleton profile on import (the BoneMap in player_clips.glb.import),
 so any humanoid rig, whatever its bones are called, can be retargeted to them.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/player_clips.py -- resourcepacks/default/models/player/player_clips.glb
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/player_clips.py -- resourcepacks/default/models/player/player_clips.glb
 
 Meshy rigs one clip per export (#1934); import_clip.py turns each into a clip source in
 sources/player/clips/, named after its clip, and its skeleton into sources/player/skeleton.glb. The

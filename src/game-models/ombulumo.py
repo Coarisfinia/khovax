@@ -2,13 +2,13 @@
 and booms at dusk. A squat, toad-like dome on short splayed legs with webbed feet, a broad flat
 head with a wide mouth, round eyes bulging on top, a pale throat sac that swells as it booms, two
 leaf fronds behind its eyes, moss pads on its back and soft glowing spots. Only its parameters and
-its own parts live here; the building blocks are the shared library in packages/game-models/lib/
+its own parts live here; the building blocks are the shared library in src/game-models/lib/
 (model skill).
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/ombulumo.py -- resourcepacks/default/models/ombulumo/ombulumo.glb
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/ombulumo.py -- resourcepacks/default/models/ombulumo/ombulumo.glb
 
-It prints the speeds the motion check (packages/game-models/check_motion.py) takes. `NAME=value`
+It prints the speeds the motion check (src/game-models/check_motion.py) takes. `NAME=value`
 after the output path sets one of its GAIT values (lib/tuning.py), for the gait sweep
 (sweep_gait.py).
 

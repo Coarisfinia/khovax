@@ -1,12 +1,12 @@
 """The mana pup (#1220): the young of the mana wolf, a round, soft quadruped with a big head, big
 paws and big ears, its crystals only budding and a few wisps already hovering about it, rigged
-and animated. Built on the mana wolf's way (packages/game-models/mana_wolf.py) from the shared
-library in packages/game-models/lib/ (model skill); only its parameters and its own parts live here.
+and animated. Built on the mana wolf's way (src/game-models/mana_wolf.py) from the shared
+library in src/game-models/lib/ (model skill); only its parameters and its own parts live here.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/mana_pup.py -- resourcepacks/default/models/mana-pup/mana_pup.glb
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/mana_pup.py -- resourcepacks/default/models/mana-pup/mana_pup.glb
 
-It prints the speeds the motion check (packages/game-models/check_motion.py) takes. `NAME=value`
+It prints the speeds the motion check (src/game-models/check_motion.py) takes. `NAME=value`
 after the output path sets one of its GAIT values (lib/tuning.py), for the gait sweep
 (sweep_gait.py).
 

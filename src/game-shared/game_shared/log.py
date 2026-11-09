@@ -3,7 +3,7 @@ notice, a warning or an error into an annotation, and elsewhere as plain lines.
 
 An annotation names its file from the repository's root, the only path GitHub links into a pull
 request's diff (#1106), while the tools name files from their working directory (most run in the
-game's folder, packages/game): `text` turns one into the other, locally too, so the lines read the
+game's folder, src/game): `text` turns one into the other, locally too, so the lines read the
 same everywhere.
 """
 

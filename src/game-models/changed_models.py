@@ -1,7 +1,7 @@
 """Which models CI's model checks look at (#2031): on a pull request and in the merge queue only
 the models it changes, and every model when it changes what all of them are built or checked by.
 
-    uv run --locked --package khovax-game-models packages/game-models/changed_models.py \
+    uv run --locked --package khovax-game-models src/game-models/changed_models.py \
         <base> <list> [--every]
 
 It reads what changed since `base` (`git diff --name-only`) and writes the game's .glb files to
@@ -29,7 +29,7 @@ from game_shared.git_files import pack_models
 from check_rebuild import EXPORT
 
 ROOT = Path(__file__).resolve().parents[2]
-MODELS = "packages/game-models/"
+MODELS = "src/game-models/"
 # A change to one of these, from the repository's root, checks every model: what every model is
 # built or checked with, the workflow running the checks, and what the footprint and world-scale
 # checks measure a model by (the views, the scenes, the default pack's manifest and its tile
@@ -37,14 +37,14 @@ MODELS = "packages/game-models/"
 # #2208, and any game script, whose constants a view's settings may name, #2072).
 EVERY = (
     MODELS + "*",
-    "packages/game-shared/*",
+    "src/game-shared/*",
     "pyproject.toml",
     "uv.lock",
     ".github/actions/setup-blender/*",
     ".github/workflows/ci.yml",
-    "packages/game/slices/*/look/*",
-    "packages/game/*.gd",
-    "packages/game/*.tscn",
+    "src/game/slices/*/look/*",
+    "src/game/*.gd",
+    "src/game/*.tscn",
     "resourcepacks/default/pack.jsonc",
     "resourcepacks/default/tiles/*",
 )

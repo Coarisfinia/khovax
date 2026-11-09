@@ -4,7 +4,7 @@ the guard refuses a change to the game's assets, texts and world, and to every r
 lets the rest through to the review subagent's call. The stand-in plays GitHub, so this needs no
 network.
 
-    uv run --locked --package khovax-game-checks packages/game-checks/test_approve_cleared.py
+    uv run --locked --package khovax-game-checks src/game-checks/test_approve_cleared.py
 """
 
 import json
@@ -94,26 +94,26 @@ class ApproveClearedTest(unittest.TestCase):
         self.assertIn("always user-facing", log)
 
     def test_tooling_may_be_approved(self):
-        approved, log = self.check(("packages/game-checks/some_check.py", None))
+        approved, log = self.check(("src/game-checks/some_check.py", None))
         self.assertTrue(approved, log)
 
     def test_the_games_world_is_refused(self):
-        self.assert_refused(("packages/game/realms/ardvaun.md", None))
+        self.assert_refused(("src/game/realms/ardvaun.md", None))
 
     def test_the_games_scenes_and_media_are_refused_outside_its_tests(self):
-        self.assert_refused(("packages/game/slices/board/look/hex_grid.tscn", None))
-        approved, log = self.check(("packages/game/tests/e2e/fixture.tscn", None))
+        self.assert_refused(("src/game/slices/board/look/hex_grid.tscn", None))
+        approved, log = self.check(("src/game/tests/e2e/fixture.tscn", None))
         self.assertTrue(approved, log)
 
     def test_a_rename_of_a_games_asset_into_its_tests_is_refused(self):
-        self.assert_refused(("packages/game/tests/e2e/a.png", "packages/game/assets/a.png"))
+        self.assert_refused(("src/game/tests/e2e/a.png", "src/game/assets/a.png"))
 
     def test_a_resource_packs_file_is_refused(self):
         self.assert_refused(("resourcepacks/default/realms/ardvaun.md", None))
 
     def test_a_rename_out_of_a_resource_pack_is_refused(self):
         self.assert_refused(
-            ("packages/game-checks/ardvaun.md", "resourcepacks/default/realms/ardvaun.md")
+            ("src/game-checks/ardvaun.md", "resourcepacks/default/realms/ardvaun.md")
         )
 
 

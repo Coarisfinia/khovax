@@ -6,7 +6,7 @@ language may reorder freely. A text with one value may keep its %.
 It reads the literals translations_pot.py extracts, from the same scripts, the plurals of tr_n()
 included.
 
-    uv run --locked --package khovax-game-checks packages/game-checks/tr_placeholders.py
+    uv run --locked --package khovax-game-checks src/game-checks/tr_placeholders.py
 """
 
 import os

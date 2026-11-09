@@ -2,8 +2,8 @@
 between each wisp (the part of the mesh a `wisp.*` bone moves most, lib/wisps.py) and the rest of
 the mesh, from lib/clearance.py.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/check_clearance.py -- <model.glb> [<model.glb> ...] [tolerance=0.005] \
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/check_clearance.py -- <model.glb> [<model.glb> ...] [tolerance=0.005] \
         [--summary]
 
 It fails when a wisp's faces cross the body's (or a wisp sits inside it), or when the gap falls

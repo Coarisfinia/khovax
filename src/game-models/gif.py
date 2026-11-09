@@ -3,7 +3,7 @@ for a clip (`<Clip>_000.png`, `<Clip>_001.png`, ...), at the rate it captured th
 beside them, the clip's own, #1150), through ffmpeg's palette pass, which is
 faster and smaller than ImageMagick, looping forever.
 
-    uv run --locked packages/game-models/gif.py <frame_dir> <Clip> [--fps <rate>] [--width 640] \
+    uv run --locked src/game-models/gif.py <frame_dir> <Clip> [--fps <rate>] [--width 640] \
         [--out <file.gif>]
 
 It writes `<frame_dir>/<Clip>.gif` unless `--out` says otherwise, and prints its path."""

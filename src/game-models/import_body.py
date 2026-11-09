@@ -1,8 +1,8 @@
 """Imports the player's body (#1827): the baseline body as Meshy rigged it, with the texture of the
 textured export of the same body, as the figure PlayerView shows.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/import_body.py -- <rigged.glb> <textured.glb> <body.glb> [size=1024]
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/import_body.py -- <rigged.glb> <textured.glb> <body.glb> [size=1024]
 
 Meshy rigged the untextured body and textured it apart, so the rigged export has no UVs and the
 textured one no rig. They are the same triangles, the textured one at another size and place, so

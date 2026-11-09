@@ -2,7 +2,7 @@
 publishing stood in for: the pictures the other jobs made are still published, the media block
 leaves the missing ones out and lists them with their job's log, and the run exits 1.
 
-    uv run --locked --package khovax-game-models packages/game-models/test_render_media.py
+    uv run --locked --package khovax-game-models src/game-models/test_render_media.py
 
 It prints `RENDER MEDIA TEST: PASS` or `FAIL` (and exits 1 on a fail)."""
 

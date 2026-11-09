@@ -5,7 +5,7 @@ extends RefCounted
 ## `<issue>-<slug>.md` with the issue in its frontmatter and one line on what changed. A reader
 ## asks whether a save has a change (`changes.has(name)`), never compares numbers, so two parallel
 ## changes never claim the same number and the order they merge in never matters. The folders are
-## append-only, like the rule changes' (packages/game-checks/rules_changes_check.py), since saves
+## append-only, like the rule changes' (src/game-checks/rules_changes_check.py), since saves
 ## name their files. Saves from before names held a `format` number instead, which each reader maps
 ## to the changes it meant.
 

@@ -19,7 +19,7 @@ translated. Each entry names the files it comes from, without line numbers, so m
 doesn't touch the template. The order is the files' order, then each file's, so related texts
 stay together.
 
-    uv run --locked --package khovax-game-checks packages/game-checks/translations_pot.py [--check]
+    uv run --locked --package khovax-game-checks src/game-checks/translations_pot.py [--check]
 """
 
 import json
@@ -406,7 +406,7 @@ def main() -> int:
     if not TEMPLATE.is_file() or TEMPLATE.read_bytes() != text.encode("utf-8"):
         log.error(
             "out of date: run `uv run --locked --package khovax-game-checks"
-            " packages/game-checks/translations_pot.py` and commit the result",
+            " src/game-checks/translations_pot.py` and commit the result",
             TEMPLATE.as_posix(),
         )
         return 1

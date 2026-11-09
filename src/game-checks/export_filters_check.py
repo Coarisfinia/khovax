@@ -5,7 +5,7 @@ them all, or CI says which preset was missed. Every exclude_filter also names to
 developer tools run from the project, never from a build (#921). The web presets share their
 html/head_include, the loading page (#925): the web e2e checks it on the Web Test build only.
 
-    uv run --locked --package khovax-game-checks packages/game-checks/export_filters_check.py
+    uv run --locked --package khovax-game-checks src/game-checks/export_filters_check.py
 """
 
 import os

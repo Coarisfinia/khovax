@@ -45,7 +45,7 @@ as unused_assets.py finds them) come with their model's entry, not through the m
 check (the fields and their types) is content_schemas_check.py's, and what a pack is checked for
 on load (each file exists, no path climbs out of the pack) is the content flow's.
 
-    uv run --locked --package khovax-game-checks packages/game-checks/resource_packs_check.py
+    uv run --locked --package khovax-game-checks src/game-checks/resource_packs_check.py
 """
 
 import os

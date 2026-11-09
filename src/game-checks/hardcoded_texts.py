@@ -33,7 +33,7 @@ that is gone fails until it's taken off the list, so the list only shrinks. A de
 goes into ALLOWED with its reason. Hits are named by file and text, never by line, so moving a
 line changes nothing.
 
-    uv run --locked --package khovax-game-checks packages/game-checks/hardcoded_texts.py [--list]
+    uv run --locked --package khovax-game-checks src/game-checks/hardcoded_texts.py [--list]
 
 --list also prints every hit, listed or not, with its line.
 """
@@ -52,7 +52,7 @@ from game_shared.git_files import git_files
 from hardcoded_texts_known import ALLOWED, KNOWN
 from translations_pot import SCENE_MODE, SCENE_NODE, SCENE_SECTION, SCENE_TEXT, literal, unescaped
 
-LISTS = "packages/game-checks/hardcoded_texts_known.py"
+LISTS = "src/game-checks/hardcoded_texts_known.py"
 TEXT_PROPERTIES = {"text", "tooltip_text", "placeholder_text", "title"}
 # Godot's methods that show their string arguments.
 GODOT_TEXT_CALLS = {

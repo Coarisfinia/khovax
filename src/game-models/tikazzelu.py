@@ -7,10 +7,10 @@ on its feet and flies to move. It has no eyes, by design (the owner, on #1732), 
 shine at its centre: a small glowing core inside the ribbons, swelling as it strikes and while it
 channels (lib/pulse.py).
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/tikazzelu.py -- resourcepacks/default/models/tikazzelu/tikazzelu.glb
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/tikazzelu.py -- resourcepacks/default/models/tikazzelu/tikazzelu.glb
 
-It prints the speeds the motion check (packages/game-models/check_motion.py) takes. `NAME=value`
+It prints the speeds the motion check (src/game-models/check_motion.py) takes. `NAME=value`
 after the output path sets one of its GAIT values (lib/tuning.py), for the gait sweep
 (sweep_gait.py).
 

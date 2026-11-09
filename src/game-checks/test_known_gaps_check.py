@@ -2,7 +2,7 @@
 added is named however it's written or whatever comments surround it, and a version without a
 readable list can't be compared.
 
-    uv run --locked --package khovax-game-checks packages/game-checks/test_known_gaps_check.py
+    uv run --locked --package khovax-game-checks src/game-checks/test_known_gaps_check.py
 """
 
 import unittest

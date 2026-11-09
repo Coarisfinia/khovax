@@ -4,8 +4,8 @@ against its gap there at rest, and how far it sinks into it (#1458), from lib/co
 where the pieces, their anchors, the tolerance and the sink are documented. test_connectivity.py
 tests it.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/check_connectivity.py -- <model.glb> [<model.glb> ...] [tolerance=0.005]
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/check_connectivity.py -- <model.glb> [<model.glb> ...] [tolerance=0.005]
 
 It prints how many parts the model has, a line per clip (the most a part lifts off its anchor and
 the most one sinks into it, each with the frame, the part and its anchor, named after the bone

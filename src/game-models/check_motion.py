@@ -1,8 +1,8 @@
 """Checks that a model's clips move cleanly (model skill, #1071): per clip, foot sliding, the loop
 seam and jitter, as numbers with limits that fail the build.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/check_motion.py -- \
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/check_motion.py -- \
         <model.glb> [<Clip>=<speed> ...] [--speeds <folder>] [--summary]
 
 - **Foot sliding:** how fast a paw moves over the ground while it stands on it (its lowest point

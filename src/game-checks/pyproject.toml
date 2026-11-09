@@ -1,4 +1,4 @@
-# CI's checks of the game (packages/game): a member of the repository's uv workspace (the root
+# CI's checks of the game (src/game): a member of the repository's uv workspace (the root
 # pyproject.toml).
 [project]
 name = "khovax-game-checks"

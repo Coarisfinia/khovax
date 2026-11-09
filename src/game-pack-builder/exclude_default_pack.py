@@ -4,7 +4,7 @@ carried twice. Adds every file default_pack.py gathers to each export preset's e
 export_presets.cfg, which CI runs before exporting; the committed presets stay as they are, so the
 project still runs from its own files.
 
-    uv run --locked --package khovax-game-pack-builder packages/game-pack-builder/exclude_default_pack.py
+    uv run --locked --package khovax-game-pack-builder src/game-pack-builder/exclude_default_pack.py
 """
 
 import os

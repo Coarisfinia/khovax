@@ -7,7 +7,7 @@ import math
 import os
 import re
 
-# Where the game's core scripts lie (packages/game/core/).
+# Where the game's core scripts lie (src/game/core/).
 GAME = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "game")
 CORE = os.path.join(GAME, "core")
 # The view that draws the player's body, at its MODEL_SCALE.

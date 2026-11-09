@@ -3,7 +3,7 @@ extends Node
 ## What the slices before the profile read of this machine's player's profile through the session
 ## (Session.holder, #1663): their personal color and the path they lean toward. The profile's
 ## ProfileHolder is one; slices after the profile cast to it for the rest, so the board never names
-## a later slice (packages/game-checks/import_rules.py). This one has no profile: Auto and no
+## a later slice (src/game-checks/import_rules.py). This one has no profile: Auto and no
 ## leaning.
 
 

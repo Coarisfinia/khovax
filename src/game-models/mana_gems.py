@@ -1,9 +1,9 @@
 """The mana gems (#1218): a cluster of large mana crystals growing out of a low rock, the decoration
 of the gems tile that rings the mana forest. A static prop: no rig and no clips. Only its
-parameters live here; the crystals are the shared library's (packages/game-models/lib/).
+parameters live here; the crystals are the shared library's (src/game-models/lib/).
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/mana_gems.py -- resourcepacks/default/models/mana-gems/mana_gems.glb
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/mana_gems.py -- resourcepacks/default/models/mana-gems/mana_gems.glb
 
 Blender is Z-up; the origin is at the rock's foot, in the middle of its tile. Sizes are in the
 hexagon pack's units, which the game shrinks to fit a tile (TileDecorations.MODEL_SCALE).

@@ -4,8 +4,8 @@ does. A nod of the head keeps the tube's girth and passes, which it didn't while
 section's axes came from the world's up, almost along an upright neck, and swung around the
 neck as the head nodded. A neck squeezed to 60 % of its girth still fails.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/test_volume.py
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/test_volume.py
 
 It prints the report and `VOLUME TEST: PASS` or `FAIL` (and exits 1 on a fail)."""
 

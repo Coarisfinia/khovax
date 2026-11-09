@@ -5,8 +5,8 @@ cel look shows (a normal map, a metal and roughness map, each as large as the co
 game's other models are a small share of its size; the model script then places, rigs and
 animates the source.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/import_source.py -- <download.glb> <source.glb> [size=1024]
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/import_source.py -- <download.glb> <source.glb> [size=1024]
 
 An unrigged download's source keeps its axes and origin: the model script places it on its feet.
 
@@ -22,7 +22,7 @@ seen from above, with a margin for its widest clip), and a number scales it by t
 download is). It prints the scale and how far the rest pose and the widest clip reach across the
 hex; check_footprint.py confirms the fit once the clips are built.
 
-    ... --python packages/game-models/import_source.py -- <rigged.glb> <source.glb> [size=1024] [scale=hex]
+    ... --python src/game-models/import_source.py -- <rigged.glb> <source.glb> [size=1024] [scale=hex]
 
 `static` instead of a scale drops a download's rig (#1635): a prop the generator rigged anyway
 (an egg given a figure's skeleton) keeps its mesh as it stands at rest and is sourced like an

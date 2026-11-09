@@ -1,7 +1,7 @@
 """Checks that every creature model carries every creature clip (#1157), the set named once in
 lib/clip_set.py, which the build (clips.animate) reads too. CI runs it on every push.
 
-    uv run --locked --package khovax-game-models packages/game-models/check_clip_set.py
+    uv run --locked --package khovax-game-models src/game-models/check_clip_set.py
 
 A creature model is every skinned .glb under the default pack's models/ except the figures in
 NOT_CREATURES, so a new skinned model is checked unless it's listed there with its reason. Each

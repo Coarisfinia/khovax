@@ -5,8 +5,8 @@ pushed half their size into the ball, so the skin cuts across them, and a loose 
 open surface, as a generated model's loose pieces are) lying over the lower half of an eye, as on
 the Wobulumu (#1747), or a loose closed lump of it there, which only a brow over the eye may be.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/test_eyes_covered.py
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/test_eyes_covered.py
 
 It prints each case and `EYES COVERED TEST: PASS` or `FAIL` (and exits 1 on a fail)."""
 

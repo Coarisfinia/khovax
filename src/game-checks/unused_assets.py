@@ -9,7 +9,7 @@ generating importer's parameters). Each pack's own notes (SOURCE.md, its license
 out: they come with the files they describe. Asset paths keep to letters, digits and `._/-`, so
 a path is always matched whole.
 
-    uv run --locked --package khovax-game-checks packages/game-checks/unused_assets.py
+    uv run --locked --package khovax-game-checks src/game-checks/unused_assets.py
 """
 
 import os

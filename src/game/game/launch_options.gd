@@ -2,7 +2,7 @@ class_name LaunchOptions
 extends RefCounted
 ## Options given on the command line after `--` (#237), read the same way by the game and by the
 ## e2e runner, so a world can be started deterministically by hand, e.g.
-## `godot --path packages/game -- --instance=lumwen_hoal --seed=42`:
+## `godot --path src/game -- --instance=lumwen_hoal --seed=42`:
 ## - `--seed=<n>`: a fresh world starts from this seed (0 or more) instead of rolling one.
 ## - `--instance=<blueprint>`: the session starts in this instance blueprint, on its start.
 ## - `--invincible`: this machine's player takes no damage from any hit, so they're never knocked

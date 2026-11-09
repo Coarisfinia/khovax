@@ -7,8 +7,8 @@ A foot that lost its weights fails as unmeasured, beside a weighted one, where i
 for a control and skipped; a rig's foot controls (the Rogue's IK-foot and control-foot-roll) are
 named as skipped (#2142).
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/test_motion.py
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/test_motion.py
 
 Each model is exported to a .glb with a bare .import beside it and checked in a Blender of its own,
 as CI checks the game's. It prints each case and `MOTION TEST: PASS` or `FAIL` (and exits 1 on a

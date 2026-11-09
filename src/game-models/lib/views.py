@@ -1,6 +1,6 @@
 """How the game's views show a pack's model on the board (#1652), read from the views themselves for
 check_footprint.py: a pack's model (the players' and people's figure, the chest) has no script in
-packages/game-models/, and its .glb isn't at the size the game shows it, since the view that puts it
+src/game-models/, and its .glb isn't at the size the game shows it, since the view that puts it
 on a tile sizes it.
 
 A **view** of a model is a script in a slice's `look/` whose `MODEL` constant is the model's id in

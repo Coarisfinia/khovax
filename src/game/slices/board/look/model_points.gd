@@ -10,7 +10,7 @@ const EYE: String = "eye."
 const ATTACK: String = "attack."
 ## An eye's lid (#1304): the bone `lid.<side>` beside `eye.<side>`, which a clip turns from its rest
 ## (open, tucked up into the head) by up to LID_SHUT about its own length to shut it over the eye
-## (`eyes.OPEN` in packages/game-models/lib/eyes.py).
+## (`eyes.OPEN` in src/game-models/lib/eyes.py).
 const LID: String = "lid."
 const LID_SHUT: float = deg_to_rad(160.0)
 ## How far through its turn (a share of LID_SHUT) a lid starts to cover the eye's glowing middle,

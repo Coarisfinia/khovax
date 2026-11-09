@@ -12,10 +12,10 @@ hound's.
 It names the generator's bones to the library's quadruped scheme and animates every creature clip
 with the library's clips, its legs planted by lib/adopted.py.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/kavrikka.py -- resourcepacks/default/models/kavrikka/kavrikka.glb
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/kavrikka.py -- resourcepacks/default/models/kavrikka/kavrikka.glb
 
-It prints the speeds the motion check (packages/game-models/check_motion.py) takes. `NAME=value`
+It prints the speeds the motion check (src/game-models/check_motion.py) takes. `NAME=value`
 after the output path sets one of its GAIT values (lib/tuning.py), for the gait sweep
 (sweep_gait.py).
 

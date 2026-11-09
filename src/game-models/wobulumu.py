@@ -6,10 +6,10 @@ asset's SOURCE.md). The generator rigged it with one chain bent back on itself a
 so this script drops that rig and builds a limbless one (lib/limbless.py), swaps the painted eyes
 for ours (lib/marked_eyes.py) and animates every creature clip.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/wobulumu.py -- resourcepacks/default/models/wobulumu/wobulumu.glb
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/wobulumu.py -- resourcepacks/default/models/wobulumu/wobulumu.glb
 
-It prints the speeds the motion check (packages/game-models/check_motion.py) takes. `NAME=value`
+It prints the speeds the motion check (src/game-models/check_motion.py) takes. `NAME=value`
 after the output path sets one of its GAIT values (lib/tuning.py), for the gait sweep
 (sweep_gait.py).
 

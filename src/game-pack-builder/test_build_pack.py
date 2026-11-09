@@ -4,7 +4,7 @@ fails the build, like one reporting an error; a clean run passes, and so does on
 the words. Godot names leaked objects only in a warning once it exits, which the builder's callers
 never see, since it keeps Godot's output to itself unless the run fails.
 
-    uv run --locked --package khovax-game-pack-builder packages/game-pack-builder/test_build_pack.py
+    uv run --locked --package khovax-game-pack-builder src/game-pack-builder/test_build_pack.py
 """
 
 import stat

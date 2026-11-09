@@ -22,7 +22,7 @@ from a free source also passes the license rules below.
 ## Before you download anything
 
 1. **Look for what's already here**, in `resourcepacks/default/models/`, `resourcepacks/default/textures/` and
-   `packages/game-models/textures/`.
+   `src/game-models/textures/`.
    Reusing an asset costs no new license review.
 2. **Check the license of the exact file, on its source's own page.** A site's general statement
    tells you where to look, not what this file is under, and terms change: the Quaternius case
@@ -58,7 +58,7 @@ download:
 
 - **`LICENSE.md`:** the license's text, or the pack's own notice if it came with one.
 - **Godot's `.import` file:** committed beside the file it describes. Godot writes it only on an
-  import, so after adding the file run `godot --headless --path packages/game --import` from the
+  import, so after adding the file run `godot --headless --path src/game --import` from the
   repository's root (as for `.uid` files in AGENTS.md's "Testing and CI"). It generates files
   rather than checking anything, so it isn't a rerun of CI.
 - **`SOURCE.md`:** a title, then the three lines `tools/godot/credits.gd` turns into `CREDITS.md`,
@@ -81,5 +81,5 @@ A pack of several files names each file within those same lines, continued on in
 each. CC BY requires keeping the creator's credit, the license notice and a note of any change, so
 they go wherever the file goes, into a built resource pack as well.
 
-`packages/game-checks/unused_assets.py` fails on a file nothing uses, so an import arrives together
+`src/game-checks/unused_assets.py` fails on a file nothing uses, so an import arrives together
 with what uses it. New content goes into the default resource pack when it belongs there (#1860).

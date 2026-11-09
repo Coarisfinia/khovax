@@ -13,7 +13,7 @@ extends SceneTree
 ## tick, so the walk is the same on every machine however fast it draws. It runs on its own, apart
 ## from the e2e flows, since it takes minutes (CI's `soak` job, under a virtual display so the
 ## renderer really draws):
-##   uv run --locked packages/game-offscreen/offscreen.py -- --path packages/game \
+##   uv run --locked src/game-offscreen/offscreen.py -- --path src/game \
 ##       -s res://tests/soak/run_soak.gd
 ## Headless it measures the frames without the renderer's share.
 ##

@@ -18,10 +18,10 @@ edit it by hand.
 - **Files:** `resourcepacks/default/models/drakkudor/`
 - **Author:** the project (generated with Meshy AI, paid plan, Private licence)
 - **Source:** generated with Meshy AI from the project's own reference image (#1476); its mesh and
-  colour texture reduced by `packages/game-models/import_source.py` to
-  `packages/game-models/sources/drakkudor.glb`, then placed, rigged, animated and exported as
-  `drakkudor.glb` by `packages/game-models/drakkudor.py` on the shared model library
-  `packages/game-models/lib/`
+  colour texture reduced by `src/game-models/import_source.py` to
+  `src/game-models/sources/drakkudor.glb`, then placed, rigged, animated and exported as
+  `drakkudor.glb` by `src/game-models/drakkudor.py` on the shared model library
+  `src/game-models/lib/`
 - **License:** Unlicense, the repository's own license, see `LICENSE.md` next to this file.
 
 ## Exploration Theme
@@ -38,9 +38,9 @@ edit it by hand.
 - **Files:** `resourcepacks/default/models/fohossa/`
 - **Author:** the project (generated with Meshy AI, paid plan, Private licence)
 - **Source:** generated and rigged with Meshy AI by the owner (#1619); its mesh, colour texture
-  and rig reduced and adopted by `packages/game-models/import_source.py` to
-  `packages/game-models/sources/fohossa.glb`, then named, animated and exported as `fohossa.glb`
-  by `packages/game-models/fohossa.py` on the shared model library `packages/game-models/lib/`
+  and rig reduced and adopted by `src/game-models/import_source.py` to
+  `src/game-models/sources/fohossa.glb`, then named, animated and exported as `fohossa.glb`
+  by `src/game-models/fohossa.py` on the shared model library `src/game-models/lib/`
 - **License:** Unlicense, the repository's own license, see `LICENSE.md` next to this file.
 
 ## Frostfire Hound
@@ -48,9 +48,9 @@ edit it by hand.
 - **Files:** `resourcepacks/default/models/frostfire_hound/`
 - **Author:** the project (generated with Meshy AI, paid plan, Private licence)
 - **Source:** generated and rigged with Meshy AI by the owner (#1609); its mesh and rig reduced and
-  adopted by `packages/game-models/import_source.py` to `packages/game-models/sources/frostfire_hound.glb`,
+  adopted by `src/game-models/import_source.py` to `src/game-models/sources/frostfire_hound.glb`,
   then repainted, named, animated and exported as `frostfire_hound.glb` by
-  `packages/game-models/frostfire_hound.py` on the shared model library `packages/game-models/lib/`
+  `src/game-models/frostfire_hound.py` on the shared model library `src/game-models/lib/`
 - **License:** Unlicense, the repository's own license, see `LICENSE.md` next to this file.
 
 ## Game-icons.net
@@ -74,10 +74,10 @@ edit it by hand.
 - **Files:** `resourcepacks/default/models/kalvrakkor_magma/`
 - **Author:** the project (generated with Meshy AI, paid plan, Private licence)
 - **Source:** generated and rigged with Meshy AI by the owner (#1771); its mesh and rig reduced and
-  adopted by `packages/game-models/import_source.py` to `packages/game-models/sources/kalvrakkor_magma.glb`
+  adopted by `src/game-models/import_source.py` to `src/game-models/sources/kalvrakkor_magma.glb`
   (sized to its hex as a stronger monster), then given our eyes, a chain of its own for each of its
   nine tails, named, animated and exported as `kalvrakkor_magma.glb` by
-  `packages/game-models/kalvrakkor_magma.py` on the shared model library `packages/game-models/lib/`
+  `src/game-models/kalvrakkor_magma.py` on the shared model library `src/game-models/lib/`
 - **License:** Unlicense, the repository's own license, see `LICENSE.md` next to this file.
 
 ## Kavrikka
@@ -85,10 +85,10 @@ edit it by hand.
 - **Files:** `resourcepacks/default/models/kavrikka/`
 - **Author:** the project (generated with Meshy AI, paid plan, Private licence)
 - **Source:** generated and rigged with Meshy AI by the owner (#1733); its mesh and rig reduced and
-  adopted by `packages/game-models/import_source.py` to `packages/game-models/sources/kavrikka.glb`
+  adopted by `src/game-models/import_source.py` to `src/game-models/sources/kavrikka.glb`
   (sized to a pup, scale 0.42), then repainted like the Frostfire Hound, given our eyes, named,
-  animated and exported as `kavrikka.glb` by `packages/game-models/kavrikka.py` on the shared model
-  library `packages/game-models/lib/`
+  animated and exported as `kavrikka.glb` by `src/game-models/kavrikka.py` on the shared model
+  library `src/game-models/lib/`
 - **License:** Unlicense, the repository's own license, see `LICENSE.md` next to this file.
 
 ## KayKit Adventurers Character Pack 1.0
@@ -141,7 +141,7 @@ edit it by hand.
 
 - **Files:** `resourcepacks/default/models/mana-gems/`
 - **Author:** the khovax contributors (built in this repository)
-- **Source:** `packages/game-models/mana_gems.py` on the shared model library `packages/game-models/lib/`, a
+- **Source:** `src/game-models/mana_gems.py` on the shared model library `src/game-models/lib/`, a
   Blender script that builds and exports `mana_gems.glb` (#1218)
 - **License:** The Unlicense, the repository's own license, see `LICENSE.md` next to this file.
 
@@ -149,7 +149,7 @@ edit it by hand.
 
 - **Files:** `resourcepacks/default/models/mana-pup/`
 - **Author:** the khovax contributors (built in this repository)
-- **Source:** `packages/game-models/mana_pup.py` on the shared model library `packages/game-models/lib/`, Blender
+- **Source:** `src/game-models/mana_pup.py` on the shared model library `src/game-models/lib/`, Blender
   scripts that build, rig, animate and export `mana_pup.glb` (#1220)
 - **License:** The Unlicense, the repository's own license, see `LICENSE.md` next to this file.
 
@@ -157,7 +157,7 @@ edit it by hand.
 
 - **Files:** `resourcepacks/default/models/mana-wolf/`
 - **Author:** the khovax contributors (built in this repository)
-- **Source:** `packages/game-models/mana_wolf.py` on the shared model library `packages/game-models/lib/`, Blender
+- **Source:** `src/game-models/mana_wolf.py` on the shared model library `src/game-models/lib/`, Blender
   scripts that build, rig, animate and export `mana_wolf.glb` (#990, #995)
 - **License:** The Unlicense, the repository's own license, see `LICENSE.md` next to this file.
 
@@ -166,17 +166,17 @@ edit it by hand.
 - **Files:** `resourcepacks/default/models/nuvvoluvvo/`
 - **Author:** the project (generated with Meshy AI, paid plan, Private licence)
 - **Source:** generated and rigged with Meshy AI by the owner (#1620); its mesh, colour texture
-  and rig reduced and adopted by `packages/game-models/import_source.py` to
-  `packages/game-models/sources/nuvvoluvvo.glb`, then painted anew, named, given our eyes and
-  stars, animated and exported as `nuvvoluvvo.glb` by `packages/game-models/nuvvoluvvo.py` on the
-  shared model library `packages/game-models/lib/`
+  and rig reduced and adopted by `src/game-models/import_source.py` to
+  `src/game-models/sources/nuvvoluvvo.glb`, then painted anew, named, given our eyes and
+  stars, animated and exported as `nuvvoluvvo.glb` by `src/game-models/nuvvoluvvo.py` on the
+  shared model library `src/game-models/lib/`
 - **License:** Unlicense, the repository's own license, see `LICENSE.md` next to this file.
 
 ## Ombulumo
 
 - **Files:** `resourcepacks/default/models/ombulumo/`
 - **Author:** the khovax contributors (built in this repository)
-- **Source:** `packages/game-models/ombulumo.py` on the shared model library `packages/game-models/lib/`, Blender
+- **Source:** `src/game-models/ombulumo.py` on the shared model library `src/game-models/lib/`, Blender
   script that builds, rigs, animates and exports `ombulumo.glb` (#1271)
 - **License:** The Unlicense, the repository's own license, see `LICENSE.md` next to this file.
 
@@ -185,10 +185,10 @@ edit it by hand.
 - **Files:** `resourcepacks/default/models/ombuwomo/`
 - **Author:** the project (generated with Meshy AI, paid plan, Private licence)
 - **Source:** generated with Meshy AI by the owner (#1738); its mesh and colour texture reduced by
-  `packages/game-models/import_source.py` (`static`: the generator's rig dropped) to
-  `packages/game-models/sources/ombuwomo.glb`, then cut free of its feet, given a leaf over its
+  `src/game-models/import_source.py` (`static`: the generator's rig dropped) to
+  `src/game-models/sources/ombuwomo.glb`, then cut free of its feet, given a leaf over its
   back, sized, rigged, given its own eyes, animated and exported as `ombuwomo.glb` by
-  `packages/game-models/ombuwomo.py` on the shared model library `packages/game-models/lib/`
+  `src/game-models/ombuwomo.py` on the shared model library `src/game-models/lib/`
 - **License:** Unlicense, the repository's own license, see `LICENSE.md` next to this file.
 
 ## Ore outcrop
@@ -197,27 +197,27 @@ edit it by hand.
 - **Author:** the project (shape generated with Meshy AI, paid plan, Private licence); textures by
   Poly Haven (CC0)
 - **Source:** its shape ("Copper Veined Boulder") generated without a texture with Meshy AI by the
-  owner (#1824, #1929), turned into `packages/game-models/sources/ore_outcrop.glb` by
-  `packages/game-models/import_source.py`, then textured from the props' shared texture set
-  (`packages/game-models/textures/`: Poly Haven's "Rock Boulder Dry",
+  owner (#1824, #1929), turned into `src/game-models/sources/ore_outcrop.glb` by
+  `src/game-models/import_source.py`, then textured from the props' shared texture set
+  (`src/game-models/textures/`: Poly Haven's "Rock Boulder Dry",
   https://polyhaven.com/a/rock_boulder_dry, CC0, reduced to a few flat tones), its veins a flat
-  copper tint, and exported as `ore_outcrop.glb` by `packages/game-models/ore_outcrop.py`
+  copper tint, and exported as `ore_outcrop.glb` by `src/game-models/ore_outcrop.py`
 - **License:** Unlicense, the repository's own license, see `LICENSE.md` next to this file; its
-  textures are CC0 1.0 (`packages/game-models/textures/LICENSE.md`).
+  textures are CC0 1.0 (`src/game-models/textures/LICENSE.md`).
 
 ## Player body and clips
 
 - **Files:** `resourcepacks/default/models/player/`
 - **Author:** the project (generated with Meshy AI, paid plan, Private licence)
 - **Source:** the baseline body (#1827), textured by the owner with Meshy AI and rigged apart:
-  `packages/game-models/import_body.py` moves the textured export's UVs and colour onto the rigged
+  `src/game-models/import_body.py` moves the textured export's UVs and colour onto the rigged
   export, the same triangles, into `player_body.glb`. Its clips: the baseline body rigged and
-  animated with Meshy AI by the owner, one clip per export (#1934); each export's rig and clip taken by `packages/game-models/import_clip.py` into
-  `packages/game-models/sources/player/`, then merged into `player_clips.glb` by
-  `packages/game-models/player_clips.py` (#1935). The Throw clip is motion capture instead: subject
+  animated with Meshy AI by the owner, one clip per export (#1934); each export's rig and clip taken by `src/game-models/import_clip.py` into
+  `src/game-models/sources/player/`, then merged into `player_clips.glb` by
+  `src/game-models/player_clips.py` (#1935). The Throw clip is motion capture instead: subject
   141, trial 11 (frames 221 to 341) of the CMU Graphics Lab Motion Capture Database
   (http://mocap.cs.cmu.edu/, funded by NSF EIA-0196217), retargeted onto the same rig by
-  `packages/game-models/import_mocap.py` (#1951)
+  `src/game-models/import_mocap.py` (#1951)
 - **License:** Unlicense, the repository's own license, see `LICENSE.md` next to this file. The
   CMU database's terms let its data be copied, modified and redistributed without permission
   (http://mocap.cs.cmu.edu/faqs.php), and it asks to be credited as above.
@@ -243,23 +243,23 @@ edit it by hand.
 - **Author:** the project (shape generated with Meshy AI, paid plan, Private licence); textures by
   Poly Haven and ambientCG (CC0)
 - **Source:** its shape generated without a texture with Meshy AI by the owner (#1853), turned into
-  `packages/game-models/sources/standing_stone.glb` by `packages/game-models/import_source.py`,
-  then textured from the props' shared texture set (`packages/game-models/textures/`: Poly Haven's
+  `src/game-models/sources/standing_stone.glb` by `src/game-models/import_source.py`,
+  then textured from the props' shared texture set (`src/game-models/textures/`: Poly Haven's
   "Rock Boulder Dry", https://polyhaven.com/a/rock_boulder_dry, and ambientCG's "Moss 002",
   https://ambientcg.com/view?id=Moss002, both CC0, reduced to a few flat tones) and exported as
-  `standing_stone.glb` by `packages/game-models/standing_stone.py`
+  `standing_stone.glb` by `src/game-models/standing_stone.py`
 - **License:** Unlicense, the repository's own license, see `LICENSE.md` next to this file; its
-  textures are CC0 1.0 (`packages/game-models/textures/LICENSE.md`).
+  textures are CC0 1.0 (`src/game-models/textures/LICENSE.md`).
 
 ## Starry egg
 
 - **Files:** `resourcepacks/default/models/starry-egg/`
 - **Author:** the project (generated with Meshy AI, paid plan, Private licence)
 - **Source:** generated with Meshy AI by the owner (#1635); its mesh and colour texture reduced by
-  `packages/game-models/import_source.py` (its rig dropped, `static`) to
-  `packages/game-models/sources/starry_egg.glb`, then exported as `starry_egg.glb` by
-  `packages/game-models/starry_egg.py`. The blob's starry sky is the project's own, drawn from a
-  fixed seed by `packages/game-models/lib/starfield.py`
+  `src/game-models/import_source.py` (its rig dropped, `static`) to
+  `src/game-models/sources/starry_egg.glb`, then exported as `starry_egg.glb` by
+  `src/game-models/starry_egg.py`. The blob's starry sky is the project's own, drawn from a
+  fixed seed by `src/game-models/lib/starfield.py`
 - **License:** Unlicense, the repository's own license, see `LICENSE.md` next to this file.
 
 ## Tentacle gate
@@ -267,9 +267,9 @@ edit it by hand.
 - **Files:** `resourcepacks/default/models/tentacle_gate/`
 - **Author:** the project (generated with Meshy AI, paid plan, Private licence)
 - **Source:** generated and rigged with Meshy AI by the owner (#1634); its mesh and colour texture
-  reduced by `packages/game-models/import_source.py` to `packages/game-models/sources/tentacle_gate.glb`,
-  then rigged, animated and exported as `tentacle_gate.glb` by `packages/game-models/tentacle_gate.py`
-  on the shared model library `packages/game-models/lib/`
+  reduced by `src/game-models/import_source.py` to `src/game-models/sources/tentacle_gate.glb`,
+  then rigged, animated and exported as `tentacle_gate.glb` by `src/game-models/tentacle_gate.py`
+  on the shared model library `src/game-models/lib/`
 - **License:** Unlicense, the repository's own license, see `LICENSE.md` next to this file.
 
 ## Tikazzelu
@@ -277,9 +277,9 @@ edit it by hand.
 - **Files:** `resourcepacks/default/models/tikazzelu/`
 - **Author:** the project (generated with Meshy AI, paid plan, Private licence)
 - **Source:** generated with Meshy AI by the owner (#1732); its mesh and colour texture reduced by
-  `packages/game-models/import_source.py` to `packages/game-models/sources/tikazzelu.glb`, then
+  `src/game-models/import_source.py` to `src/game-models/sources/tikazzelu.glb`, then
   sized, rigged as a flutterer, given its violet core, animated and exported as `tikazzelu.glb` by
-  `packages/game-models/tikazzelu.py` on the shared model library `packages/game-models/lib/`
+  `src/game-models/tikazzelu.py` on the shared model library `src/game-models/lib/`
 - **License:** Unlicense, the repository's own license, see `LICENSE.md` next to this file.
 
 ## Tolvakkor
@@ -287,9 +287,9 @@ edit it by hand.
 - **Files:** `resourcepacks/default/models/tolvakkor/`
 - **Author:** the project (generated with Meshy AI, paid plan, Private licence)
 - **Source:** generated and rigged with Meshy AI by the owner (#1770); its mesh and rig reduced and
-  adopted by `packages/game-models/import_source.py` to `packages/game-models/sources/tolvakkor.glb`,
+  adopted by `src/game-models/import_source.py` to `src/game-models/sources/tolvakkor.glb`,
   then named, rigged, animated and exported as `tolvakkor.glb` by
-  `packages/game-models/tolvakkor.py` on the shared model library `packages/game-models/lib/`
+  `src/game-models/tolvakkor.py` on the shared model library `src/game-models/lib/`
 - **License:** Unlicense, the repository's own license, see `LICENSE.md` next to this file.
 
 ## Wobulumu
@@ -297,8 +297,8 @@ edit it by hand.
 - **Files:** `resourcepacks/default/models/wobulumu/`
 - **Author:** the project (generated with Meshy AI, paid plan, Private licence)
 - **Source:** generated with Meshy AI by the owner (#1737); its mesh and colour texture reduced by
-  `packages/game-models/import_source.py` (`static`: the generator's rig dropped) to
-  `packages/game-models/sources/wobulumu.glb`, then sized, rigged, given its own eyes, animated and
-  exported as `wobulumu.glb` by `packages/game-models/wobulumu.py` on the shared model library
-  `packages/game-models/lib/`
+  `src/game-models/import_source.py` (`static`: the generator's rig dropped) to
+  `src/game-models/sources/wobulumu.glb`, then sized, rigged, given its own eyes, animated and
+  exported as `wobulumu.glb` by `src/game-models/wobulumu.py` on the shared model library
+  `src/game-models/lib/`
 - **License:** Unlicense, the repository's own license, see `LICENSE.md` next to this file.

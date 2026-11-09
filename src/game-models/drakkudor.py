@@ -5,10 +5,10 @@ with glowing amber eyes and a short bone tail. Its mesh and colour come from a g
 SOURCE.md); this script places it on its feet, rigs it as a hexapod (lib/hexapod.py) and animates
 every creature clip.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/drakkudor.py -- resourcepacks/default/models/drakkudor/drakkudor.glb
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/drakkudor.py -- resourcepacks/default/models/drakkudor/drakkudor.glb
 
-It prints the speeds the motion check (packages/game-models/check_motion.py) takes. `NAME=value`
+It prints the speeds the motion check (src/game-models/check_motion.py) takes. `NAME=value`
 after the output path sets one of its GAIT values (lib/tuning.py), for the gait sweep
 (sweep_gait.py).
 

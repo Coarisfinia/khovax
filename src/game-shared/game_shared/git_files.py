@@ -6,7 +6,7 @@ from pathlib import Path
 from game_shared import log
 
 # The resource packs' folder lies at the repository's root (#1978), and the game's project reaches
-# it through its link, resourcepacks (packages/game-build/link_resource_packs.py). Git lists those
+# it through its link, resourcepacks (src/game-build/link_resource_packs.py). Git lists those
 # files by their real path, which is the same as the game's path through the link, but only from
 # the root: from the game's folder, git sees no files under the link.
 PACKS = "resourcepacks/"

@@ -6,7 +6,7 @@ extends SceneTree
 ## and any other kind it owns in <kind>/; a kind the default pack holds, in its own folder in
 ## PACKS, #1978) as plain JSON into build/data-json/<kind>/, with the comments stripped by the
 ## game's own stripper (Jsonc), so CI can check each one against
-## its schema: godot --headless --path packages/game -s res://tools/godot/data_to_json.gd
+## its schema: godot --headless --path src/game -s res://tools/godot/data_to_json.gd
 
 const TARGET: String = "res://build/data-json/"
 const SLICES: String = "res://slices/"

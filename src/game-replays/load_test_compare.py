@@ -1,11 +1,11 @@
-"""Compares two headless load test reports (packages/game/tools/godot/load_test.gd, #101) for CI
+"""Compares two headless load test reports (src/game/tools/godot/load_test.gd, #101) for CI
 (#303): this branch's and, on a pull request, its base's, both measured in the same job on the
 same runner. Prints a Markdown table for the job summary, and fails when this branch's mean tick is
 more than SLOWER times the base's (plus a small floor, since a tick is microseconds and runners
 jitter), or when its mean or 95th-percentile tick is above a fixed budget, base or not (#1337): a
 slowdown that lands in small steps passes the comparison every time, but not the budget.
 
-    uv run --locked packages/game-replays/load_test_compare.py <this branch's report> [<base's report>]
+    uv run --locked src/game-replays/load_test_compare.py <this branch's report> [<base's report>]
 """
 
 import re

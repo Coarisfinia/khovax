@@ -129,10 +129,10 @@ jobs:
           # scenes, resources and media, are always user-facing; its code is the review subagent's
           # call (#2061). The game's tests and tools never are.
           user_facing=$(printf '%s\n' "$files" | cut -c2- |
-            grep -v -e '^"packages/game/tests/' -e '^"packages/game/tools/' |
+            grep -v -e '^"src/game/tests/' -e '^"src/game/tools/' |
             grep -i -e '^"resourcepacks/' \
-              -e '^"packages/game/\(assets\|translations\|realms\|regions\)/' \
-              -e '^"packages/game/.*\.\(tscn\|tres\|res\|import\|png\|svg\|jpg\|jpeg\|webp\|glb\|gltf\|bin\|ogg\|wav\|mp3\|ttf\|otf\|gdshader\|gdshaderinc\)"$' ||
+              -e '^"src/game/\(assets\|translations\|realms\|regions\)/' \
+              -e '^"src/game/.*\.\(tscn\|tres\|res\|import\|png\|svg\|jpg\|jpeg\|webp\|glb\|gltf\|bin\|ogg\|wav\|mp3\|ttf\|otf\|gdshader\|gdshaderinc\)"$' ||
             true)
           if [ -n "$user_facing" ]; then
             echo "Not approving #$PR: it changes files that are always user-facing, which need the" \

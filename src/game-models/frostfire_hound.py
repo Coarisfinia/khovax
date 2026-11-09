@@ -17,10 +17,10 @@ The generator's snout is closed, so `mouth` cuts it open and hangs the lower jaw
 It names the generator's bones to the library's quadruped scheme and animates every creature clip
 with the library's clips, its legs planted by lib/adopted.py.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/frostfire_hound.py -- resourcepacks/default/models/frostfire_hound/frostfire_hound.glb
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/frostfire_hound.py -- resourcepacks/default/models/frostfire_hound/frostfire_hound.glb
 
-It prints the speeds the motion check (packages/game-models/check_motion.py) takes. `NAME=value`
+It prints the speeds the motion check (src/game-models/check_motion.py) takes. `NAME=value`
 after the output path sets one of its GAIT values (lib/tuning.py), for the gait sweep
 (sweep_gait.py).
 

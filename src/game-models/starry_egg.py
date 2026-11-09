@@ -4,8 +4,8 @@ two pale eyes on it. Its mesh and the shell's colour come from the owner's gener
 the asset's SOURCE.md). The blob inside gets our own starry sky (lib/starfield.py), drawn from a
 fixed seed, instead of the generator's paint. A static model: no rig and no clips.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/starry_egg.py -- resourcepacks/default/models/starry-egg/starry_egg.glb
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/starry_egg.py -- resourcepacks/default/models/starry-egg/starry_egg.glb
 
 Blender is Z-up and it faces -Y (the game's +Z); the origin is at the egg's foot, in the middle of
 its hex. The source is already at the game's size (SCALE 1): it stands well inside its hex.

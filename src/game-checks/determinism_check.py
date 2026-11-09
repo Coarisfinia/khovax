@@ -8,7 +8,7 @@ A whole file is exempt while its top comment lines carry the marker below with a
 parentheses (owner, #515). It marks a workaround to fix later; a marker without a reason fails:
   # TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (why this file can't pass yet)
 
-    uv run --locked --package khovax-game-checks packages/game-checks/determinism_check.py
+    uv run --locked --package khovax-game-checks src/game-checks/determinism_check.py
 """
 
 import os

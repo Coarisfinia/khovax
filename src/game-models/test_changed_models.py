@@ -2,7 +2,7 @@
 that model, a change to what every model is built or checked by checks them all, and anything
 else checks none.
 
-    uv run --locked --package khovax-game-models packages/game-models/test_changed_models.py
+    uv run --locked --package khovax-game-models src/game-models/test_changed_models.py
 
 It prints `CHANGED MODELS TEST: PASS` or `FAIL` (and exits 1 on a fail)."""
 
@@ -12,35 +12,35 @@ import sys
 
 import changed_models
 
-SCRIPTS = {"packages/game-models/mana_wolf.py", "packages/game-models/player_clips.py"}
+SCRIPTS = {"src/game-models/mana_wolf.py", "src/game-models/player_clips.py"}
 CASES = [
-    ("a model script", ["packages/game-models/mana_wolf.py"], {"mana_wolf"}),
+    ("a model script", ["src/game-models/mana_wolf.py"], {"mana_wolf"}),
     ("its .glb and .import", ["resourcepacks/default/models/mana-wolf/mana_wolf.glb",
                               "resourcepacks/default/models/kavrikka/kavrikka.glb.import"], {"mana_wolf", "kavrikka"}),
-    ("a model's source", ["packages/game-models/sources/kavrikka.glb"], {"kavrikka"}),
+    ("a model's source", ["src/game-models/sources/kavrikka.glb"], {"kavrikka"}),
     ("a .glb with no script", ["resourcepacks/default/models/items/pebble.glb"], {"pebble"}),
-    ("nothing the checks read", ["packages/game/slices/quests/data/quests/x.jsonc", "README.md", ".github/workflows/nightly.yml",
+    ("nothing the checks read", ["src/game/slices/quests/data/quests/x.jsonc", "README.md", ".github/workflows/nightly.yml",
                                  "resourcepacks/default/models/mana-wolf/SOURCE.md"], set()),
-    ("the attached-part check", ["packages/game-models/check_connectivity.py"], None),
-    ("the rebuild check", ["packages/game-models/check_rebuild.py"], None),
-    ("the selection itself", ["packages/game-models/changed_models.py"], None),
-    ("a check's test", ["packages/game-models/test_connectivity.py"], None),
-    ("the shared rig and build code", ["packages/game-models/lib/rigged.py"], None),
-    ("a script that isn't a model", ["packages/game-models/import_source.py"], None),
-    ("a deleted or other model script", ["packages/game-models/gone.py"], None),
-    ("a source of several clips", ["packages/game-models/sources/player/clips/Walk.glb"], None),
-    ("the models' package", ["packages/game-models/pyproject.toml"], None),
-    ("the shared tools", ["packages/game-shared/game_shared/log.py"], None),
+    ("the attached-part check", ["src/game-models/check_connectivity.py"], None),
+    ("the rebuild check", ["src/game-models/check_rebuild.py"], None),
+    ("the selection itself", ["src/game-models/changed_models.py"], None),
+    ("a check's test", ["src/game-models/test_connectivity.py"], None),
+    ("the shared rig and build code", ["src/game-models/lib/rigged.py"], None),
+    ("a script that isn't a model", ["src/game-models/import_source.py"], None),
+    ("a deleted or other model script", ["src/game-models/gone.py"], None),
+    ("a source of several clips", ["src/game-models/sources/player/clips/Walk.glb"], None),
+    ("the models' package", ["src/game-models/pyproject.toml"], None),
+    ("the shared tools", ["src/game-shared/game_shared/log.py"], None),
     ("the lock file", ["uv.lock"], None),
     ("the workflow", [".github/workflows/ci.yml"], None),
     ("Blender's setup", [".github/actions/setup-blender/action.yml"], None),
-    ("a view the footprint check reads", ["packages/game/slices/board/look/board_view.gd"], None),
-    ("a scene", ["packages/game/game/main.tscn"], None),
-    ("a game script a view's settings may name (#2072)", ["packages/game/slices/combat/rules/x.gd"], None),
-    ("a core script (#2072)", ["packages/game/core/tick.gd"], None),
+    ("a view the footprint check reads", ["src/game/slices/board/look/board_view.gd"], None),
+    ("a scene", ["src/game/game/main.tscn"], None),
+    ("a game script a view's settings may name (#2072)", ["src/game/slices/combat/rules/x.gd"], None),
+    ("a core script (#2072)", ["src/game/core/tick.gd"], None),
     ("the default pack's manifest", ["resourcepacks/default/pack.jsonc"], None),
     ("a tile blueprint the footprint check reads (#2208)", ["resourcepacks/default/tiles/boulder.jsonc"], None),
-    ("one model and the library", ["packages/game-models/mana_wolf.py", "packages/game-models/lib/eyes.py"], None),
+    ("one model and the library", ["src/game-models/mana_wolf.py", "src/game-models/lib/eyes.py"], None),
 ]
 
 

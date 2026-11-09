@@ -5,8 +5,8 @@ fit both or reach past them. The ones that fit pass; an oversized one fails what
 is, and a prop whose clip spreads past the hex's edge fails, even one it calls Attack, though a
 monster may do so (props have limits of their own, never an exemption).
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/test_footprint.py
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/test_footprint.py
 
 It also reads a pack's model's views from a small Godot project of its own (lib/views.py, #1652):
 views naming its id in the default resource pack (#1864) at a scale, one through another class's

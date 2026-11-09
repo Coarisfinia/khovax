@@ -3,8 +3,8 @@
 # settings: it loads, has a skinned mesh on a skeleton, and has every clip the game plays. It lists
 # the attachment points (ModelPoints, #1007) where they stand at rest, and fails a model that
 # plays an Attack clip without a centre of attack.
-# From the repository, after `godot --headless --path packages/game --import`:
-# godot --headless --path packages/game -s res://tools/models/check_glb.gd -- \
+# From the repository, after `godot --headless --path src/game --import`:
+# godot --headless --path src/game -s res://tools/models/check_glb.gd -- \
 #   res://resourcepacks/default/models/<name>/<name>.glb [Clip ...]
 extends SceneTree
 

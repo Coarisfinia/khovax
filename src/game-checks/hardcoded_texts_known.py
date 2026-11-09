@@ -1,4 +1,4 @@
-"""The lists hardcoded_texts.py reads (#1693), each entry named by its file (from packages/game)
+"""The lists hardcoded_texts.py reads (#1693), each entry named by its file (from src/game)
 and its text: the hits waiting for the issue that moves them over to tr(), and the deliberate
 exceptions."""
 

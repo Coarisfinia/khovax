@@ -171,8 +171,8 @@ for look-dev with the owner, but whatever it finds goes back into the script.
 ## Tools
 - **Blender 5.2.2**, portable at `~/.local/opt/blender-5.2.2` (`blender` on the PATH). Brew can't
   install it on Linux. CI pins the same version in `.github/actions/setup-blender/action.yml`
-  (#1161): a bump changes both, and every scripted model's rebuild with them. Run it headless, through `packages/game-models/blender.py`:
-  `uv run --locked packages/game-models/blender.py --background --factory-startup
+  (#1161): a bump changes both, and every scripted model's rebuild with them. Run it headless, through `src/game-models/blender.py`:
+  `uv run --locked src/game-models/blender.py --background --factory-startup
   --python <script.py> -- <args>`
   The wrapper puts Blender on the GPU under WSL (`GALLIUM_DRIVER=d3d12`, #1050), for that process
   only: Mesa's default falls back to the CPU's software rasteriser. It also makes a script that
@@ -190,20 +190,20 @@ for look-dev with the owner, but whatever it finds goes back into the script.
   the screen between frames. Blender (GPU) and Godot (CPU) renders don't compete and
   run side by side; several Godot renders at once only share the CPU's cores.
 - **ffmpeg** for GIFs through
-  `uv run --locked packages/game-models/gif.py <frame_dir> <Clip>` (a palette pass, looping; options in its
+  `uv run --locked src/game-models/gif.py <frame_dir> <Clip>` (a palette pass, looping; options in its
   header), never a hand-typed command.
 - The scripts beside this file: `scripts/render_views.py` (every side, one labelled sheet, drawn
   in Blender with its own font: no ImageMagick, no system font),
   `scripts/compare_sheet.py` (the model against its reference, as a sheet and numbers, #1072). The
-  Godot import check, `packages/game/tools/models/check_glb.gd`, lives in the game, where Godot can
+  Godot import check, `src/game/tools/models/check_glb.gd`, lives in the game, where Godot can
   run it (#1101).
 
 ## Shared library and tools (owner's rule, #995)
 **Tools are built reusable; a model script holds only that model's parameters and parts.** Anything
 a second model could use goes into the library or a generic tool, never into one model's script.
 
-- **The Blender library, `packages/game-models/lib/`** (a model script imports it after
-  `sys.path.insert(0, <packages/game-models>)`):
+- **The Blender library, `src/game-models/lib/`** (a model script imports it after
+  `sys.path.insert(0, <src/game-models>)`):
   - `scene`: a clean scene at the clip rate, `apply_scale`, `triangles`, and `export_glb` (the
     export settings the game takes: GLB, skins, one animation per NLA track, Y up, every mesh's
     faces in a fixed order so a rebuild gives the same bytes).
@@ -319,42 +319,42 @@ a second model could use goes into the library or a generic tool, never into one
     deforms nothing, parented to the bone it moves with; `eyes.spot` is where an eye looks out,
     and its bone points the way it looks (`eyes.look`), so the game's eye glow shrinks into an
     eye turned away from the camera (#1171).
-- **The ground check:** `packages/game-models/check_ground.py -- <model.glb> [tolerance]` samples every
+- **The ground check:** `src/game-models/check_ground.py -- <model.glb> [tolerance]` samples every
   frame of every clip and prints, per clip, the lowest point of the deformed mesh and of each
   paw or foot; it fails when anything sinks below the ground (z = 0) by more than the tolerance.
-- **The motion check (#1071):** `packages/game-models/check_motion.py -- <model.glb> [<Clip>=<speed> ...]`
+- **The motion check (#1071):** `src/game-models/check_motion.py -- <model.glb> [<Clip>=<speed> ...]`
   samples every frame of every clip and prints, per clip, **foot sliding** (a paw's speed over
   the ground while it stands on it, against the speed the game moves the model at while it
   plays that clip; the model script prints them; every clip, one-shots too), the **loop seam** (pose, every bone's shift, the
   wisps' `loc.` channels too, and roughness from the last frame to the first), the **joins** of a loop to its lead-in and lead-out (`<Loop>Start`,
   `<Loop>End`) and **jitter** (how rough the roughest joint curve runs); it fails
   past its limits (in its header).
-- **The clearance check (#1227):** `packages/game-models/check_clearance.py -- <model.glb> [tolerance]`
+- **The clearance check (#1227):** `src/game-models/check_clearance.py -- <model.glb> [tolerance]`
   samples every frame of every clip and prints, per clip, the smallest gap between a wisp and the
   rest of the mesh, the frame, and the wisp and body bone it's between; it fails when a wisp's
   faces cross the body's, a wisp sits inside it, or the gap falls below the tolerance
   (`lib/clearance.py`).
-- **The brow check (#1249):** `packages/game-models/check_brows.py -- <model.glb> [tolerance]`
+- **The brow check (#1249):** `src/game-models/check_brows.py -- <model.glb> [tolerance]`
   looks at each eye (its `eye.*` point and the pieces `eyes.eye` built around it) every other frame
   of every clip, from the model's front, from the eye's side and straight into it, and fails when
   more of the eye than the tolerance shows above a brow (or anything lying on the eye) crossing it:
   a brow may overlap the eye, but the eye's top never shines through above it (`lib/brows.py`).
-- **The covered-eye check (#1758):** `packages/game-models/check_eyes_covered.py -- <model.glb> [tolerance]`
+- **The covered-eye check (#1758):** `src/game-models/check_eyes_covered.py -- <model.glb> [tolerance]`
   looks at each of our eyes straight on, along the way it looks, at rest and every other frame of
   every clip, and fails when the body (anything but the eye's own eyeball, iris, pupil, rim, brow
   and lid; a generated skin's loose pieces included) covers more of the eye's face, within its
   rim, than the tolerance (`lib/covered.py`).
-- **The tails check (#1771):** `packages/game-models/check_tails.py -- <model.glb>` fails a many-tailed
+- **The tails check (#1771):** `src/game-models/check_tails.py -- <model.glb>` fails a many-tailed
   model when any tail's vertices don't follow that tail's own bones, or when a tail doesn't move in a
   clip. Its `TAILS` list names each such model and how many tails it has. `lib/tails.py` finds the
   tails on the mesh and gives them bones, weights and motion (`Fan`). Meshy's rig gives a fan of tails
   shared stalks at best: remove those and use `Fan`.
-- **The volume check (#1306):** `packages/game-models/check_volume.py -- <model.glb> [share]`
+- **The volume check (#1306):** `src/game-models/check_volume.py -- <model.glb> [share]`
   samples every frame of every clip and prints, per clip, the smallest share of its rest depth or
   width the body keeps at a station on the spine or neck, the frame, the station and which; it
   fails below the share (`lib/volume.py`). Its `KNOWN` list and `check_clearance.py`'s are judged
   alike (`lib/known.py`).
-- **The connectivity check (#1403):** `packages/game-models/check_connectivity.py -- <model.glb> [tolerance]`
+- **The connectivity check (#1403):** `src/game-models/check_connectivity.py -- <model.glb> [tolerance]`
   cuts the mesh into pieces (welded by position), gives each part (a crystal, a claw, a tuft) the
   nearest larger piece at rest as the skin it sits on, samples every frame of every clip and prints,
   per clip, the most a part's gap to it grows beyond its gap at rest, the frame, the part and that
@@ -362,7 +362,7 @@ a second model could use goes into the library or a generic tool, never into one
   share at rest, #1458); it fails past the tolerance or `SINK` (`lib/connectivity.py`). Wisps are
   exempt. Its `KNOWN` list is judged like the volume check's. `test_connectivity.py` tests it on a
   box with a part that stays, dips, lifts off and sinks in.
-- **The footprint check (#1520):** `packages/game-models/check_footprint.py -- <model.glb>`
+- **The footprint check (#1520):** `src/game-models/check_footprint.py -- <model.glb>`
   measures the rest pose and every frame of every clip and prints how far the model's meshes reach
   across the hex the game stands it on, seen from above (1.00 at the hex's edge), and the frame. It
   fails a regular monster past 0.95 at rest (5 % padding inside), 1.30 in its Attack and 1.05 in
@@ -382,11 +382,11 @@ a second model could use goes into the library or a generic tool, never into one
   model no view preloads (shown only in the gear panel) isn't measured. Its `KNOWN` list
   is judged like the volume check's. `test_footprint.py` tests it on boxes that fit their hex or
   are too big for it.
-- **The world-scale check (#1837):** `packages/game-models/check_world_scale.py -- <model.glb>`
+- **The world-scale check (#1837):** `src/game-models/check_world_scale.py -- <model.glb>`
   measures each model against the world's scale (`lib/world_scale.py`): a model that isn't a
   monster by the kind its script names, the players' figure against the player's height (step
   23). `test_world_scale.py` tests it on boxes of each kind, sized to it or off it.
-- **The dimensions check (#1299):** `packages/game-models/check_dimensions.py -- <model.glb> [...]`
+- **The dimensions check (#1299):** `src/game-models/check_dimensions.py -- <model.glb> [...]`
   measures each limb at rest per body plan (forearm against upper arm, shin against thigh, the
   foreleg against the shoulder's height) and fails a measure outside its range
   (`lib/dimensions.py`, where the ranges and their reasons are).
@@ -394,7 +394,7 @@ a second model could use goes into the library or a generic tool, never into one
   line per clip and limit it misses, with the value, the limit and by how much, and the passing
   clips on one line (`lib/summary.py`). Read those while tuning, not the full logs.
 - **The gait sweep (#1524):** `uv run --locked --package khovax-game-models
-  packages/game-models/sweep_gait.py packages/game-models/<name>.py
+  src/game-models/sweep_gait.py src/game-models/<name>.py
   resourcepacks/default/models/<name>/<name>.glb NAME=a,b,c ... [--clips Walk,Run] [--keep <folder>]`
   builds the model over the grid of gait values in parallel, runs those three checks on each in
   summary mode, and prints a Markdown table: `PASS`, or the limit each combination misses most
@@ -404,15 +404,15 @@ a second model could use goes into the library or a generic tool, never into one
   `*_TILES`) after `tuning.arguments` has run, so a swept value reaches it. Tune a gait with a
   sweep or two rather than hand-run rounds of build and check, then write the chosen values into
   the script.
-- **The curve plots (#1071):** `packages/game-models/plot_motion.py -- <out.png> <Clip> <model.glb>
+- **The curve plots (#1071):** `src/game-models/plot_motion.py -- <out.png> <Clip> <model.glb>
   [<before.glb>]` draws each bone's turn over a clip, a loop twice through with its seam
   marked, the previous build faint behind: stiffness, overlap and a stop at the seam read better
   from a curve than from a GIF.
 - **The renders:** `scripts/render_views.py` (every side in Blender) and
-  `packages/game/tools/models/render_in_game.gd` (any `.glb` in the real game scene: six sides,
+  `src/game/tools/models/render_in_game.gd` (any `.glb` in the real game scene: six sides,
   the game camera, the codex close-ups `portrait` and `face`, or a clip's frames; usage in its header).
 - **A new model** starts from its source (above), never from scratch (#1568): turn it into the
-  source the script builds from with `packages/game-models/import_source.py` (usage in its
+  source the script builds from with `src/game-models/import_source.py` (usage in its
   header; it adopts a rig the source already has), then place, rig and animate it like the
   existing scripts (`attachments.add`, `weights.bind`, `clips.animate`, `scene.export_glb`). The
   scripted models built from the library (`mana_wolf.py` and others) stay maintained; a body plan
@@ -425,7 +425,7 @@ a second model could use goes into the library or a generic tool, never into one
 
 ## Generated models (Meshy): the order and the traps (#1526)
 A model whose mesh and colour come from the owner's Meshy download (as Drakkudor's do,
-`packages/game-models/drakkudor.py`) goes through these steps, in this order:
+`src/game-models/drakkudor.py`) goes through these steps, in this order:
 
 1. **Generating in Meshy** (the owner generates; owner, #1671): **triangle** topology at about
    **6,000 triangles**. That budget comes out a bit flawed now and then (thin parts merged into
@@ -438,11 +438,11 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
    Meshy rigs it first wherever it can (#1514);
    where it can't, we build our own Blender rig (#1732, section 2). An evolution's image comes
    from the copypastas above (#1754).
-2. **Inspect:** `uv run --locked packages/game-models/inspect_meshy.py <download.glb>` (#1523),
+2. **Inspect:** `uv run --locked src/game-models/inspect_meshy.py <download.glb>` (#1523),
    one report on its mesh, material, painted eyes, body columns and rig. Read it before measuring
    anything by hand. It warns when the download is far above step 1's triangle target.
-3. **Import and strip:** `packages/game-models/import_source.py` makes the source the script
-   builds from (`packages/game-models/sources/<name>.glb`): only the base colour, opaque,
+3. **Import and strip:** `src/game-models/import_source.py` makes the source the script
+   builds from (`src/game-models/sources/<name>.glb`): only the base colour, opaque,
    single-sided and matte (#1476). A download Meshy has rigged keeps its skin and rig, adopted
    by `lib/rigged.py` (#1516): its chains checked against the parts they move, a short one
    regrown and one bleeding into another's part cleaned, its bones named to the library's scheme,
@@ -573,9 +573,9 @@ Meshy rigs one clip per export (#1934): the owner exports each clip from the sam
 body into `Coarisfinia/khovax-sources` (`1827-baseline-body/`). The clips are kept **apart from the
 body**, as a clip library of their own, so a later body plays the same clips:
 
-1. **Each export becomes a clip source:** `uv run --locked packages/game-models/blender.py
-   --background --factory-startup --python packages/game-models/import_clip.py -- <export.glb>
-   <Clip> packages/game-models/sources/player/clips/<Clip>.glb`, named after the clip the game
+1. **Each export becomes a clip source:** `uv run --locked src/game-models/blender.py
+   --background --factory-startup --python src/game-models/import_clip.py -- <export.glb>
+   <Clip> src/game-models/sources/player/clips/<Clip>.glb`, named after the clip the game
    plays. It keeps the rig and its one clip, without the body (`lib/clip_sources.py`: a stand-in
    triangle carries the rig as a skin). `rest` instead of a clip name writes the rig alone, the
    library's skeleton (`sources/player/skeleton.glb`), which every clip must share.
@@ -625,7 +625,7 @@ World props are generated as **shapes only** (5 credits, the owner's pick on #18
 by us; creatures and the player normally keep Meshy's texture (15). State the texture decision
 and its reason explicitly on each request, including any exception to these defaults (above).
 **There is one small texture set for
-every prop**, in `packages/game-models/textures/` (stone, sandstone, wood, moss): CC0 textures
+every prop**, in `src/game-models/textures/` (stone, sandstone, wood, moss): CC0 textures
 (Poly Haven, ambientCG) that `prop_textures.py` downloads by pinned checksum and reduces to a few
 flat tones, so they keep their surface detail but suit the cel shading. Never a texture of a
 prop's own, and never another grey stone. A prop's script only maps its parts onto the set
@@ -660,7 +660,7 @@ place (a sign's lettering, a banner's pattern, a face), or the owner preferring 
 No runes or carvings by script: they come from the rune set (#1855) and the engraving work (#1856).
 
 ## 1. Build (Blender script)
-- **Where:** `packages/game-models/<name>.py` builds the model, and
+- **Where:** `src/game-models/<name>.py` builds the model, and
   `resourcepacks/default/models/<name>/<name>.glb` is its output, with `SOURCE.md`, a license and a
   `CREDITS.md` entry, as AGENTS.md's asset rules say.
 - **Look:** cel-shaded eye candy, medium-poly for anything the camera sees up close (AGENTS.md,
@@ -673,7 +673,7 @@ No runes or carvings by script: they come from the rune set (#1855) and the engr
   body without legs (a vortex, floating rocks, a blob) must be buildable from it too, from `body`,
   `parts`, `surface`, `eyes` and its own rig module.
 - **Baseline:** the mana wolf (#995) is the baseline for the level of detail: every new model
-  matches or exceeds it up close (owner). Its build script, `packages/game-models/mana_wolf.py`, and its
+  matches or exceeds it up close (owner). Its build script, `src/game-models/mana_wolf.py`, and its
   renders on the `assets` branch (`pr-995-v2-*`, the close-ups `pr-995-v2-portrait.png` and
   `pr-995-v2-face.png` first) are the reference.
 - **Scale and placement:** the origin at the feet, facing +Z after import (glTF's forward,
@@ -715,7 +715,7 @@ clips. Ask the owner only when it's unclear what should move how.
 - **Weights:** automatic weights (`ARMATURE_AUTO`) as a start, then fix by script where they
   fail. At most four bone influences per vertex, normalised.
 - **Clips:** one action per state the game plays. Every creature carries the full creature set
-  (owner, #1157), named once in `packages/game-models/lib/clip_set.py`: `clips.animate` refuses a
+  (owner, #1157), named once in `src/game-models/lib/clip_set.py`: `clips.animate` refuses a
   creature without one of them, and CI's `check_clip_set.py` fails a committed creature `.glb`
   that lacks one (every skinned model under the default pack's `models/` except the non-creatures it
   lists). A clip every creature gains goes into that set, with every creature's rebuild in the
@@ -748,7 +748,7 @@ clips. Ask the owner only when it's unclear what should move how.
   there (as `Rogue.glb.import` does).
 
 ## 4. Verify (every item gives an image or a number for the PR)
-1. **Every side:** `uv run --locked packages/game-models/blender.py --background --factory-startup
+1. **Every side:** `uv run --locked src/game-models/blender.py --background --factory-startup
    --python .claude/skills/model/scripts/render_views.py -- <model.glb> <out_dir> [clips] [frames]`. It
    writes front, back, left, right, top and a three-quarter view, and `sheet.png`. **Look at it.**
    Check the proportions, gaps, stretched textures and anything floating or clipping.
@@ -759,8 +759,8 @@ clips. Ask the owner only when it's unclear what should move how.
 3. **Silhouette:** a flat black render from the game camera's angle. Is it readable as what it
    is, at the size it has on screen?
 4. **Godot import, in the game project:** a new worktree first links the resource packs (`uv run
-   --locked packages/game-build/link_resource_packs.py`, #2134). Then, after `godot --headless
-   --path packages/game --import`, run `godot --headless --path packages/game -s
+   --locked src/game-build/link_resource_packs.py`, #2134). Then, after `godot --headless
+   --path src/game --import`, run `godot --headless --path src/game -s
    res://tools/models/check_glb.gd -- res://resourcepacks/default/models/<name>/<name>.glb <Clip> ...`. It goes through
    the repo's own import settings (looping clips included) and must print `MODEL CHECK: PASS`: a
    skeleton with bones, every skinned mesh bound to it, every clip the game plays, and a centre of
@@ -769,10 +769,10 @@ clips. Ask the owner only when it's unclear what should move how.
    constant: a view that plays a new clip adds it there. A monster's model is worn by naming it in
    its species' data (`model`, #1223), and the boot flow checks it against the monster views' clips.
 5. **In game:** with the resource packs linked (step 4), first re-import after every build (`godot
-   --headless --path packages/game --import`): Godot renders its imported copy of the `.glb`, and a
+   --headless --path src/game --import`): Godot renders its imported copy of the `.glb`, and a
    stale one shows the previous build, however much the Blender checks say changed (#1164). Then,
-   with `packages/game/tools/models/render_in_game.gd`, run off the desktop through
-   `packages/game-offscreen/offscreen.py` (AGENTS.md's screenshot recipe; never a WSLg window), put
+   with `src/game/tools/models/render_in_game.gd`, run off the desktop through
+   `src/game-offscreen/offscreen.py` (AGENTS.md's screenshot recipe; never a WSLg window), put
    the model in the game, under the game's
    cel shading and its top-down camera at play distance, on real terrain, next to the player for
    scale. Capture it at a desktop and a phone resolution. It must stand out from the ground and
@@ -782,7 +782,7 @@ clips. Ask the owner only when it's unclear what should move how.
    through the attack clip too.
 6. **Clips in game:** a GIF of each clip playing in Godot, all of them from one run
    (`clip=Idle,Walk,Attack,...` per view: the game starts once, which is most of a run's cost),
-   each made with `packages/game-models/gif.py`. Check that loops don't jump, steps don't slide, and the
+   each made with `src/game-models/gif.py`. Check that loops don't jump, steps don't slide, and the
    attack and hit read at game zoom.
    **Before and after from one camera (#2107):** a view's camera frames where the model moves over
    the clip, so it re-frames on every build and a before GIF doesn't line up with its after. Each
@@ -801,14 +801,14 @@ clips. Ask the owner only when it's unclear what should move how.
    anything far above.
 8. **Renderer:** check the glow and materials in the web build (Compatibility renderer) as well as
    on desktop.
-9. **Ground contact:** `uv run --locked packages/game-models/blender.py --background --factory-startup
-   --python packages/game-models/check_ground.py -- <model.glb>` must print `GROUND CHECK: PASS`: no paw, foot or
+9. **Ground contact:** `uv run --locked src/game-models/blender.py --background --factory-startup
+   --python src/game-models/check_ground.py -- <model.glb>` must print `GROUND CHECK: PASS`: no paw, foot or
    any other part sinks into the ground in any frame of any clip (owner, #995). Its numbers go
    into the PR.
 10. **Proportions:** the build prints `PROPORTIONS CHECK: PASS` (`lib/metrics.py`); its lines go
    into the PR. A deliberate change of proportions updates `REFERENCE` in the same PR, and the
    PR says so.
-11. **Reference comparison (#1072):** `uv run --locked packages/game-models/blender.py --background
+11. **Reference comparison (#1072):** `uv run --locked src/game-models/blender.py --background
    --factory-startup --python .claude/skills/model/scripts/compare_sheet.py -- <model.glb>
    <reference> <out_dir> [views]`, the reference being the last approved `.glb` (`git show
    origin/main:resourcepacks/default/models/<name>/<name>.glb > <scratch>/reference.glb`) or, for a new
@@ -842,17 +842,17 @@ clips. Ask the owner only when it's unclear what should move how.
    (on #1072 it measured close-set eyes correctly and still called them more focused). Only a
    change the owner asked for stays unfixed. A reviewer that only praises has failed: rerun it
    with a fresh subagent.
-13. **Motion (required, #1071):** `uv run --locked packages/game-models/blender.py --background
-   --factory-startup --python packages/game-models/check_motion.py -- <model.glb> <the speeds the build
+13. **Motion (required, #1071):** `uv run --locked src/game-models/blender.py --background
+   --factory-startup --python src/game-models/check_motion.py -- <model.glb> <the speeds the build
    prints>` must print
-   `MOTION CHECK: PASS`, and `packages/game-models/plot_motion.py` plots each clip the PR changes
+   `MOTION CHECK: PASS`, and `src/game-models/plot_motion.py` plots each clip the PR changes
    against the previous build (`git show main:<model.glb>`, with its `.import` beside it). Both
    go into the PR, before and after. A clip that still fails waits in its `KNOWN` list with the
    issue that fixes it, and a fix takes it off. CI runs it on every `.glb` (#2117), at the speeds
    the rebuild check's build prints (step 14, `--speeds`).
 
 14. **Rebuild (#1085):** `uv run --locked --package khovax-game-models
-   packages/game-models/check_rebuild.py packages/game-models/<name>.py resourcepacks/default/models/<name>/<name>.glb` builds the model twice,
+   src/game-models/check_rebuild.py src/game-models/<name>.py resourcepacks/default/models/<name>/<name>.glb` builds the model twice,
    side by side, and compares the two builds with each other and with the committed `.glb`; it
    must print `REBUILD CHECK: PASS`. On a difference it names what differs (the JSON's part, or
    each mesh's indices or attribute and each clip's channel, by how much): indices that only move
@@ -862,27 +862,27 @@ clips. Ask the owner only when it's unclear what should move how.
    an Ubuntu 24.04 container: the C library's maths differs between releases in the last bit, and
    the decimation and face order turn that into a different file. So build committed models on
    Ubuntu 24.04 (this machine's WSL); moving to another release moves CI's container with it.
-15. **Clearance (#1227):** `uv run --locked packages/game-models/blender.py --background
-   --factory-startup --python packages/game-models/check_clearance.py -- <model.glb>` must print
+15. **Clearance (#1227):** `uv run --locked src/game-models/blender.py --background
+   --factory-startup --python src/game-models/check_clearance.py -- <model.glb>` must print
    `CLEARANCE CHECK: PASS`: no wisp cuts into the body (crest, ears, anything) in any frame of any
    clip. A model without wisps passes. A clip that still fails waits in its `KNOWN` list with the
    issue that fixes it, and a fix takes it off. Its lines go into the PR. CI runs it on every
    `.glb` with the rebuild check (step 14).
-16. **Brows (#1249):** `uv run --locked packages/game-models/blender.py --background
-   --factory-startup --python packages/game-models/check_brows.py -- <model.glb>` must print
+16. **Brows (#1249):** `uv run --locked src/game-models/blender.py --background
+   --factory-startup --python src/game-models/check_brows.py -- <model.glb>` must print
    `BROW CHECK: PASS`: no eye shows above its brow in any clip, from the front, the side or
    straight on. A model without eye points passes. Its lines go into the PR. CI runs it on every
    `.glb` with the rebuild check (step 14). `eyes.eye`'s `brow_size` makes a smaller brow that still
    covers the eye's top.
-17. **Dimensions (#1299):** `uv run --locked packages/game-models/blender.py --background
-   --factory-startup --python packages/game-models/check_dimensions.py -- <model.glb>` must print
+17. **Dimensions (#1299):** `uv run --locked src/game-models/blender.py --background
+   --factory-startup --python src/game-models/check_dimensions.py -- <model.glb>` must print
    `DIMENSIONS CHECK: PASS`: every limb's segments within their body plan's ranges at rest (the
    owner, on #1297: no "weird dimensions"). A model without limbs of a known body plan passes. Its
    lines go into the PR. CI runs it on every `.glb` with the rebuild check (step 14). A new body
    plan adds its own ranges to `lib/dimensions.py`, with their reasons.
 
-18. **Volume (#1306):** `uv run --locked packages/game-models/blender.py --background
-   --factory-startup --python packages/game-models/check_volume.py -- <model.glb>` must print
+18. **Volume (#1306):** `uv run --locked src/game-models/blender.py --background
+   --factory-startup --python src/game-models/check_volume.py -- <model.glb>` must print
    `VOLUME CHECK: PASS`: in every frame of every clip, the body's depth and width at stations
    along the spine and neck keep their share of rest (`lib/volume.py`, where the stations and
    the share are), so a creature bending down doesn't thin out (the owner, on #1305). A model
@@ -890,8 +890,8 @@ clips. Ask the owner only when it's unclear what should move how.
    issue that fixes it, and a fix takes it off. Its lines go into the PR. CI runs it on every
    `.glb` with the rebuild check (step 14).
 
-19. **Connectivity (#1403):** `uv run --locked packages/game-models/blender.py --background
-   --factory-startup --python packages/game-models/check_connectivity.py -- <model.glb>` must print
+19. **Connectivity (#1403):** `uv run --locked src/game-models/blender.py --background
+   --factory-startup --python src/game-models/check_connectivity.py -- <model.glb>` must print
    `CONNECTIVITY CHECK: PASS`: in every frame of every clip, every attached part (crystals, gems,
    horns, claws, tufts) stays on the skin it sits on, its gap there growing no more than the
    tolerance beyond its gap at rest, and doesn't sink into it (`lib/connectivity.py`). Wisps are
@@ -899,8 +899,8 @@ clips. Ask the owner only when it's unclear what should move how.
    A clip that still fails waits in its `KNOWN` list with the issue that fixes it, and a fix takes it
    off. Its lines go into the PR. CI runs it on every `.glb` with the rebuild check (step 14).
 
-20. **Footprint (#1520):** `uv run --locked packages/game-models/blender.py --background
-   --factory-startup --python packages/game-models/check_footprint.py -- <model.glb>` must print
+20. **Footprint (#1520):** `uv run --locked src/game-models/blender.py --background
+   --factory-startup --python src/game-models/check_footprint.py -- <model.glb>` must print
    `FOOTPRINT CHECK: PASS`. These are base rules for every monster, checked in CI (the owner, on
    #1514, #1533 and #1528), seen from above, against the hex the game stands it on:
    - **rest pose:** within its hex with 5 % padding (reach 0.95); a boss, enraged or stronger
@@ -918,12 +918,12 @@ clips. Ask the owner only when it's unclear what should move how.
    on every `.glb` with the rebuild check (step 14).
 
 21. **Our eyes (#1683):** `uv run --locked --package khovax-game-models
-   packages/game-models/check_eyes.py` fails a creature model whose eye points have no lids, or
+   src/game-models/check_eyes.py` fails a creature model whose eye points have no lids, or
    that has no eyes at all: its eyes must be ours (`lib/eyes.py`, put on a generated model by
    `lib/marked_eyes.py`), never painted ones. A creature designed without eyes goes into its
    `EYELESS` list with the reason, and one still waiting for ours into `KNOWN` with its issue.
    CI runs it on every push. Its other half, `blender.py --background --factory-startup --python
-   packages/game-models/check_painted_eyes.py -- <model.glb>` (#1688), fails a creature whose
+   src/game-models/check_painted_eyes.py -- <model.glb>` (#1688), fails a creature whose
    texture still shows the generator's eyes on its head: a mirrored pair of flat black or glowing
    spots that `marked_eyes.find` picks out (`DARK`, `GLOW`), left beside or under ours because
    `replace` wasn't run or missed them; and fragments of them left beyond a pair (#1756), spots
@@ -934,8 +934,8 @@ clips. Ask the owner only when it's unclear what should move how.
    area (a basalt half) needs none. CI runs it on every `.glb`, with its test
    (`test_painted_eyes.py`).
 
-22. **Nothing covers our eyes (#1758):** `uv run --locked packages/game-models/blender.py --background
-   --factory-startup --python packages/game-models/check_eyes_covered.py -- <model.glb>` must print
+22. **Nothing covers our eyes (#1758):** `uv run --locked src/game-models/blender.py --background
+   --factory-startup --python src/game-models/check_eyes_covered.py -- <model.glb>` must print
    `EYES COVERED CHECK: PASS`: seen straight on, no surface of the body pokes through an eye or lies
    in front of it within its rim, in any frame of any clip, its shut lid included (the owner, on
    #1747: the Wobulumu's skin crossed the bottom of its eyes). A model without eye points passes.
@@ -945,8 +945,8 @@ clips. Ask the owner only when it's unclear what should move how.
    that fixes it. Its lines go into the PR. CI runs it on every `.glb`, with its test
    (`test_eyes_covered.py`).
 
-23. **World scale (#1837):** `uv run --locked packages/game-models/blender.py --background
-   --factory-startup --python packages/game-models/check_world_scale.py -- <model.glb>` must print
+23. **World scale (#1837):** `uv run --locked src/game-models/blender.py --background
+   --factory-startup --python src/game-models/check_world_scale.py -- <model.glb>` must print
    `WORLD SCALE CHECK: PASS`: a model built here that isn't a monster names its kind
    (`WORLD_SCALE`) and stands, at rest, within its kind's height, and an edge piece spans its hex
    edge (`lib/world_scale.py`); the players' figure stands at the player's height; a pack's model a
@@ -960,7 +960,7 @@ clips. Ask the owner only when it's unclear what should move how.
    its import may be merged. Props and the other non-creatures (`NOT_CREATURES` in
    `check_clip_set.py`) don't take it, and models already in the game are handled in their own
    issues (#2183 and its follow-ups). It checks the import, never the design: no creature prompt
-   gains a mouth line for it (#2052). `uv run --locked --package khovax-game-models packages/game-models/check_mouth.py`
+   gains a mouth line for it (#2052). `uv run --locked --package khovax-game-models src/game-models/check_mouth.py`
    (#2191, on every push in CI) fails a creature without a `jaw` bone that moves skin and opens in
    Attack and ChannelStart; how the mouth looks, the builder still judges from the renders.
    - **What passes:** closed, the mouth reads as a mouth, with no holes, torn faces or stray
@@ -994,7 +994,7 @@ clips. Ask the owner only when it's unclear what should move how.
   4. **Close-ups:** the codex view, `portrait` and `face` from `render_in_game.gd`.
   Publish them on the `assets` branch per AGENTS.md.
 - **One command for all of them (#1525):** `uv run --locked --package khovax-game-models
-  packages/game-models/render_media.py resourcepacks/default/models/<name>/<name>.glb --pr <n> [--tag v2]
+  src/game-models/render_media.py resourcepacks/default/models/<name>/<name>.glb --pr <n> [--tag v2]
   [--quick]` (in a new worktree, after `link_resource_packs.py` as in step 4) renders the sheet,
   the in-game shots (desktop, phone, close-ups, points, the six sides joined into one picture)
   and every clip's GIF in game and close up, Blender and Godot side by side and Godot off the

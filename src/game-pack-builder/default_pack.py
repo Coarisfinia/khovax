@@ -2,7 +2,7 @@
 its manifest as pack.jsonc, and every file it lists (a glTF's buffers and images too) at its path
 in the pack, each with the game's import settings, so the pack imports as the game does.
 
-    uv run --locked --package khovax-game-pack-builder packages/game-pack-builder/default_pack.py <out>
+    uv run --locked --package khovax-game-pack-builder src/game-pack-builder/default_pack.py <out>
 
 Of each .import file only its importer and its settings are kept: Godot gives the pack's copies
 their own uids and imported files, so a pack never claims one of the game's. The textures Godot
@@ -20,7 +20,7 @@ from game_shared.resource_packs import MANIFEST, PACK_FOLDER, file_lists, gltf_f
 
 GAME = Path(__file__).resolve().parents[1] / "game"
 # The default pack's own folder at the repository's root (#1978), which the game reaches through
-# its link, resourcepacks/ (packages/game-build/link_resource_packs.py).
+# its link, resourcepacks/ (src/game-build/link_resource_packs.py).
 PACK_ROOT = GAME.parents[1] / "resourcepacks" / "default"
 SINGLE = (
     "textures", "models", "audio", "regions", "realms", "quests", "species", "tiles", "translations", "loot_tables",

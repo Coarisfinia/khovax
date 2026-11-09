@@ -7,8 +7,8 @@ one flat copper tint (`prop_paint.flat`): another ore (iron, crystal) is this sh
 colour on its veins (retexture first, #1847). No moss, so the veins read from the camera, and no
 runes or writing (the owner, on #1929). A static model: no rig and no clips.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/ore_outcrop.py -- resourcepacks/default/models/ore-outcrop/ore_outcrop.glb
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/ore_outcrop.py -- resourcepacks/default/models/ore-outcrop/ore_outcrop.glb
 
 Blender is Z-up; the origin is at the boulder's foot, in the middle of its hex, and it is sized to
 its hex as a prop (lib/footprint.py's `PROP`)."""

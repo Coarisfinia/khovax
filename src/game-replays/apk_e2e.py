@@ -3,7 +3,7 @@ its test mode and reads the flow's result from the game's own log: it must pass 
 state hash the headless run of the same commit ended in (#876). Run by CI inside the emulator
 step. A start that never reports is retried once (#957).
 
-    uv run --locked packages/game-replays/apk_e2e.py <test APK> <the headless run's final hash>
+    uv run --locked src/game-replays/apk_e2e.py <test APK> <the headless run's final hash>
 """
 
 import re

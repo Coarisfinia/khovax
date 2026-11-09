@@ -3,7 +3,7 @@ on it, turned wide open in Attack and in ChannelStart, the clip that opens it fo
 model skill's step 24). It reads the .glb without Blender and says nothing about how the mouth
 looks: the renders of step 24 still show that. CI runs it on every push.
 
-    uv run --locked --package khovax-game-models packages/game-models/check_mouth.py
+    uv run --locked --package khovax-game-models src/game-models/check_mouth.py
 
 A creature model is one check_clip_set.py checks. One designed without a mouth is let off in
 MOUTHLESS with its reason, and one still waiting for its mouth in KNOWN with its issue

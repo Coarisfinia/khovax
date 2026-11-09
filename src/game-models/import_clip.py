@@ -1,8 +1,8 @@
 """Turns one of Meshy's rigged exports into a clip source (#1935): its rig and its one clip, without
 the body (lib/clip_sources.py), which a clip library's script merges with the others.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/import_clip.py -- <export.glb> <Clip> <clip-source.glb>
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/import_clip.py -- <export.glb> <Clip> <clip-source.glb>
 
 Meshy rigs one clip per export (#1934): the owner exports each clip from the same rigged body, and
 each becomes its own clip source, named after the clip the game plays (`Wave`), in the library's

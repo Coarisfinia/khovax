@@ -4,8 +4,8 @@ the clip's frames (degrees); given a second model, its curves are drawn faint be
 before and after. A looping clip is drawn twice through, with its seam marked, so a stop or a
 jump there shows.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/plot_motion.py -- \
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/plot_motion.py -- \
         <out.png> <Clip> <model.glb> [<before.glb>] [--bones a,b,c]
 
 The bones default to the chains a quadruped moves (BONES); the image is drawn with numpy and

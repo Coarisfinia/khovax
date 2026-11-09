@@ -5,7 +5,7 @@ extends SceneTree
 ## (resourcepacks/default/<kind>/<pack>/SOURCE.md, #1978): its title and its author, source and
 ## license lines (#70), every pack in the order of its folder's name. CI runs it
 ## and fails when the committed CREDITS.md differs, so the credits can't drift from the assets:
-## godot --headless --path packages/game -s res://tools/godot/credits.gd
+## godot --headless --path src/game -s res://tools/godot/credits.gd
 ##
 ## It also refuses an asset under the Quaternius Asset License (QAL, #1954): the author's site,
 ## quaternius.com, offers its files under it since 2026-08-28, and it forbids redistributing them

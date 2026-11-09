@@ -1,8 +1,8 @@
 """Checks that every model is sized to the world's scale (#1837): a hex's size and a wall's height
 against the player's height, from lib/world_scale.py, where the numbers and the kinds are.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/check_world_scale.py -- <model.glb> [<model.glb> ...]
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/check_world_scale.py -- <model.glb> [<model.glb> ...]
 
 - **A model built by a script here that isn't a monster** (a prop in lib/footprint.py's sense)
   names its kind in its script (`WORLD_SCALE = "wall"`), and its rest pose is measured against

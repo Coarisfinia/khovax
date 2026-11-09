@@ -1,7 +1,7 @@
 """The default resource pack's manifest (#1860), as the checks read it: the pack that describes the
 game's own resources, which ResourcePacks (slices/resource_packs/meta/) resolves every lookup
 through. Its file names its paths from its own folder, like a player's pack (#1978); read_manifest
-gives them relative to the game's project folder, packages/game, where res:// starts.
+gives them relative to the game's project folder, src/game, where res:// starts.
 """
 
 import glob

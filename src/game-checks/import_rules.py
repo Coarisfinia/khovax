@@ -25,7 +25,7 @@ builds' mode takes its flow's path from the environment or a project setting (#5
   of a path without its scheme, and no scene or resource names a file by a relative path.
 Comments don't count (gdscript_code.py strips them), so the rules can be explained in them.
 
-    uv run --locked --package khovax-game-checks packages/game-checks/import_rules.py
+    uv run --locked --package khovax-game-checks src/game-checks/import_rules.py
 """
 
 import os
@@ -57,7 +57,7 @@ SLICE_ORDER: tuple[str, ...] = (
 # The back-edges still waiting ("slice>later slice": the issue that drops it).
 SLICE_EXEMPT: dict[str, int] = {}
 
-THIS = "packages/game-checks/import_rules.py"
+THIS = "src/game-checks/import_rules.py"
 LATER_SLICE = "a slice names only the slices before it in SLICE_ORDER"
 # Where a folder's path starts: at the start of a string, or after a /.
 AT = r"(^|[/\"'])"

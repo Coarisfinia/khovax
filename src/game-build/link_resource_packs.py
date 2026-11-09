@@ -1,11 +1,11 @@
 """Links the game's project to the resource packs' folder at the repository's root (#1978): the
 default pack's files lie in resourcepacks/default/, laid out like a player's pack, outside the
 project, and Godot imports and loads only what is under res://. The link,
-packages/game/resourcepacks, is a symlink, or on Windows a directory junction, which needs neither
+src/game/resourcepacks, is a symlink, or on Windows a directory junction, which needs neither
 admin rights nor Developer Mode. Git leaves it out (.gitignore): Windows checks a tracked symlink
 out as a text file. Run it once per checkout or worktree, before Godot opens the project:
 
-    uv run --locked packages/game-build/link_resource_packs.py
+    uv run --locked src/game-build/link_resource_packs.py
 """
 
 import os
@@ -15,7 +15,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 PACKS = ROOT / "resourcepacks"
-LINK = ROOT / "packages" / "game" / "resourcepacks"
+LINK = ROOT / "src" / "game" / "resourcepacks"
 
 
 def main() -> int:

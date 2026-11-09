@@ -2,7 +2,7 @@
 placeholders is refused, in tr(), TranslationServer.tr() and tr_n()'s plural alike; one value,
 named values, %% and a literal outside tr() pass.
 
-    uv run --locked --package khovax-game-checks packages/game-checks/test_tr_placeholders.py
+    uv run --locked --package khovax-game-checks src/game-checks/test_tr_placeholders.py
 """
 
 import unittest

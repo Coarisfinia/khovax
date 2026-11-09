@@ -9,12 +9,12 @@ pull request allows that (#899: the agent adds it and says why, the owner's appr
 which CI passes on as OUTCOMES_CHANGE=true.
 
     [OUTCOMES_CHANGE=true] uv run --locked --package khovax-game-replays \\
-        packages/game-replays/rules_compare.py \\
+        src/game-replays/rules_compare.py \\
         <parent's report> <this commit's report> <parent>
 
 Run from this commit's repository root; <parent> is the commit the parent's report was made from.
-The game's paths are read in each commit's own layout: under packages/game (#1101), or at the
-root in a parent from before that move.
+The game's paths are read in each commit's own layout: under src/game, under packages/ before that
+rename (#1979), or at the root in a parent from before the move there (#1101).
 """
 
 import json
@@ -25,14 +25,15 @@ from typing import Any
 
 from game_shared import log
 
-# The game's folder (#1101); the paths below are inside it.
-GAME = "packages/game"
+# The folder the game lies in, in each layout a commit can have (#1101, #1979); the paths below
+# are inside its game/.
+TOPS = ("src", "packages")
 REPLAYS = "tests/replays"
 FOLDER = "core/rules_changes"
 # The APK's flow and its headless runner.
 FLOW_SCRIPTS = ("tests/apk/apk_flow.gd", "tests/e2e/test_apk_flow.gd")
 # This script, which no commit may remove (see main).
-SELF = "packages/game-replays/rules_compare.py"
+SELF = "src/game-replays/rules_compare.py"
 
 
 def git(*args: str) -> subprocess.CompletedProcess[str]:
@@ -40,10 +41,11 @@ def git(*args: str) -> subprocess.CompletedProcess[str]:
 
 
 def game_path(commit: str, path: str) -> str:
-    """A game file's path from the repository's root in that commit: under GAME, or at the root in
-    a commit from before the game moved there (#1101)."""
-    if git("cat-file", "-e", f"{commit}:{GAME}/project.godot").returncode == 0:
-        return f"{GAME}/{path}"
+    """A game file's path from the repository's root in that commit: under one of TOPS, or at the
+    root in a commit from before the game moved there (#1101)."""
+    for top in TOPS:
+        if git("cat-file", "-e", f"{commit}:{top}/game/project.godot").returncode == 0:
+            return f"{top}/game/{path}"
     return path
 
 

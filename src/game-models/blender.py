@@ -1,6 +1,6 @@
 """Starts Blender for the model tools, on the GPU where it can (#1050).
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
+    uv run --locked src/game-models/blender.py --background --factory-startup \
         --python <script.py> -- <args>
 
 Under WSL, Mesa's default OpenGL falls back to the CPU's software rasteriser; its d3d12 driver

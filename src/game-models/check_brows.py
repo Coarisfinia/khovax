@@ -2,8 +2,8 @@
 of every clip, each eye seen from the model's front, from its side and straight into it, from
 lib/brows.py.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/check_brows.py -- <model.glb> [<model.glb> ...] [tolerance=0.0025]
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/check_brows.py -- <model.glb> [<model.glb> ...] [tolerance=0.0025]
 
 It fails when more of an eye than the tolerance (a share of the eye's disc) shows above a brow
 (or any surface lying on the eye) crossing it: a brow may overlap the eye, but the eye's top must

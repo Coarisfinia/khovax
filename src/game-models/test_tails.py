@@ -2,8 +2,8 @@
 without faces, each tail on its own chain, or all on one chain as a generator's auto-rig does, or
 never moving in its clip. Only the first passes.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/test_tails.py
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/test_tails.py
 
 It prints each case's report and `TAILS TEST: PASS` or `FAIL` (and exits 1 on a fail)."""
 

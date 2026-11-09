@@ -109,7 +109,7 @@ func _play(driver: GameDriver, tree: SceneTree, origin: Vector2, leg: int, tick:
 ## On the web, saves the error log the way a player with only a controller does (#1598): the
 ## Credits tab's save button, focused, pressed with a controller's A. The page has had no click or
 ## key press, so the browser has to let the download through without any user activation;
-## packages/game-web-e2e/web_e2e.py checks that it arrives and holds the log. Elsewhere the button
+## src/game-web-e2e/web_e2e.py checks that it arrives and holds the log. Elsewhere the button
 ## hides, and nothing is saved.
 func _save_log_by_controller(main: Node) -> String:
 	if not OS.has_feature("web"):

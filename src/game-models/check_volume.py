@@ -3,8 +3,8 @@ every clip, the depth and width of the body's cross section at stations along th
 neck against their rest values, from lib/volume.py, where the stations and the share they must
 keep (SHARE) are documented.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/check_volume.py -- <model.glb> [<model.glb> ...] [share=0.8]
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/check_volume.py -- <model.glb> [<model.glb> ...] [share=0.8]
 
 It prints each station's rest depth and width, a line per clip (the smallest share of rest any
 station keeps, the frame, the station and which measure), and `VOLUME CHECK: PASS` or `FAIL` (and

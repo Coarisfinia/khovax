@@ -14,7 +14,7 @@ focuses itself, so this proves the browser lets a controller's press save the lo
 controller can reach the button in the Credits tab.
 
     CHROME=<chrome-headless-shell> EXPECTED_HASH=<hash> \
-        uv run --locked --package khovax-game-web-e2e packages/game-web-e2e/web_e2e.py [build/web-test]
+        uv run --locked --package khovax-game-web-e2e src/game-web-e2e/web_e2e.py [build/web-test]
 """
 
 import asyncio

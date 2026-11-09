@@ -2,7 +2,7 @@
 machine has cores (#2031), so a check over every model takes a share of the time it takes one
 after the other.
 
-    uv run --locked --package khovax-game-models packages/game-models/blender_each.py \
+    uv run --locked --package khovax-game-models src/game-models/blender_each.py \
         <list> <check.py> [<arg> ...]
 
 The list is the .glb files separated by NUL bytes, as changed_models.py writes it. Each runs as

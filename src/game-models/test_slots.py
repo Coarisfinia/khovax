@@ -2,8 +2,8 @@
 does (lib/imported.py's `slot`), on a clip whose first slot is another object's: one glTF animation
 that moves an empty and a rig imports as one action with a slot each, the empty's first.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/test_slots.py
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/test_slots.py
 
 - ground: the rig's slot lowers its body into the ground, so check_ground.py's report says it
   sinks; with the empty's slot on, the rig would stand still and pass.

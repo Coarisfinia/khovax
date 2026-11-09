@@ -2,10 +2,10 @@
 side by side, and compares the two .glb files byte for byte; with the committed .glb, it compares
 that too, which tells whether a pull request's .glb is what its script builds.
 
-    uv run --locked --package khovax-game-models packages/game-models/check_rebuild.py \
-        packages/game-models/<name>.py \
+    uv run --locked --package khovax-game-models src/game-models/check_rebuild.py \
+        src/game-models/<name>.py \
         [resourcepacks/default/models/<name>/<name>.glb]
-    uv run --locked --package khovax-game-models packages/game-models/check_rebuild.py --all \
+    uv run --locked --package khovax-game-models src/game-models/check_rebuild.py --all \
         [--keep <folder>] [--only <list>]
 
 `--all` checks every scripted model against its committed .glb, as CI does (#1161): a model

@@ -3,7 +3,7 @@ in for: a script that throws on the page fails the check instead of passing it, 
 activation must be exactly false, and an error log download that fails or never finishes is a
 failure of the run, not a traceback or a wait until CI's timeout.
 
-    uv run --locked --package khovax-game-web-e2e packages/game-web-e2e/test_web_e2e.py
+    uv run --locked --package khovax-game-web-e2e src/game-web-e2e/test_web_e2e.py
 
 It prints `WEB E2E TEST: PASS` or `FAIL` (and exits 1 on a fail)."""
 

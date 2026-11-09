@@ -1,7 +1,7 @@
 """Renders a model's pictures for its pull request in one command (#1525), publishes them on the
 assets branch and prints the description's media block, ready to paste.
 
-    uv run --locked --package khovax-game-models packages/game-models/render_media.py \
+    uv run --locked --package khovax-game-models src/game-models/render_media.py \
         resourcepacks/default/models/<name>/<name>.glb --pr <n> [--tag v2] [--quick] [--out <folder>] \
         [--jobs 3] [--timeout 900] [--no-publish]
 
@@ -50,7 +50,7 @@ from game_shared import log
 from lib import clip_set
 
 ROOT = Path(__file__).resolve().parents[2]
-GAME = ROOT / "packages" / "game"
+GAME = ROOT / "src" / "game"
 RENDER_VIEWS = ROOT / ".claude" / "skills" / "model" / "scripts" / "render_views.py"
 URL = "https://github.com/Coarisfinia/khovax/blob/assets/{}?raw=true"
 # The sizes the recent model pull requests show (#1514): the desktop's screen, a phone's, and the
@@ -86,7 +86,7 @@ class Job:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Render, publish and describe a model's pictures.")
-    parser.add_argument("model", type=Path, help="the model's .glb, inside packages/game")
+    parser.add_argument("model", type=Path, help="the model's .glb, inside src/game")
     parser.add_argument("--pr", type=int, required=True, help="the pull request the pictures are for")
     parser.add_argument("--tag", default="", help="the version in the names, e.g. v2")
     parser.add_argument("--quick", action="store_true", help="only the fast-feedback pictures")
@@ -176,7 +176,7 @@ def publish(paths: list[Path]) -> bool:
     """Publishes the pictures on the assets branch; True when that worked."""
     published = subprocess.run(
         ["uv", "run", "--locked", "--package", "khovax-game-visuals",
-         str(ROOT / "packages" / "game-visuals" / "publish.py"), *map(str, paths)],
+         str(ROOT / "src" / "game-visuals" / "publish.py"), *map(str, paths)],
         cwd=ROOT, check=False,
     )
     return published.returncode == 0
@@ -210,14 +210,14 @@ def clips_of(model: Path) -> list[str]:
 
 
 def blender_job(name: str, model: Path, out: Path, *extra: str) -> Job:
-    command = ["uv", "run", "--locked", str(ROOT / "packages" / "game-models" / "blender.py"),
+    command = ["uv", "run", "--locked", str(ROOT / "src" / "game-models" / "blender.py"),
                "--background", "--factory-startup", "--python", str(RENDER_VIEWS), "--",
                str(model), str(out), *extra]
     return Job(name, command, out)
 
 
 def godot_job(name: str, resource: str, out: Path, *extra: str) -> Job:
-    command = ["uv", "run", "--locked", str(ROOT / "packages" / "game-offscreen" / "offscreen.py"), "--",
+    command = ["uv", "run", "--locked", str(ROOT / "src" / "game-offscreen" / "offscreen.py"), "--",
                "--path", str(GAME), "-s", "res://tools/models/render_in_game.gd", "--",
                resource, str(out), *extra, "--seed=0"]
     return Job(name, command, out)

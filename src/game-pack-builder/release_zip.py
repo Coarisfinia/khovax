@@ -3,7 +3,7 @@ project, the parts of game_shared it imports, its README (PACK_MAKERS.md) and go
 Godot version and checksum the game's release is built with, which build_pack.py reads instead of
 setup-godot. It runs with a plain Python, no uv or workspace needed.
 
-    uv run --locked --package khovax-game-pack-builder packages/game-pack-builder/release_zip.py <out.zip>
+    uv run --locked --package khovax-game-pack-builder src/game-pack-builder/release_zip.py <out.zip>
 """
 
 import json

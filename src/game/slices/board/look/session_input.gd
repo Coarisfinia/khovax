@@ -3,7 +3,7 @@ extends Node
 ## What the slices see of this machine's player's input through the session (Session.input): whose
 ## slot it plays, whether the game hears it, and what it focuses. The controls' LocalInput is the
 ## one that turns devices into commands; the board only names this, so it never reaches the
-## controls, which come after it (#851, packages/game-checks/import_rules.py).
+## controls, which come after it (#851, src/game-checks/import_rules.py).
 
 ## The player slot this machine's player controls.
 @export_range(0, GameState.MAX_PLAYERS - 1) var slot: int = 0

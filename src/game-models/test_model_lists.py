@@ -2,7 +2,7 @@
 so a moved folder can't turn them off silently (the mouth check went dark that way, #2199), and an
 entry on a list of models fails when its file isn't tracked. No model changing is still fine.
 
-    uv run --locked --package khovax-game-models packages/game-models/test_model_lists.py
+    uv run --locked --package khovax-game-models src/game-models/test_model_lists.py
 
 It prints `MODEL LISTS TEST: PASS` or `FAIL` (and exits 1 on a fail)."""
 

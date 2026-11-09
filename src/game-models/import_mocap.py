@@ -2,9 +2,9 @@
 of the player's clip library (#1935): the take's frames from `first` to `last`, retargeted onto the
 library's skeleton (lib/mocap.py) and written like import_clip.py's clip sources.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/import_mocap.py -- <take.asf> <take.amc> <first> <last> <Clip> \
-        packages/game-models/sources/player/clips/<Clip>.glb
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/import_mocap.py -- <take.asf> <take.amc> <first> <last> <Clip> \
+        src/game-models/sources/player/clips/<Clip>.glb
 
 `first` and `last` are the take's own frame numbers (it's captured at `CAPTURED` frames a second,
 sampled down to the clip rate). The raw take stays out of the repository, beside the owner's Meshy

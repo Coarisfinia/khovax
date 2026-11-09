@@ -8,7 +8,7 @@ adds one to ENDINGS on its own.
 The shell scripts still tracked wait in SH_EXEMPT, each with the issue that ports it, and an
 exemption no longer used fails too, so the list only shrinks.
 
-    uv run --locked --package khovax-game-checks packages/game-checks/file_endings.py
+    uv run --locked --package khovax-game-checks src/game-checks/file_endings.py
 """
 
 import os
@@ -56,7 +56,7 @@ ENDINGS: dict[str, str] = {
 # The shell scripts still waiting for their port (path: the issue that ports it).
 SH_EXEMPT: dict[str, int] = {}
 
-THIS = "packages/game-checks/file_endings.py"
+THIS = "src/game-checks/file_endings.py"
 
 
 def ending(path: str) -> str:

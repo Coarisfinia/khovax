@@ -2,7 +2,7 @@
 # The runner's report on stdout is what it is for, not leftover debug printing.
 extends SceneTree
 ## Headless e2e runner. Runs every tests/e2e/test_*.gd and exits non-zero on failure.
-## Usage: godot --headless --path packages/game -s res://tests/e2e/run_e2e.gd -- --seed=0
+## Usage: godot --headless --path src/game -s res://tests/e2e/run_e2e.gd -- --seed=0
 ## Locally, add `--user-dir=<branch>` (#786): worktrees share one `user://` folder otherwise, and
 ## parallel runs overwrite each other's files. CI runs without it, each job on its own machine.
 ## The seed is required (#237): every flow boots the main scene on that world, and the flows'

@@ -5,8 +5,8 @@ detail stays as flat areas rather than photo grain), and writes it to `textures/
 every prop's script takes it from (lib/prop_paint.py). Run it again only to change the set; the
 sources and their licence are in `textures/SOURCE.md`.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/prop_textures.py
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/prop_textures.py
 
 Blender reads the JPEGs (the tooling has no image library of its own). Only the committed PNGs
 are read by the model builds, so a build never downloads anything."""

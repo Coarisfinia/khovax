@@ -5,7 +5,7 @@ upload that fails for good drops the draft it was filling, and a published relea
 drafts older than a day, and nothing else (#2024). The stand-in plays GitHub, so this needs no
 network.
 
-    uv run --locked --package khovax-game-checks packages/game-checks/test_dev_release.py
+    uv run --locked --package khovax-game-checks src/game-checks/test_dev_release.py
 """
 
 import json
@@ -102,7 +102,7 @@ class DevReleaseTest(unittest.TestCase):
             for name, script in (("gh", STAND_IN_GH), ("sleep", "#!/bin/sh\n")):
                 (stand_ins / name).write_text(script, encoding="utf-8")
                 (stand_ins / name).chmod(0o755)
-            project = work / "packages/game/project.godot"
+            project = work / "src/game/project.godot"
             project.parent.mkdir(parents=True)
             project.write_text('[application]\nconfig/name="Khovax"\n', encoding="utf-8")
             for build in (

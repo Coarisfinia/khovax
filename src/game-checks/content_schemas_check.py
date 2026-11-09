@@ -13,7 +13,7 @@ checked against the schema in its slice. A folder without its schema fails, so a
 borrows another's schema; so does a schema without its data, which would sit unchecked, and a kind with two schemas.
 
     [GODOT=<binary>] [JV=<binary>] uv run --locked --package khovax-game-checks \\
-        packages/game-checks/content_schemas_check.py
+        src/game-checks/content_schemas_check.py
 
 GODOT defaults to `godot`, JV to `jv`.
 """
@@ -28,7 +28,7 @@ from game_shared import log
 
 TARGET = Path("build/data-json")
 # The default resource pack's own folder (#1978), where it keeps the core kinds it holds (#1901),
-# through the game's link to it (packages/game-build/link_resource_packs.py).
+# through the game's link to it (src/game-build/link_resource_packs.py).
 PACK_DATA = Path("resourcepacks/default")
 # The kind of the pack's manifest, which lies directly in PACK_DATA (#1978).
 MANIFEST_KIND = "resource_packs"

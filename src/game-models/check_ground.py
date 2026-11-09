@@ -1,8 +1,8 @@
 """Checks that no clip of a model sinks into the ground (model skill): every frame of every clip,
 the lowest point of the deformed mesh and of each paw or foot bone, against z = 0.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/check_ground.py -- <model.glb> [tolerance=0.005] [--summary]
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/check_ground.py -- <model.glb> [tolerance=0.005] [--summary]
 
 It prints a line per clip and `GROUND CHECK: PASS` or `FAIL` (and exits 1 on a fail). With
 `--summary` (#1524) it prints only what sinks in which clip and how deep, one line each

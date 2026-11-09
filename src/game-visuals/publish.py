@@ -10,7 +10,7 @@ Each file lands at the branch's top level under its own name, which the descript
 https://github.com/Coarisfinia/khovax/blob/assets/<name>?raw=true. `--remove` takes paths off the
 branch again.
 
-    uv run --locked --package khovax-game-visuals packages/game-visuals/publish.py \
+    uv run --locked --package khovax-game-visuals src/game-visuals/publish.py \
         pr-<n>-<what>.png ... [--remove <path> ...]
 """
 

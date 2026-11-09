@@ -16,7 +16,7 @@ anywhere, so it can always be met. What a schema or the content flow checks (tha
 that the files read) isn't checked again here. resource_packs_check.py runs it, on the default
 pack's quests, species and regions.
 
-    uv run --locked --package khovax-game-checks packages/game-checks/quest_reachability.py
+    uv run --locked --package khovax-game-checks src/game-checks/quest_reachability.py
 """
 
 import json

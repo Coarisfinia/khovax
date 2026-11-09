@@ -27,7 +27,7 @@ extends SceneTree
 ## the scale its view does (PlayerView.MODEL_SCALE).
 ##
 ## Render it off the desktop and silent, as AGENTS.md's screenshot recipe says:
-##   uv run --locked packages/game-offscreen/offscreen.py -- --path packages/game \
+##   uv run --locked src/game-offscreen/offscreen.py -- --path src/game \
 ##     -s res://tools/models/render_in_game.gd -- \
 ##     res://resourcepacks/default/models/<name>/<name>.glb <out_dir> [size=1280x720] \
 ##     [clip=<Clip>[,<Clip>...] [from=<view> [camera=rest|<file>|<dir>]]] [points] [agitated] \
@@ -123,7 +123,7 @@ func _initialize() -> void:
 	# then waits for ever for the thread, which polls for a reply that already came. Refused at
 	# once, and killed rather than quit, since quitting is what can hang.
 	if DisplayServer.get_name() == "Wayland":
-		printerr("Wayland can hang on exit: render through packages/game-offscreen/offscreen.py")
+		printerr("Wayland can hang on exit: render through src/game-offscreen/offscreen.py")
 		var _killed: Error = OS.kill(OS.get_process_id())
 	# It renders on the CPU, so it draws each frame as soon as it can, never waiting for the
 	# screen (#1050): no vsync and no frame cap, whatever the command line says.
@@ -244,7 +244,7 @@ func _add_clip_shots(model: Node3D, animations: AnimationPlayer, glow: EyeGlow) 
 			return
 	var fps: float = _clip_fps()
 	for clip: String in clips:
-		# Beside the frames, the rate they play back at, for packages/game-models/gif.py.
+		# Beside the frames, the rate they play back at, for src/game-models/gif.py.
 		var rate: FileAccess = FileAccess.open(_out_dir.path_join(clip + ".fps"), FileAccess.WRITE)
 		if rate == null or not rate.store_line(str(fps)):
 			printerr("can't write %s's rate: %s" % [clip, FileAccess.get_open_error()])

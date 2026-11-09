@@ -1,8 +1,8 @@
 """Checks that a monster stays within its hex (#1520): every frame of every clip, how far the
 deformed mesh reaches across the hex the game stands it on, seen from above, from lib/footprint.py.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/check_footprint.py -- <model.glb> [<model.glb> ...]
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/check_footprint.py -- <model.glb> [<model.glb> ...]
 
 The base rules, which CI enforces (the owner, on #1514, #1533, #1528 and #1641), as the largest
 reach over the hex's inradius (1.00 at its edge; the limits are in lib/footprint.py):

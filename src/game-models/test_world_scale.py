@@ -2,8 +2,8 @@
 a kind, sized to it or off its scale. The ones sized to their kind pass; one too tall or too low
 fails, and an edge piece that doesn't span its hex edge fails.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/test_world_scale.py
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/test_world_scale.py
 
 It prints each box's report and `WORLD SCALE TEST: PASS` or `FAIL` (and exits 1 on a fail)."""
 

@@ -7,7 +7,7 @@ description: >-
 inputs:
   project:
     description: The Godot project, relative to the workspace.
-    default: packages/game
+    default: src/game
   cache:
     description: >-
       "true" restores and saves the downloads with actions/cache; "false" always downloads them
@@ -90,7 +90,7 @@ runs:
 
     - name: "⬇️ Download the export templates"
       # The archive holds every platform's templates; only those export_presets.cfg needs are kept
-      # (packages/game-build/export_templates.py reads them from it), so the cache stays small.
+      # (src/game-build/export_templates.py reads them from it), so the cache stays small.
       if: inputs.templates == 'true' && steps.cache-templates.outputs.cache-hit != 'true'
       shell: bash
       working-directory: ${{ inputs.project }}
@@ -109,7 +109,7 @@ runs:
       # The default pack's files lie at the repository's root, in resourcepacks/ (#1978), which
       # the game reaches through its link, as every checkout does.
       shell: bash
-      run: uv run --locked packages/game-build/link_resource_packs.py
+      run: uv run --locked src/game-build/link_resource_packs.py
 
     - name: "📦 Import the project"
       # Tool scripts run during the import too; a script error there passes silently otherwise.

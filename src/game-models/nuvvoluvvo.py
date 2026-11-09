@@ -21,10 +21,10 @@ see the asset's SOURCE.md). This script:
   paddling in pairs. And `RollOver`, the sleeper turning over in its sleep: onto its back, its
   paws in the air, and back again.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/nuvvoluvvo.py -- resourcepacks/default/models/nuvvoluvvo/nuvvoluvvo.glb
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/nuvvoluvvo.py -- resourcepacks/default/models/nuvvoluvvo/nuvvoluvvo.glb
 
-It prints the speeds the motion check (packages/game-models/check_motion.py) takes. `NAME=value`
+It prints the speeds the motion check (src/game-models/check_motion.py) takes. `NAME=value`
 after the output path sets one of its GAIT values (lib/tuning.py), for the gait sweep
 (sweep_gait.py), or `STARS=flanks` for the other placement of its stars.
 

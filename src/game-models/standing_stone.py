@@ -7,8 +7,8 @@ foot, and the hole's inner wall as its own part (`glow`), which the game lights 
 activated (#1854). No runes: its faces stay free for an engraving (#1855, #1856). A static model:
 no rig and no clips.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/standing_stone.py -- resourcepacks/default/models/standing-stone/standing_stone.glb
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/standing_stone.py -- resourcepacks/default/models/standing-stone/standing_stone.glb
 
 Blender is Z-up and it faces -Y (the game's +Z), the hole running through along Y; the origin is
 at the stone's foot, in the middle of its hex, and it is sized to its hex as a prop

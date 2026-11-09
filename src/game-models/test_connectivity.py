@@ -3,8 +3,8 @@ for a part on its top, partly sunk at rest like Ombulumo's fronds, each moved by
 own, with a clip each way the part can go. The part that stays passes; one that lifts off, and
 one that sinks wholly into the body (which the gap alone counts as on it, #1440), fail.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/test_connectivity.py
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/test_connectivity.py
 
 It prints the report and `CONNECTIVITY TEST: PASS` or `FAIL` (and exits 1 on a fail)."""
 

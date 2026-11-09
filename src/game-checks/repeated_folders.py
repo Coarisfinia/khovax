@@ -1,8 +1,8 @@
 """Fails when a tracked path repeats a folder name (#442): slices/tiles/data/tiles/ is refused,
 slices/tiles/data/foo/ is fine. Only folders count, not the file's own name. The paths are the
-game's, from its project folder (#1101), whose own packages/game/game/ isn't a repeat.
+game's, from its project folder (#1101), whose own src/game/game/ isn't a repeat.
 
-    uv run --locked --package khovax-game-checks packages/game-checks/repeated_folders.py
+    uv run --locked --package khovax-game-checks src/game-checks/repeated_folders.py
 """
 
 import os

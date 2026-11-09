@@ -1,5 +1,5 @@
-"""Tests that a checkout without the resource packs' link (packages/game/resourcepacks, made by
-packages/game-build/link_resource_packs.py, #1978) fails fast and says so once, naming the link and
+"""Tests that a checkout without the resource packs' link (src/game/resourcepacks, made by
+src/game-build/link_resource_packs.py, #1978) fails fast and says so once, naming the link and
 the command that makes it (#2123), rather than looping on script errors until it's killed. The game
 runs from a copy of the project made of links to its files, the resource packs' link left out, so
 the checkout itself is never touched: the main scene, as the game boots, and two tools run with
@@ -7,7 +7,7 @@ the checkout itself is never touched: the main scene, as the game boots, and two
 tools start.
 
     [GODOT=<binary>] uv run --locked --package khovax-game-checks \\
-        packages/game-checks/test_missing_pack_link.py
+        src/game-checks/test_missing_pack_link.py
 
 GODOT defaults to `godot`. The project must have been imported (`godot --headless --import`).
 """

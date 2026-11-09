@@ -1,8 +1,8 @@
 """Checks that no body surface covers our eyes (the owner, on #1747 and #1758): at rest and every
 other frame of every clip, each eye looked at straight on, from lib/covered.py.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/check_eyes_covered.py -- <model.glb> [<model.glb> ...] [tolerance=0.01]
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/check_eyes_covered.py -- <model.glb> [<model.glb> ...] [tolerance=0.01]
 
 It fails when the body (any surface but the eye's own pieces: its eyeball, iris, pupil, rim, brow
 and lid) covers more of an eye's face than the tolerance (a share of the face within its rim),

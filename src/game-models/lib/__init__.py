@@ -1,4 +1,4 @@
-"""The shared Blender library every model script in packages/game-models/ builds on (model skill, #995).
+"""The shared Blender library every model script in src/game-models/ builds on (model skill, #995).
 
 A model script holds only its model's parameters and its own parts; everything reusable lives
 here: the scene and the glTF export (scene), materials (materials), soft metaball bodies (body),
@@ -8,5 +8,5 @@ clips (clips), the motion between their keys (motion), wisps floating beside a b
 generated model's own rig adopted (rigged) and its many-bone legs and stalks for the clips
 (adopted), a built model read back for the checks (imported), the checks' summary mode (summary)
 and a model script's gait values from its arguments (tuning). Import it from a model script with
-`sys.path.insert(0, <packages/game-models>)`.
+`sys.path.insert(0, <src/game-models>)`.
 """

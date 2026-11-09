@@ -3,7 +3,7 @@ attachments.add) has its lid's bone (`lid.<side>`, lib/eyes.py), so its eyes are
 blink and shut in Sleep and Faint, never a generator's painted ones. A beast imported from a
 generated model gets them from lib/marked_eyes.py. CI runs it on every push.
 
-    uv run --locked --package khovax-game-models packages/game-models/check_eyes.py
+    uv run --locked --package khovax-game-models src/game-models/check_eyes.py
 
 A creature model is one check_clip_set.py checks. One designed without eyes is let off in
 EYELESS with its reason, and one still waiting for ours in KNOWN with the issue that gives them

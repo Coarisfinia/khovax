@@ -4,7 +4,7 @@ a change may take entries out, never add one. The content flow refuses an entry 
 it can't see an entry added to get past a new faction or territory, which this does.
 <base> is the commit the change is compared with, e.g. HEAD^1 of a pull request's merge commit.
 
-    uv run --locked --package khovax-game-checks packages/game-checks/known_gaps_check.py <base>
+    uv run --locked --package khovax-game-checks src/game-checks/known_gaps_check.py <base>
 """
 
 import re
@@ -13,7 +13,9 @@ import sys
 
 from game_shared import log
 
-FILE = "packages/game/tests/e2e/territory_quests.gd"
+FILE = "game/tests/e2e/territory_quests.gd"
+# The folder the game lies in: src/, or packages/ before the rename (#1979).
+TOPS = ("src", "packages")
 # A string or a comment, read in one pass so that neither is taken for the other.
 TOKEN = re.compile(r"""\"[^"\n]*"|'[^'\n]*'|#[^\n]*""")
 # The list, whose brackets only count outside its strings, and whose ] ends its line.
@@ -47,10 +49,13 @@ def added(before: str, after: str) -> list[str] | None:
 
 def version(commit: str) -> str | None:
     """The file's text at that commit, or None when git can't show it."""
-    shown = subprocess.run(
-        ["git", "show", f"{commit}:{FILE}"], stdout=subprocess.PIPE, text=True, encoding="utf-8"
-    )
-    return shown.stdout if shown.returncode == 0 else None
+    for top in TOPS:
+        shown = subprocess.run(
+            ["git", "show", f"{commit}:{top}/{FILE}"], capture_output=True, text=True, encoding="utf-8"
+        )
+        if shown.returncode == 0:
+            return shown.stdout
+    return None
 
 
 def main() -> int:

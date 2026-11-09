@@ -25,8 +25,8 @@ A mark whose normal lies (nearly) along Z has no sideways axis, so `Mark` refuse
 dim one there; and `placed` refuses a spot
 off the surface whose nearest point there lies within half the eye's width of the middle.
 
-    uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/test_painted_eyes.py
+    uv run --locked src/game-models/blender.py --background --factory-startup \
+        --python src/game-models/test_painted_eyes.py
 
 It prints each case and `PAINTED EYES TEST: PASS` or `FAIL` (and exits 1 on a fail)."""
 

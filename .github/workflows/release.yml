@@ -52,7 +52,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          sparse-checkout: packages/game/project.godot
+          sparse-checkout: src/game/project.godot
           sparse-checkout-cone-mode: false
 
       - name: "🏷️ Work out the version, and check the commit may be released"
@@ -91,7 +91,7 @@ jobs:
           else
             # The first prod release: config/version, which the dev builds before it are named after.
             next=$(awk -F'"' '/^\[/ { section = $0 } section == "[application]" && /^config\/version="/ { print $2 }' \
-              packages/game/project.godot)
+              src/game/project.godot)
             echo "::notice::no prod release yet: the first is config/version, ${next}, whatever the bump"
           fi
           # No leading zeros, which bash's arithmetic would read as octal.
@@ -151,7 +151,7 @@ jobs:
     # tooling is beside it, in ../<package>/.
     defaults:
       run:
-        working-directory: packages/game
+        working-directory: src/game
     env:
       TAG: ${{ needs.plan.outputs.tag }}
     steps:
@@ -296,8 +296,8 @@ jobs:
         with:
           name: release-builds
           path: |
-            packages/game/build/release/
-            packages/game/build/web/
+            src/game/build/release/
+            src/game/build/web/
           retention-days: 3
 
   release:
