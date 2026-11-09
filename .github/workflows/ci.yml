@@ -165,6 +165,10 @@ jobs:
         # still waiting for its mouth, is listed in the script.
         run: uv run --locked --package khovax-game-models ../game-models/check_mouth.py
 
+      - name: "🗒️ Check the model checks refuse an empty model list and stale entries"
+        # A moved folder must not turn them off silently (#2199, #2203).
+        run: uv run --locked --package khovax-game-models ../game-models/test_model_lists.py
+
       - name: "🗃️ Check the export presets share their file filters and web loading page"
         run: uv run --locked --package khovax-game-checks ../game-checks/export_filters_check.py
 
