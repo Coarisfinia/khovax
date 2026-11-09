@@ -14,6 +14,7 @@ parentheses (owner, #515). It marks a workaround to fix later; a marker without 
 import os
 import re
 import sys
+import unittest
 from pathlib import Path
 
 from game_shared import log
@@ -53,7 +54,23 @@ def numbered(lines: list[str], hit: list[bool]) -> list[str]:
     return [f"{number}:{line}" for number, (line, h) in enumerate(zip(lines, hit), 1) if h]
 
 
+def forbidden_lines(source: str) -> list[str]:
+    """The numbered lines of a script that use something the rules never use."""
+    code = without_comments(source).rstrip("\n").split("\n")
+    return numbered(code, [FORBIDDEN.search(line) is not None for line in code])
+
+
+def own_test_passes() -> bool:
+    """Runs test_determinism_check.py, so CI's step for this check covers its patterns too (#2210)."""
+    suite = unittest.defaultTestLoader.loadTestsFromName("test_determinism_check")
+    return unittest.TextTestRunner().run(suite).wasSuccessful()
+
+
 def main() -> int:
+    if not own_test_passes():
+        log.error("the check's own test fails: see above", __file__)
+        return 1
+
     # The game's project folder (#1101): every path below is relative to it.
     os.chdir(Path(__file__).resolve().parents[1] / "game")
     rules = [Path("core"), *sorted(path for path in Path("slices").rglob("rules") if path.is_dir())]
@@ -90,7 +107,7 @@ def main() -> int:
         if not extends.intersection(code):
             log.error("rules scripts extend RefCounted or a class of the rules", file)
             failed = True
-        hits = numbered(code, [FORBIDDEN.search(line) is not None for line in code])
+        hits = forbidden_lines(source)
         if hits:
             print("\n".join(hits))
             log.error("the rules must stay deterministic: see the lines above", file)
