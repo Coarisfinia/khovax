@@ -46,6 +46,8 @@ var _mesh: CylinderMesh = CylinderMesh.new()
 ## Made in `_ready`, where it joins the grid: a grid freed without ever entering the tree (the
 ## editor makes such, #1955) would otherwise leave it behind, unparented and never freed.
 var _tiles: MultiMeshInstance3D
+## The water over the water tiles (#1933), made in `_ready` like the tiles.
+var _water: WaterSurface
 ## The region the tiles show.
 var _region: Region
 ## The colors each layer last painted onto tiles, by PaintLayer.
@@ -61,6 +63,8 @@ var _colors: Dictionary[Vector2i, Color] = {}
 var _kinds: Dictionary[Vector2i, String] = {}
 ## The tiles easing into their new kind's color after changing in place (#530), each with its tween.
 var easing: Dictionary[Vector2i, Tween] = {}
+## The tiles that were water and are easing into another kind: their water stays until it's done.
+var _drying: Dictionary[Vector2i, bool] = {}
 
 
 func _ready() -> void:
@@ -83,6 +87,8 @@ func _ready() -> void:
 	_tiles.multimesh.use_colors = true
 	_tiles.multimesh.mesh = _mesh
 	add_child(_tiles)
+	_water = WaterSurface.new()
+	add_child(_water)
 	_build(_shown_region())
 
 
@@ -194,6 +200,7 @@ func _recolor(tile: Vector2i) -> void:
 	if _colors.get(tile, Color(0.0, 0.0, 0.0, 0.0)) != color:
 		_colors[tile] = color
 		_tiles.multimesh.set_instance_color(_index[tile], color)
+		_water.recolor(tile, color)
 
 
 ## Eases every tile changed in place this tick (#530) from the color it has into its new kind's.
@@ -207,7 +214,10 @@ func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 func _ease_into(tile: Vector2i, kind: String) -> void:
 	if easing.has(tile):
 		easing[tile].kill()
+	if TileKinds.is_drinkable(_kinds[tile]) and not TileKinds.is_drinkable(kind):
+		_drying[tile] = true
 	_kinds[tile] = kind
+	_show_water()
 	var tween: Tween = create_tween()
 	var ease_to: Callable = _ease.bind(tile)
 	var to: Color = terrain_color(kind)
@@ -225,12 +235,24 @@ func _ease(color: Color, tile: Vector2i) -> void:
 func _drop_easing(tile: Vector2i, tween: Tween) -> void:
 	if easing.get(tile) == tween:
 		var _dropped: bool = easing.erase(tile)
+		if _drying.erase(tile):
+			_show_water()
+
+
+## Draws the water on every water tile, and on those still drying.
+func _show_water() -> void:
+	var water: Array[Vector2i] = []
+	for tile: Vector2i in _index:
+		if TileKinds.is_drinkable(_kinds[tile]) or _drying.has(tile):
+			water.append(tile)
+	_water.show_tiles(water, _transforms, _colors)
 
 
 func _build(region: Region) -> void:
 	for tween: Tween in easing.values():
 		tween.kill()
 	easing.clear()
+	_drying.clear()
 	_region = region
 	var tiles: Array[Vector2i] = region.sorted_tiles()
 	_index.clear()
@@ -247,5 +269,6 @@ func _build(region: Region) -> void:
 		_base[tile] = terrain_color(_kinds[tile])
 		_transforms[tile] = Transform3D(Basis.IDENTITY, center)
 		_tiles.multimesh.set_instance_transform(i, _transforms[tile])
+	_show_water()
 	for tile: Vector2i in _index:
 		_recolor(tile)
