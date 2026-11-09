@@ -83,14 +83,19 @@ FOLLOW.update({"tail_05": (1.9, 0.4, 0.0, 0.15), "tail_06": (1.7, 0.4, 0.0, 0.15
 TILE = math.sqrt(3.0)
 WALK_SPEED = TILE / 0.8
 RUN_SPEED = TILE / 0.3
-WALK_TILES, RUN_TILES = 2 / 3, 1.25
+WALK_TILES, RUN_TILES = 0.6, 1.25
 # Each gait's shape (clips.gait): the share of the cycle a paw is down, how far (radians) a leg's
 # joints fold as it swings, how high a paw lifts (a share of its leg's reach), how far its toes tip
 # down, how far (radians) the body rolls and the spine flexes, and how much of a straight leg's
 # sink the body bobs by.
-WALK_DUTY, WALK_LIFT, WALK_CURL, WALK_ROLL, WALK_BOB = 0.4, 0.2, 0.4, 0.05, 0.4
+WALK_DUTY, WALK_LIFT, WALK_CURL, WALK_ROLL, WALK_BOB = 0.22, 0.1, 0.4, 0.09, 0.4
+# The walk is soft rather than stalking (#2177): the body stays this far (metres) below its height
+# at rest, so the legs walk bent instead of on stilts, it sways this far (metres) over the side that
+# bears its weight, and a paw runs with the ground for this share of its stand as it comes down.
+WALK_CROUCH, WALK_SWAY, WALK_MATCHED = 0.1, 0.04, 0.4
 RUN_DUTY, RUN_FOLD, RUN_SPINE_FLEX, RUN_ROLL, RUN_BOB = 0.3, 0.5, 0.06, 0.0, 0.4
-GAIT = ("WALK_TILES", "WALK_DUTY", "WALK_LIFT", "WALK_CURL", "WALK_ROLL", "WALK_BOB", "RUN_TILES", "RUN_DUTY",
+GAIT = ("WALK_TILES", "WALK_DUTY", "WALK_LIFT", "WALK_CURL", "WALK_ROLL", "WALK_BOB", "WALK_CROUCH", "WALK_SWAY",
+        "WALK_MATCHED", "RUN_TILES", "RUN_DUTY",
         "RUN_FOLD", "RUN_SPINE_FLEX", "RUN_ROLL", "RUN_BOB")
 OUT = tuning.arguments(globals(), GAIT)
 WALK_FRAMES = clips.cycle_frames(WALK_SPEED, TILE * WALK_TILES, FPS)
@@ -111,6 +116,19 @@ SLEEP_PAWS = {"front_paw": (0.0, 0.0, 0.25), "hind_paw": (0.08, 0.0, -0.08)}
 # The share of the neck's bow the withers take: one joint turning the whole bow pinches the neck
 # between the shoulders, whose skin stays (the volume check).
 WITHERS = 0.4
+
+
+def settled(name, poses, _loop):
+    """An animate overlay: the Walk's body low on bent legs, swaying over the side bearing it."""
+    if name != "Walk":
+        return
+    for step, (_frame, pose) in enumerate(poses):
+        t = step / (len(poses) - 1)
+        # The left hind paw stands from 0 of the cycle for WALK_DUTY of it: the body is furthest
+        # over to that side halfway through (the model's left is +X).
+        sway = WALK_SWAY * math.cos(2.0 * math.pi * (t - WALK_DUTY / 2.0))
+        x, y, z = pose.get("root_loc", (0.0, 0.0, 0.0))
+        pose["root_loc"] = (x + sway, y - WALK_CROUCH, z)
 
 
 def withers(_name, poses, _loop):
@@ -203,7 +221,7 @@ def build(out):
     clips.animate(rig, {
         "Idle": clips.idle(),
         "Walk": clips.gait(WALK_FRAMES, WALK_STRIDE, body, clips.WALK, duty=WALK_DUTY, fold=0.0, lift=WALK_LIFT,
-                           curl=WALK_CURL, roll=WALK_ROLL, bob=WALK_BOB),
+                           curl=WALK_CURL, roll=WALK_ROLL, bob=WALK_BOB, matched=WALK_MATCHED),
         "Run": clips.gait(RUN_FRAMES, RUN_STRIDE, body, clips.GALLOP, duty=RUN_DUTY, fold=RUN_FOLD,
                           spine_flex=RUN_SPINE_FLEX, roll=RUN_ROLL, bob=RUN_BOB, planted=False),
         "Attack": adopted.lesser(clips.attack(), SHARE),
@@ -213,7 +231,7 @@ def build(out):
         "Feed": clips.feed(forepaws=0.04),
         "Sleep": clips.sleep(clips.curled(BELLY_HEIGHT), SLEEP_PAWS),
     }, SCALE, ground_meshes=[skin], chains=FOLLOW, limbs=adopted.limbs(rig),
-        overlays=[withers])
+        overlays=[settled, withers])
     scene.export_glb(out)
     print("MODEL", out, "triangles", scene.triangles(skin), "bones", len(rig.data.bones),
           "materials", len(skin.data.materials))

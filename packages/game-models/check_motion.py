@@ -85,7 +85,6 @@ UNMEASURED = "; unmeasured (no part of the mesh follows the bone): "
 # A join is named after its lead with " join" (`("mana_wolf", "WalkStart join")`).
 KNOWN = {
     ("fohossa", "Run"): 1629,
-    ("fohossa", "Walk"): 1629,
     ("frostfire_hound", "Walk"): 2171,
     ("kavrikka", "Attack"): 1780,
     ("kavrikka", "Run"): 1780,
