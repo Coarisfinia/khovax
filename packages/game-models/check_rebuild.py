@@ -36,7 +36,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from game_shared import log
-from game_shared.git_files import git_files
+from game_shared.git_files import pack_models
 
 MODELS = Path(__file__).resolve().parent
 BLENDER = MODELS / "blender.py"
@@ -116,7 +116,7 @@ def scripted_models() -> list[tuple[str, str | None]]:
     """Every model script with the .glb it builds, both from the working directory: a model script
     is a script here that exports through scene.export_glb, and its .glb is the tracked one under
     the default pack's models/ named like it (None when there is none)."""
-    glbs = {Path(path).stem: path for path in git_files("resourcepacks/default/models/*.glb")}
+    glbs = {Path(path).stem: path for path in pack_models()}
     return [(os.path.relpath(script), glbs.get(script.stem)) for script in sorted(MODELS.glob("*.py"))
             if EXPORT.search(script.read_text())]
 

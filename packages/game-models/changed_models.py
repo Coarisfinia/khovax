@@ -24,7 +24,7 @@ import sys
 from pathlib import Path
 
 from game_shared import log
-from game_shared.git_files import git_files
+from game_shared.git_files import pack_models
 
 from check_rebuild import EXPORT
 
@@ -101,7 +101,7 @@ def main() -> int:
     base, out = args
     changed = changed_paths(base)
     models = None if changed is None else select(changed, is_model_script)
-    glbs = git_files("resourcepacks/default/models/*.glb")
+    glbs = pack_models()
     if models is None or (models and "--every" in sys.argv[1:]):
         listed = glbs
     else:

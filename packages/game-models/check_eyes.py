@@ -17,7 +17,7 @@ from pathlib import Path
 from check_clip_set import NOT_CREATURES
 from check_rebuild import read_glb
 from game_shared import log
-from game_shared.git_files import git_files
+from game_shared.git_files import pack_models, stale_entries
 
 # The attachment points' and the lids' bone names (lib/attachments.py's EYE, lib/eyes.py's LID;
 # both import Blender, which this check runs without).
@@ -61,8 +61,9 @@ def joints(gltf):
 def main() -> int:
     # The game's project folder (#1101): the paths below are relative to it.
     os.chdir(Path(__file__).resolve().parents[1] / "game")
-    failed = 0
-    for path in git_files("resourcepacks/default/models/*.glb"):
+    models = pack_models()
+    failed = stale_entries(models, EYELESS=EYELESS, KNOWN=KNOWN)
+    for path in models:
         gltf, _binary = read_glb(Path(path))
         if not gltf.get("skins") or path in NOT_CREATURES:
             continue
