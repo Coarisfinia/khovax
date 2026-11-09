@@ -838,8 +838,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   git -C khovax-sources -c credential.helper= -c credential.helper="$H" push origin main
   ```
 
-  The empty `credential.helper=` drops every other helper, so the push can't go out under the
-  owner's login. A blob-filtered clone fetches blobs on demand, so any other command that needs
+  The empty `credential.helper=` drops every other helper, so git doesn't use the owner's stored
+  login. A blob-filtered clone fetches blobs on demand, so any other command that needs
   a missing blob takes the same two `-c` options.
 - **A beast exists only from the owner's vibe or model** (owner's ground rule, #1686): prompt
   suggestions, such as the brainstormed lists for A, make no beast: only the owner's vibe or model
