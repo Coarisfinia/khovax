@@ -19,7 +19,7 @@ import unittest
 from pathlib import Path
 
 from game_shared import log
-from game_shared.gdscript_code import code_only, without_comments
+from game_shared.gdscript_code import Kind, code_only, tokens, without_comments
 
 # What the rules never use, one alternation per kind; add a kind as its own line.
 FORBIDDEN = re.compile(
@@ -31,8 +31,6 @@ FORBIDDEN = re.compile(
             r"\b(FileAccess|DirAccess|JSON)\b",
             r"\b(Vector2|Vector3|Vector4|Color|Rect2|AABB|Plane|Basis|Quaternion|Transform2D"
             r"|Transform3D|Projection)\b",
-            # Here because the name is the string (#2216).
-            r"""\.(call|callv|call_deferred)\s*\(\s*&?["'](shuffle|pick_random)["']""",
         )
     )
 )
@@ -61,7 +59,7 @@ FORBIDDEN_IN_CODE = re.compile(
             r"\bto_float\s*\(",
             r"\b(PI|TAU|INF|NAN)\b",
             r"\.aspect\s*\(|\bPackedFloat(32|64)Array\b|\bstr_to_var\s*\(",
-            r"\btype_convert\s*\(.*\bTYPE_FLOAT\b",
+            r"\bTYPE_FLOAT\b",
         )
     )
 )
@@ -70,7 +68,14 @@ FORBIDDEN_IN_CODE = re.compile(
 # every declaration (AGENTS.md); the left-out `(` keeps a dictionary entry `a: Vector2i(1, 2)` from
 # declaring `a`.
 VECTOR2I_RECEIVER = r"\bVector2i(?:\([^()]*\)|\.[A-Z_]+)"
+# What a Vector2i's own methods return is a Vector2i again.
+VECTOR2I_CHAIN = r"(?:\.(?:abs|clamp|clampi|max|maxi|min|mini|sign|snapped|snappedi)\([^()]*\))*"
 VECTOR2I_DECLARED = re.compile(r"\b(\w+)\s*:\s*Vector2i\b(?!\s*\()")
+# Reaching a randomness method by name: read on code_with_random_names, which keeps that string.
+RANDOM_NAMES = ("shuffle", "pick_random")
+RANDOM_BY_NAME = re.compile(
+    rf"""\.(call|callv|call_deferred)\s*\(\s*&?["']({"|".join(RANDOM_NAMES)})["']"""
+)
 MARKER = "# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK"
 MARKER_WITH_REASON = re.compile(re.escape(MARKER) + r" \(.*[^ )].*\)")
 HEADER_LINE = re.compile(r"\s*(#|$)")
@@ -90,20 +95,33 @@ def numbered(lines: list[str], hit: list[bool]) -> list[str]:
     return [f"{number}:{line}" for number, (line, h) in enumerate(zip(lines, hit), 1) if h]
 
 
+def code_with_random_names(source: str) -> str:
+    """The script's code and the strings that are only a randomness method's name."""
+    return "".join(
+        token.text
+        if token.kind == Kind.CODE
+        or (token.kind == Kind.STRING and token.text.strip("\"'") in RANDOM_NAMES)
+        else "\n" * token.text.count("\n")
+        for token in tokens(source)
+    )
+
+
 def forbidden_lines(source: str) -> list[str]:
     """The numbered lines of a script that use something the rules never use."""
     code = without_comments(source).rstrip("\n").split("\n")
     bare = code_only(source).split("\n")
     declared = VECTOR2I_DECLARED.findall("\n".join(bare))
     receivers = [VECTOR2I_RECEIVER, *(rf"\b{name}" for name in declared)]
-    float_length = re.compile(rf"(?:{'|'.join(receivers)})\.length\s*\(")
+    float_length = re.compile(rf"(?:{'|'.join(receivers)}){VECTOR2I_CHAIN}\.length\s*\(")
+    named = code_with_random_names(source).split("\n")
     return numbered(
         code,
         [
             FORBIDDEN.search(line) is not None
             or FORBIDDEN_IN_CODE.search(bare_line) is not None
             or float_length.search(bare_line) is not None
-            for line, bare_line in zip(code, bare)
+            or RANDOM_BY_NAME.search(named_line) is not None
+            for line, bare_line, named_line in zip(code, bare, named)
         ],
     )
 

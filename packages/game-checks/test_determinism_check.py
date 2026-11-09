@@ -57,6 +57,7 @@ REFUSED = (
     # Float sources (#2216).
     "var a := Vector2i(3, 4).length()",
     "var a := Vector2i.ONE.length()",
+    "var a := Vector2i(1, 2).abs().length()",
     "var a := tile.aspect()",
     "var a := PackedFloat32Array()",
     "var a := PackedFloat64Array()",
@@ -94,6 +95,7 @@ ALLOWED = (
     # A string that only reads like a call to global randomness, or names something else (#2216).
     'var a := "the seed (in a text)"',
     'var a := x.call("shuffled")',
+    'var a := "obj.call(\'shuffle\')"',
     "var a := type_convert(x, TYPE_INT)",
     "var a := text.length()",
 )
@@ -114,6 +116,18 @@ class FormsTest(unittest.TestCase):
         self.assertEqual(
             forbidden_lines("var tile: Vector2i\nvar a := tile.length()"),
             ["2:var a := tile.length()"],
+        )
+
+    def test_a_chain_on_a_declared_vector2i_is_refused(self) -> None:
+        self.assertEqual(
+            forbidden_lines("var tile: Vector2i\nvar a := tile.abs().length()"),
+            ["2:var a := tile.abs().length()"],
+        )
+
+    def test_type_float_on_its_own_line_is_refused(self) -> None:
+        self.assertEqual(
+            forbidden_lines("var a := type_convert(\n\tx, TYPE_FLOAT)"),
+            ["2:\tx, TYPE_FLOAT)"],
         )
 
     def test_the_length_of_anything_else_is_allowed(self) -> None:
