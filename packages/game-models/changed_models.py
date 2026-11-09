@@ -14,8 +14,8 @@ fails. `--every` lists every .glb whenever anything is to check, as CI does on `
 A model is named by its stem (mana_wolf for mana_wolf.py and resourcepacks/default/models/mana-wolf/mana_wolf.glb, as
 check_rebuild.py pairs them). One model's own files are its model script, its source in sources/
 and its .glb and .glb.import in the game; every other change in EVERY (the model library and
-checks, Blender's setup, the workflow, the game's scripts, views and scenes and the pack the
-checks read) checks every model, and so does a diff that fails. Anything else checks nothing."""
+checks, Blender's setup, the workflow, the game's scripts, views and scenes and the pack's
+manifest and tile blueprints the checks read) checks every model, and so does a diff that fails. Anything else checks nothing."""
 
 import fnmatch
 import os
@@ -32,8 +32,9 @@ ROOT = Path(__file__).resolve().parents[2]
 MODELS = "packages/game-models/"
 # A change to one of these, from the repository's root, checks every model: what every model is
 # built or checked with, the workflow running the checks, and what the footprint and world-scale
-# checks measure a model by (the views, the scenes and the default pack's manifest, #1651, #1652,
-# #1864, and any game script, whose constants a view's settings may name, #2072).
+# checks measure a model by (the views, the scenes, the default pack's manifest and its tile
+# blueprints, whose "model" the footprint check leaves out as a decoration, #1651, #1652, #1864,
+# #2208, and any game script, whose constants a view's settings may name, #2072).
 EVERY = (
     MODELS + "*",
     "packages/game-shared/*",
@@ -45,6 +46,7 @@ EVERY = (
     "packages/game/*.gd",
     "packages/game/*.tscn",
     "packages/game/slices/resource_packs/data/*",
+    "resourcepacks/default/tiles/*",
 )
 
 
