@@ -46,77 +46,77 @@ wheels = [
 [[package]]
 name = "khovax-game-build"
 version = "0.0.0"
-source = { virtual = "packages/game-build" }
+source = { virtual = "src/game-build" }
 
 [[package]]
 name = "khovax-game-checks"
 version = "0.0.0"
-source = { virtual = "packages/game-checks" }
+source = { virtual = "src/game-checks" }
 dependencies = [
     { name = "khovax-game-shared" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "khovax-game-shared", editable = "packages/game-shared" }]
+requires-dist = [{ name = "khovax-game-shared", editable = "src/game-shared" }]
 
 [[package]]
 name = "khovax-game-models"
 version = "0.0.0"
-source = { virtual = "packages/game-models" }
+source = { virtual = "src/game-models" }
 dependencies = [
     { name = "khovax-game-shared" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "khovax-game-shared", editable = "packages/game-shared" }]
+requires-dist = [{ name = "khovax-game-shared", editable = "src/game-shared" }]
 
 [[package]]
 name = "khovax-game-offscreen"
 version = "0.0.0"
-source = { virtual = "packages/game-offscreen" }
+source = { virtual = "src/game-offscreen" }
 
 [[package]]
 name = "khovax-game-pack-builder"
 version = "0.0.0"
-source = { virtual = "packages/game-pack-builder" }
+source = { virtual = "src/game-pack-builder" }
 dependencies = [
     { name = "khovax-game-shared" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "khovax-game-shared", editable = "packages/game-shared" }]
+requires-dist = [{ name = "khovax-game-shared", editable = "src/game-shared" }]
 
 [[package]]
 name = "khovax-game-replays"
 version = "0.0.0"
-source = { virtual = "packages/game-replays" }
+source = { virtual = "src/game-replays" }
 dependencies = [
     { name = "khovax-game-shared" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "khovax-game-shared", editable = "packages/game-shared" }]
+requires-dist = [{ name = "khovax-game-shared", editable = "src/game-shared" }]
 
 [[package]]
 name = "khovax-game-shared"
 version = "0.0.0"
-source = { editable = "packages/game-shared" }
+source = { editable = "src/game-shared" }
 
 [[package]]
 name = "khovax-game-visuals"
 version = "0.0.0"
-source = { virtual = "packages/game-visuals" }
+source = { virtual = "src/game-visuals" }
 dependencies = [
     { name = "khovax-game-shared" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "khovax-game-shared", editable = "packages/game-shared" }]
+requires-dist = [{ name = "khovax-game-shared", editable = "src/game-shared" }]
 
 [[package]]
 name = "khovax-game-web-e2e"
 version = "0.0.0"
-source = { virtual = "packages/game-web-e2e" }
+source = { virtual = "src/game-web-e2e" }
 dependencies = [
     { name = "playwright" },
 ]
