@@ -115,10 +115,12 @@ def main() -> int:
     # The game's project folder (#1101): the paths below are relative to it.
     os.chdir(Path(__file__).resolve().parents[1] / "game")
     failed = 0
+    checked = 0
     for path in git_files("assets/*.glb"):
         gltf, binary = read_glb(Path(path))
         if not gltf.get("skins") or path in NOT_CREATURES:
             continue
+        checked += 1
         found = problem(gltf, binary)
         if path in MOUTHLESS:
             if found is None:
@@ -135,6 +137,10 @@ def main() -> int:
             log.error(found + ": give it a mouth that opens (the model skill's step 24), or list it in MOUTHLESS", path)
         else:
             log.info(f"{path}: its mouth opens")
+    # Models that moved must not silence the check (#2199).
+    if not checked:
+        failed += 1
+        log.error("found no creature model to check: has their folder moved?")
     return 1 if failed else 0
 
 
