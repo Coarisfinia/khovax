@@ -14,7 +14,7 @@ const DEFAULT: String = DEFAULT_ROOT + "pack.jsonc"
 ## The default pack's .pck, built by the pack builder like any pack, which every build carries and
 ## mounts like one (#1941). A run from the project has none and reads the files DEFAULT names.
 const BUILT_DEFAULT: String = "res://packs/default.pck"
-## Where a run from the project finds the default pack's moved files (#1978): the repository's
+## Where a run from the project finds the default pack's files (#1978): the repository's
 ## resourcepacks/, which the project reaches only through an untracked link a checkout must make.
 const LINKED: String = "res://resourcepacks/"
 ## What makes that link, run from the repository's root.
