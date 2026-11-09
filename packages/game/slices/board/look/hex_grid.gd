@@ -63,8 +63,6 @@ var _colors: Dictionary[Vector2i, Color] = {}
 var _kinds: Dictionary[Vector2i, String] = {}
 ## The tiles easing into their new kind's color after changing in place (#530), each with its tween.
 var easing: Dictionary[Vector2i, Tween] = {}
-## The tiles that were water and are easing into another kind: their water stays until it's done.
-var _drying: Dictionary[Vector2i, bool] = {}
 
 
 func _ready() -> void:
@@ -215,7 +213,7 @@ func _ease_into(tile: Vector2i, kind: String) -> void:
 	if easing.has(tile):
 		easing[tile].kill()
 	if TileKinds.is_drinkable(_kinds[tile]) and not TileKinds.is_drinkable(kind):
-		_drying[tile] = true
+		_water.start_drying(tile)
 	_kinds[tile] = kind
 	_show_water()
 	var tween: Tween = create_tween()
@@ -235,7 +233,7 @@ func _ease(color: Color, tile: Vector2i) -> void:
 func _drop_easing(tile: Vector2i, tween: Tween) -> void:
 	if easing.get(tile) == tween:
 		var _dropped: bool = easing.erase(tile)
-		if _drying.erase(tile):
+		if _water.stop_drying(tile):
 			_show_water()
 
 
@@ -243,7 +241,7 @@ func _drop_easing(tile: Vector2i, tween: Tween) -> void:
 func _show_water() -> void:
 	var water: Array[Vector2i] = []
 	for tile: Vector2i in _index:
-		if TileKinds.is_drinkable(_kinds[tile]) or _drying.has(tile):
+		if TileKinds.is_drinkable(_kinds[tile]) or _water.is_drying(tile):
 			water.append(tile)
 	_water.show_tiles(water, _transforms, _colors)
 
@@ -252,7 +250,7 @@ func _build(region: Region) -> void:
 	for tween: Tween in easing.values():
 		tween.kill()
 	easing.clear()
-	_drying.clear()
+	_water.forget_drying()
 	_region = region
 	var tiles: Array[Vector2i] = region.sorted_tiles()
 	_index.clear()

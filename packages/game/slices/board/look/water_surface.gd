@@ -19,6 +19,8 @@ static var _shared: ShaderMaterial
 
 ## Each water tile's MultiMesh instance.
 var _index: Dictionary[Vector2i, int] = {}
+## The tiles that were water and are easing into another kind: their water stays until it's done.
+var _drying: Dictionary[Vector2i, bool] = {}
 
 
 func _init() -> void:
@@ -67,6 +69,23 @@ func show_tiles(
 		multimesh.set_instance_color(i, color)
 		var mask: Color = Color(_shore_mask(tile, placed) / MASK_RANGE, 0.0, 0.0, 0.0)
 		multimesh.set_instance_custom_data(i, mask)
+
+
+func start_drying(tile: Vector2i) -> void:
+	_drying[tile] = true
+
+
+## Whether `tile` was drying, which has now ended.
+func stop_drying(tile: Vector2i) -> bool:
+	return _drying.erase(tile)
+
+
+func is_drying(tile: Vector2i) -> bool:
+	return _drying.has(tile)
+
+
+func forget_drying() -> void:
+	_drying.clear()
 
 
 ## Gives `tile` the color `color`, if it's water.
