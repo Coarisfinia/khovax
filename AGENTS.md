@@ -824,23 +824,23 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   3 prompts each. Accepted deliveries follow the active-request removal and import rule above.
 - **The owner's model exports are pushed to `Coarisfinia/khovax-sources`** (#1849, #2224), the
   private model inbox, directly to its `main`, as the agent bot (the layout is in the model skill).
-  The usual agent token is scoped to this repository only, so ask for one scoped to the inbox and
-  send it as a per-command header, which stays out of the clone's config. The
-  inbox holds large binaries, so clone it blob-filtered and sparse, and check out only the folder
-  you work on. Never print the token:
+  The usual agent token is scoped to this repository only, so ask for one scoped to the inbox,
+  through a per-command credential helper: it stays out of the clone's config, the command line
+  and shell traces. The inbox holds large binaries, so clone it blob-filtered and sparse, and
+  check out only the folder you work on. Never print the token:
 
   ```sh
-  T=$(GH_REPO=Coarisfinia/khovax-sources agent-gh-token)
-  A=$(printf 'x-access-token:%s' "$T" | base64 -w0)
-  git -c http.extraHeader="Authorization: Basic $A" clone --filter=blob:none --sparse \
+  H='!f() { test "$1" = get || exit 0; echo username=x-access-token; echo "password=$(GH_REPO=Coarisfinia/khovax-sources agent-gh-token)"; }; f'
+  git -c credential.helper= -c credential.helper="$H" clone --filter=blob:none --sparse \
     https://github.com/Coarisfinia/khovax-sources
-  git -C khovax-sources -c http.extraHeader="Authorization: Basic $A" sparse-checkout set <issue>-<slug>
+  git -C khovax-sources -c credential.helper= -c credential.helper="$H" sparse-checkout set <issue>-<slug>
   # add the export and commit it, then:
-  git -C khovax-sources -c http.extraHeader="Authorization: Basic $A" push origin main
+  git -C khovax-sources -c credential.helper= -c credential.helper="$H" push origin main
   ```
 
-  A blob-filtered clone fetches blobs on demand, so any other command that needs a missing blob
-  takes the same `-c http.extraHeader=…`.
+  The empty `credential.helper=` drops every other helper, so the push can't go out under the
+  owner's login. A blob-filtered clone fetches blobs on demand, so any other command that needs
+  a missing blob takes the same two `-c` options.
 - **A beast exists only from the owner's vibe or model** (owner's ground rule, #1686): prompt
   suggestions, such as the brainstormed lists for A, make no beast: only the owner's vibe or model
   does. They're never rewritten, asked about or tracked as creatures, and a rule about "every beast"
