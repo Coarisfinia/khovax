@@ -9,8 +9,8 @@ requires-python = "==3.14.8"
 dependencies = []
 
 [build-system]
-# uv's own backend, which the pinned uv (UV_VERSION in ci.yml) builds with directly, downloading
-# nothing: bump it with UV_VERSION.
+# uv's own backend, which the pinned uv (UV_VERSION in .github/actions/setup-uv) builds with
+# directly, downloading nothing: bump it with UV_VERSION.
 requires = ["uv_build==0.13.4"]
 build-backend = "uv_build"
 

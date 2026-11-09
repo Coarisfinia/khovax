@@ -1,7 +1,7 @@
 name: Set up Godot
 description: >-
-  Godot's Linux editor at ~/godot/godot, optionally its export templates, uv (pinned by the job's
-  UV_VERSION and UV_SHA256), the game's link to the resource packs (#1978) and the imported project.
+  Godot's Linux editor at ~/godot/godot, optionally its export templates, uv (through setup-uv),
+  the game's link to the resource packs (#1978) and the imported project.
   The one place Godot's version and checksums are pinned (#924): ci.yml and release.yml both use it.
 
 inputs:
@@ -71,22 +71,8 @@ runs:
 
     - name: "🧰 Install uv (the Python tooling's runner)"
       # Always: linking the resource packs needs it (#1978), and so do the templates, cached or not
-      # (#1975). Not again when the job installed it already; an unpinned uv the runner image
-      # might bring doesn't count.
-      shell: bash
-      run: |
-        if [ -z "${UV_VERSION:-}" ] || [ -z "${UV_SHA256:-}" ]; then
-          echo "::error::setting up Godot needs uv: set UV_VERSION and UV_SHA256 in the job's env"
-          exit 1
-        fi
-        if [ "$(uv --version 2> /dev/null | cut -d' ' -f2)" = "${UV_VERSION}" ]; then
-          exit 0
-        fi
-        curl -fsSL -o /tmp/uv.tar.gz \
-          "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-unknown-linux-gnu.tar.gz"
-        echo "${UV_SHA256}  /tmp/uv.tar.gz" | sha256sum --check
-        sudo tar xzf /tmp/uv.tar.gz -C /usr/local/bin --strip-components=1 \
-          uv-x86_64-unknown-linux-gnu/uv
+      # (#1975).
+      uses: ./.github/actions/setup-uv
 
     - name: "⬇️ Download the export templates"
       # The archive holds every platform's templates; only those export_presets.cfg needs are kept

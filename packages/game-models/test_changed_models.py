@@ -34,6 +34,7 @@ CASES = [
     ("the lock file", ["uv.lock"], None),
     ("the workflow", [".github/workflows/ci.yml"], None),
     ("Blender's setup", [".github/actions/setup-blender/action.yml"], None),
+    ("uv's setup", [".github/actions/setup-uv/action.yml"], None),
     ("a view the footprint check reads", ["packages/game/slices/board/look/board_view.gd"], None),
     ("a scene", ["packages/game/game/main.tscn"], None),
     ("a game script a view's settings may name (#2072)", ["packages/game/slices/combat/rules/x.gd"], None),
