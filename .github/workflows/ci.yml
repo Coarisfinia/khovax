@@ -36,11 +36,6 @@ env:
   # archive, as GitHub records it for the release asset.
   JV_VERSION: 6.0.3
   JV_SHA256: 36e9ab8481cc8e2cb27c8336decc9abdcbd606b05792ca88d6188e01ec28766b
-  # uv runs the Python tooling (#1036) and installs the Python pyproject.toml pins, which it checks
-  # against the checksums built into this release; the checksum is of its Linux release archive,
-  # from the release's .sha256 file. Locally it comes from scoop or Homebrew.
-  UV_VERSION: 0.13.4
-  UV_SHA256: 2b428396f12572d4429cf210ca234dd599a33b3af0958a4d5ed569d63e3f344f
   # The web e2e flow's browser (#102); the checksum is of its Linux archive. Playwright, which
   # drives it, is locked in uv.lock (packages/game-web-e2e, #1041).
   CHROME_VERSION: 156.0.8078.12
@@ -99,12 +94,7 @@ jobs:
         run: jscpd --format gdscript --exit-code 1 --reporters console --no-colors .
 
       - name: "🧰 Install uv (the Python tooling's runner)"
-        run: |
-          curl -fsSL -o /tmp/uv.tar.gz \
-            "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-unknown-linux-gnu.tar.gz"
-          echo "${UV_SHA256}  /tmp/uv.tar.gz" | sha256sum --check
-          sudo tar xzf /tmp/uv.tar.gz -C /usr/local/bin --strip-components=1 \
-            uv-x86_64-unknown-linux-gnu/uv
+        uses: ./.github/actions/setup-uv
 
       - name: "🐍 Check the uv project is locked and runs"
         # uv.lock matches pyproject.toml, and the pinned Python runs from it: the ported tools
@@ -347,12 +337,7 @@ jobs:
           fetch-depth: 2
 
       - name: "🧰 Install uv (the Python tooling's runner)"
-        run: |
-          curl -fsSL -o /tmp/uv.tar.gz \
-            "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-unknown-linux-gnu.tar.gz"
-          echo "${UV_SHA256}  /tmp/uv.tar.gz" | sha256sum --check
-          sudo tar xzf /tmp/uv.tar.gz -C /usr/local/bin --strip-components=1 \
-            uv-x86_64-unknown-linux-gnu/uv
+        uses: ./.github/actions/setup-uv
 
       - name: "🔗 Link the resource packs"
         # The footprint and world-scale checks read the tile blueprints, which lie in the default
@@ -724,12 +709,7 @@ jobs:
 
       - name: "🧰 Install uv (the Python tooling's runner)"
         if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
-        run: |
-          curl -fsSL -o /tmp/uv.tar.gz \
-            "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-unknown-linux-gnu.tar.gz"
-          echo "${UV_SHA256}  /tmp/uv.tar.gz" | sha256sum --check
-          sudo tar xzf /tmp/uv.tar.gz -C /usr/local/bin --strip-components=1 \
-            uv-x86_64-unknown-linux-gnu/uv
+        uses: ./.github/actions/setup-uv
 
       - name: "🎲 Play this commit"
         # The import's script errors are the headless job's to report. Godot names what leaked only
@@ -1068,12 +1048,7 @@ jobs:
           echo "EXPECTED_HASH=${hash}" >> "$GITHUB_ENV"
 
       - name: "🧰 Install uv (the Python tooling's runner)"
-        run: |
-          curl -fsSL -o /tmp/uv.tar.gz \
-            "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-unknown-linux-gnu.tar.gz"
-          echo "${UV_SHA256}  /tmp/uv.tar.gz" | sha256sum --check
-          sudo tar xzf /tmp/uv.tar.gz -C /usr/local/bin --strip-components=1 \
-            uv-x86_64-unknown-linux-gnu/uv
+        uses: ./.github/actions/setup-uv
 
       - name: "🐍 Install the pinned Python"
         # Here, so the emulator step's timeout isn't spent downloading it.
@@ -1212,12 +1187,7 @@ jobs:
           echo "EXPECTED_HASH=${hash}" >> "$GITHUB_ENV"
 
       - name: "🧰 Install uv (the Python tooling's runner)"
-        run: |
-          curl -fsSL -o /tmp/uv.tar.gz \
-            "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-unknown-linux-gnu.tar.gz"
-          echo "${UV_SHA256}  /tmp/uv.tar.gz" | sha256sum --check
-          sudo tar xzf /tmp/uv.tar.gz -C /usr/local/bin --strip-components=1 \
-            uv-x86_64-unknown-linux-gnu/uv
+        uses: ./.github/actions/setup-uv
 
       - name: "⬇️ Download Chrome (headless shell) and Playwright's ffmpeg"
         run: |

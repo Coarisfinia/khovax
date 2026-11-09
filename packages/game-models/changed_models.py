@@ -41,6 +41,7 @@ EVERY = (
     "pyproject.toml",
     "uv.lock",
     ".github/actions/setup-blender/*",
+    ".github/actions/setup-uv/*",
     ".github/workflows/ci.yml",
     "packages/game/slices/*/look/*",
     "packages/game/*.gd",

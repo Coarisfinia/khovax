@@ -917,9 +917,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   "Allow GitHub Actions to create and approve pull requests" stays off (owner's pick on #1874).
 - **Everything CI downloads is pinned and verified:** actions by full commit SHA (with the tag in a
   comment), and Godot, its export templates, Blender, gdstyle and uv by checksum, with cache keys
-  that include the checksum. Bump a version and its checksum together, in `ci.yml` and `release.yml` both.
-  Godot's are pinned once, in `.github/actions/setup-godot/action.yml`, the setup every job that
-  needs Godot uses (#924), and Blender's in `.github/actions/setup-blender/action.yml` (#1161), with
+  that include the checksum. Bump a version and its checksum together.
+  uv's are pinned once, in `.github/actions/setup-uv/action.yml` (#2204), Godot's once, in
+  `.github/actions/setup-godot/action.yml`, the setup every job that needs Godot uses (#924), and Blender's in `.github/actions/setup-blender/action.yml` (#1161), with
   the model skill naming the same version. The runner image is named explicitly (`ubuntu-26.04`, not
   `ubuntu-latest`), so a new image arrives on purpose, with the APK build checked, not on GitHub's
   date.
