@@ -3,7 +3,7 @@ hand-run rounds of build, check, read the logs and adjust, one run prints a shor
 combinations pass, and for each failing one the limit it misses most and by how much.
 
     uv run --locked --package khovax-game-models packages/game-models/sweep_gait.py \
-        packages/game-models/<name>.py packages/game/assets/<name>/<name>.glb \
+        packages/game-models/<name>.py resourcepacks/default/models/<name>/<name>.glb \
         NAME=value,value,... [NAME=value,...] [--clips Walk,Run] [--jobs N] [--keep <folder>]
 
 The script must offer the names in its GAIT (lib/tuning.py); the committed .glb's .import gives

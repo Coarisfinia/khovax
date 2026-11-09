@@ -7,7 +7,7 @@ so this script drops that rig and builds a limbless one (lib/limbless.py), swaps
 for ours (lib/marked_eyes.py) and animates every creature clip.
 
     uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/wobulumu.py -- packages/game/assets/wobulumu/wobulumu.glb
+        --python packages/game-models/wobulumu.py -- resourcepacks/default/models/wobulumu/wobulumu.glb
 
 It prints the speeds the motion check (packages/game-models/check_motion.py) takes. `NAME=value`
 after the output path sets one of its GAIT values (lib/tuning.py), for the gait sweep

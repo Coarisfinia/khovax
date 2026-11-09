@@ -12,7 +12,7 @@ creature clip with the library's clips, its forelegs planted by lib/adopted.py a
 bent at the knee (`limbs`, #2026).
 
     uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/kalvrakkor_magma.py -- packages/game/assets/kalvrakkor_magma/kalvrakkor_magma.glb
+        --python packages/game-models/kalvrakkor_magma.py -- resourcepacks/default/models/kalvrakkor_magma/kalvrakkor_magma.glb
 
 It prints the speeds the motion check (packages/game-models/check_motion.py) takes. `NAME=value`
 after the output path sets one of its GAIT values (lib/tuning.py), for the gait sweep
@@ -49,7 +49,7 @@ COLORS = {
     "glow": (marked_eyes.linear(frostfire.MAGMA_EYE), 1.0),
 }
 # The marks are black on a head of dark basalt, off the middle (marked_eyes.BEASTS).
-MARKED = marked_eyes.BEASTS["assets/kalvrakkor_magma/kalvrakkor_magma.glb"]
+MARKED = marked_eyes.BEASTS["resourcepacks/default/models/kalvrakkor_magma/kalvrakkor_magma.glb"]
 # Faint's frames over which the lids shut (eyes.Lids): as it sinks.
 FAINT_LIDS = (14, 34)
 

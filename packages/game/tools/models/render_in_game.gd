@@ -29,7 +29,7 @@ extends SceneTree
 ## Render it off the desktop and silent, as AGENTS.md's screenshot recipe says:
 ##   uv run --locked packages/game-offscreen/offscreen.py -- --path packages/game \
 ##     -s res://tools/models/render_in_game.gd -- \
-##     res://assets/<name>/<name>.glb <out_dir> [size=1280x720] \
+##     res://resourcepacks/default/models/<name>/<name>.glb <out_dir> [size=1280x720] \
 ##     [clip=<Clip>[,<Clip>...] [from=<view> [camera=rest|<file>|<dir>]]] [points] [agitated] \
 ##     [type=<type>] \
 ##     [leaning=harmony|supremacy] [library=<id>] [scale=<n>] \

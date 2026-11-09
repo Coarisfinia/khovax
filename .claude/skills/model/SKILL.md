@@ -395,7 +395,7 @@ a second model could use goes into the library or a generic tool, never into one
   clips on one line (`lib/summary.py`). Read those while tuning, not the full logs.
 - **The gait sweep (#1524):** `uv run --locked --package khovax-game-models
   packages/game-models/sweep_gait.py packages/game-models/<name>.py
-  packages/game/assets/<name>/<name>.glb NAME=a,b,c ... [--clips Walk,Run] [--keep <folder>]`
+  resourcepacks/default/models/<name>/<name>.glb NAME=a,b,c ... [--clips Walk,Run] [--keep <folder>]`
   builds the model over the grid of gait values in parallel, runs those three checks on each in
   summary mode, and prints a Markdown table: `PASS`, or the limit each combination misses most
   and by how much. A model script offers its gait values as module constants named in its `GAIT`
@@ -586,7 +586,7 @@ body**, as a clip library of their own, so a later body plays the same clips:
    out of the repository (beside the owner's exports in khovax-sources) and credit it in the
    library's `SOURCE.md`.
 2. **The library's build merges them:** `player_clips.py` puts every clip source onto the one rig
-   and exports `packages/game/assets/player/player_clips.glb`. It **fails when a clip source's
+   and exports `resourcepacks/default/models/player/player_clips.glb`. It **fails when a clip source's
    skeleton differs** from the skeleton's (a bone missing or extra, another parent, another rest
    pose; `lib/skeleton.py`, read from the .glb as Godot reads it), naming each difference in a
    `SKELETON` line. CI builds it with every model (step 14), so a clip from another rig fails there.
@@ -609,7 +609,7 @@ body**, as a clip library of their own, so a later body plays the same clips:
    such a map, Meshy's or not, plays the same clips. The boot flow checks the library loads with
    its clips on the profile's bones (`UNWORN_CLIPS`) until a body's view plays it.
 4. **The body plays the library** (#1827): `import_body.py -- <rigged.glb> <textured.glb>
-   packages/game/assets/player/player_body.glb` takes the rigged export's body and rig (no clips)
+   resourcepacks/default/models/player/player_body.glb` takes the rigged export's body and rig (no clips)
    and moves the textured export's UVs and colour onto it corner by corner, when Meshy textured
    the same mesh apart (it fails, saying how far off, when the two aren't the same triangles). Its
    `.import` carries the library's `BoneMap`. `PlayerView` names the library (`CLIP_LIBRARY`) and
@@ -648,7 +648,7 @@ prop's own, and never another grey stone. A prop's script only maps its parts on
 
 **Every model is a resource of the default pack** (#1864): a new `.glb` gets an entry in the
 `models` of `packages/game/slices/resource_packs/data/default.jsonc` (`"model_<name>":
-"assets/<name>/<name>.glb"`), and content files and views name it by that id, never by its
+"resourcepacks/default/models/<name>/<name>.glb"`), and content files and views name it by that id, never by its
 `res://` path (`resource_packs_check.py` in CI).
 
 A new material goes into the set (`prop_textures.py`'s `SET` and `textures/SOURCE.md`), for every
@@ -661,7 +661,7 @@ No runes or carvings by script: they come from the rune set (#1855) and the engr
 
 ## 1. Build (Blender script)
 - **Where:** `packages/game-models/<name>.py` builds the model, and
-  `packages/game/assets/<name>/<name>.glb` is its output, with `SOURCE.md`, a license and a
+  `resourcepacks/default/models/<name>/<name>.glb` is its output, with `SOURCE.md`, a license and a
   `CREDITS.md` entry, as AGENTS.md's asset rules say.
 - **Look:** cel-shaded eye candy, medium-poly for anything the camera sees up close (AGENTS.md,
   #69). It must read from the game's top-down camera, so the shape comes from the silhouette
@@ -717,7 +717,7 @@ clips. Ask the owner only when it's unclear what should move how.
 - **Clips:** one action per state the game plays. Every creature carries the full creature set
   (owner, #1157), named once in `packages/game-models/lib/clip_set.py`: `clips.animate` refuses a
   creature without one of them, and CI's `check_clip_set.py` fails a committed creature `.glb`
-  that lacks one (every skinned model under the game's `assets/` except the non-creatures it
+  that lacks one (every skinned model under the default pack's `models/` except the non-creatures it
   lists). A clip every creature gains goes into that set, with every creature's rebuild in the
   same pull request. Read the view that will use the model too, and cover the clips it plays.
   Looping clips start and end on the same pose, and the walk speed matches how fast the game
@@ -761,7 +761,7 @@ clips. Ask the owner only when it's unclear what should move how.
 4. **Godot import, in the game project:** a new worktree first links the resource packs (`uv run
    --locked packages/game-build/link_resource_packs.py`, #2134). Then, after `godot --headless
    --path packages/game --import`, run `godot --headless --path packages/game -s
-   res://tools/models/check_glb.gd -- res://assets/<name>/<name>.glb <Clip> ...`. It goes through
+   res://tools/models/check_glb.gd -- res://resourcepacks/default/models/<name>/<name>.glb <Clip> ...`. It goes through
    the repo's own import settings (looping clips included) and must print `MODEL CHECK: PASS`: a
    skeleton with bones, every skinned mesh bound to it, every clip the game plays, and a centre of
    attack when it plays Attack; it lists the eyes and centres of attack. CI checks the same for
@@ -811,7 +811,7 @@ clips. Ask the owner only when it's unclear what should move how.
 11. **Reference comparison (#1072):** `uv run --locked packages/game-models/blender.py --background
    --factory-startup --python .claude/skills/model/scripts/compare_sheet.py -- <model.glb>
    <reference> <out_dir> [views]`, the reference being the last approved `.glb` (`git show
-   origin/main:packages/game/assets/<name>/<name>.glb > <scratch>/reference.glb`) or, for a new
+   origin/main:resourcepacks/default/models/<name>/<name>.glb > <scratch>/reference.glb`) or, for a new
    model, its concept image. A concept image drawn from front three-quarter (as generated ones
    usually are) is compared in the `three_quarter` view, tilted and turned to the image's angle
    when it differs: `three_quarter:<tilt>:<turn>` (#1517), or `three_quarter:fit`, which finds that
@@ -852,13 +852,13 @@ clips. Ask the owner only when it's unclear what should move how.
    the rebuild check's build prints (step 14, `--speeds`).
 
 14. **Rebuild (#1085):** `uv run --locked --package khovax-game-models
-   packages/game-models/check_rebuild.py packages/game-models/<name>.py packages/game/assets/<name>/<name>.glb` builds the model twice,
+   packages/game-models/check_rebuild.py packages/game-models/<name>.py resourcepacks/default/models/<name>/<name>.glb` builds the model twice,
    side by side, and compares the two builds with each other and with the committed `.glb`; it
    must print `REBUILD CHECK: PASS`. On a difference it names what differs (the JSON's part, or
    each mesh's indices or attribute and each clip's channel, by how much): indices that only move
    point to a face order, values off by a hair to float noise. Run it after the last build, before
    committing the `.glb`. CI runs it with `--all` (every script named like a `.glb` under the
-   game's `assets/`) whenever a model, its script or the library changes (#1161), with Blender in
+   default pack's `models/`) whenever a model, its script or the library changes (#1161), with Blender in
    an Ubuntu 24.04 container: the C library's maths differs between releases in the last bit, and
    the decimation and face order turn that into a different file. So build committed models on
    Ubuntu 24.04 (this machine's WSL); moving to another release moves CI's container with it.
@@ -991,7 +991,7 @@ clips. Ask the owner only when it's unclear what should move how.
   4. **Close-ups:** the codex view, `portrait` and `face` from `render_in_game.gd`.
   Publish them on the `assets` branch per AGENTS.md.
 - **One command for all of them (#1525):** `uv run --locked --package khovax-game-models
-  packages/game-models/render_media.py packages/game/assets/<name>/<name>.glb --pr <n> [--tag v2]
+  packages/game-models/render_media.py resourcepacks/default/models/<name>/<name>.glb --pr <n> [--tag v2]
   [--quick]` (in a new worktree, after `link_resource_packs.py` as in step 4) renders the sheet,
   the in-game shots (desktop, phone, close-ups, points, the six sides joined into one picture)
   and every clip's GIF in game and close up, Blender and Godot side by side and Godot off the

@@ -2,9 +2,8 @@
 # The tool reports to whoever runs it (CI) on stderr; that is what it is for.
 extends SceneTree
 ## Writes CREDITS.md from the source note every asset pack keeps next to its files
-## (assets/<pack>/SOURCE.md, or for a kind moved into the default pack's own folder, #1978,
-## resourcepacks/default/<kind>/<pack>/SOURCE.md): its title and its author, source and license
-## lines (#70), every pack in the order of its folder's name. CI runs it
+## (resourcepacks/default/<kind>/<pack>/SOURCE.md, #1978): its title and its author, source and
+## license lines (#70), every pack in the order of its folder's name. CI runs it
 ## and fails when the committed CREDITS.md differs, so the credits can't drift from the assets:
 ## godot --headless --path packages/game -s res://tools/godot/credits.gd
 ##
@@ -13,14 +12,14 @@ extends SceneTree
 ## as assets, which this public repository and a shareable resource pack do. A pack whose source
 ## names quaternius.com, whose license names the QAL, or whose license file is the QAL's text fails,
 ## unless its note has an `- **Owner's OK:**` line naming where the owner allowed it. The author's
-## models taken from Poly Pizza while it showed them as CC0 (assets/quaternius-items/) stay allowed.
+## models taken from Poly Pizza while it showed them as CC0 (quaternius-items) stay allowed.
 
-## The folders holding asset packs, from res://: assets/, and the default pack's folders of the
-## kinds already moved there (#1978), which the game reaches through its link, res://resourcepacks/
+## The folders holding asset packs, from res://: the default pack's folders of each
+## kind (#1978), which the game reaches through its link, res://resourcepacks/
 ## (link_resource_packs.py; named in parts, so no check takes it for a lookup around the resolver).
 const PACKS: String = "res://resourcepacks/"
 const FOLDERS: Array[String] = [
-	"res://assets/",
+	PACKS + "default/models/",
 	PACKS + "default/audio/",
 	PACKS + "default/textures/",
 ]
@@ -34,7 +33,7 @@ const OWNERS_OK: String = "- **Owner's OK:**"
 const HEADER: String = """# Credits
 
 The assets this game uses, with their authors and licenses. Generated from each pack's `SOURCE.md`
-(`assets/<pack>/`, or `resourcepacks/default/<kind>/<pack>/`) by `tools/godot/credits.gd`; don't
+(`resourcepacks/default/<kind>/<pack>/`) by `tools/godot/credits.gd`; don't
 edit it by hand.
 """
 
@@ -50,7 +49,7 @@ func _init() -> void:
 	var failed: int = 0
 	var packs: Array[String] = _packs()
 	if packs.is_empty():
-		printerr("no asset packs in assets/: the credits would be empty")
+		printerr("no asset packs in the default pack: the credits would be empty")
 		failed += 1
 	for pack: String in packs:
 		var entry: String = _entry(pack)

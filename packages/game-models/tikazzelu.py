@@ -8,7 +8,7 @@ shine at its centre: a small glowing core inside the ribbons, swelling as it str
 channels (lib/pulse.py).
 
     uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/tikazzelu.py -- packages/game/assets/tikazzelu/tikazzelu.glb
+        --python packages/game-models/tikazzelu.py -- resourcepacks/default/models/tikazzelu/tikazzelu.glb
 
 It prints the speeds the motion check (packages/game-models/check_motion.py) takes. `NAME=value`
 after the output path sets one of its GAIT values (lib/tuning.py), for the gait sweep

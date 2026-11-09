@@ -21,7 +21,7 @@ from a free source also passes the license rules below.
 
 ## Before you download anything
 
-1. **Look for what's already here**, in `packages/game/assets/`, `resourcepacks/default/textures/` and
+1. **Look for what's already here**, in `resourcepacks/default/models/`, `resourcepacks/default/textures/` and
    `packages/game-models/textures/`.
    Reusing an asset costs no new license review.
 2. **Check the license of the exact file, on its source's own page.** A site's general statement
@@ -52,8 +52,8 @@ A claim on a source's page is the source's claim, so word it that way.
 
 ## What stays next to the file
 
-Each pack lives in `packages/game/assets/<pack>/` (a sound's or an image's in the default pack's own
-folder, `resourcepacks/default/audio/<pack>/` or `resourcepacks/default/textures/<pack>/`, #1978), with only what the game uses, never a whole
+Each pack lives in the default pack's own folder of its kind, `resourcepacks/default/<kind>/<pack>/`
+(`models`, `textures` or `audio`, #1978), with only what the game uses, never a whole
 download:
 
 - **`LICENSE.md`:** the license's text, or the pack's own notice if it came with one.
