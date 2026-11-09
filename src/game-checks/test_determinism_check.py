@@ -59,6 +59,11 @@ REFUSED = (
     "var a := Vector2i.ONE.length()",
     "var a := Vector2i(1, 2).abs().length()",
     "var a := Vector2i(get_x(), 4).length()",
+    "var a := Vector3i(1, 2, 3).length()",
+    "var a := Vector4i.ONE.length()",
+    "var a := Vector2i(1, 2).distance_to(other)",
+    "var a := Vector3i.ONE.abs().distance_to(other)",
+    "var e := Expression.new()",
     "var a := Vector2i.ONE.snapped(Vector2i(2, 2)).length()",
     "var a := tile.aspect()",
     "var a := PackedFloat32Array()",
@@ -100,6 +105,7 @@ ALLOWED = (
     'var a := "obj.call(\'shuffle\')"',
     "var a := type_convert(x, TYPE_INT)",
     "var a := text.length()",
+    "var a := other.distance_to(x)",
 )
 
 
@@ -117,6 +123,16 @@ class FormsTest(unittest.TestCase):
     def test_the_length_of_a_declared_vector2i_is_refused(self) -> None:
         self.assertEqual(
             forbidden_lines("var tile: Vector2i\nvar a := tile.length()"),
+            ["2:var a := tile.length()"],
+        )
+
+    def test_a_declared_vector3i_or_vector4i_is_refused(self) -> None:
+        self.assertEqual(
+            forbidden_lines("var tile: Vector3i\nvar a := tile.distance_to(b)"),
+            ["2:var a := tile.distance_to(b)"],
+        )
+        self.assertEqual(
+            forbidden_lines("var tile: Vector4i\nvar a := tile.length()"),
             ["2:var a := tile.length()"],
         )
 

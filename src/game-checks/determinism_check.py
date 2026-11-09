@@ -31,6 +31,8 @@ FORBIDDEN = re.compile(
             r"\b(FileAccess|DirAccess|JSON)\b",
             r"\b(Vector2|Vector3|Vector4|Color|Rect2|AABB|Plane|Basis|Quaternion|Transform2D"
             r"|Transform3D|Projection)\b",
+            # Runs code from a string, where the patterns read with strings removed can't see it.
+            r"\bExpression\b",
         )
     )
 )
@@ -63,17 +65,18 @@ FORBIDDEN_IN_CODE = re.compile(
         )
     )
 )
-# A Vector2i's length() is a float, a String's a whole number, and a pattern can't see types: so a
-# length() counts on a Vector2i written out or on a name the file declares as one. Scripts type
+# An integer vector's length() and distance_to() are floats, a String's length() a whole number,
+# and a pattern can't see types: so they count on a Vector2i, Vector3i or Vector4i written out or on
+# a name the file declares as one. Scripts type
 # every declaration (AGENTS.md); a dictionary entry's value (`a: Vector2i(1, 2)`, `a: Vector2i.ONE`)
 # declares nothing.
-VECTOR2I_ARGUMENTS = r"\((?:[^()]|\([^()]*\))*\)"  # A call inside them, one level deep.
-VECTOR2I_RECEIVER = rf"\bVector2i(?:{VECTOR2I_ARGUMENTS}|\.[A-Z_]+)"
-# What a Vector2i's own methods return is a Vector2i again.
-VECTOR2I_CHAIN = (
-    rf"(?:\.(?:abs|clamp|clampi|max|maxi|min|mini|sign|snapped|snappedi){VECTOR2I_ARGUMENTS})*"
+INT_VECTOR_ARGUMENTS = r"\((?:[^()]|\([^()]*\))*\)"  # A call inside them, one level deep.
+INT_VECTOR_RECEIVER = rf"\bVector[234]i(?:{INT_VECTOR_ARGUMENTS}|\.[A-Z_]+)"
+# What an integer vector's own methods return is an integer vector again.
+INT_VECTOR_CHAIN = (
+    rf"(?:\.(?:abs|clamp|clampi|max|maxi|min|mini|sign|snapped|snappedi){INT_VECTOR_ARGUMENTS})*"
 )
-VECTOR2I_DECLARED = re.compile(r"\b(\w+)\s*:\s*Vector2i\b(?!\s*[.(])")
+INT_VECTOR_DECLARED = re.compile(r"\b(\w+)\s*:\s*Vector[234]i\b(?!\s*[.(])")
 # Reaching a randomness method by name: read on code_with_random_names, which keeps that string.
 RANDOM_NAMES = ("shuffle", "pick_random")
 RANDOM_BY_NAME = re.compile(
@@ -113,9 +116,11 @@ def forbidden_lines(source: str) -> list[str]:
     """The numbered lines of a script that use something the rules never use."""
     code = without_comments(source).rstrip("\n").split("\n")
     bare = code_only(source).split("\n")
-    declared = VECTOR2I_DECLARED.findall("\n".join(bare))
-    receivers = [VECTOR2I_RECEIVER, *(rf"\b{name}" for name in declared)]
-    float_length = re.compile(rf"(?:{'|'.join(receivers)}){VECTOR2I_CHAIN}\.length\s*\(")
+    declared = INT_VECTOR_DECLARED.findall("\n".join(bare))
+    receivers = [INT_VECTOR_RECEIVER, *(rf"\b{name}" for name in declared)]
+    float_length = re.compile(
+        rf"(?:{'|'.join(receivers)}){INT_VECTOR_CHAIN}\.(?:length|distance_to)\s*\("
+    )
     named = code_with_random_names(source).split("\n")
     return numbered(
         code,
