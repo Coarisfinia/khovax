@@ -834,6 +834,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   git -c credential.helper= -c credential.helper="$H" clone --filter=blob:none --sparse \
     https://github.com/Coarisfinia/khovax-sources
   git -C khovax-sources -c credential.helper= -c credential.helper="$H" sparse-checkout set <issue>-<slug>
+  git -C khovax-sources config user.name 'coarisfinia-ai-agent[bot]'
+  git -C khovax-sources config user.email '343849075+coarisfinia-ai-agent[bot]@users.noreply.github.com'
   # add the export and commit it, then:
   git -C khovax-sources -c credential.helper= -c credential.helper="$H" push origin main
   ```
