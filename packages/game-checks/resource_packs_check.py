@@ -104,6 +104,8 @@ MOVED = {
     "harvest_tables": "harvest_tables",
     "materials": "materials",
 }
+# Where the default pack's manifest lay before it moved into the pack's own folder (#1978).
+OLD_MANIFEST = Path("slices/resource_packs/data/default.jsonc")
 # Where the default pack's realms, regions and region pieces lie (#1978).
 REALMS = f"{PACK_ROOT}realms"
 REGIONS = f"{PACK_ROOT}regions"
@@ -288,6 +290,14 @@ def misplaced_regions(whole: Entries, pieces: Entries) -> Problems:
     return problems
 
 
+def old_manifest() -> Problems:
+    """The default pack's manifest where it lay before it moved into the pack's own folder."""
+    if not OLD_MANIFEST.is_file():
+        return []
+    return [(f"the default pack's manifest lies at {OLD_MANIFEST.as_posix()}: move it to"
+             f" {PACK_ROOT}pack.jsonc, its paths relative to it (#1978)", OLD_MANIFEST.as_posix())]
+
+
 def outside_root(entries: dict[str, Entries]) -> Problems:
     """The files of a kind already moved (MOVED) that the manifest lists outside its folder in
     the default pack's own folder (PACK_ROOT)."""
@@ -369,6 +379,7 @@ def main() -> int:
     entries, read_problems = manifest_sections()
     problems += read_problems
     problems += outside_root(entries)
+    problems += old_manifest()
     problems += [
         (f"region {region_id} is both drawn whole and in pieces", MANIFEST.as_posix())
         for region_id in sorted(entries["regions"].keys() & entries["region_pieces"].keys())
