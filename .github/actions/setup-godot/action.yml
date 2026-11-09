@@ -71,8 +71,11 @@ runs:
 
     - name: "🧰 Install uv (the Python tooling's runner)"
       # Always: linking the resource packs needs it (#1978), and so do the templates, cached or not
-      # (#1975).
+      # (#1975). Not again when the job installed it already; an unpinned uv the runner image
+      # might bring doesn't count.
       uses: ./.github/actions/setup-uv
+      with:
+        skip-if-installed: "true"
 
     - name: "⬇️ Download the export templates"
       # The archive holds every platform's templates; only those export_presets.cfg needs are kept

@@ -4,20 +4,28 @@ description: >-
   checking them against the checksums built into this release. The one place CI pins uv's version
   and checksum (#2204). Locally it comes from scoop or Homebrew.
 
+inputs:
+  skip-if-installed:
+    description: >-
+      "true" leaves a uv that already reports the pinned version alone (setup-godot, for a job that
+      installed it already); "false" always downloads and verifies it.
+    default: "false"
+
 runs:
   using: composite
   steps:
     - name: "🧰 Install uv (the Python tooling's runner)"
       # Bump the version and the checksum together: the checksum is of the Linux release archive,
       # from the release's .sha256 file. Bump uv_build in packages/game-shared/pyproject.toml with
-      # them. Not again when the job installed it already; an unpinned uv the runner image might
-      # bring doesn't count.
+      # them.
       shell: bash
       env:
         UV_VERSION: 0.13.4
         UV_SHA256: 2b428396f12572d4429cf210ca234dd599a33b3af0958a4d5ed569d63e3f344f
+        SKIP_IF_INSTALLED: ${{ inputs.skip-if-installed }}
       run: |
-        if [ "$(uv --version 2> /dev/null | cut -d' ' -f2)" = "${UV_VERSION}" ]; then
+        if [ "${SKIP_IF_INSTALLED}" = "true" ] \
+          && [ "$(uv --version 2> /dev/null | cut -d' ' -f2)" = "${UV_VERSION}" ]; then
           exit 0
         fi
         curl -fsSL -o /tmp/uv.tar.gz \
