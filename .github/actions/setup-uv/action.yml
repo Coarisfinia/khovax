@@ -1,0 +1,35 @@
+name: Set up uv
+description: >-
+  uv on the PATH, which runs the Python tooling (#1036) and installs the Python pyproject.toml pins,
+  checking them against the checksums built into this release. The one place CI pins uv's version
+  and checksum (#2204). Locally it comes from scoop or Homebrew.
+
+inputs:
+  skip-if-installed:
+    description: >-
+      "true" leaves a uv that already reports the pinned version alone (setup-godot, for a job that
+      installed it already); "false" always downloads and verifies it.
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: "🧰 Install uv (the Python tooling's runner)"
+      # Bump the version and the checksum together: the checksum is of the Linux release archive,
+      # from the release's .sha256 file. Bump uv_build in src/game-shared/pyproject.toml with
+      # them.
+      shell: bash
+      env:
+        UV_VERSION: 0.13.4
+        UV_SHA256: 2b428396f12572d4429cf210ca234dd599a33b3af0958a4d5ed569d63e3f344f
+        SKIP_IF_INSTALLED: ${{ inputs.skip-if-installed }}
+      run: |
+        if [ "${SKIP_IF_INSTALLED}" = "true" ] \
+          && [ "$(uv --version 2> /dev/null | cut -d' ' -f2)" = "${UV_VERSION}" ]; then
+          exit 0
+        fi
+        curl -fsSL -o /tmp/uv.tar.gz \
+          "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-unknown-linux-gnu.tar.gz"
+        echo "${UV_SHA256}  /tmp/uv.tar.gz" | sha256sum --check
+        sudo tar xzf /tmp/uv.tar.gz -C /usr/local/bin --strip-components=1 \
+          uv-x86_64-unknown-linux-gnu/uv

@@ -31,10 +31,7 @@ concurrency:
   group: release
   cancel-in-progress: false
 
-env:
-  # Godot's version and checksums are pinned once, in .github/actions/setup-godot (#924).
-  UV_VERSION: 0.13.4
-  UV_SHA256: 2b428396f12572d4429cf210ca234dd599a33b3af0958a4d5ed569d63e3f344f
+# Godot's and uv's versions and checksums are pinned once, in their setup actions (#924, #2204).
 
 jobs:
   plan:
@@ -183,12 +180,7 @@ jobs:
           echo "Builds carry ${TAG}, Android version code ${code}"
 
       - name: "🧰 Install uv (the Python tooling's runner)"
-        run: |
-          curl -fsSL -o /tmp/uv.tar.gz \
-            "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-unknown-linux-gnu.tar.gz"
-          echo "${UV_SHA256}  /tmp/uv.tar.gz" | sha256sum --check
-          sudo tar xzf /tmp/uv.tar.gz -C /usr/local/bin --strip-components=1 \
-            uv-x86_64-unknown-linux-gnu/uv
+        uses: ./.github/actions/setup-uv
 
       - name: "🤖 Android: point Godot at the SDK and Java"
         run: |
