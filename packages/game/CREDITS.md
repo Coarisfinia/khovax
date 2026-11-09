@@ -1,12 +1,12 @@
 # Credits
 
 The assets this game uses, with their authors and licenses. Generated from each pack's `SOURCE.md`
-(`assets/<pack>/`, or `resourcepacks/default/<kind>/<pack>/`) by `tools/godot/credits.gd`; don't
+(`resourcepacks/default/<kind>/<pack>/`) by `tools/godot/credits.gd`; don't
 edit it by hand.
 
 ## Pearl bracelet
 
-- **Files:** `assets/armory3d-pearl-bracelet/`
+- **Files:** `resourcepacks/default/models/armory3d-pearl-bracelet/`
 - **Author:** Armory_3D (https://poly.pizza/u/Armory_3D)
 - **Source:** "Pearl bracelet" on Poly Pizza (https://poly.pizza/m/9zb8mXYP6J), the site's `.glb`
   download, renamed `pearl_bracelet.glb`
@@ -15,7 +15,7 @@ edit it by hand.
 
 ## Drakkudor
 
-- **Files:** `assets/drakkudor/`
+- **Files:** `resourcepacks/default/models/drakkudor/`
 - **Author:** the project (generated with Meshy AI, paid plan, Private licence)
 - **Source:** generated with Meshy AI from the project's own reference image (#1476); its mesh and
   colour texture reduced by `packages/game-models/import_source.py` to
@@ -35,7 +35,7 @@ edit it by hand.
 
 ## Fohossa
 
-- **Files:** `assets/fohossa/`
+- **Files:** `resourcepacks/default/models/fohossa/`
 - **Author:** the project (generated with Meshy AI, paid plan, Private licence)
 - **Source:** generated and rigged with Meshy AI by the owner (#1619); its mesh, colour texture
   and rig reduced and adopted by `packages/game-models/import_source.py` to
@@ -45,7 +45,7 @@ edit it by hand.
 
 ## Frostfire Hound
 
-- **Files:** `assets/frostfire_hound/`
+- **Files:** `resourcepacks/default/models/frostfire_hound/`
 - **Author:** the project (generated with Meshy AI, paid plan, Private licence)
 - **Source:** generated and rigged with Meshy AI by the owner (#1609); its mesh and rig reduced and
   adopted by `packages/game-models/import_source.py` to `packages/game-models/sources/frostfire_hound.glb`,
@@ -71,7 +71,7 @@ edit it by hand.
 
 ## Korvakkar
 
-- **Files:** `assets/kalvrakkor_magma/`
+- **Files:** `resourcepacks/default/models/kalvrakkor_magma/`
 - **Author:** the project (generated with Meshy AI, paid plan, Private licence)
 - **Source:** generated and rigged with Meshy AI by the owner (#1771); its mesh and rig reduced and
   adopted by `packages/game-models/import_source.py` to `packages/game-models/sources/kalvrakkor_magma.glb`
@@ -82,7 +82,7 @@ edit it by hand.
 
 ## Kavrikka
 
-- **Files:** `assets/kavrikka/`
+- **Files:** `resourcepacks/default/models/kavrikka/`
 - **Author:** the project (generated with Meshy AI, paid plan, Private licence)
 - **Source:** generated and rigged with Meshy AI by the owner (#1733); its mesh and rig reduced and
   adopted by `packages/game-models/import_source.py` to `packages/game-models/sources/kavrikka.glb`
@@ -93,7 +93,7 @@ edit it by hand.
 
 ## KayKit Adventurers Character Pack 1.0
 
-- **Files:** `assets/kaykit-adventurers/`
+- **Files:** `resourcepacks/default/models/kaykit-adventurers/`
 - **Author:** Kay Lousberg (www.kaylousberg.com)
 - **Source:** https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0
   (`addons/kaykit_character_pack_adventures/Characters/gltf/Rogue.glb`)
@@ -101,7 +101,7 @@ edit it by hand.
 
 ## KayKit Dungeon Remastered 1.0
 
-- **Files:** `assets/kaykit-dungeon/`
+- **Files:** `resourcepacks/default/models/kaykit-dungeon/`
 - **Author:** Kay Lousberg (www.kaylousberg.com)
 - **Source:** https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0
   (`addons/kaykit_dungeon_remastered/Assets/gltf/chest.glb`, and `box_small_decorated.gltf.glb` as
@@ -110,7 +110,7 @@ edit it by hand.
 
 ## KayKit Medieval Hexagon Pack 1.0
 
-- **Files:** `assets/kaykit-hexagon/`
+- **Files:** `resourcepacks/default/models/kaykit-hexagon/`
 - **Author:** Kay Lousberg (www.kaylousberg.com)
 - **Source:** https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0
   (`addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/nature/`)
@@ -139,7 +139,7 @@ edit it by hand.
 
 ## Mana gems
 
-- **Files:** `assets/mana-gems/`
+- **Files:** `resourcepacks/default/models/mana-gems/`
 - **Author:** the khovax contributors (built in this repository)
 - **Source:** `packages/game-models/mana_gems.py` on the shared model library `packages/game-models/lib/`, a
   Blender script that builds and exports `mana_gems.glb` (#1218)
@@ -147,7 +147,7 @@ edit it by hand.
 
 ## Mana pup
 
-- **Files:** `assets/mana-pup/`
+- **Files:** `resourcepacks/default/models/mana-pup/`
 - **Author:** the khovax contributors (built in this repository)
 - **Source:** `packages/game-models/mana_pup.py` on the shared model library `packages/game-models/lib/`, Blender
   scripts that build, rig, animate and export `mana_pup.glb` (#1220)
@@ -155,7 +155,7 @@ edit it by hand.
 
 ## Mana wolf
 
-- **Files:** `assets/mana-wolf/`
+- **Files:** `resourcepacks/default/models/mana-wolf/`
 - **Author:** the khovax contributors (built in this repository)
 - **Source:** `packages/game-models/mana_wolf.py` on the shared model library `packages/game-models/lib/`, Blender
   scripts that build, rig, animate and export `mana_wolf.glb` (#990, #995)
@@ -163,7 +163,7 @@ edit it by hand.
 
 ## Nuvvoluvvo
 
-- **Files:** `assets/nuvvoluvvo/`
+- **Files:** `resourcepacks/default/models/nuvvoluvvo/`
 - **Author:** the project (generated with Meshy AI, paid plan, Private licence)
 - **Source:** generated and rigged with Meshy AI by the owner (#1620); its mesh, colour texture
   and rig reduced and adopted by `packages/game-models/import_source.py` to
@@ -174,7 +174,7 @@ edit it by hand.
 
 ## Ombulumo
 
-- **Files:** `assets/ombulumo/`
+- **Files:** `resourcepacks/default/models/ombulumo/`
 - **Author:** the khovax contributors (built in this repository)
 - **Source:** `packages/game-models/ombulumo.py` on the shared model library `packages/game-models/lib/`, Blender
   script that builds, rigs, animates and exports `ombulumo.glb` (#1271)
@@ -182,7 +182,7 @@ edit it by hand.
 
 ## Ombuwomo
 
-- **Files:** `assets/ombuwomo/`
+- **Files:** `resourcepacks/default/models/ombuwomo/`
 - **Author:** the project (generated with Meshy AI, paid plan, Private licence)
 - **Source:** generated with Meshy AI by the owner (#1738); its mesh and colour texture reduced by
   `packages/game-models/import_source.py` (`static`: the generator's rig dropped) to
@@ -193,7 +193,7 @@ edit it by hand.
 
 ## Ore outcrop
 
-- **Files:** `assets/ore-outcrop/`
+- **Files:** `resourcepacks/default/models/ore-outcrop/`
 - **Author:** the project (shape generated with Meshy AI, paid plan, Private licence); textures by
   Poly Haven (CC0)
 - **Source:** its shape ("Copper Veined Boulder") generated without a texture with Meshy AI by the
@@ -207,7 +207,7 @@ edit it by hand.
 
 ## Player body and clips
 
-- **Files:** `assets/player/`
+- **Files:** `resourcepacks/default/models/player/`
 - **Author:** the project (generated with Meshy AI, paid plan, Private licence)
 - **Source:** the baseline body (#1827), textured by the owner with Meshy AI and rigged apart:
   `packages/game-models/import_body.py` moves the textured export's UVs and colour onto the rigged
@@ -224,7 +224,7 @@ edit it by hand.
 
 ## Quaternius items
 
-- **Files:** `assets/quaternius-items/`
+- **Files:** `resourcepacks/default/models/quaternius-items/`
 - **Author:** Quaternius (https://quaternius.com)
 - **Source:** Poly Pizza, which hosts the author's models: `necklace.glb` is "Necklace"
   (https://poly.pizza/m/Jvhs8DCNDZ), `coin_pouch.glb` is "Coin Pouch"
@@ -239,7 +239,7 @@ edit it by hand.
 
 ## Standing stone
 
-- **Files:** `assets/standing-stone/`
+- **Files:** `resourcepacks/default/models/standing-stone/`
 - **Author:** the project (shape generated with Meshy AI, paid plan, Private licence); textures by
   Poly Haven and ambientCG (CC0)
 - **Source:** its shape generated without a texture with Meshy AI by the owner (#1853), turned into
@@ -253,7 +253,7 @@ edit it by hand.
 
 ## Starry egg
 
-- **Files:** `assets/starry-egg/`
+- **Files:** `resourcepacks/default/models/starry-egg/`
 - **Author:** the project (generated with Meshy AI, paid plan, Private licence)
 - **Source:** generated with Meshy AI by the owner (#1635); its mesh and colour texture reduced by
   `packages/game-models/import_source.py` (its rig dropped, `static`) to
@@ -264,7 +264,7 @@ edit it by hand.
 
 ## Tentacle gate
 
-- **Files:** `assets/tentacle_gate/`
+- **Files:** `resourcepacks/default/models/tentacle_gate/`
 - **Author:** the project (generated with Meshy AI, paid plan, Private licence)
 - **Source:** generated and rigged with Meshy AI by the owner (#1634); its mesh and colour texture
   reduced by `packages/game-models/import_source.py` to `packages/game-models/sources/tentacle_gate.glb`,
@@ -274,7 +274,7 @@ edit it by hand.
 
 ## Tikazzelu
 
-- **Files:** `assets/tikazzelu/`
+- **Files:** `resourcepacks/default/models/tikazzelu/`
 - **Author:** the project (generated with Meshy AI, paid plan, Private licence)
 - **Source:** generated with Meshy AI by the owner (#1732); its mesh and colour texture reduced by
   `packages/game-models/import_source.py` to `packages/game-models/sources/tikazzelu.glb`, then
@@ -284,7 +284,7 @@ edit it by hand.
 
 ## Tolvakkor
 
-- **Files:** `assets/tolvakkor/`
+- **Files:** `resourcepacks/default/models/tolvakkor/`
 - **Author:** the project (generated with Meshy AI, paid plan, Private licence)
 - **Source:** generated and rigged with Meshy AI by the owner (#1770); its mesh and rig reduced and
   adopted by `packages/game-models/import_source.py` to `packages/game-models/sources/tolvakkor.glb`,
@@ -294,7 +294,7 @@ edit it by hand.
 
 ## Wobulumu
 
-- **Files:** `assets/wobulumu/`
+- **Files:** `resourcepacks/default/models/wobulumu/`
 - **Author:** the project (generated with Meshy AI, paid plan, Private licence)
 - **Source:** generated with Meshy AI by the owner (#1737); its mesh and colour texture reduced by
   `packages/game-models/import_source.py` (`static`: the generator's rig dropped) to

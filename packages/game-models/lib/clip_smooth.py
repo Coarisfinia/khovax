@@ -22,8 +22,9 @@ def action_curves(action):
     return found
 
 
-def gauss(values, sigma, zero):
-    """`values` through a Gaussian of `sigma` frames, the ends held (a one-shot clip)."""
+def gauss(values, sigma, zero, loop=False):
+    """`values` through a Gaussian of `sigma` frames, the ends held (a one-shot clip), or, with
+    `loop`, wrapping around (a cycle, without its last frame repeating its first)."""
     reach = int(math.ceil(3.0 * sigma))
     weights = [math.exp(-0.5 * (offset / sigma) ** 2) for offset in range(-reach, reach + 1)]
     total = sum(weights)
@@ -31,14 +32,16 @@ def gauss(values, sigma, zero):
     for index in range(len(values)):
         mixed = zero.copy()
         for offset, weight in zip(range(-reach, reach + 1), weights):
-            mixed += values[min(max(index + offset, 0), len(values) - 1)] * weight
+            at = (index + offset) % len(values) if loop else min(max(index + offset, 0), len(values) - 1)
+            mixed += values[at] * weight
         out.append(mixed * (1.0 / total))
     return out
 
 
-def smooth(rig, action, sigma):
-    """Every bone's channels of one-shot `action` (keyed on every frame from 0, as Meshy's and the
-    motion capture's are) through a Gaussian of `sigma` frames, keyed on every frame again."""
+def smooth(rig, action, sigma, loop=False):
+    """Every bone's channels of `action` (keyed on every frame from 0, as Meshy's and the motion
+    capture's are) through a Gaussian of `sigma` frames, keyed on every frame again; with `loop`
+    the curves wrap around, so a looping clip's seam stays closed."""
     found = action_curves(action)
     first, last = (int(round(frame)) for frame in action.frame_range)
     if first != 0:
@@ -60,7 +63,9 @@ def smooth(rig, action, sigma):
                     turns[index].negate()
         for path, (curves, samples) in values.items():
             zero = Quaternion((0.0, 0.0, 0.0, 0.0)) if path == "rotation_quaternion" else Vector((0.0, 0.0, 0.0))
-            smoothed = gauss(samples, sigma, zero)
+            smoothed = (gauss(samples[:-1], sigma, zero, True) + [None] if loop else gauss(samples, sigma, zero))
+            if loop:
+                smoothed[-1] = smoothed[0]
             if path == "rotation_quaternion":
                 smoothed = [turn.normalized() for turn in smoothed]
             for index, curve in enumerate(curves):

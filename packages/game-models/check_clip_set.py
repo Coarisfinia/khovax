@@ -3,7 +3,7 @@ lib/clip_set.py, which the build (clips.animate) reads too. CI runs it on every 
 
     uv run --locked --package khovax-game-models packages/game-models/check_clip_set.py
 
-A creature model is every skinned .glb under the game's assets/ except the figures in
+A creature model is every skinned .glb under the default pack's models/ except the figures in
 NOT_CREATURES, so a new skinned model is checked unless it's listed there with its reason. Each
 one lacking a clip is an error annotation on its .glb naming the missing clips (game_shared.log,
 #1115)."""
@@ -19,10 +19,10 @@ from lib import clip_set
 
 # Skinned figures that aren't creatures, from the game's folder, each with why.
 NOT_CREATURES = {
-    "assets/kaykit-adventurers/Rogue.glb": "the people's humanoid figure, with clips of its own",
-    "assets/player/player_body.glb": "the player's body, which plays the player's clip library (#1827)",
-    "assets/player/player_clips.glb": "the player's clip library, its clips on a stand-in rig without a body (#1935)",
-    "assets/tentacle_gate/tentacle_gate.glb": "a gate, a prop of the world that only idles (#1634)",
+    "resourcepacks/default/models/kaykit-adventurers/Rogue.glb": "the people's humanoid figure, with clips of its own",
+    "resourcepacks/default/models/player/player_body.glb": "the player's body, which plays the player's clip library (#1827)",
+    "resourcepacks/default/models/player/player_clips.glb": "the player's clip library, its clips on a stand-in rig without a body (#1935)",
+    "resourcepacks/default/models/tentacle_gate/tentacle_gate.glb": "a gate, a prop of the world that only idles (#1634)",
 }
 
 
@@ -30,7 +30,7 @@ def main() -> int:
     # The game's project folder (#1101): the paths below are relative to it.
     os.chdir(Path(__file__).resolve().parents[1] / "game")
     failed = 0
-    for path in git_files("assets/*.glb"):
+    for path in git_files("resourcepacks/default/models/*.glb"):
         gltf, _binary = read_glb(Path(path))
         if not gltf.get("skins") or path in NOT_CREATURES:
             continue

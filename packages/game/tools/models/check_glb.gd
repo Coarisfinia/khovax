@@ -5,7 +5,7 @@
 # plays an Attack clip without a centre of attack.
 # From the repository, after `godot --headless --path packages/game --import`:
 # godot --headless --path packages/game -s res://tools/models/check_glb.gd -- \
-#   res://assets/<name>/<name>.glb [Clip ...]
+#   res://resourcepacks/default/models/<name>/<name>.glb [Clip ...]
 extends SceneTree
 
 

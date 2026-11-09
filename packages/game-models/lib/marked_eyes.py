@@ -174,16 +174,16 @@ PALE = Marked("PALE", _pale)
 # marked: what the model script hands `replace` and check_painted_eyes.py looks for, keyed by
 # the .glb's path in the game's project folder.
 BEASTS = {
-    "assets/drakkudor/drakkudor.glb": GLOW,
+    "resourcepacks/default/models/drakkudor/drakkudor.glb": GLOW,
     # Pale lanterns, weighted only 0.41 to the head (the muzzle and neck hold the rest).
-    "assets/fohossa/fohossa.glb": Marked("PALE", _pale, weight=0.3),
+    "resourcepacks/default/models/fohossa/fohossa.glb": Marked("PALE", _pale, weight=0.3),
     # Black ovals on a head of dark basalt, which DARK takes for one big eye; ours replaced them on a
     # head standing a little off the middle (kalvrakkor_magma.py).
-    "assets/kalvrakkor_magma/kalvrakkor_magma.glb": Marked("BLACK", _black, middle=0.0125),
+    "resourcepacks/default/models/kalvrakkor_magma/kalvrakkor_magma.glb": Marked("BLACK", _black, middle=0.0125),
     # Two eye pieces painted by frostfire_hound.py, MAGMA_EYE's amber and ICE_EYE's pale cyan on a
     # head of ice blue (hue about 210) and amber cracks. The generator set them off the middle, one
     # ahead of the other: they mirror each other only roughly, across x = 0.068.
-    "assets/frostfire_hound/frostfire_hound.glb": Marked("AMBER/ICE", glow((36.0, 46.0), (180.0, 195.0)),
+    "resourcepacks/default/models/frostfire_hound/frostfire_hound.glb": Marked("AMBER/ICE", glow((36.0, 46.0), (180.0, 195.0)),
                                                          middle=0.068, mirror=1.0),
 }
 
@@ -208,10 +208,10 @@ class Box:
 # basalt half) needs no box: `fragments` takes it for a tone of the head's own paint (#1782).
 MARKINGS = {
     # Its black nose on a head of dark basalt.
-    "assets/kalvrakkor_magma/kalvrakkor_magma.glb": [Box((-0.035, -0.565, 0.595), (0.06, -0.51, 0.65))],
+    "resourcepacks/default/models/kalvrakkor_magma/kalvrakkor_magma.glb": [Box((-0.035, -0.565, 0.595), (0.06, -0.51, 0.65))],
     # The Tolvakkor's dark blue ice: its ears and its helmet's gem above its eyes, its nose and its
     # throat below them; and the thin shadow line inside each of its helmet's cheek guards.
-    "assets/tolvakkor/tolvakkor.glb": [
+    "resourcepacks/default/models/tolvakkor/tolvakkor.glb": [
         Box((-0.4, -0.55, 0.93), (0.4, 0.0, 1.4)),
         Box((-0.1, -0.7, 0.905), (0.06, -0.55, 1.0)),
         Box((-0.1, -0.8, 0.7), (0.06, -0.6, 0.84)),

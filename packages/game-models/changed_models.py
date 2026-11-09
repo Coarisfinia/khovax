@@ -11,7 +11,7 @@ check into `list`, separated by NUL bytes for `xargs -0`, named from the working
 .glb is left to list, such as a model script whose .glb was deleted, which the rebuild check
 fails. `--every` lists every .glb whenever anything is to check, as CI does on `main`.
 
-A model is named by its stem (mana_wolf for mana_wolf.py and assets/mana-wolf/mana_wolf.glb, as
+A model is named by its stem (mana_wolf for mana_wolf.py and resourcepacks/default/models/mana-wolf/mana_wolf.glb, as
 check_rebuild.py pairs them). One model's own files are its model script, its source in sources/
 and its .glb and .glb.import in the game; every other change in EVERY (the model library and
 checks, Blender's setup, the workflow, the game's scripts, views and scenes and the pack the
@@ -101,7 +101,7 @@ def main() -> int:
     base, out = args
     changed = changed_paths(base)
     models = None if changed is None else select(changed, is_model_script)
-    glbs = git_files(str(ROOT / "packages" / "game" / "*.glb"))
+    glbs = git_files("resourcepacks/default/models/*.glb")
     if models is None or (models and "--every" in sys.argv[1:]):
         listed = glbs
     else:
