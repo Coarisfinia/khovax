@@ -1726,37 +1726,47 @@ func _check_guards() -> String:
 	return result if not result.is_empty() else _check_dodges()
 
 
-## A companion whose own passive dodges half the hits (#1499), not striking back: of ten wild
-## monster hits on it some miss, dealing nothing and said to be dodged, which the damage numbers
-## show as a miss (#1564), and the others land less its guard, off its HP;
-## a hit on its player beside it, which no dodge helps, always lands.
+## A companion whose own passive dodges a fifth of the hits (#1499, #2234), not striking back: every
+## fifth wild monster hit on it misses, dealing nothing and said to be dodged, which the damage
+## numbers show as a miss (#1564), and the others land less its guard, off its HP. The count is in
+## the feature's hash, survives a save and walks through an exit with the companion (`carry_out`,
+## and gone with it otherwise); a hit on its player beside it, which no dodge helps, always lands.
 func _check_dodges() -> String:
 	var state: GameState = _strike_state([Vector2i.ZERO], [], 0, GUARDS)
-	(state.feature(WildAttackFeature.ID) as WildAttackFeature).dodges = { SELF_GUARD: 500 }
+	var attacks: WildAttackFeature = state.feature(WildAttackFeature.ID) as WildAttackFeature
+	attacks.dodges = { SELF_GUARD: 200 }
 	state.set_enabled(CompanionAttackFeature.ID, false)
 	FlowSteps.carry(state, 0, [WEAK])
 	var player: Entity = state.add_entity(0, Vector2i(3, 0))
 	var _joined: Array[WildMonsterStruck] = _wild_strikes_over(state, 1, Vector2i(-3, 0))
 	var companion_id: int = (state.feature(CompanionFeature.ID) as CompanionFeature).companion_of(0)
 	var guarded: int = Fixed.scale(WEAK_STRENGTH, Fixed.ONE - GUARDS[SELF_GUARD])
-	var hits: int = 10
-	var missed: int = 0
 	var full: int = _hp(state, companion_id)
-	var ticks: int = hits * WildAttackFeature.STRIKE_TICKS
-	var strikes: Array[WildMonsterStruck] = _wild_strikes_over(state, ticks, Vector2i(-1, 0))
+	var uncounted: Array[int] = attacks.hash_values()
+	var ticks: int = WildAttackFeature.STRIKE_TICKS
+	var strikes: Array[WildMonsterStruck] = _wild_strikes_over(state, 3 * ticks, Vector2i(-1, 0))
+	if attacks.hash_values() == uncounted:
+		return "the hits a companion has counted towards a dodge aren't in the feature's hash"
+	attacks.load_values(state, DataReader.new(attacks.save_values()))
+	strikes.append_array(_wild_strikes_over(state, 4 * ticks, Vector2i(-1, 0)))
+	var carried: Dictionary = attacks.carry_out(state, companion_id)
+	attacks.entity_removed(state, companion_id)
+	if not attacks.carry_out(state, companion_id).is_empty():
+		return "a companion that left kept its count towards a dodge"
+	attacks.carry_in(state, state.entity(companion_id), carried)
+	strikes.append_array(_wild_strikes_over(state, 3 * ticks, Vector2i(-1, 0)))
+	var hits: int = 10
 	if strikes.size() != hits:
 		return "a dodging companion was struck %d times, not %d" % [strikes.size(), hits]
-	for struck: WildMonsterStruck in strikes:
-		if struck.target_id != companion_id or (struck.damage != 0 and struck.damage != guarded):
-			return "a wild monster's hit on a dodging companion dealt %d" % struck.damage
-		if struck.dodged != (struck.damage == 0):
-			return "a dodging companion's hit for %d says dodged: %s" % [
-				struck.damage,
-				struck.dodged,
-			]
+	var missed: int = 0
+	for hit: int in hits:
+		var struck: WildMonsterStruck = strikes[hit]
+		var fifth: bool = (hit + 1) % 5 == 0
+		if struck.target_id != companion_id or struck.damage != (0 if fifth else guarded):
+			return "hit %d on a dodging companion dealt %d" % [hit + 1, struck.damage]
+		if struck.dodged != fifth:
+			return "hit %d on a dodging companion says dodged: %s" % [hit + 1, struck.dodged]
 		missed += 1 if struck.dodged else 0
-	if missed == 0 or missed == hits:
-		return "a companion dodging half the hits dodged %d of %d" % [missed, hits]
 	if DamageNumbersView.auto_text(0, true) != "miss":
 		return "a dodged hit's damage number shows %s" % DamageNumbersView.auto_text(0, true)
 	if _hp(state, companion_id) != full - (hits - missed) * guarded:
