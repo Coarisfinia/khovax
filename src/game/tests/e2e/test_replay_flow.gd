@@ -44,6 +44,7 @@ func run(_tree: SceneTree) -> String:
 		_check_rng_ranges,
 		_check_rng_rejection,
 		_check_rng_bounds,
+		_check_rng_restored,
 		_check_rolls_replay,
 		_check_streams_apart,
 		_check_rounding,
@@ -566,6 +567,38 @@ func _check_rng_bounds() -> String:
 		var high_end: int = rng.between(highest - Rng.SPAN + 1, highest)
 		if high_end < highest - Rng.SPAN + 1:
 			return "between() at the highest integers gave %d" % high_end
+	return ""
+
+
+## A saved generator goes on with the very draws the original would have given. Any four 32-bit
+## words but all zero are a state; anything else is refused with null, and without a log (the
+## runner would fail this flow on one), since bad save data is the save's problem.
+func _check_rng_restored() -> String:
+	var original: Rng = Rng.new(42, 0)
+	var _skipped: Array[int] = _draws(original, 5)
+	var restored: Rng = Rng.restored(original.hash_values())
+	if restored == null or _draws(restored, 5) != _draws(original, 5):
+		return "a restored generator didn't go on with the original's draws"
+	var accepted: Array[Array] = [[0, 0, 0, 1], [Rng.MASK, 0, Rng.MASK, 0]]
+	for each: Array in accepted:
+		var state: Array[int] = []
+		state.assign(each)
+		var generator: Rng = Rng.restored(state)
+		if generator == null or generator.hash_values() != state:
+			return "the valid state %s wasn't restored as it is" % [state]
+	var refused: Array[Array] = [
+		[],
+		[1, 2, 3],
+		[1, 2, 3, 4, 5],
+		[0, 0, 0, 0],
+		[1, 2, 3, -1],
+		[1, 2, 3, Rng.MASK + 1],
+	]
+	for each: Array in refused:
+		var state: Array[int] = []
+		state.assign(each)
+		if Rng.restored(state) != null:
+			return "the invalid state %s was restored" % [state]
 	return ""
 
 
