@@ -26,7 +26,7 @@ from mathutils import Vector
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-from lib import adopted, attachments, clips, legs, metrics, rigged, scene, tuning  # noqa: E402
+from lib import adopted, attachments, clips, metrics, rigged, scene, tuning  # noqa: E402
 
 SOURCE = os.path.join(HERE, "sources", "fohossa.glb")
 FPS = 30
@@ -83,22 +83,19 @@ FOLLOW.update({"tail_05": (1.9, 0.4, 0.0, 0.15), "tail_06": (1.7, 0.4, 0.0, 0.15
 TILE = math.sqrt(3.0)
 WALK_SPEED = TILE / 0.8
 RUN_SPEED = TILE / 0.3
-WALK_TILES, RUN_TILES = 2 / 3, 1.25
+WALK_TILES, RUN_TILES = 0.6, 1.25
 # Each gait's shape (clips.gait): the share of the cycle a paw is down, how far (radians) a leg's
 # joints fold as it swings, how high a paw lifts (a share of its leg's reach), how far its toes tip
 # down, how far (radians) the body rolls and the spine flexes, and how much of a straight leg's
 # sink the body bobs by.
-WALK_DUTY, WALK_LIFT, WALK_CURL, WALK_ROLL, WALK_BOB = 0.4, 0.2, 0.4, 0.05, 0.4
+WALK_DUTY, WALK_LIFT, WALK_CURL, WALK_ROLL, WALK_BOB = 0.22, 0.1, 0.4, 0.09, 0.4
 # The walk is soft rather than stalking (#2177): the body stays this far (metres) below its height
 # at rest, so the legs walk bent instead of on stilts, it sways this far (metres) over the side that
 # bears its weight, and a paw runs with the ground for this share of its stand as it comes down.
-WALK_CROUCH, WALK_SWAY, WALK_MATCHED = 0.0, 0.0, clips.MATCHED
-# Whether each hind leg bends at its knee, its hock turning with the thigh (limbs), rather than at the
-# joint adopted.limbs picks.
-HIND_KNEE = 0
+WALK_CROUCH, WALK_SWAY, WALK_MATCHED = 0.1, 0.04, 0.4
 RUN_DUTY, RUN_FOLD, RUN_SPINE_FLEX, RUN_ROLL, RUN_BOB = 0.3, 0.5, 0.06, 0.0, 0.4
 GAIT = ("WALK_TILES", "WALK_DUTY", "WALK_LIFT", "WALK_CURL", "WALK_ROLL", "WALK_BOB", "WALK_CROUCH", "WALK_SWAY",
-        "WALK_MATCHED", "HIND_KNEE", "RUN_TILES", "RUN_DUTY",
+        "WALK_MATCHED", "RUN_TILES", "RUN_DUTY",
         "RUN_FOLD", "RUN_SPINE_FLEX", "RUN_ROLL", "RUN_BOB")
 OUT = tuning.arguments(globals(), GAIT)
 WALK_FRAMES = clips.cycle_frames(WALK_SPEED, TILE * WALK_TILES, FPS)
@@ -204,15 +201,6 @@ def points(rig):
     attachments.add(rig, eyes, [(MUZZLE, "head")])
 
 
-def limbs(rig):
-    """The legs for the clips: adopted's, each hind leg bending at its knee with HIND_KNEE."""
-    out = adopted.limbs(rig)
-    if not HIND_KNEE:
-        return out
-    return [leg for leg in out if leg.paw.startswith("front")] + [
-        legs.Leg("thigh." + side, "shin." + side, "hind_paw." + side, follower="hock." + side) for side in ("L", "R")]
-
-
 def build(out):
     scene.reset(FPS)
     bpy.ops.import_scene.gltf(filepath=SOURCE)
@@ -242,7 +230,7 @@ def build(out):
         **{name: adopted.lesser(clip, SHARE) for name, clip in clips.channel().items()},
         "Feed": clips.feed(forepaws=0.04),
         "Sleep": clips.sleep(clips.curled(BELLY_HEIGHT), SLEEP_PAWS),
-    }, SCALE, ground_meshes=[skin], chains=FOLLOW, limbs=limbs(rig),
+    }, SCALE, ground_meshes=[skin], chains=FOLLOW, limbs=adopted.limbs(rig),
         overlays=[settled, withers])
     scene.export_glb(out)
     print("MODEL", out, "triangles", scene.triangles(skin), "bones", len(rig.data.bones),
