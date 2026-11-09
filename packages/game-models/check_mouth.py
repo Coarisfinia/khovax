@@ -36,7 +36,6 @@ MOUTHLESS = {
 # Creatures whose mouth doesn't open yet, each with the issue that decides it.
 KNOWN = {
     "assets/fohossa/fohossa.glb": "#2187",
-    "assets/frostfire_hound/frostfire_hound.glb": "#2183",
     "assets/kalvrakkor_magma/kalvrakkor_magma.glb": "#2185",
     "assets/kavrikka/kavrikka.glb": "#2184",
     "assets/nuvvoluvvo/nuvvoluvvo.glb": "#2188",
