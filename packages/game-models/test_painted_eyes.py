@@ -60,8 +60,8 @@ ICE, AMBER, ICE_EYE = (0.36, 0.60, 0.88), (1.0, 0.78, 0.30), (0.62, 0.96, 1.0)
 # Where the left eye sits (the model faces -Y, its left is +X; the right one mirrors it), and how
 # far around it the paint reaches.
 EYE, EYE_RADIUS = Vector((0.35, -1.0, 0.3)).normalized() * RADIUS, 0.09
-FOHOSSA = "assets/fohossa/fohossa.glb"
-HOUND = "assets/frostfire_hound/frostfire_hound.glb"
+FOHOSSA = "resourcepacks/default/models/fohossa/fohossa.glb"
+HOUND = "resourcepacks/default/models/frostfire_hound/frostfire_hound.glb"
 # A texture this many texels square, whose texels the ball's triangles cover far more of than the
 # head samples (#1764), and the dim specks laid between those samples, each this many texels
 # square, with whether the check passes it and whether `scrub` runs first (#1785: it paints out a

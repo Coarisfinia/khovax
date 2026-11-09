@@ -4,7 +4,7 @@ rig's bones to its humanoid skeleton profile on import (the BoneMap in player_cl
 so any humanoid rig, whatever its bones are called, can be retargeted to them.
 
     uv run --locked packages/game-models/blender.py --background --factory-startup \
-        --python packages/game-models/player_clips.py -- packages/game/assets/player/player_clips.glb
+        --python packages/game-models/player_clips.py -- resourcepacks/default/models/player/player_clips.glb
 
 Meshy rigs one clip per export (#1934); import_clip.py turns each into a clip source in
 sources/player/clips/, named after its clip, and its skeleton into sources/player/skeleton.glb. The
@@ -20,7 +20,8 @@ import bpy
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib import clip_smooth, clip_sources, pace, planted_feet, relaxed_hands, scene, skeleton, standing_feet  # noqa: E402
+from lib import (clip_smooth, clip_sources, pace, paced_gait, planted_feet, relaxed_hands, scene, skeleton,  # noqa: E402
+                 standing_feet)
 
 # No body to size against the world (check_world_scale.py): the clips play on the stand-in rig.
 WORLD_SCALE = "clip_library"
@@ -37,10 +38,14 @@ SMOOTHED = ["GetUp", "HarvestBush", "Hit", "KnockedDown", "PickUp", "Throw"]
 SMOOTHING = 1.0
 # The clips whose motion capture lets a standing foot creep (#2154): lib/standing_feet.py holds it.
 HELD = ["Hit", "KnockedDown", "PickUp", "Throw"]
-# The game's pace for the player (metres a second, for the motion check, #2128; lib/pace.py). The
-# player has that one pace, so the walk and the run are both checked at it, whichever the body's
-# view plays while moving.
-WALK_SPEED = RUN_SPEED = pace.player()
+# The speeds the motion check measures the gaits at (metres a second of the clips' own units,
+# #2128). The game moves the player at one pace and plays the run (lib/pace.py); the walk, which it
+# doesn't play, can't reach that pace and stay a walk, so it's checked at a walking pace of its own.
+WALK_SPEED = 0.94
+RUN_SPEED = pace.player()
+# The walk loops, and pops like the one-shots: smoothed too, around its seam, then its standing
+# feet held at its pace (lib/paced_gait.py).
+WALK_SMOOTHING = 1.5
 
 
 def mismatches(clips):
@@ -70,6 +75,8 @@ def build(out):
         name = os.path.splitext(os.path.basename(path))[0]
         if name in SMOOTHED:
             clip_smooth.smooth(rig, action, SMOOTHING)
+        elif name == "Walk":
+            clip_smooth.smooth(rig, action, WALK_SMOOTHING, True)
         relaxed_hands.relax(action)
         clip_sources.stash(rig, action, name)
         # Its rig was only the clip's carrier: the clip now plays on the library's.
@@ -77,7 +84,9 @@ def build(out):
         bpy.data.objects.remove(other, do_unlink=True)
         bpy.data.armatures.remove(armature, do_unlink=True)
         print("CLIP %s: frames %d-%d" % (name, *action.frame_range))
-        if name in HELD:
+        if name == "Walk":
+            paced_gait.pace(rig, action, WALK_SPEED, clip_sources.FPS)
+        elif name in HELD:
             standing_feet.hold(rig, action, name in GROUNDED)
         elif name in GROUNDED:
             planted_feet.plant(rig, action)

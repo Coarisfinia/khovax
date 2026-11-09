@@ -15,12 +15,12 @@ import changed_models
 SCRIPTS = {"packages/game-models/mana_wolf.py", "packages/game-models/player_clips.py"}
 CASES = [
     ("a model script", ["packages/game-models/mana_wolf.py"], {"mana_wolf"}),
-    ("its .glb and .import", ["packages/game/assets/mana-wolf/mana_wolf.glb",
-                              "packages/game/assets/kavrikka/kavrikka.glb.import"], {"mana_wolf", "kavrikka"}),
+    ("its .glb and .import", ["resourcepacks/default/models/mana-wolf/mana_wolf.glb",
+                              "resourcepacks/default/models/kavrikka/kavrikka.glb.import"], {"mana_wolf", "kavrikka"}),
     ("a model's source", ["packages/game-models/sources/kavrikka.glb"], {"kavrikka"}),
-    ("a .glb with no script", ["packages/game/assets/items/pebble.glb"], {"pebble"}),
+    ("a .glb with no script", ["resourcepacks/default/models/items/pebble.glb"], {"pebble"}),
     ("nothing the checks read", ["packages/game/slices/quests/data/quests/x.jsonc", "README.md", ".github/workflows/nightly.yml",
-                                 "packages/game/assets/mana-wolf/SOURCE.md"], set()),
+                                 "resourcepacks/default/models/mana-wolf/SOURCE.md"], set()),
     ("the attached-part check", ["packages/game-models/check_connectivity.py"], None),
     ("the rebuild check", ["packages/game-models/check_rebuild.py"], None),
     ("the selection itself", ["packages/game-models/changed_models.py"], None),

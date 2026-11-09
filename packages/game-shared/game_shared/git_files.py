@@ -19,10 +19,12 @@ def _listed(*arguments: str) -> list[str]:
 
 def git_files(*pathspecs: str) -> list[str]:
     """The tracked files the pathspecs match, as git lists them. In the game's project, the files
-    under its link to the resource packs (PACKS) are listed too, by the game's path."""
-    own = [spec for spec in pathspecs if not spec.startswith(PACKS)]
+    under its link to the resource packs (PACKS) are listed too, by the game's path; from the root,
+    they are ordinary paths."""
+    in_game = Path("project.godot").is_file()
+    own = [spec for spec in pathspecs if not (in_game and spec.startswith(PACKS))]
     files = _listed("--", *own) if own or not pathspecs else []
-    if Path("project.godot").is_file():
+    if in_game:
         # The same pathspecs matched from the root, kept only under the link: the paths there are
         # the game's.
         top = [f":(top){spec}" for spec in pathspecs] or [f":(top){PACKS}"]

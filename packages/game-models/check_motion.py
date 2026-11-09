@@ -89,9 +89,7 @@ KNOWN = {
     ("kavrikka", "Attack"): 1780,
     ("kavrikka", "Run"): 1780,
     ("kavrikka", "Walk"): 1780,
-    # The player's walk and run slide at the game's pace (#2128).
-    ("player_clips", "Run"): 2128,
-    ("player_clips", "Walk"): 2128,
+    ("player_clips", "Run"): 2181,
     # The third-party Rogue's every clip (#2129).
     **{("Rogue", clip): 2129 for clip in (
         "1H_Melee_Attack_Chop", "1H_Melee_Attack_Slice_Diagonal", "1H_Melee_Attack_Slice_Horizontal",

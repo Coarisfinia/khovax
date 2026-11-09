@@ -39,9 +39,9 @@ GAME = os.path.join(os.path.dirname(HERE), "game")
 
 # Beasts whose texture still shows the generator's eyes, each with the issue that gives them ours.
 KNOWN = {
-    "assets/drakkudor/drakkudor.glb": "#1684",
-    "assets/fohossa/fohossa.glb": "#1684",
-    "assets/frostfire_hound/frostfire_hound.glb": "#1684",
+    "resourcepacks/default/models/drakkudor/drakkudor.glb": "#1684",
+    "resourcepacks/default/models/fohossa/fohossa.glb": "#1684",
+    "resourcepacks/default/models/frostfire_hound/frostfire_hound.glb": "#1684",
 }
 
 # How many of a head's fragments its line names, the largest first.
@@ -73,7 +73,7 @@ def main():
     glbs = [arg for arg in sys.argv[sys.argv.index("--") + 1:] if arg.endswith(".glb")]
     failed = 0
     for glb in glbs:
-        path = os.path.relpath(os.path.abspath(glb), GAME).replace(os.sep, "/")
+        path = os.path.relpath(os.path.realpath(glb), os.path.dirname(os.path.dirname(GAME))).replace(os.sep, "/")
         if path in NOT_CREATURES:
             log.info("PAINTED EYES %s: not a creature (%s)" % (path, NOT_CREATURES[path]))
             continue

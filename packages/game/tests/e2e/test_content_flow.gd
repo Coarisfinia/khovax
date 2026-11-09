@@ -31,7 +31,8 @@ extends RefCounted
 ## and sound (#2014) resolving, and broken pack manifests are refused; the quests (#1888), the tile
 ## blueprints
 ## (#1901), the loot tables and materials (#1953), and harvest tables (#1990) are read from it, and
-## its files load in the background with progress (#1943).
+## its files load in the background with progress (#1943). Every faction has a quest for every
+## territory but the known gaps, and no territory has two samey quests (#639).
 
 ## A model a species can wear (#1223), by its id in the resource packs (#1864).
 const MODEL: String = "model_mana_wolf"
@@ -162,7 +163,7 @@ func run(tree: SceneTree) -> String:
 		_check_rule_sets,
 		_check_realms,
 		_check_tiles,
-		_check_quests,
+		_check_quest_content,
 		_check_factions,
 		_check_people,
 		_check_dialogs,
@@ -660,6 +661,94 @@ func _check_target_steps(content: QuestContent) -> String:
 		quest % ["dominated", target.replace("old toad", " ") % "old_toad"]: "step 0: its name",
 	}
 	return _unrefused(cases, content)
+
+
+## The quests read, and the game's territory quests keep to their rules (#639).
+func _check_quest_content() -> String:
+	var problem: String = _check_quests()
+	return problem if not problem.is_empty() else _check_territory_quests()
+
+
+## The game's territory quests keep to TerritoryQuests' rules (#639), and what breaks them is
+## refused: a new faction or territory without a quest, a gap whose quest exists, one that doesn't
+## exist any more or comes twice, and two samey quests of one territory, whichever faction's.
+func _check_territory_quests() -> String:
+	var quests: Array[QuestDefinition] = []
+	quests.assign(QuestContent.load_quests().quests.values())
+	var factions: Array[String] = []
+	factions.assign(FactionContent.load_factions().factions.keys())
+	var problem: String = TerritoryQuests.problem(
+		quests, factions, InstanceBlueprints.names(), TerritoryQuests.KNOWN_GAPS
+	)
+	if not problem.is_empty():
+		return "the territory quests: " + problem
+	var results: Array[String] = [
+		_gap_refusal(["f"], ["t"], [], ""),
+		_gap_refusal(["f", "g"], ["t"], [], "1 without a territory quest: g/t"),
+		_gap_refusal(["f"], ["t", "u"], [], "1 without a territory quest: f/u"),
+		_gap_refusal(["f", "g"], ["t"], ["g/t"], ""),
+		_gap_refusal(["f"], ["t"], ["f/t"], "f/t is listed as a gap, but there's no such gap"),
+		_gap_refusal(["f"], ["t"], ["f/x"], "f/x is listed as a gap, but there's no such gap"),
+		_gap_refusal(["f", "g"], ["t"], ["g/t", "g/t"], "g/t is listed twice"),
+	]
+	for result: String in results:
+		if not result.is_empty():
+			return result
+	return _check_samey_quests()
+
+
+## Why one quest of the faction f for the territory t, among these `factions`, `territories` and
+## `gaps`, doesn't give the problem `expected`, or "".
+static func _gap_refusal(
+	factions: Array[String],
+	territories: Array[String],
+	gaps: Array[String],
+	expected: String,
+) -> String:
+	var kinds: Array[String] = ["reached"]
+	var one: Array[QuestDefinition] = [_territory_quest("q", "f", kinds)]
+	var got: String = TerritoryQuests.problem(one, factions, territories, gaps)
+	return "" if got == expected else "expected %s, got: %s" % [expected, got]
+
+
+## Two quests of one territory are samey when their steps are the same kinds in the same order,
+## whichever faction each is for (#639); the same kinds in another order aren't.
+func _check_samey_quests() -> String:
+	var kinds: Array[String] = ["reached", "entered"]
+	var other: Array[String] = ["entered", "reached"]
+	var none: Array[String] = []
+	var samey: Array[QuestDefinition] = [
+		_territory_quest("a", "f", kinds), _territory_quest("b", "g", kinds),
+	]
+	var got: String = TerritoryQuests.problem(samey, none, none, none)
+	if got != "a and b are samey in t":
+		return "two samey territory quests weren't refused: " + got
+	var distinct: Array[QuestDefinition] = [
+		_territory_quest("a", "f", kinds), _territory_quest("b", "g", other),
+	]
+	got = TerritoryQuests.problem(distinct, none, none, none)
+	return "" if got.is_empty() else "two different territory quests were refused: " + got
+
+
+## A quest called `id` handing the territory t to `faction`, with a step of each of `kinds`.
+static func _territory_quest(
+	id: String, faction: String, kinds: Array[String]
+) -> QuestDefinition:
+	var quest: QuestDefinition = QuestDefinition.new()
+	quest.id = id
+	quest.territory = QuestTerritory.new()
+	quest.territory.instance = "t"
+	quest.territory.faction = faction
+	for kind: String in kinds:
+		quest.steps.append(_step_of(kind))
+	return quest
+
+
+## A quest step of the kind `kind`.
+static func _step_of(kind: String) -> QuestStep:
+	var step: QuestStep = QuestStep.new()
+	step.condition = kind
+	return step
 
 
 ## Every tile blueprint the resource packs list reads (#1901), its id matching its file, and a
@@ -2276,7 +2365,7 @@ func _check_pack_manifests() -> String:
 		+ " \"translations\": {}%s}"
 	)
 	var cog: String = "resourcepacks/default/textures/game-icons/cog.svg"
-	var wolf: String = "assets/mana-wolf/mana_wolf.glb"
+	var wolf: String = "resourcepacks/default/models/mana-wolf/mana_wolf.glb"
 	var cases: Dictionary[String, String] = {
 		"an unknown field": valid % ["p", "1.0.0", "a", cog, wolf, ", \"x\": 1"],
 		"a bad id": valid % ["P", "1.0.0", "a", cog, wolf, ""],
@@ -2284,7 +2373,7 @@ func _check_pack_manifests() -> String:
 		"a bad texture id": valid % ["p", "1.0.0", "A", cog, wolf, ""],
 		"a missing file": valid % ["p", "1.0.0", "a", cog.replace("cog", "nothing"), wolf, ""],
 		"a file outside the pack": valid % ["p", "1.0.0", "a", "assets/../../" + cog, wolf, ""],
-		"a missing model": valid % ["p", "1.0.0", "a", cog, "assets/mana-wolf/no_wolf.glb", ""],
+		"a missing model": valid % ["p", "1.0.0", "a", cog, wolf.replace("mana_", "no_"), ""],
 		"an image as a model": valid % ["p", "1.0.0", "a", cog, cog, ""],
 		"no models": (start + " \"game_version\": \"0.1.0\", \"textures\": {}}") % ["p", "1.0.0"],
 	}

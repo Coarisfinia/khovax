@@ -25,14 +25,14 @@ EYE, LID = "eye.", "lid."
 
 # Creatures designed without eyes, from the game's folder, each with why.
 EYELESS = {
-    "assets/tikazzelu/tikazzelu.glb": "a ribbon sprite the owner designed without eyes (#1732)",
+    "resourcepacks/default/models/tikazzelu/tikazzelu.glb": "a ribbon sprite the owner designed without eyes (#1732)",
 }
 
 # Creatures whose eyes are still the generator's painted ones, each with the issue that gives them ours.
 KNOWN = {
-    "assets/drakkudor/drakkudor.glb": "#1684",
-    "assets/fohossa/fohossa.glb": "#1684",
-    "assets/frostfire_hound/frostfire_hound.glb": "#1684",
+    "resourcepacks/default/models/drakkudor/drakkudor.glb": "#1684",
+    "resourcepacks/default/models/fohossa/fohossa.glb": "#1684",
+    "resourcepacks/default/models/frostfire_hound/frostfire_hound.glb": "#1684",
 }
 
 
@@ -62,7 +62,7 @@ def main() -> int:
     # The game's project folder (#1101): the paths below are relative to it.
     os.chdir(Path(__file__).resolve().parents[1] / "game")
     failed = 0
-    for path in git_files("assets/*.glb"):
+    for path in git_files("resourcepacks/default/models/*.glb"):
         gltf, _binary = read_glb(Path(path))
         if not gltf.get("skins") or path in NOT_CREATURES:
             continue

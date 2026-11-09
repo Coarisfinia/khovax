@@ -15,7 +15,7 @@ from unittest import mock
 
 import render_media
 
-MODEL = next(iter(sorted(render_media.GAME.glob("assets/*/*.glb"))))
+MODEL = next(iter(sorted(render_media.ROOT.glob("resourcepacks/default/models/*/*.glb"))))
 CLIPS = ["Idle", "Walk"]
 
 
