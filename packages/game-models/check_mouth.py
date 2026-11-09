@@ -18,7 +18,7 @@ from pathlib import Path
 from check_clip_set import NOT_CREATURES
 from check_rebuild import read_glb, values
 from game_shared import log
-from game_shared.git_files import git_files
+from game_shared.git_files import pack_models, stale_entries
 
 JAW = "jaw"
 # The clips that open the mouth (lib/clips.py keys `jaw` in them; Channel only holds it open).
@@ -29,21 +29,20 @@ FLOAT = 5126
 
 # Creatures designed without a mouth, from the game's folder, each with why.
 MOUTHLESS = {
-    "assets/drakkudor/drakkudor.glb": "a cracked bone plate for a face, with no mouth (#1476)",
-    "assets/tikazzelu/tikazzelu.glb": "a ball of ribbons round a glowing core, with no mouth (#1732)",
+    "resourcepacks/default/models/drakkudor/drakkudor.glb": "a cracked bone plate for a face, with no mouth (#1476)",
+    "resourcepacks/default/models/tikazzelu/tikazzelu.glb": "a ball of ribbons round a glowing core, with no mouth (#1732)",
 }
 
 # Creatures whose mouth doesn't open yet, each with the issue that decides it.
 KNOWN = {
-    "assets/fohossa/fohossa.glb": "#2187",
-    "assets/frostfire_hound/frostfire_hound.glb": "#2183",
-    "assets/kalvrakkor_magma/kalvrakkor_magma.glb": "#2185",
-    "assets/kavrikka/kavrikka.glb": "#2184",
-    "assets/nuvvoluvvo/nuvvoluvvo.glb": "#2188",
-    "assets/ombulumo/ombulumo.glb": "#2195",
-    "assets/ombuwomo/ombuwomo.glb": "#2195",
-    "assets/tolvakkor/tolvakkor.glb": "#2186",
-    "assets/wobulumu/wobulumu.glb": "#2195",
+    "resourcepacks/default/models/fohossa/fohossa.glb": "#2187",
+    "resourcepacks/default/models/kalvrakkor_magma/kalvrakkor_magma.glb": "#2185",
+    "resourcepacks/default/models/kavrikka/kavrikka.glb": "#2184",
+    "resourcepacks/default/models/nuvvoluvvo/nuvvoluvvo.glb": "#2188",
+    "resourcepacks/default/models/ombulumo/ombulumo.glb": "#2195",
+    "resourcepacks/default/models/ombuwomo/ombuwomo.glb": "#2195",
+    "resourcepacks/default/models/tolvakkor/tolvakkor.glb": "#2186",
+    "resourcepacks/default/models/wobulumu/wobulumu.glb": "#2195",
 }
 
 
@@ -114,11 +113,14 @@ def problem(gltf, binary):
 def main() -> int:
     # The game's project folder (#1101): the paths below are relative to it.
     os.chdir(Path(__file__).resolve().parents[1] / "game")
-    failed = 0
-    for path in git_files("assets/*.glb"):
+    models = pack_models()
+    failed = stale_entries(models, MOUTHLESS=MOUTHLESS, KNOWN=KNOWN)
+    checked = 0
+    for path in models:
         gltf, binary = read_glb(Path(path))
         if not gltf.get("skins") or path in NOT_CREATURES:
             continue
+        checked += 1
         found = problem(gltf, binary)
         if path in MOUTHLESS:
             if found is None:
@@ -135,6 +137,10 @@ def main() -> int:
             log.error(found + ": give it a mouth that opens (the model skill's step 24), or list it in MOUTHLESS", path)
         else:
             log.info(f"{path}: its mouth opens")
+    # Models that moved must not silence the check (#2199).
+    if not checked:
+        failed += 1
+        log.error("found no creature model to check: has their folder moved?")
     return 1 if failed else 0
 
 

@@ -14,7 +14,7 @@ from pathlib import Path
 
 from check_rebuild import read_glb
 from game_shared import log
-from game_shared.git_files import git_files
+from game_shared.git_files import pack_models, stale_entries
 from lib import clip_set
 
 # Skinned figures that aren't creatures, from the game's folder, each with why.
@@ -29,8 +29,9 @@ NOT_CREATURES = {
 def main() -> int:
     # The game's project folder (#1101): the paths below are relative to it.
     os.chdir(Path(__file__).resolve().parents[1] / "game")
-    failed = 0
-    for path in git_files("resourcepacks/default/models/*.glb"):
+    models = pack_models()
+    failed = stale_entries(models, NOT_CREATURES=NOT_CREATURES)
+    for path in models:
         gltf, _binary = read_glb(Path(path))
         if not gltf.get("skins") or path in NOT_CREATURES:
             continue

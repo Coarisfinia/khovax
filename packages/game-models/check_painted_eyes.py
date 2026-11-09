@@ -72,6 +72,11 @@ def found(objects, path):
 def main():
     glbs = [arg for arg in sys.argv[sys.argv.index("--") + 1:] if arg.endswith(".glb")]
     failed = 0
+    # An entry whose file has gone would otherwise do nothing, unnoticed (#2203).
+    for path in KNOWN:
+        if not os.path.isfile(os.path.join(os.path.dirname(os.path.dirname(GAME)), path)):
+            failed += 1
+            log.error("on KNOWN, but no such model exists: take it off the list", path)
     for glb in glbs:
         path = os.path.relpath(os.path.realpath(glb), os.path.dirname(os.path.dirname(GAME))).replace(os.sep, "/")
         if path in NOT_CREATURES:

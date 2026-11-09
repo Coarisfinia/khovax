@@ -39,6 +39,7 @@ CASES = [
     ("a game script a view's settings may name (#2072)", ["packages/game/slices/combat/rules/x.gd"], None),
     ("a core script (#2072)", ["packages/game/core/tick.gd"], None),
     ("the default pack's manifest", ["resourcepacks/default/pack.jsonc"], None),
+    ("a tile blueprint the footprint check reads (#2208)", ["resourcepacks/default/tiles/boulder.jsonc"], None),
     ("one model and the library", ["packages/game-models/mana_wolf.py", "packages/game-models/lib/eyes.py"], None),
 ]
 
