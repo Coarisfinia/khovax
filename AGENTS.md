@@ -521,11 +521,10 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   blueprints (#1901), loot tables and materials (#1953) are listed in
   `resourcepacks/default/pack.jsonc` at the repository's root and reached only through `ResourcePacks` by id, never
   by a `res://` path (`resource_packs_check.py` in CI).
-  **The default pack's files move into one folder at the repository's root, `resourcepacks/default/`**
-  (owner, #1978), laid out like a player's pack, one kind of data per pull request; the schemas and
-  the code stay in their slices. The game reaches it through `res://resourcepacks/`, an untracked link
+  **The default pack's files lie in one folder at the repository's root, `resourcepacks/default/`**
+  (owner, #1978), laid out like a player's pack; the schemas and the code stay in their slices. The game reaches it through `res://resourcepacks/`, an untracked link
   (`src/game-build/link_resource_packs.py`; a tracked symlink is a text file in a Windows
-  checkout), and `resource_packs_check.py` fails on a kind already moved (`MOVED`) listed outside it.
+  checkout), and `resource_packs_check.py` fails on a file listed outside its kind's folder there (`MOVED`).
   **Whatever new is built, consider whether it belongs in the default pack** (owner's ground rule,
   on #1887), and say in the pull request which you chose and why: content a player's pack could
   add or replace (quests, #1888) does.
@@ -879,7 +878,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   before `--user-dir` applies.
 - **A fresh checkout or worktree needs its link to the resource packs**
   (`uv run --locked src/game-build/link_resource_packs.py`, #1978) before Godot opens it:
-  without it the default pack's moved files are missing.
+  without it the default pack's files are missing.
 - **A fresh checkout needs `godot --headless --path src/game --import`** before headless
   runs, and so does a worktree after a rebase brings in a new `class_name` script: with a stale class cache, the
   flows fail to load or log errors that have nothing to do with the change.

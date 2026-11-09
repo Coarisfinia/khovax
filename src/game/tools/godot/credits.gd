@@ -74,8 +74,9 @@ func _init() -> void:
 	quit(1 if failed > 0 else 0)
 
 
-## Every asset pack's folder, from res:// without it (assets/<pack>), in the order of the pack's
-## folder's name wherever it lies, so moving a pack keeps its place in the credits.
+## Every asset pack's folder, from res:// without it (resourcepacks/default/<kind>/<pack>), in
+## the order of the pack's folder's name wherever it lies, so moving a pack keeps its place in the
+## credits.
 func _packs() -> Array[String]:
 	var packs: Array[String] = []
 	for folder: String in FOLDERS:

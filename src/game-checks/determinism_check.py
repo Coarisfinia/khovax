@@ -3,7 +3,8 @@ every slice's rules/ hold the rules: plain RefCounted classes (or classes of the
 Feature) without nodes, input, time, engine or OS state, global randomness, frame delta, floats
 (float-backed engine types such as Vector2 or Color too; Vector2i and Rect2i stay allowed), or file
 and JSON access (#572: reading happens before a tick, never inside one).
-Comments are stripped first (gdscript_code.py), so the rules can be explained in them.
+Comments are stripped first (gdscript_code.py), so the rules can be explained in them; floats, float
+maths and randomness methods are looked for with strings stripped too (#2210).
 A whole file is exempt while its top comment lines carry the marker below with a reason in
 parentheses (owner, #515). It marks a workaround to fix later; a marker without a reason fails:
   # TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (why this file can't pass yet)
@@ -14,10 +15,11 @@ parentheses (owner, #515). It marks a workaround to fix later; a marker without 
 import os
 import re
 import sys
+import unittest
 from pathlib import Path
 
 from game_shared import log
-from game_shared.gdscript_code import without_comments
+from game_shared.gdscript_code import code_only, without_comments
 
 # What the rules never use, one alternation per kind; add a kind as its own line.
 FORBIDDEN = re.compile(
@@ -27,10 +29,30 @@ FORBIDDEN = re.compile(
             r"\b(Input|InputMap|Time|Engine|OS|DisplayServer|RenderingServer|ProjectSettings)\.",
             r"\b(randf|randi|randf_range|randi_range|randfn|randomize|seed|rand_from_seed)\(",
             r"\bdelta\b",
-            r"\bfloat\b|[0-9]\.[0-9]|[0-9][eE][-+]?[0-9]",
             r"\b(FileAccess|DirAccess|JSON)\b",
             r"\b(Vector2|Vector3|Vector4|Color|Rect2|AABB|Plane|Basis|Quaternion|Transform2D"
             r"|Transform3D|Projection)\b",
+        )
+    )
+)
+# The same, read with strings removed too, for what a string may legitimately spell out. The bare
+# float forms need a number on their own: `v2.x`, `items[1].y` and `2.foo()` are member accesses.
+FORBIDDEN_IN_CODE = re.compile(
+    "|".join(
+        (
+            r"\b(shuffle|pick_random)\s*\(|\bRandomNumberGenerator\b",
+            r"\bfloat\b|[0-9]\.[0-9]|(?<![\w.])[0-9][0-9_]*[eE][-+]?[0-9]",
+            r"(?<![\w)\]])\.[0-9]",
+            r"(?<![\w.])[0-9][0-9_]*\.(?:[eE][-+]?[0-9]|(?!\w))",
+            r"\b(sqrt|sin|cos|tan|asin|acos|atan|atan2|sinh|cosh|tanh|exp|log|pow|fmod|fposmod"
+            r"|lerp|lerpf|lerp_angle|inverse_lerp|remap|smoothstep|move_toward|deg_to_rad"
+            r"|rad_to_deg|to_float|floor|ceil|round|floorf|ceilf|roundf|absf|signf|maxf|minf"
+            r"|clampf|snapped|snappedf|wrapf|is_nan|is_inf|is_finite|is_equal_approx"
+            r"|is_zero_approx|ease|pingpong|asinh|acosh|atanh|angle_difference|rotate_toward"
+            r"|bezier_interpolate|bezier_derivative|cubic_interpolate|cubic_interpolate_angle"
+            r"|cubic_interpolate_in_time|cubic_interpolate_angle_in_time|db_to_linear"
+            r"|linear_to_db)\s*\(",
+            r"\b(PI|TAU|INF|NAN)\b",
         )
     )
 )
@@ -53,7 +75,30 @@ def numbered(lines: list[str], hit: list[bool]) -> list[str]:
     return [f"{number}:{line}" for number, (line, h) in enumerate(zip(lines, hit), 1) if h]
 
 
+def forbidden_lines(source: str) -> list[str]:
+    """The numbered lines of a script that use something the rules never use."""
+    code = without_comments(source).rstrip("\n").split("\n")
+    bare = code_only(source).split("\n")
+    return numbered(
+        code,
+        [
+            FORBIDDEN.search(line) is not None or FORBIDDEN_IN_CODE.search(bare_line) is not None
+            for line, bare_line in zip(code, bare)
+        ],
+    )
+
+
+def own_test_passes() -> bool:
+    """Runs test_determinism_check.py, so CI's step for this check covers its patterns too (#2210)."""
+    suite = unittest.defaultTestLoader.loadTestsFromName("test_determinism_check")
+    return unittest.TextTestRunner().run(suite).wasSuccessful()
+
+
 def main() -> int:
+    if not own_test_passes():
+        log.error("the check's own test fails: see above", __file__)
+        return 1
+
     # The game's project folder (#1101): every path below is relative to it.
     os.chdir(Path(__file__).resolve().parents[1] / "game")
     rules = [Path("core"), *sorted(path for path in Path("slices").rglob("rules") if path.is_dir())]
@@ -90,7 +135,7 @@ def main() -> int:
         if not extends.intersection(code):
             log.error("rules scripts extend RefCounted or a class of the rules", file)
             failed = True
-        hits = numbered(code, [FORBIDDEN.search(line) is not None for line in code])
+        hits = forbidden_lines(source)
         if hits:
             print("\n".join(hits))
             log.error("the rules must stay deterministic: see the lines above", file)

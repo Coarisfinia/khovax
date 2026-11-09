@@ -1253,33 +1253,75 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [headless, models, export, apk-e2e, web-e2e]
     runs-on: ubuntu-26.04
-    timeout-minutes: 10
+    # Room for both deploy steps: deploy-pages caps its own `timeout` at 10 minutes, and this limit
+    # must not end the job before the step's timeout does.
+    timeout-minutes: 25
     # One deploy at a time: one under way is never cancelled, and a newer one waiting replaces an
-    # older one waiting, since only the latest build matters.
+    # older one waiting, since only the latest build matters. The jobs can still start out of
+    # order, which the first step guards against.
     concurrency:
       group: pages
       cancel-in-progress: false
     permissions:
+      contents: read
+      deployments: read
       pages: write
       id-token: write
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      url: ${{ steps.deploy.outputs.page_url || steps.deploy-retry.outputs.page_url }}
     steps:
+      - name: "🔎 🌐 Web build: skip it if a newer commit is already live"
+        id: live
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # A build older than the one live would take the site back (#2220). When GitHub can't
+          # say, deploy: a lookup that fails must not hold back a deploy.
+          query='query($o:String!,$n:String!){repository(owner:$o,name:$n){deployments(environments:["github-pages"],first:30,orderBy:{field:CREATED_AT,direction:DESC}){nodes{state commitOid}}}}'
+          live=$(gh api graphql -f query="$query" -f o="${GITHUB_REPOSITORY%/*}" -f n="${GITHUB_REPOSITORY#*/}" \
+            --jq '[.data.repository.deployments.nodes[] | select(.state == "ACTIVE") | .commitOid][0] // ""') || live=""
+          relation=""
+          if [ -n "$live" ]; then
+            relation=$(gh api "repos/$GITHUB_REPOSITORY/compare/$GITHUB_SHA...$live" --jq .status) || relation=""
+          fi
+          if [ "$relation" = "ahead" ]; then
+            echo "::notice::Not deploying $GITHUB_SHA: the live site already has the newer $live."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: "⬇️ 🌐 Web build: download (khovax-web)"
+        if: steps.live.outputs.skip != 'true'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: khovax-web
           path: site
 
       - name: "📦 🌐 Web build: package it for GitHub Pages"
+        if: steps.live.outputs.skip != 'true'
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: site
+          # Per attempt: deploy-pages refuses a run holding two artifacts of one name, and an
+          # earlier attempt's stays, so a rerun of this job could never deploy (#2220).
+          name: github-pages-${{ github.run_attempt }}
 
       - name: "🚀 🌐 Web build: deploy to GitHub Pages"
         id: deploy
+        if: steps.live.outputs.skip != 'true'
+        # A deploy can sit in GitHub's syncing_files until the timeout (#2220), and the same build
+        # then goes through at once, so one failure gets a second try below.
+        continue-on-error: true
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}
+
+      - name: "🔁 🌐 Web build: deploy to GitHub Pages, second try"
+        id: deploy-retry
+        if: steps.deploy.outcome == 'failure'
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}
 
   dev-release:
     # A dev release on every push to main whose checks all pass (#1312, #747: one kept prerelease per

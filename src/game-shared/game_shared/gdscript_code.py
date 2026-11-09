@@ -55,6 +55,15 @@ def without_comments(source: str) -> str:
     return "".join(token.text for token in tokens(source) if token.kind != Kind.COMMENT)
 
 
+def code_only(source: str) -> str:
+    """The source's code alone: comments removed, and every string reduced to its line breaks, so
+    line numbers hold."""
+    return "".join(
+        token.text if token.kind == Kind.CODE else "\n" * token.text.count("\n")
+        for token in tokens(source)
+    )
+
+
 def _string_end(source: str, start: int) -> int:
     """Where the string opening at `start` ends: after its closing quote, or, left open, at its
     line's end (one quote) or the source's end (three)."""
