@@ -33,7 +33,9 @@ def retime(action, frames):
     """Resamples every channel of looping `action` to `frames` frames, keeping its shape and
     closing the seam; quaternions stay next to the key before, so they interpolate."""
     found = clip_smooth.action_curves(action)
-    last = int(round(action.frame_range[1]))
+    first, last = (int(round(frame)) for frame in action.frame_range)
+    if first != 0:
+        raise RuntimeError("%s starts at frame %d, not 0" % (action.name, first))
     groups = {}
     for (path, index), curve in found.items():
         groups.setdefault(path, {})[index] = curve
