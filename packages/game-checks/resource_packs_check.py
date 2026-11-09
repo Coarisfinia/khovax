@@ -23,8 +23,8 @@ will have (#1858), and looked up only through ResourcePacks. It fails when
   resourcepacks/default/loot_tables/<id>.jsonc, resourcepacks/default/harvest_tables/<id>.jsonc,
   resourcepacks/default/materials/<id>.jsonc), so it's named
   after its file (#72);
-- a file of a kind already moved into the default pack's own folder at the repository's root
-  (PACK_ROOT, #1978; MOVED) is listed outside it;
+- a file is listed outside its kind's folder in the default pack's own folder at the repository's
+  root (PACK_ROOT, #1978; MOVED);
 - a tile blueprint lies outside the pack (in the core's old core/data/tiles/), or its entry isn't
   resourcepacks/default/tiles/<id>.jsonc, so it's named after its file (#802);
 - a script, scene, resource or content file names a texture's, model's, sound's, region's, realm's, quest's,
@@ -32,9 +32,9 @@ will have (#1858), and looked up only through ResourcePacks. It fails when
   instead of its id, so it would get around the resolver, and a pack could never override it (project.godot
   naming a catalogue for Godot to load gets around it too, #1902); or a script names anything by
   its uid://, loaded or kept for later (stricter than the pack needs: scripts never do; #1865,
-  #1919), or builds a path under assets/, resourcepacks/, translations/, the
-  species', the tile blueprints', the loot tables', the harvest tables' or the materials' folder
-  at runtime (#1865; the tools, which list the assets for the credits, may). A path may hold spaces (#1919).
+  #1919), or builds a path under resourcepacks/, translations/, the
+  species', the tile blueprints', the loot tables', the harvest tables' or the materials' folder,
+  or the old assets/ (still refused, #1978), at runtime (#1865; the tools, which list the assets for the credits, may). A path may hold spaces (#1919).
 A catalogue the pack lists that leaves texts of the template untranslated, or holds texts the
 template no longer has, is only warned about (catalogue_gaps.py, #1968).
 An id named only in the tests (any tests/ folder, or a test_*.gd anywhere; #1865, #1919) counts as
@@ -87,9 +87,9 @@ class Kind:
 # The default pack's own folder at the repository's root (#1978), laid out like a player's pack,
 # which the game reaches through its link, res://resourcepacks/ (link_resource_packs.py)...
 PACK_ROOT = "resourcepacks/default/"
-# ...and the kinds already moved into it, by their section, each with its own folder there (a
-# region's pieces lie beside the regions drawn whole); the move goes one kind at a time, and the
-# rest follow (#1978).
+# ...and each kind's own folder there, by its section (a region's pieces lie beside the regions
+# drawn whole). Every kind has moved (#1978, last step #2082); this stays as the guard that none
+# is listed outside it.
 MOVED = {
     "textures": "textures",
     "models": "models",
@@ -171,7 +171,8 @@ RESOLVER = "slices/resource_packs/"
 STRING = re.compile(r"\"([a-z][a-z0-9_]*)\"")
 # A path is a whole string: it runs from the string's quote to the same quote again, anything in
 # between, so a file name with spaces or the other quote counts too (#1919), and prose outside
-# a string never does.
+# a string never does. assets/ is the folder the pack's files left (#1978): a path into it stays
+# refused, here and in PACK_STRING below.
 PATH_CHAR = r"(?:(?!\1).)"
 PATH = re.compile(
     rf"([\"'])res://(?P<path>assets/{PATH_CHAR}+?\.(?:"
@@ -300,8 +301,8 @@ def old_manifest() -> Problems:
 
 
 def outside_root(entries: dict[str, Entries]) -> Problems:
-    """The files of a kind already moved (MOVED) that the manifest lists outside its folder in
-    the default pack's own folder (PACK_ROOT)."""
+    """The files the manifest lists outside their kind's folder (MOVED) in the default pack's
+    own folder (PACK_ROOT)."""
     return [
         (f"{KINDS[name].noun} {entry_id}'s file {path} lies outside {PACK_ROOT}{folder}/: move it"
          " there (#1978)", MANIFEST.as_posix())

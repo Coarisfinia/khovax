@@ -30,8 +30,8 @@ from game_shared.resource_packs import (
 NOTES = re.compile(r".*\.import|.*/SOURCE\.md|.*/LICENSE[^/]*")
 PLAIN = re.compile(r"[A-Za-z0-9._/-]*")
 NAMED = re.compile(rb"res://(resourcepacks/[A-Za-z0-9._/-]+)")
-# The default pack's own folders of the kinds of asset already moved there (#1978), reached through
-# the game's link, resourcepacks/.
+# The default pack's own folders of each kind of asset (#1978), reached through the game's link,
+# resourcepacks/.
 MOVED = ("resourcepacks/default/audio", "resourcepacks/default/textures", "resourcepacks/default/models")
 NAMING = ("*.gd", "*.tscn", "*.tres", "*.godot", "*.cfg", "*.jsonc")
 
