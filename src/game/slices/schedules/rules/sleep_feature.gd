@@ -8,8 +8,9 @@ extends Feature
 ## in. A player coming close doesn't wake it, unless its species is a light sleeper (#1230): one
 ## wakes as soon as a player stands next to it, on any tick, and stays awake the same way. A player
 ## may be hushed (#1563, `hush`, which a later rule sets from a passive of their companion): a light
-## sleeper next to them wakes only when they have just stepped (an EntityMoved this tick) and a roll
-## on the feature's own stream doesn't spare it, so standing still beside it never wakes it. A
+## sleeper next to them hears only their steps (an EntityMoved this tick), so standing still beside
+## it never wakes it, and wakes on the step that makes its count reach their hush (#2235). The count
+## is the sleeper's own, so co-op players' steps add up on it, and it starts over once it wakes. A
 ## sleepless monster's day has no sleep block, so it never sleeps. One already in a sleep block when
 ## the instance loads fresh is asleep from the start. The schedules change only on the hour, so it
 ## puts to sleep only then. Who sleeps is WildMonsterFeature's state (`asleep`), saved and hashed
@@ -25,10 +26,11 @@ const ID: String = "sleep"
 
 ## The world tick (GameState.world_tick) of the feature's last step, or of the instance's start.
 var _stepped_at: int = 0
-## Each hushed player's hush (#1563), by slot: the share of their steps next to a light sleeper that
-## don't wake it, in thousandths (Fixed); a player without one isn't hushed.
+## Each hushed player's hush (#1563, #2235), by slot: a light sleeper wakes on the step of theirs
+## that makes this many it has heard; a player without one isn't hushed.
 var _hushes: Dictionary[int, int] = {}
-var _rng: Rng
+## How many hushed steps next to it each sleeping light sleeper has heard (#2235), by entity id.
+var _steps_heard: Dictionary[int, int] = {}
 
 
 func id() -> String:
@@ -43,7 +45,6 @@ func requires() -> Array[String]:
 ## Every wild monster in a sleep block when the instance starts is asleep from its first tick.
 func start(state: GameState) -> void:
 	_stepped_at = state.world_tick
-	_rng = Rng.new(state.rng_seed, stream())
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	var schedules: ScheduleFeature = state.feature(ScheduleFeature.ID) as ScheduleFeature
 	for monster: int in wild.monsters:
@@ -53,7 +54,7 @@ func start(state: GameState) -> void:
 ## On every hour that turned since the last step (this tick's alone, while the instance steps
 ## every tick), a wild monster whose sleep block begins falls asleep, and one whose block ended
 ## wakes. Then, every tick, a light sleeper with a player next to it wakes, unless that player is
-## hushed and the roll spares it.
+## hushed and hasn't made its count yet.
 func step(state: GameState, _commands: Array[Command]) -> void:
 	# A clock set back (only tests do) settles this tick's hour, as a step always did.
 	var last: int = mini(_stepped_at, state.world_tick - 1)
@@ -65,20 +66,19 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 	_wake_light_sleepers(state)
 
 
-## Hushes the player in `slot` by `share` (#1563): the share of their steps next to a light sleeper
-## that don't wake it, in thousandths, kept below a whole (Fixed.ONE); 0 for none. Only rules call
-## it, inside a tick (#30).
-func hush(slot: int, share: int) -> void:
-	if share <= 0:
+## Hushes the player in `slot` (#1563, #2235): a light sleeper wakes on every `every`th step next
+## to it; 0 for none. Only rules call it, inside a tick (#30).
+func hush(slot: int, every: int) -> void:
+	if every < 2:
 		var _unhushed: bool = _hushes.erase(slot)
 	else:
-		_hushes[slot] = mini(share, Fixed.ONE - 1)
+		_hushes[slot] = every
 
 
 func hash_values() -> Array[int]:
 	var values: Array[int] = [_stepped_at]
 	values.append_array(DataReader.flat_pairs(_hushes))
-	values.append_array(_rng.hash_values())
+	values.append_array(DataReader.flat_pairs(_steps_heard))
 	return values
 
 
@@ -86,24 +86,20 @@ func save_values() -> Dictionary:
 	return {
 		"stepped_at": _stepped_at,
 		"hushes": DataReader.flat_pairs(_hushes),
-		"rng": _rng.hash_values(),
+		"steps_heard": DataReader.flat_pairs(_steps_heard),
 	}
 
 
 func load_values(_state: GameState, values: DataReader) -> void:
 	_stepped_at = values.whole("stepped_at", 0, DataReader.MOST)
 	_hushes.clear()
-	var hushes: Dictionary[int, int] = values.pairs("hushes", 0, Fixed.ONE - 1)
+	var hushes: Dictionary[int, int] = values.pairs("hushes", 0, DataReader.MOST)
 	for slot: int in hushes:
-		if slot >= GameState.MAX_PLAYERS or hushes[slot] < 1:
-			values.fail("slot %d's hush isn't a player's, from 1 to %d" % [slot, Fixed.ONE - 1])
+		if slot >= GameState.MAX_PLAYERS or hushes[slot] < 2:
+			values.fail("slot %d's hush isn't a player's, from 2" % slot)
 			return
 		_hushes[slot] = hushes[slot]
-	var restored: Rng = Rng.restored(values.wholes("rng", 0, Rng.MASK))
-	if restored == null:
-		values.fail("the sleep's random stream isn't four 32-bit words, not all zero")
-		return
-	_rng = restored
+	_steps_heard = values.pairs("steps_heard", 0, DataReader.MOST)
 
 
 ## The hour `hour` has begun: puts every standing wild monster whose sleep block begins with it to
@@ -126,22 +122,28 @@ func _wake_light_sleepers(state: GameState) -> void:
 	var stepped: Array[int] = _stepped_slots(state)
 	for monster: int in wild.asleep.duplicate():
 		if (schedules.has_trait(state, monster, SpeciesBehaviour.LIGHT_SLEEPER)
-				and _woken_by_players(state, state.entity(monster).tile, stepped)):
+				and _woken_by_players(state, monster, stepped)):
 			wild.sleep(monster, false)
+	for heard: int in _steps_heard.keys():
+		if not wild.asleep.has(heard):
+			var _forgotten: bool = _steps_heard.erase(heard)
 
 
-## Whether a player on a tile next to `tile` wakes the light sleeper there, in slot order: one
-## who isn't hushed does; a hushed one only when they stepped this tick (in `stepped`) and the roll
-## doesn't spare it. It rolls only for those, and stops once one wakes it.
-func _woken_by_players(state: GameState, tile: Vector2i, stepped: Array[int]) -> bool:
+## Whether a player next to the light sleeper `monster` wakes it, in slot order: one who isn't
+## hushed does; a hushed one's step this tick (in `stepped`) adds to its count, and wakes it when
+## the count reaches their hush.
+func _woken_by_players(state: GameState, monster: int, stepped: Array[int]) -> bool:
+	var tile: Vector2i = state.entity(monster).tile
 	for slot: int in GameState.MAX_PLAYERS:
 		var player: Entity = state.player(slot)
 		if player == null or Hex.distance(player.tile, tile) != 1:
 			continue
 		if not _hushes.has(slot):
 			return true
-		if stepped.has(slot) and not _rng.chance(_hushes[slot], Fixed.ONE):
-			return true
+		if stepped.has(slot):
+			_steps_heard[monster] = _steps_heard.get(monster, 0) + 1
+			if _steps_heard[monster] >= _hushes[slot]:
+				return true
 	return false
 
 

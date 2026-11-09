@@ -10,7 +10,8 @@ extends Feature
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "hushes"
 
-## Each passive's hush, in thousandths, by ability id, for the passives that have one.
+## Each passive's hush, by ability id, for the passives that have one: a light sleeper wakes on
+## every so many steps next to it (#2235).
 var hushes: Dictionary[String, int] = {}
 
 

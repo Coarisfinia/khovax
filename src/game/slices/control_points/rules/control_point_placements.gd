@@ -31,6 +31,16 @@ func kind_of(meaning: String) -> String:
 	return KIND if side_of(meaning) != UNKNOWN else ""
 
 
+## A control point is taken by closing a ring around it (#644), and no ring encloses a tile on the
+## edge (RingShape.outside floods in from there), so one marked there could never be taken (#1495).
+## Asked of each region piece, whose edge may later join a neighbour: a point stays off it anyway.
+func problem_in(region: Region) -> String:
+	for tile: Vector2i in region.placed(KIND):
+		if RingShape.on_edge(region, tile):
+			return "the control point on %s is on the region's edge: no ring encloses it" % tile
+	return ""
+
+
 ## The side holding the control point `meaning` places at the start, or UNKNOWN when it places none.
 static func side_of(meaning: String) -> int:
 	if not meaning.begins_with(HELD_BY):

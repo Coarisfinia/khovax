@@ -12,19 +12,23 @@ const SEED: int = 3
 ## A battle ground: the attackers start with one control point, the defenders hold two and one
 ## more is held by nobody.
 ## Written with \n, as the formatter strips a multi-line string's leading spaces.
-const GRID: String = " 🟫🚩🟫🟫\n🟫🔴🟫⚪🟫\n 🏯🟫🏯🟫"
+const GRID: String = (
+	"🟫🟫🟫🟫🟫🟫🟫\n 🟫🟫🚩🟫🟫🟫\n🟫🔴🟫🟫⚪🟫🟫\n 🟫🏯🟫🏯🟫🟫\n🟫🟫🟫🟫🟫🟫🟫"
+)
 const LEGEND: String = """- `🚩`: a control point, held by the attackers
 - `🏯`: a control point, held by the defenders
 - `⚪`: a control point, held by nobody
 """
-## A battle ground with room for rings: the attackers' point and one of the defenders' inside,
-## each with a ring of ground around it, and the defenders' other point on the edge.
+## A battle ground with room for rings: the attackers' point and both of the defenders', each with
+## a ring of ground around it that touches no other point's.
 const RING_GRID: String = (
-	" 🟫🟫🟫🟫🟫🟫🟫\n🟫🔴🟫🟫🟫🟫🟫\n 🟫🚩🟫🟫🏯🟫🟫\n🟫🟫🟫🟫🟫🟫🟫\n 🟫🟫🟫🟫🟫🟫🏯"
+	" 🟫🟫🟫🟫🟫🟫🟫🟫🟫\n🟫🔴🟫🟫🟫🟫🟫🟫🟫\n 🟫🚩🟫🟫🏯🟫🟫🏯🟫\n🟫🟫🟫🟫🟫🟫🟫🟫🟫\n 🟫🟫🟫🟫🟫🟫🟫🟫🟫"
 )
 const ATTACKERS: int = ControlPointSides.ATTACKERS
 const DEFENDERS: int = ControlPointSides.DEFENDERS
 const NOBODY: int = ControlPointSides.NOBODY
+## The smallest ground with a control point off the edge, in its middle.
+const SMALL_GRID: String = " 🟫🟫\n🔴🚩🟫\n 🟫🟫"
 ## Who holds each of GRID's control points at the start.
 const HELD: Dictionary[Vector2i, int] = {
 	Vector2i(0, -1): ATTACKERS,
@@ -39,6 +43,7 @@ func run(_tree: SceneTree) -> String:
 		_check_ordinary_instances,
 		_check_marked,
 		_check_unknown_side,
+		_check_edge_refused,
 		_check_hashed,
 		_check_lost,
 		_check_saved,
@@ -91,11 +96,20 @@ func _check_marked() -> String:
 ## A control point naming a side there is none of is refused, on a grid that reads with a known one.
 func _check_unknown_side() -> String:
 	var known: String = "- `🚩`: a control point, held by the attackers\n"
-	if not FlowSteps.region("🔴🚩🟫", known).problem.is_empty():
+	if not FlowSteps.region(SMALL_GRID, known).problem.is_empty():
 		return "a control point held by the attackers wasn't read"
 	var unknown: String = "- `🚩`: a control point, held by the wanderers\n"
-	if FlowSteps.region("🔴🚩🟫", unknown).problem.is_empty():
+	if FlowSteps.region(SMALL_GRID, unknown).problem.is_empty():
 		return "a control point held by an unknown side was read"
+	return ""
+
+
+## A control point on the region's edge is refused (#1495): no ring can ever enclose it.
+func _check_edge_refused() -> String:
+	var known: String = "- `🚩`: a control point, held by the attackers\n"
+	var problem: String = FlowSteps.region("🔴🚩🟫", known).problem
+	if not problem.contains("edge"):
+		return "a control point on the region's edge wasn't refused: '%s'" % problem
 	return ""
 
 
@@ -169,9 +183,9 @@ func _check_saved() -> String:
 func _check_warded() -> String:
 	var state: GameState = _ring_battle()
 	var points: ControlPointFeature = _points(state)
-	var own: int = _inner_point(state, ATTACKERS)
+	var own: int = _first_point(state, ATTACKERS)
 	var own_ring: Array[Vector2i] = _ring(points.points[own])
-	var fort_ring: Array[Vector2i] = _ring(points.points[_inner_point(state, DEFENDERS)])
+	var fort_ring: Array[Vector2i] = _ring(points.points[_first_point(state, DEFENDERS)])
 	_color(state, fort_ring.slice(0, 5), state.player(0))
 	if FlowSteps.usable(TotemButton.new(), state, 0):
 		return "the totem's button shows usable on a ring with a gap"
@@ -204,9 +218,9 @@ func _check_warded() -> String:
 func _check_taken() -> String:
 	var state: GameState = _ring_battle()
 	var points: ControlPointFeature = _points(state)
-	var fort: int = _inner_point(state, DEFENDERS)
+	var fort: int = _first_point(state, DEFENDERS)
 	var fort_ring: Array[Vector2i] = _ring(points.points[fort])
-	# The defenders' point on the edge goes to the attackers, so the fort is the defenders' last.
+	# The defenders' other point goes to the attackers, so the fort is the defenders' last.
 	for index: int in points.holders.size():
 		if index != fort and points.holders[index] == DEFENDERS:
 			points.holders[index] = ATTACKERS
@@ -235,7 +249,7 @@ func _check_taken() -> String:
 func _check_button_follows() -> String:
 	var state: GameState = _ring_battle()
 	var points: ControlPointFeature = _points(state)
-	_color(state, _ring(points.points[_inner_point(state, ATTACKERS)]), state.player(1))
+	_color(state, _ring(points.points[_first_point(state, ATTACKERS)]), state.player(1))
 	var button: TotemButton = TotemButton.new()
 	var answers: Array[bool] = [FlowSteps.usable(button, state, 1, true)]
 	var session: Session = button.driver
@@ -244,13 +258,13 @@ func _check_button_follows() -> String:
 	session.input.slot = 1
 	answers.append(button.usable())
 	var _events: Array[RefCounted] = _totem(state, 1)
-	_color(state, _ring(points.points[_inner_point(state, ATTACKERS)]), state.player(1))
+	_color(state, _ring(points.points[_first_point(state, ATTACKERS)]), state.player(1))
 	answers.append(button.usable())
 	var other: GameState = _ring_battle()
 	# At the same tick as `state`, so only the state differs.
 	Simulation.step(other, FlowSteps.commands([Command.NO_MOVE, Command.NO_MOVE]))
 	session.world.instances[session.local_instance_name()] = other
-	_color(other, _ring(_points(other).points[_inner_point(other, ATTACKERS)]), other.player(1))
+	_color(other, _ring(_points(other).points[_first_point(other, ATTACKERS)]), other.player(1))
 	answers.append(button.usable())
 	button.free()
 	if answers != [true, false, true, false, true]:
@@ -259,18 +273,18 @@ func _check_button_follows() -> String:
 
 
 ## A battle on RING_GRID with the playground's rules: player 1 on the ring around the defenders'
-## inner point, player 2 on the one around the attackers' point.
+## first point, player 2 on the one around the attackers' point.
 func _ring_battle() -> GameState:
 	var ground: Region = FlowSteps.region(RING_GRID, LEGEND)
 	var state: GameState = FlowSteps.rules_on(FlowSteps.BASIC, ground, SEED)
 	var points: ControlPointFeature = _points(state)
 	var _taker: Entity = state.add_entity(
 		0,
-		_ring(points.points[_inner_point(state, DEFENDERS)])[0],
+		_ring(points.points[_first_point(state, DEFENDERS)])[0],
 	)
 	var _warder: Entity = state.add_entity(
 		1,
-		_ring(points.points[_inner_point(state, ATTACKERS)])[0],
+		_ring(points.points[_first_point(state, ATTACKERS)])[0],
 	)
 	return state
 
@@ -284,14 +298,9 @@ static func _domination(state: GameState) -> DominationFeature:
 	return state.feature(DominationFeature.ID) as DominationFeature
 
 
-## The index of GRID's control point held by `side` away from the region's edge.
-static func _inner_point(state: GameState, side: int) -> int:
-	var points: ControlPointFeature = _points(state)
-	for index: int in points.points.size():
-		var inner: bool = not RingShape.on_edge(state.region, points.points[index])
-		if points.holders[index] == side and inner:
-			return index
-	return -1
+## The index of the first control point held by `side`.
+static func _first_point(state: GameState, side: int) -> int:
+	return _points(state).holders.find(side)
 
 
 ## The six tiles around `point`.
