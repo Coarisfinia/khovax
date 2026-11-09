@@ -44,9 +44,9 @@ var hurt_haste: int = 0
 ## A self passive's: the share of its monster's full HP it gets back each second it rests, waiting
 ## for no strike, in thousandths (#1500, CompanionAttackFeature); 0 for none.
 var rest_heal: int = 0
-## A player passive's: the share of its player's steps next to a sleeping light sleeper that don't
-## wake it, in thousandths (#1563, SleepFeature), while its monster is out; 0 for none, and for a
-## special or a self passive.
+## A player passive's: a sleeping light sleeper wakes on every so many of its player's steps next
+## to it (#1563, #2235, SleepFeature), while its monster is out; 0 for none, and for a special or a
+## self passive.
 var hush: int = 0
 ## A self passive's: the share of the hits on its own monster that miss, in thousandths, while it
 ## is out (#1499, WildAttackFeature); 0 for none.
@@ -96,7 +96,7 @@ static func parse(file_id: String, text: String) -> Ability:
 ## Why its power, cooldown, strike type, hold, guard, haste, heal, dodge and hush don't fit its
 ## kind, or "": a special has the first three and may be held, a passive has none and may guard,
 ## taking off less than a whole hit, a self passive may hasten or heal its monster, or make it
-## dodge, by less than a whole, and a player passive may hush, sparing less than every step.
+## dodge, by less than a whole, and a player passive may hush, on every second step or rarer.
 func _strike_problem(data: Dictionary) -> String:
 	if kind == SPECIAL and (power < 1 or cooldown_seconds < 1):
 		return "a special has a power and a cooldown, whole numbers from 1"
@@ -113,6 +113,6 @@ func _strike_problem(data: Dictionary) -> String:
 		var share: int = Content.amount(data.get(field))
 		if data.has(field) and (kind != SELF_PASSIVE or share < 1 or share >= Fixed.ONE):
 			return "a self passive's %s is thousandths from 1 to 999, others have none" % field
-	if data.has("hush") and (kind != PLAYER_PASSIVE or hush < 1 or hush >= Fixed.ONE):
-		return "a player passive's hush is whole thousandths from 1 to 999, no other ability's"
+	if data.has("hush") and (kind != PLAYER_PASSIVE or hush < 2):
+		return "a player passive's hush is a whole number of steps from 2, no other ability's"
 	return ""
