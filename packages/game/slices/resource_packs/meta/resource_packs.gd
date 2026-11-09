@@ -7,8 +7,10 @@ extends RefCounted
 ## quest (#1888), species (#1903), translation catalogue (#1902), tile blueprint (#1901), loot table
 ## or material (#1953) any other way (resource_packs_check.py in CI).
 
-## The default pack's manifest; its files are named from res://.
-const DEFAULT: String = "res://slices/resource_packs/data/default.jsonc"
+## The default pack's folder (#1978), laid out like a player's pack, and its manifest, whose files
+## are named from that folder.
+const DEFAULT_ROOT: String = "res://resourcepacks/default/"
+const DEFAULT: String = DEFAULT_ROOT + "pack.jsonc"
 ## The default pack's .pck, built by the pack builder like any pack, which every build carries and
 ## mounts like one (#1941). A run from the project has none and reads the files DEFAULT names.
 const BUILT_DEFAULT: String = "res://packs/default.pck"
@@ -234,7 +236,7 @@ static func _default_pack() -> ResourcePack:
 			if (not FileAccess.file_exists(BUILT_DEFAULT)
 					and not DirAccess.dir_exists_absolute(LINKED)):
 				_stop_without_link()
-			_default = ResourcePack.parse(Content.text_in(DEFAULT), "res://")
+			_default = ResourcePack.parse(Content.text_in(DEFAULT), DEFAULT_ROOT)
 			if not _default.problem.is_empty():
 				push_error("the default resource pack can't be read: " + _default.problem)
 	return _default

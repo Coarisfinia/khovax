@@ -16,6 +16,9 @@ Use the builder from the same release as the game: a pack is built with that gam
 
 ## A pack's folder
 
+The game's own default pack, `resourcepacks/default/` at the repository's root, is laid out this way
+and is the reference example.
+
 ```text
 my_pack/
   pack.jsonc        the manifest

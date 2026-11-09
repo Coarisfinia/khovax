@@ -647,8 +647,8 @@ prop's own, and never another grey stone. A prop's script only maps its parts on
    boot flow's `UNPLACED_MODELS`, by its id. Its `SOURCE.md` names the set's textures it uses.
 
 **Every model is a resource of the default pack** (#1864): a new `.glb` gets an entry in the
-`models` of `packages/game/slices/resource_packs/data/default.jsonc` (`"model_<name>":
-"resourcepacks/default/models/<name>/<name>.glb"`), and content files and views name it by that id, never by its
+`models` of `resourcepacks/default/pack.jsonc` (`"model_<name>":
+"models/<name>/<name>.glb"`, named from that folder), and content files and views name it by that id, never by its
 `res://` path (`resource_packs_check.py` in CI).
 
 A new material goes into the set (`prop_textures.py`'s `SET` and `textures/SOURCE.md`), for every

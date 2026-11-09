@@ -44,7 +44,7 @@ EVERY = (
     "packages/game/slices/*/look/*",
     "packages/game/*.gd",
     "packages/game/*.tscn",
-    "packages/game/slices/resource_packs/data/*",
+    "resourcepacks/default/pack.jsonc",
 )
 
 

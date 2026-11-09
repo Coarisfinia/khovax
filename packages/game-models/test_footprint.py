@@ -146,7 +146,7 @@ PROJECT = {
         'const CLIPS: Array[StringName] = []\n'
         'func _hide() -> void:\n\tfor part: String in FigureView.HIDDEN_PARTS:\n\t\tpass\n'),
     "tools/render_lamp.gd": 'const MODEL: String = "model_lamp"\n',
-    "slices/resource_packs/data/default.jsonc": (
+    "resourcepacks/default/pack.jsonc": (
         "// The tiny project's pack.\n"
         '{ "models": { "model_figure": "assets/figure.glb", "model_chest": "chest.glb",'
         ' "model_lamp": "lamp.glb", "model_pebble": "assets/pebble.glb" } }\n'),

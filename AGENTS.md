@@ -519,7 +519,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **Our resources are the default resource pack** (owner, #1860): textures, models, sounds (#2014),
   regions, region pieces, realms, quests (#1888), species (#1903), translation catalogues (#1902), tile
   blueprints (#1901), loot tables and materials (#1953) are listed in
-  `slices/resource_packs/data/default.jsonc` and reached only through `ResourcePacks` by id, never
+  `resourcepacks/default/pack.jsonc` at the repository's root and reached only through `ResourcePacks` by id, never
   by a `res://` path (`resource_packs_check.py` in CI).
   **The default pack's files move into one folder at the repository's root, `resourcepacks/default/`**
   (owner, #1978), laid out like a player's pack, one kind of data per pull request; the schemas and
