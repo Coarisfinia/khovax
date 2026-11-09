@@ -12,6 +12,8 @@ which its pup, the Kavrikka, shares), as the owner asked on the issue:
   swung a little out to its own side so both read;
 - **the soles:** the underside of every paw is a plain pad of its side's colour.
 
+The generator's snout is closed, so `mouth` cuts it open and hangs the lower jaw on a bone (#2183).
+
 It names the generator's bones to the library's quadruped scheme and animates every creature clip
 with the library's clips, its legs planted by lib/adopted.py.
 
@@ -30,6 +32,7 @@ import math
 import os
 import sys
 
+import bmesh
 import bpy
 import numpy
 from mathutils import Matrix, Vector
@@ -83,6 +86,18 @@ NECK = (0.62, -0.19)
 KNEE = (0.31, 0.30)
 KNEE_BLEND = 0.02
 
+# The mouth (#2183): the generator's snout is one closed shell, so it is cut open along a plane
+# round its front, behind which (Y, metres) it stays whole: the cut's ends are the mouth's corners
+# and the jaw's hinge. The plane passes through MOUTH_POINT, rising MOUTH_RISE towards the head per
+# metre; the lower jaw comes fully under the jaw bone over JAW_BLEND ahead of the corners.
+MOUTH_CORNER = -0.345
+MOUTH_POINT = (0.10, -0.47, 0.685)
+MOUTH_RISE = 0.29
+JAW_BLEND = 0.03
+# How wide (texels) the patch of the painted texture the mouth's lining samples is, all of it dark:
+# the model keeps its one material, which is how the eye checks know its eyes are painted on.
+MOUTH_PATCH = 9
+
 # Its eyes, as the attachment points find them (the eye pieces' middles, filled in by `eyes`),
 # looking ahead and a little out; it bites with its muzzle's tip.
 EYE_LOOK = (0.25, -1.0, 0.0)
@@ -105,9 +120,13 @@ RUN_DUTY, RUN_FOLD, RUN_SPINE_FLEX, RUN_ROLL, RUN_BOB = 0.2, 0.25, 0.06, 0.0, 0.
 # The long attack's shifts and paws are smaller than the other clips' and its lunge a little
 # larger against them: at the shared size the body is still coming back from reaching for its
 # paws when ChannelStart hands over to the loop, and the join breaks (#2127).
+# Its snout is small and the library's lunge bows the head, so the Attack's open mouth wouldn't
+# read: at the lunge the jaw opens this far and the head stays up this far (radians).
+ATTACK_JAW = 0.72
+ATTACK_HEAD = -0.15
 CHANNEL_SHARE = 0.25
 LUNGE = 1.25
-GAIT = ("CHANNEL_SHARE", "LUNGE", "WALK_TILES", "WALK_DUTY", "WALK_LIFT", "WALK_CURL", "WALK_ROLL", "WALK_BOB",
+GAIT = ("ATTACK_JAW", "ATTACK_HEAD", "CHANNEL_SHARE", "LUNGE", "WALK_TILES", "WALK_DUTY", "WALK_LIFT", "WALK_CURL", "WALK_ROLL", "WALK_BOB",
         "RUN_TILES", "RUN_DUTY",
         "RUN_FOLD", "RUN_SPINE_FLEX", "RUN_ROLL", "RUN_BOB")
 OUT = tuning.arguments(globals(), GAIT)
@@ -120,6 +139,14 @@ BELLY_HEIGHT = 0.30
 SHARE = 0.5
 FAINT_FOREPAWS = 0.25
 SLEEP_PAWS = {"front_paw": (0.0, 0.0, 0.25), "hind_paw": (0.08, 0.0, -0.08)}
+
+
+def attack():
+    """The library's Attack at this body's share, its mouth wide at the lunge."""
+    out = adopted.lesser(clips.attack(), SHARE)
+    frame, pose, *rest = out.keys[3]
+    out.keys[3] = (frame, dict(pose, jaw=(ATTACK_JAW, 0.0, 0.0), head=(ATTACK_HEAD, 0.0, 0.0)), *rest)
+    return out
 
 
 def channel():
@@ -201,6 +228,106 @@ def rename(rig, skin):
     rigged.roll(rig)
 
 
+def darkest(image):
+    """Where (U, V) the middle of the darkest MOUTH_PATCH-wide patch of `image` lies."""
+    width, height = image.size
+    pixels = numpy.empty(width * height * 4, dtype=numpy.float32)
+    image.pixels.foreach_get(pixels)
+    bright = pixels.reshape(height, width, 4)[:, :, :3].max(axis=2)
+    worst = numpy.lib.stride_tricks.sliding_window_view(bright, (MOUTH_PATCH, MOUTH_PATCH)).max(axis=(2, 3))
+    row, column = numpy.unravel_index(numpy.argmin(worst), worst.shape)
+    return (column + MOUTH_PATCH / 2.0) / width, (row + MOUTH_PATCH / 2.0) / height
+
+
+def chain(edges):
+    """The vertices of an open run of edges, in order from one end to the other. The skin's
+    vertices are doubled along its UV seams, so the run is followed by where they are."""
+
+    def spot(vertex):
+        return tuple(round(value, 6) for value in vertex.co)
+
+    links = {}
+    for edge in edges:
+        for vertex in edge.verts:
+            links.setdefault(spot(vertex), []).append((edge, vertex))
+    start = next(linked for linked in links.values() if len(linked) == 1)
+    run, used = [start[0][1]], set()
+    while True:
+        step = next((edge for edge, _vertex in links[spot(run[-1])] if edge not in used), None)
+        if step is None:
+            if len(run) != len(edges) + 1:
+                raise ValueError("the mouth's cut is not one run: %d of %d edges" % (len(run) - 1, len(edges)))
+            return run
+        used.add(step)
+        here = spot(run[-1])
+        run.append(next(vertex for vertex in step.verts if spot(vertex) != here))
+
+
+def cap(mesh, ring, down, dark):
+    """Closes one side of the cut, on the texture's dark patch `dark`, facing the other side."""
+    face = mesh.faces.new(ring)
+    for loop in face.loops:
+        loop[mesh.loops.layers.uv.active].uv = dark
+    made = bmesh.ops.triangulate(mesh, faces=[face], ngon_method="EAR_CLIP")["faces"]
+    mesh.normal_update()
+    wrong = sum(triangle.normal.z for triangle in made) > 0.0 if down else sum(
+        triangle.normal.z for triangle in made) < 0.0
+    if wrong:
+        bmesh.ops.reverse_faces(mesh, faces=made)
+
+
+def mouth(rig, skin, colour):
+    """Cuts the snout open, lines both sides of the cut with the darkest of the painted texture
+    `colour` and hangs the lower jaw on a new bone from the mouth's corners towards its chin."""
+    dark = darkest(colour)
+    mesh = bmesh.new()
+    mesh.from_mesh(skin.data)
+    normal = Vector((0.0, -MOUTH_RISE, 1.0)).normalized()
+    point = Vector(MOUTH_POINT)
+    snout = [face for face in mesh.faces if face.calc_center_median().y < MOUTH_CORNER]
+    geometry = list({vertex for face in snout for vertex in face.verts}) + list(
+        {edge for face in snout for edge in face.edges}) + snout
+    cut = bmesh.ops.bisect_plane(mesh, geom=geometry, plane_co=point, plane_no=normal)["geom_cut"]
+    edges = [element for element in cut if isinstance(element, bmesh.types.BMEdge)]
+    bmesh.ops.split_edges(mesh, edges=edges)
+    mesh.faces.ensure_lookup_table()
+
+    def below(face):
+        return normal.dot(face.calc_center_median() - point) < 0.0
+
+    # Only the cut's own edges: the generated skin has open edges of its own further back, and a
+    # lining closed over those would be a sheet inside the head.
+    open_edges = [edge for edge in mesh.edges if edge.is_boundary and all(
+        abs(normal.dot(vertex.co - point)) < 1e-5 for vertex in edge.verts)]
+    upper = chain([edge for edge in open_edges if not below(edge.link_faces[0])])
+    lower = chain([edge for edge in open_edges if below(edge.link_faces[0])])
+    corners = [upper[0], upper[-1]]
+    hinge = (corners[0].co + corners[1].co) / 2.0
+    tip = sum((vertex.co for vertex in lower), Vector()) / len(lower)
+    chin = min(lower, key=lambda vertex: vertex.co.y).co.copy()
+    jaw = {vertex for face in mesh.faces if face.calc_center_median().y < MOUTH_CORNER and below(face)
+           for vertex in face.verts} - set(corners)
+    cap(mesh, upper, True, dark)
+    cap(mesh, lower, False, dark)
+    mesh.verts.index_update()
+    jaw = {vertex.index for vertex in jaw}
+    mesh.to_mesh(skin.data)
+    mesh.free()
+    group = skin.vertex_groups.new(name="jaw")
+    for index in jaw:
+        vertex = skin.data.vertices[index]
+        share = max(0.0, min(1.0, (MOUTH_CORNER - vertex.co.y) / JAW_BLEND))
+        for entry in vertex.groups:
+            entry.weight *= 1.0 - share
+        group.add([index], share, "REPLACE")
+    scene.select_only(rig)
+    bpy.ops.object.mode_set(mode="EDIT")
+    bone = rig.data.edit_bones.new("jaw")
+    bone.head, bone.tail, bone.parent = hinge, Vector((chin.x, chin.y, tip.z)), rig.data.edit_bones["head"]
+    bpy.ops.object.mode_set(mode="OBJECT")
+    rigged.roll(rig)
+
+
 def eyes(skin, part):
     """Each eye piece's middle, its side's eye point."""
     out = {}
@@ -234,6 +361,7 @@ def build(out):
     spread(skin, part)
     spots = eyes(skin, part)
     rename(rig, skin)
+    mouth(rig, skin, colour)
     points(rig, spots)
     body = adopted.Body(rig, MUZZLE)
     clips.animate(rig, {
@@ -242,7 +370,7 @@ def build(out):
                            curl=WALK_CURL, roll=WALK_ROLL, bob=WALK_BOB),
         "Run": clips.gait(RUN_FRAMES, RUN_STRIDE, body, clips.GALLOP, duty=RUN_DUTY, fold=RUN_FOLD,
                           spine_flex=RUN_SPINE_FLEX, roll=RUN_ROLL, bob=RUN_BOB, planted=False),
-        "Attack": adopted.lesser(clips.attack(), SHARE),
+        "Attack": attack(),
         "Hit": adopted.lesser(clips.hit(), SHARE),
         "Faint": adopted.lesser(clips.faint(BELLY_HEIGHT, forepaws=FAINT_FOREPAWS), SHARE),
         **channel(),
