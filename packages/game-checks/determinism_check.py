@@ -65,12 +65,15 @@ FORBIDDEN_IN_CODE = re.compile(
 )
 # A Vector2i's length() is a float, a String's a whole number, and a pattern can't see types: so a
 # length() counts on a Vector2i written out or on a name the file declares as one. Scripts type
-# every declaration (AGENTS.md); the left-out `(` keeps a dictionary entry `a: Vector2i(1, 2)` from
-# declaring `a`.
-VECTOR2I_RECEIVER = r"\bVector2i(?:\([^()]*\)|\.[A-Z_]+)"
+# every declaration (AGENTS.md); a dictionary entry's value (`a: Vector2i(1, 2)`, `a: Vector2i.ONE`)
+# declares nothing.
+VECTOR2I_ARGUMENTS = r"\((?:[^()]|\([^()]*\))*\)"  # A call inside them, one level deep.
+VECTOR2I_RECEIVER = rf"\bVector2i(?:{VECTOR2I_ARGUMENTS}|\.[A-Z_]+)"
 # What a Vector2i's own methods return is a Vector2i again.
-VECTOR2I_CHAIN = r"(?:\.(?:abs|clamp|clampi|max|maxi|min|mini|sign|snapped|snappedi)\([^()]*\))*"
-VECTOR2I_DECLARED = re.compile(r"\b(\w+)\s*:\s*Vector2i\b(?!\s*\()")
+VECTOR2I_CHAIN = (
+    rf"(?:\.(?:abs|clamp|clampi|max|maxi|min|mini|sign|snapped|snappedi){VECTOR2I_ARGUMENTS})*"
+)
+VECTOR2I_DECLARED = re.compile(r"\b(\w+)\s*:\s*Vector2i\b(?!\s*[.(])")
 # Reaching a randomness method by name: read on code_with_random_names, which keeps that string.
 RANDOM_NAMES = ("shuffle", "pick_random")
 RANDOM_BY_NAME = re.compile(

@@ -58,6 +58,8 @@ REFUSED = (
     "var a := Vector2i(3, 4).length()",
     "var a := Vector2i.ONE.length()",
     "var a := Vector2i(1, 2).abs().length()",
+    "var a := Vector2i(get_x(), 4).length()",
+    "var a := Vector2i.ONE.snapped(Vector2i(2, 2)).length()",
     "var a := tile.aspect()",
     "var a := PackedFloat32Array()",
     "var a := PackedFloat64Array()",
@@ -134,6 +136,7 @@ class FormsTest(unittest.TestCase):
         for source in (
             "func f(tile: Vector2i, text: String) -> int:\n\treturn text.length()",
             "var d := {tile: Vector2i(1, 2)}\nvar a := tile.length()",
+            "var d := {tile: Vector2i.ONE}\nvar a := tile.length()",
         ):
             self.assertEqual(forbidden_lines(source), [], source)
 
