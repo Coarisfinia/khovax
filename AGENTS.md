@@ -571,6 +571,10 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   gdstyle is installed with scoop from `tools/scoop/gdstyle.json`; its version is pinned only there
   (CI reads it from the manifest), so a bump also updates CI's `GDSTYLE_SHA256`, the checksum of
   that version's Linux archive.
+- **On WSL, run gdstyle as `tools/gdstyle.sh`** (#2215), everywhere this file says `gdstyle`: the
+  `gdstyle` on the agents' `PATH` is older than the pin, so it rewrites files CI accepts and reports
+  errors CI doesn't have. The script installs nothing system-wide: it downloads the pinned release
+  into `~/.cache/khovax/`, checks it against `GDSTYLE_SHA256`, and passes on its arguments.
 - **Godot rewrites `project.godot` in its own form** whenever it runs: its own order, no comments,
   and settings equal to their default left out (four warnings are errors by default). Keep the file
   in that form so it doesn't churn, and keep the reasons for its settings in this file instead.
