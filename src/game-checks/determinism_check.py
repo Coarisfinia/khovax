@@ -19,7 +19,7 @@ import unittest
 from pathlib import Path
 
 from game_shared import log
-from game_shared.gdscript_code import code_only, without_comments
+from game_shared.gdscript_code import Kind, code_only, tokens, without_comments
 
 # What the rules never use, one alternation per kind; add a kind as its own line.
 FORBIDDEN = re.compile(
@@ -27,11 +27,12 @@ FORBIDDEN = re.compile(
         (
             r"\b(Node|Node2D|Node3D|CanvasItem|Control|Window|Viewport|Resource)\b",
             r"\b(Input|InputMap|Time|Engine|OS|DisplayServer|RenderingServer|ProjectSettings)\.",
-            r"\b(randf|randi|randf_range|randi_range|randfn|randomize|seed|rand_from_seed)\(",
             r"\bdelta\b",
             r"\b(FileAccess|DirAccess|JSON)\b",
             r"\b(Vector2|Vector3|Vector4|Color|Rect2|AABB|Plane|Basis|Quaternion|Transform2D"
             r"|Transform3D|Projection)\b",
+            # Runs code from a string, where the patterns read with strings removed can't see it.
+            r"\bExpression\b",
         )
     )
 )
@@ -40,21 +41,46 @@ FORBIDDEN = re.compile(
 FORBIDDEN_IN_CODE = re.compile(
     "|".join(
         (
-            r"\b(shuffle|pick_random)\s*\(|\bRandomNumberGenerator\b",
+            r"\b(randf|randi|randf_range|randi_range|randfn|randomize|seed|rand_from_seed)"
+            r"\s*\(",
+            r"\b(shuffle|pick_random)\s*\(|\.(shuffle|pick_random)\b",
+            r"\bRandomNumberGenerator\b",
             r"\bfloat\b|[0-9]\.[0-9]|(?<![\w.])[0-9][0-9_]*[eE][-+]?[0-9]",
             r"(?<![\w)\]])\.[0-9]",
             r"(?<![\w.])[0-9][0-9_]*\.(?:[eE][-+]?[0-9]|(?!\w))",
-            r"\b(sqrt|sin|cos|tan|asin|acos|atan|atan2|sinh|cosh|tanh|exp|log|pow|fmod|fposmod"
+            # Global functions only: `vi.snapped(x)` is an integer method of Vector2i (#2216).
+            r"(?<!\.)\b(sqrt|sin|cos|tan|asin|acos|atan|atan2|sinh|cosh|tanh|exp|log|pow|fmod"
+            r"|fposmod"
             r"|lerp|lerpf|lerp_angle|inverse_lerp|remap|smoothstep|move_toward|deg_to_rad"
-            r"|rad_to_deg|to_float|floor|ceil|round|floorf|ceilf|roundf|absf|signf|maxf|minf"
+            r"|rad_to_deg|floor|ceil|round|floorf|ceilf|roundf|absf|signf|maxf|minf"
             r"|clampf|snapped|snappedf|wrapf|is_nan|is_inf|is_finite|is_equal_approx"
             r"|is_zero_approx|ease|pingpong|asinh|acosh|atanh|angle_difference|rotate_toward"
             r"|bezier_interpolate|bezier_derivative|cubic_interpolate|cubic_interpolate_angle"
             r"|cubic_interpolate_in_time|cubic_interpolate_angle_in_time|db_to_linear"
             r"|linear_to_db)\s*\(",
+            r"\bto_float\s*\(",
             r"\b(PI|TAU|INF|NAN)\b",
+            r"\.aspect\s*\(|\bPackedFloat(32|64)Array\b|\bstr_to_var\s*\(",
+            r"\bTYPE_FLOAT\b",
         )
     )
+)
+# An integer vector's length() and distance_to() are floats, a String's length() a whole number,
+# and a pattern can't see types: so they count on a Vector2i, Vector3i or Vector4i written out or on
+# a name the file declares as one. Scripts type
+# every declaration (AGENTS.md); a dictionary entry's value (`a: Vector2i(1, 2)`, `a: Vector2i.ONE`)
+# declares nothing.
+INT_VECTOR_ARGUMENTS = r"\((?:[^()]|\([^()]*\))*\)"  # A call inside them, one level deep.
+INT_VECTOR_RECEIVER = rf"\bVector[234]i(?:{INT_VECTOR_ARGUMENTS}|\.[A-Z_]+)"
+# What an integer vector's own methods return is an integer vector again.
+INT_VECTOR_CHAIN = (
+    rf"(?:\.(?:abs|clamp|clampi|max|maxi|min|mini|sign|snapped|snappedi){INT_VECTOR_ARGUMENTS})*"
+)
+INT_VECTOR_DECLARED = re.compile(r"\b(\w+)\s*:\s*Vector[234]i\b(?!\s*[.(])")
+# Reaching a randomness method by name: read on code_with_random_names, which keeps that string.
+RANDOM_NAMES = ("shuffle", "pick_random")
+RANDOM_BY_NAME = re.compile(
+    rf"""\.(call|callv|call_deferred)\s*\(\s*&?["']({"|".join(RANDOM_NAMES)})["']"""
 )
 MARKER = "# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK"
 MARKER_WITH_REASON = re.compile(re.escape(MARKER) + r" \(.*[^ )].*\)")
@@ -75,15 +101,35 @@ def numbered(lines: list[str], hit: list[bool]) -> list[str]:
     return [f"{number}:{line}" for number, (line, h) in enumerate(zip(lines, hit), 1) if h]
 
 
+def code_with_random_names(source: str) -> str:
+    """The script's code and the strings that are only a randomness method's name."""
+    return "".join(
+        token.text
+        if token.kind == Kind.CODE
+        or (token.kind == Kind.STRING and token.text.strip("\"'") in RANDOM_NAMES)
+        else "\n" * token.text.count("\n")
+        for token in tokens(source)
+    )
+
+
 def forbidden_lines(source: str) -> list[str]:
     """The numbered lines of a script that use something the rules never use."""
     code = without_comments(source).rstrip("\n").split("\n")
     bare = code_only(source).split("\n")
+    declared = INT_VECTOR_DECLARED.findall("\n".join(bare))
+    receivers = [INT_VECTOR_RECEIVER, *(rf"\b{name}" for name in declared)]
+    float_length = re.compile(
+        rf"(?:{'|'.join(receivers)}){INT_VECTOR_CHAIN}\.(?:length|distance_to)\s*\("
+    )
+    named = code_with_random_names(source).split("\n")
     return numbered(
         code,
         [
-            FORBIDDEN.search(line) is not None or FORBIDDEN_IN_CODE.search(bare_line) is not None
-            for line, bare_line in zip(code, bare)
+            FORBIDDEN.search(line) is not None
+            or FORBIDDEN_IN_CODE.search(bare_line) is not None
+            or float_length.search(bare_line) is not None
+            or RANDOM_BY_NAME.search(named_line) is not None
+            for line, bare_line, named_line in zip(code, bare, named)
         ],
     )
 
@@ -91,7 +137,9 @@ def forbidden_lines(source: str) -> list[str]:
 def own_test_passes() -> bool:
     """Runs test_determinism_check.py, so CI's step for this check covers its patterns too (#2210)."""
     suite = unittest.defaultTestLoader.loadTestsFromName("test_determinism_check")
-    return unittest.TextTestRunner().run(suite).wasSuccessful()
+    result = unittest.TextTestRunner().run(suite)
+    # A module without tests is successful too, and would prove nothing (#2216).
+    return result.wasSuccessful() and result.testsRun > 0
 
 
 def main() -> int:

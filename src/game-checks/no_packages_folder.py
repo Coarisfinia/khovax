@@ -1,7 +1,7 @@
 """Fails while the repository has a packages/ folder, or a tracked file names a path in it (#1979):
 the folder is src/ now, and a path left behind reads nothing without saying so (#2199, #2203).
 
-    uv run --locked --package khovax-game-checks packages/game-checks/no_packages_folder.py
+    uv run --locked --package khovax-game-checks src/game-checks/no_packages_folder.py
 """
 
 import os
@@ -15,13 +15,12 @@ from game_shared.git_files import git_files
 
 # A path in the old folder: a member (game, game-*), or the folder's members in a pattern.
 STALE = r"\bpackages/(game|<package>|\*)"
-SELF = Path(__file__).name
 
 
 def stale_references() -> list[tuple[str, int]]:
-    """Every tracked text file's lines naming the old folder, this file's own left out."""
+    """Every tracked text file's lines naming the old folder, this file's own included."""
     found = subprocess.run(
-        ["git", "grep", "-I", "-n", "-z", "-E", STALE, "--", ".", f":(exclude,glob)**/{SELF}"],
+        ["git", "grep", "-I", "-n", "-z", "-E", STALE],
         capture_output=True,
         text=True,
         encoding="utf-8",
