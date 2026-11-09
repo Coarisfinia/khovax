@@ -822,6 +822,25 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   20-request minimum.
 - **The world-asset list, #1824** (owner's ground rule, #1825): the issue of non-monster assets,
   3 prompts each. Accepted deliveries follow the active-request removal and import rule above.
+- **The owner's model exports are pushed to `Coarisfinia/khovax-sources`** (#1849, #2224), the
+  private model inbox, directly to its `main`, as the agent bot (the layout is in the model skill).
+  The usual agent token is scoped to this repository only, so ask for one scoped to the inbox and
+  send it as a per-command header, which stays out of the clone's config. The
+  inbox holds large binaries, so clone it blob-filtered and sparse, and check out only the folder
+  you work on. Never print the token:
+
+  ```sh
+  T=$(GH_REPO=Coarisfinia/khovax-sources agent-gh-token)
+  A=$(printf 'x-access-token:%s' "$T" | base64 -w0)
+  git -c http.extraHeader="Authorization: Basic $A" clone --filter=blob:none --sparse \
+    https://github.com/Coarisfinia/khovax-sources
+  git -C khovax-sources -c http.extraHeader="Authorization: Basic $A" sparse-checkout set <issue>-<slug>
+  # add the export and commit it, then:
+  git -C khovax-sources -c http.extraHeader="Authorization: Basic $A" push origin main
+  ```
+
+  A blob-filtered clone fetches blobs on demand, so any other command that needs a missing blob
+  takes the same `-c http.extraHeader=…`.
 - **A beast exists only from the owner's vibe or model** (owner's ground rule, #1686): prompt
   suggestions, such as the brainstormed lists for A, make no beast: only the owner's vibe or model
   does. They're never rewritten, asked about or tracked as creatures, and a rule about "every beast"
