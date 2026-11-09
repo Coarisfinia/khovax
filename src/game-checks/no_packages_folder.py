@@ -1,7 +1,7 @@
 """Fails while the repository has a packages/ folder, or a tracked file names a path in it (#1979):
 the folder is src/ now, and a path left behind reads nothing without saying so (#2199, #2203).
 
-    uv run --locked --package khovax-game-checks packages/game-checks/no_packages_folder.py
+    uv run --locked --package khovax-game-checks src/game-checks/no_packages_folder.py
 """
 
 import os
