@@ -270,6 +270,8 @@ class FormsTest(unittest.TestCase):
             "var d := {}\nvar tile: Vector2i\nvar a := tile.length()",
             "var d := {f = func(tile: Vector2i) -> void: print(tile.length())}",
             "var d := {\n\tf = func(tile: Vector2i) -> void:\n\t\tprint(tile.length())\n}",
+            "var d := {\n\tf = func() -> void:\n\t\tvar tile: Vector2i"
+            "\n\t\tprint(tile.length())\n}",
             "class A:\n\tvar tile: Vector2i\n\n\nfunc f() -> void:\n\tvar a := tile.length()",
         ):
             hit = [
