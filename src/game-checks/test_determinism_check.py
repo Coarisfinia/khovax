@@ -140,6 +140,38 @@ ALLOWED = (
     "var a := bytes.to_int32_array()",
 )
 
+# Variant.Type constants of types that hold floats, and of their integer twins (#2247).
+FLOAT_BACKED_TYPES = (
+    "VECTOR2",
+    "VECTOR3",
+    "VECTOR4",
+    "RECT2",
+    "TRANSFORM2D",
+    "TRANSFORM3D",
+    "PLANE",
+    "QUATERNION",
+    "AABB",
+    "BASIS",
+    "PROJECTION",
+    "COLOR",
+    "PACKED_FLOAT32_ARRAY",
+    "PACKED_FLOAT64_ARRAY",
+    "PACKED_VECTOR2_ARRAY",
+    "PACKED_VECTOR3_ARRAY",
+    "PACKED_VECTOR4_ARRAY",
+    "PACKED_COLOR_ARRAY",
+)
+INTEGER_TYPES = (
+    "INT",
+    "VECTOR2I",
+    "VECTOR3I",
+    "VECTOR4I",
+    "RECT2I",
+    "PACKED_INT32_ARRAY",
+    "PACKED_INT64_ARRAY",
+    "PACKED_BYTE_ARRAY",
+)
+
 
 class FormsTest(unittest.TestCase):
     def test_every_form_is_refused(self) -> None:
@@ -173,6 +205,16 @@ class FormsTest(unittest.TestCase):
             forbidden_lines("var tile: Vector2i\nvar a := tile.abs().length()"),
             ["2:var a := tile.abs().length()"],
         )
+
+    def test_float_backed_type_constants_are_refused(self) -> None:
+        # Each builds a float-backed type without naming it (#2247).
+        for name in FLOAT_BACKED_TYPES:
+            line = f"var a := type_convert(x, TYPE_{name})"
+            self.assertEqual(forbidden_lines(line), [f"1:{line}"], name)
+
+    def test_integer_type_constants_are_allowed(self) -> None:
+        for name in INTEGER_TYPES:
+            self.assertEqual(forbidden_lines(f"var a := type_convert(x, TYPE_{name})"), [], name)
 
     def test_type_float_on_its_own_line_is_refused(self) -> None:
         self.assertEqual(
