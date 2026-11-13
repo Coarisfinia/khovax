@@ -56,9 +56,9 @@ MATERIALS = (("sandstone", "sandstone", 1.0),
 SANDSTONE, SHADED, MOSS = range(3)
 # How far a joint's darkness looks, in metres once sized.
 REACH = 0.1
-# The paint's values are rounded to this many decimals before the cuts: another machine's numpy and
-# Blender differ in the last bits, which would move a cut or flip a face across a step, so the
-# build would differ from the committed one (check_rebuild.py).
+# The paint's values are rounded to this many decimals before the cuts, and the wall's vertices to
+# one more (metres): another machine's numpy and Blender differ in the last bits, which would move a
+# cut or reorder the export, so CI's build would differ from the committed one (check_rebuild.py).
 DECIMALS = 4
 
 
@@ -118,6 +118,10 @@ def build(source):
         bpy.data.meshes.remove(piece)
         rise += (top - GRASS_TOP) - SINK
     bmesh.ops.scale(stack, verts=stack.verts, vec=Vector((size, size, size)))
+    # The cuts' vertices land a last bit apart on another machine (its float maths), which reorders
+    # the sorted export; on a fine grid they land alike, the flat ends exactly at the edge's ends.
+    for vert in stack.verts:
+        vert.co = Vector([round(value, DECIMALS + 1) for value in vert.co])
     mesh = bpy.data.meshes.new("MossySandstoneWall")
     stack.to_mesh(mesh)
     stack.free()
