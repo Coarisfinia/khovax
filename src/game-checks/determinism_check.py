@@ -118,6 +118,11 @@ FUNCTION = re.compile(r"\s*(static\s+)?func\b")
 CLASS = re.compile(r"\s*class\s")
 # Annotations may come first, as in INT_VECTOR_MEMBER.
 CONSTANT = re.compile(r"\s*(?:@\w+(?:\([^)]*\))?\s+)*const\s+(\w+)")
+# A class has the members of the class it extends by bare name: an inner class of the same file or
+# another rules class (#2306). A path in quotes is stripped with the strings, so it names none.
+CLASS_NAMED = re.compile(r"\s*class\s+(\w+)")
+CLASS_NAME = re.compile(r"class_name\s+(\w+)")
+EXTENDS = re.compile(r"\s*(?:class(?:_name)?\s+\w+\s+)?extends\s+(\w+)\s*(?::|$)")
 # Reaching a randomness method by name, with call() or a Callable: read on the whole of
 # code_with_random_names, which keeps that string, so a call split over lines is seen too (#2223).
 RANDOM_NAMES = ("shuffle", "pick_random")
@@ -300,19 +305,40 @@ def over_array(line: str, at: int) -> bool:
     return at >= 0 and LOOP_END.match(line, at) is not None
 
 
-def int_vector_members(source: str) -> set[str]:
-    """The members a script declares as an integer vector: outside its functions, in any class."""
+def int_vector_members(source: str, own_class_only: bool = False) -> set[str]:
+    """The members a script declares as an integer vector: outside its functions, in any class, or
+    in its own class only."""
     bare = code_only(source).split("\n")
     return {
         hit.group(1)
-        for line, (_, function) in zip(bare, scopes_of(bare, continued_lines(source, bare)))
-        if function is None and (hit := INT_VECTOR_MEMBER.match(line))
+        for line, (classes, function) in zip(bare, scopes_of(bare, continued_lines(source, bare)))
+        if function is None
+        and not (own_class_only and classes)
+        and (hit := INT_VECTOR_MEMBER.match(line))
     }
 
 
 def inherited_members(sources: list[str]) -> dict[str, set[str]]:
-    """Fail-first stub (#2306): the fix fills it in."""
-    return {}
+    """The integer vector members each rules class has by bare name, by its class_name: its own
+    class's and those of the rules classes it extends (#2306)."""
+    own: dict[str, set[str]] = {}
+    parents: dict[str, str] = {}
+    for source in sources:
+        bare = code_only(source).split("\n")
+        name = next((hit.group(1) for line in bare if (hit := CLASS_NAME.match(line))), None)
+        if name is None:
+            continue
+        own[name] = int_vector_members(source, own_class_only=True)
+        parent = next((hit.group(1) for line in bare if (hit := EXTENDS.match(line))), None)
+        if parent is not None:
+            parents[name] = parent
+
+    def of(name: str | None, seen: set[str]) -> set[str]:
+        if name is None or name not in own or name in seen:
+            return set()
+        return own[name] | of(parents.get(name), seen | {name})
+
+    return {name: of(name, set()) for name in own}
 
 
 def receiver_in(names: set[str], members: set[str]) -> re.Pattern[str]:
@@ -329,7 +355,8 @@ def forbidden_lines(
     source: str, members: set[str] | None = None, bases: dict[str, set[str]] | None = None
 ) -> list[str]:
     """The numbered lines of a script that use something the rules never use. `members` are the
-    integer vector members the rules declare, in any script (int_vector_members)."""
+    integer vector members the rules declare, in any script (int_vector_members), and `bases` those
+    each rules class has by bare name (inherited_members)."""
     code = without_comments(source).rstrip("\n").split("\n")
     bare = code_only(source).split("\n")
     scopes = scopes_of(bare, continued_lines(source, bare))
@@ -369,11 +396,32 @@ def forbidden_lines(
     for owner, names in dictionaries.items():
         declared.setdefault(owner, set()).update(rf"{name}{DICTIONARY_VALUE}" for name in names)
 
+    # Each inner class's line by its name, and the class each class extends.
+    inner: dict[str, int] = {}
+    parents: dict[int | None, str] = {}
+    for index, (line, (_, function), owner) in enumerate(zip(bare, scopes, owners)):
+        if function is None and (named_class := CLASS_NAMED.match(line)):
+            inner[named_class.group(1)] = index
+        if function is None and (base := EXTENDS.match(line)):
+            parents[owner] = base.group(1)
+
+    def inherited(owner: int | None, seen: set[int | None]) -> set[str]:
+        """What a class has from the classes it extends: in this file, or another rules class."""
+        base = parents.get(owner)
+        if base is None:
+            return set()
+        if base not in inner:
+            return set((bases or {}).get(base, set()))
+        if inner[base] in seen:
+            return set()
+        return declared.get(inner[base], set()) | inherited(inner[base], seen | {inner[base]})
+
     def names_in(scope: Scope) -> set[str]:
-        """Its function's names, its class's and the constants of the classes around that."""
+        """Its function's names, its class's, those its class inherits and the constants of the
+        classes around that."""
         classes, function = scope
         *outers, own = None, *classes
-        names = set(declared.get(own, set()))
+        names = declared.get(own, set()) | inherited(own, {own})
         if function is not None:
             names |= declared.get(function, set())
         for outer in outers:
@@ -424,9 +472,9 @@ def main() -> int:
         if line.startswith("class_name ") and len(line.split()) > 1
     }
     extends = {f"extends {name}" for name in rule_classes | {"RefCounted"}}
-    members = set().union(
-        *(int_vector_members(Path(file).read_text(encoding="utf-8")) for file in scripts)
-    )
+    sources = [Path(file).read_text(encoding="utf-8") for file in scripts]
+    members = set().union(*(int_vector_members(source) for source in sources))
+    bases = inherited_members(sources)
     failed = False
 
     for file in scripts:
@@ -452,7 +500,7 @@ def main() -> int:
         if not extends.intersection(code):
             log.error("rules scripts extend RefCounted or a class of the rules", file)
             failed = True
-        hits = forbidden_lines(source, members)
+        hits = forbidden_lines(source, members, bases)
         if hits:
             print("\n".join(hits))
             log.error("the rules must stay deterministic: see the lines above", file)
