@@ -27,8 +27,9 @@ extends RefCounted
 ##
 ## In its hunt hours (#1204), a predator stalks a grazer or weaker wild monster it sights, strikes
 ## it down to 1 HP and no further, and rests; it leaves a stronger one be and roams around its
-## home; it gives up on prey it can't beat; outside its hunt hours it rests no more. A save in
-## the middle of a hunt plays on the same, and the content's Tikazzir hunt in the basic instance.
+## home, walking the ring ROAM_RADIUS from it round one way (#2236), never a random step; it gives
+## up on prey it can't beat; outside its hunt hours it rests no more. A save in the middle of a
+## hunt plays on the same, and the content's Tikazzir hunt in the basic instance.
 ## Hunted prey that's awake flees its hunter at its pace (#1239), a step at a time away from it and
 ## never off ground a ring could enclose it on, so it's cornered where the ground ends; sighted at
 ## the edge of its hunter's sight, it gets out of it, and the hunter roams on. Asleep, it stays put
@@ -43,12 +44,13 @@ extends RefCounted
 ## next member, a pack down to one is gone, and a save plays on the same. The content's Vynakiir
 ## band in Ivenwhal Wudhen.
 ##
-## Babies live beside the grown ones (#1697): each bundle of rolled wild monsters whose species has
-## an earlier form holds babies in WildBabies.CHANCE thousandths of cases, over many seeds within a
-## tolerance; a baby is of the first form of its line (level 1 and unevolved), a grown one keeps its
-## species, a monster the region names never starts as a baby, a species with no earlier form has
-## no babies (owner, on #1722), and a save gives the babies back, in the state hash. In Hrovumel
-## Stolm, a Vynakiir's baby is a Vynnimu, and every baby there is a first form with a later one.
+## Babies live beside the grown ones (#1697): of the bundles of rolled wild monsters whose species
+## has an earlier form, a count, not a roll, picks the ones with babies (#2239), the same on every
+## seed: the second, fourth and fifth of every five, at WildBabies.CHANCE; a baby is of the first
+## form of its line (level 1 and unevolved), a grown one keeps its species, a monster the region
+## names never starts as a baby, a species with no earlier form has no babies (owner, on #1722), and
+## a save gives the babies back, in the state hash. In Hrovumel Stolm, a Vynakiir's baby is a
+## Vynnimu, and every baby there is a first form with a later one.
 ##
 ## In its grazing hours a grazer walks to the nearest grass and eats there, and in its drinking
 ## hours a drinker finds its way round a rock wall to the nearest water and drinks (#1203).
@@ -121,21 +123,24 @@ const PACK_SPOTS: Dictionary[Vector2i, String] = {
 	Vector2i(3, 2): "sha",
 	Vector2i(4, -2): "lon",
 }
-## The baby flow's bundles (#1697), each of rolled monsters, too far apart to gather into one; a
-## spot the region names beside the first; the species they roll, and its line's first form; how
-## many seeds it rolls, and how far from WildBabies.CHANCE the share of bundles with babies may be,
-## in thousandths.
+## The baby flow's bundles (#1697), each of rolled monsters, too far apart to gather into one, and
+## which of them hold babies (#2239): the second, fourth and fifth of five; a spot the region names
+## beside the first; the species they roll, and its line's first form; and how many seeds it plays,
+## each holding babies in the same bundles.
 const BABY_BUNDLES: Array[Array] = [
 	[Vector2i(-7, 0), Vector2i(-7, 1), Vector2i(-6, 0)],
 	[Vector2i(6, 0), Vector2i(6, 1), Vector2i(7, 0)],
+	[Vector2i(0, -9)],
+	[Vector2i(0, 9)],
+	[Vector2i(9, -9)],
 ]
+const BABY_HELD: Array[bool] = [false, true, false, true, true]
 const BABY_NAMED: Vector2i = Vector2i(-6, 1)
 const BABY_ADULT: String = "big"
 const BABY_FIRST_FORM: String = "pup"
 ## A species with no earlier form (owner, on #1722): it has no babies.
 const BABY_LONE: String = "own"
-const BABY_SEEDS: int = 1000
-const BABY_TOLERANCE: int = 50
+const BABY_SEEDS: int = 20
 ## How many seeds of Hrovumel Stolm the content's baby check plays.
 const CONTENT_BABY_SEEDS: int = 40
 ## A test grazer and drinker (#1203), and what each does in its hours of need.
@@ -176,6 +181,7 @@ func run(_tree: SceneTree) -> String:
 		_check_hunt_saved,
 		_check_content_hunters,
 		_check_hunt_round_wall,
+		_check_hunter_patrols,
 		_check_flight_shuns_dead_end,
 		_check_light_sleeper_wakes,
 		_check_hushed_steps,
@@ -1270,6 +1276,51 @@ func _check_hunt_round_wall() -> String:
 	)
 
 
+## A hunter with no prey in sight walks a patrol a player can read (#2236): from its home out to
+## the ring ROAM_RADIUS from it, reaching it at the corner its id picks, then round
+## that ring in Hex.ring's order, a tile a step, never a random step.
+func _check_hunter_patrols() -> String:
+	var state: GameState = _hunt_state({ "hun": Vector2i(0, 0) })
+	var hunter: int = _monster_of(state, "hun")
+	var home: Vector2i = state.entity(hunter).tile
+	var schedules: ScheduleFeature = state.feature(ScheduleFeature.ID) as ScheduleFeature
+	var ring: Array[Vector2i] = Hex.ring(HuntFeature.ROAM_RADIUS, home)
+	var corner: int = (hunter % Hex.DIRECTIONS.size()) * HuntFeature.ROAM_RADIUS
+	_to_hunt_hours(state, hunter)
+	var along: int = 0
+	for _tick: int in DayClock.HOURS * DayClock.TICKS_PER_HOUR:
+		if schedules.activity_of(state, hunter) != Schedule.HUNT:
+			break
+		var was: Vector2i = state.entity(hunter).tile
+		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+		var tile: Vector2i = state.entity(hunter).tile
+		if tile == was:
+			continue
+		if Hex.distance(tile, home) > HuntFeature.ROAM_RADIUS or Hex.distance(tile, was) > 1:
+			return "the roaming hunter went from %s to %s, off its patrol round %s" % [
+				was,
+				tile,
+				home,
+			]
+		if not ring.has(was):
+			if Hex.distance(tile, home) <= Hex.distance(was, home):
+				return "the hunter went from %s to %s, not out to its patrol ring" % [was, tile]
+			if ring.has(tile) and tile != ring[corner]:
+				return "the hunter reached its patrol ring at %s, not its corner" % tile
+			continue
+		if tile != _ring_after(ring, was, 1):
+			return "the hunter went from %s to %s, not on round its patrol ring" % [was, tile]
+		along += 1
+	if 2 * along < ring.size():
+		return "the hunter walked only %d tiles round its patrol ring" % along
+	return ""
+
+
+## The tile `turns` along `ring` from its tile `tile`, round either way.
+static func _ring_after(ring: Array[Vector2i], tile: Vector2i, turns: int) -> Vector2i:
+	return ring[posmod(ring.find(tile) + turns, ring.size())]
+
+
 ## Hunted prey with two ways away from its hunter takes the one that leads furthest (#1259): not
 ## the first in direction order, which runs into a dead end of rock a step on.
 func _check_flight_shuns_dead_end() -> String:
@@ -1505,11 +1556,14 @@ func _check_content_packs() -> String:
 	return ""
 
 
-## Over BABY_SEEDS seeds, each of the baby flow's bundles (BABY_BUNDLES) holds babies in
-## WildBabies.CHANCE thousandths of cases, within BABY_TOLERANCE: then its last spot only, a baby
-## of its line's first form; its grown ones and the named monster beside them keep their species.
+## On each of BABY_SEEDS seeds, the baby flow's bundles (BABY_BUNDLES) that BABY_HELD marks hold
+## babies, and no other (#2239): a count, not a roll, at WildBabies.CHANCE. A bundle that does holds
+## them on its last spot only, a baby of its line's first form; its grown ones and the named monster
+## beside them keep their species.
 func _check_wild_babies() -> String:
-	var held: int = 0
+	var held: int = BABY_HELD.count(true)
+	if Fixed.ratio(held, BABY_HELD.size()) != WildBabies.CHANCE:
+		return "%d bundles in %d isn't WildBabies.CHANCE" % [held, BABY_HELD.size()]
 	for seed_value: int in BABY_SEEDS:
 		var state: GameState = _baby_state(seed_value)
 		var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
@@ -1518,14 +1572,15 @@ func _check_wild_babies() -> String:
 			at[state.entity(monster).tile] = monster
 		if wild.babies.has(at[BABY_NAMED]) or wild.species_of(at[BABY_NAMED]) != BABY_ADULT:
 			return "the monster the region names started as a baby (seed %d)" % seed_value
-		for bundle: Array in BABY_BUNDLES:
-			var last_spot: Vector2i = bundle[bundle.size() - 1]
-			var last: int = at[last_spot]
-			var expected: String = BABY_FIRST_FORM if wild.babies.has(last) else BABY_ADULT
+		for i: int in BABY_BUNDLES.size():
+			var bundle: Array = BABY_BUNDLES[i]
+			var last: int = at[bundle[bundle.size() - 1]]
+			if wild.babies.has(last) != BABY_HELD[i]:
+				var held_or_not: String = "held no" if BABY_HELD[i] else "held"
+				return "bundle %d %s babies (seed %d)" % [i + 1, held_or_not, seed_value]
+			var expected: String = BABY_FIRST_FORM if BABY_HELD[i] else BABY_ADULT
 			if wild.species_of(last) != expected:
 				return "a bundle's last is a %s, not a %s" % [wild.species_of(last), expected]
-			if wild.babies.has(last):
-				held += 1
 			for spot: Vector2i in bundle.slice(0, bundle.size() - 1):
 				if wild.babies.has(at[spot]) or wild.species_of(at[spot]) != BABY_ADULT:
 					return "more than the last of a bundle of %d started as a baby" % bundle.size()
@@ -1533,12 +1588,6 @@ func _check_wild_babies() -> String:
 		var lone: GameState = _baby_state(seed_value, BABY_LONE)
 		if not (lone.feature(WildMonsterFeature.ID) as WildMonsterFeature).babies.is_empty():
 			return "a species with no earlier form had a baby (seed %d)" % seed_value
-	var share: int = Fixed.ratio(held, BABY_SEEDS * BABY_BUNDLES.size())
-	if absi(share - WildBabies.CHANCE) > BABY_TOLERANCE:
-		return "%d thousandths of the bundles held babies, not about %d" % [
-			share,
-			WildBabies.CHANCE,
-		]
 	return _baby_saved()
 
 

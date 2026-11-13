@@ -91,12 +91,18 @@ INT_VECTOR_DECLARED = re.compile(r"\b(\w+)\s*:\s*Vector[234]i\b(?!\s*[.(])")
 # Reaching a randomness method by name, with call() or a Callable: read on the whole of
 # code_with_random_names, which keeps that string, so a call split over lines is seen too (#2223).
 RANDOM_NAMES = ("shuffle", "pick_random")
-RANDOM_NAME = re.compile(rf"""&?["']({"|".join(RANDOM_NAMES)})["']""")
+# A raw string's r stays code like a StringName's &, so it is part of the name (#2254).
+RANDOM_NAME = re.compile(rf"""(?:&|\br)?["']({"|".join(RANDOM_NAMES)})["']""")
 # What opens the call the name is an argument of: call()'s first, or any of a Callable's.
 CALL_BY_NAME = re.compile(r"\.(call|callv|call_deferred)\s*\(\s*$")
 CALLABLE = re.compile(r"\bCallable(\.create)?\s*\($")
 # A conversion the name may be wrapped in: the call around it counts then.
-CONVERSION = re.compile(r"\b(StringName|String)\s*\(\s*$")
+CONVERSION = re.compile(r"\b(StringName|String)\s*\($")
+# Grouping parentheses the name may sit in, which no name or closing bracket opens (#2254).
+GROUPING = re.compile(r"(?<![\w)\]\s])\s*\($")
+# What ends a wrapper around the name, and what ends the whole argument (#2254).
+WRAPPER_END = re.compile(r"\s*\)")
+ARGUMENT_END = re.compile(r"\s*[,)]")
 MARKER = "# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK"
 MARKER_WITH_REASON = re.compile(re.escape(MARKER) + r" \(.*[^ )].*\)")
 HEADER_LINE = re.compile(r"\s*(#|$)")
@@ -127,8 +133,9 @@ def code_with_random_names(source: str) -> str:
     )
 
 
-def called_by_name(before: str) -> bool:
-    """Whether a name, after the code `before` it, is the method a call() or a Callable reaches."""
+def called_by_name(before: str, after: str) -> bool:
+    """Whether a name, between the code `before` and `after` it, is the method a call() or a
+    Callable reaches: a whole argument, alone in any conversion or grouping parentheses."""
     depth = 0
     for at in range(len(before) - 1, -1, -1):
         if before[at] in ")]}":
@@ -136,10 +143,22 @@ def called_by_name(before: str) -> bool:
         elif before[at] in "([{":
             if depth == 0:
                 opener = before[: at + 1]
-                if conversion := CONVERSION.search(opener):
-                    return called_by_name(opener[: conversion.start()])
-                return before[at] == "(" and (
-                    CALL_BY_NAME.search(before) is not None or CALLABLE.search(opener) is not None
+                wrapper = CONVERSION.search(opener) or GROUPING.search(opener)
+                if wrapper:
+                    # Nothing but the name inside the wrapper, e.g. not ("shuffle" + "d").
+                    end = WRAPPER_END.match(after)
+                    return (
+                        not before[at + 1 :].strip()
+                        and end is not None
+                        and called_by_name(opener[: wrapper.start()], after[end.end() :])
+                    )
+                return (
+                    before[at] == "("
+                    and ARGUMENT_END.match(after) is not None
+                    and (
+                        CALL_BY_NAME.search(before) is not None
+                        or CALLABLE.search(opener) is not None
+                    )
                 )
             depth -= 1
     return False
@@ -184,7 +203,7 @@ def forbidden_lines(source: str) -> list[str]:
     by_name = {
         named.count("\n", 0, hit.start(1))
         for hit in RANDOM_NAME.finditer(named)
-        if called_by_name(named[: hit.start()])
+        if called_by_name(named[: hit.start()], named[hit.end() :])
     }
     return numbered(
         code,
