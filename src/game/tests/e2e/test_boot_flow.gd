@@ -67,6 +67,7 @@ func _steps() -> Array[Callable]:
 		_check_grid,
 		_check_grid_colors,
 		_check_water_surfaces,
+		_check_still_water,
 		_check_player_placement,
 		_check_player_model,
 		_check_view_models,
@@ -321,6 +322,18 @@ func _check_water_surfaces(main: Node) -> String:
 			if named_water and not _is_water_material(material):
 				return "%s is water drawn by another material" % shown.get_path()
 	return "" if _is_water_material(surface.material_override) else "the tiles' water isn't the one"
+
+
+## Still water (#2255): the headless renderer can't draw the water, so this reads its shader. A zero
+## vector has no direction, and normalising one gives NaN on most GPUs, which blacks out the
+## surface. So each `normalize(` in the water shader sits behind a length test on its own line,
+## falling back to a fixed direction, and a still water's zero `flow_direction` draws as water.
+func _check_still_water(_main: Node) -> String:
+	var lines: PackedStringArray = WaterSurface.SHADER.code.split("\n")
+	for line: int in lines.size():
+		if lines[line].contains("normalize(") and not lines[line].contains("length("):
+			return "water.gdshader:%d normalises a vector with no length test" % (line + 1)
+	return ""
 
 
 ## The materials `shown` draws with: its override, or each of its mesh's surfaces'.
