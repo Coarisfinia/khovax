@@ -117,6 +117,7 @@ func run(tree: SceneTree) -> String:
 		_check_start_corrupted,
 		_check_sent_to_spawn,
 		_check_invincible,
+		_check_invincible_requested,
 		_check_layout,
 		_check_tile_changed,
 	]
@@ -262,6 +263,36 @@ func _check_invincible() -> String:
 			or world.player(0).id != player.id
 			or health.hp_of(basic, player.id) != HealthFeature.PLAYER_HP):
 		return "an invincible player was hurt, knocked down or sent back to the spawn"
+	return ""
+
+
+## The Debug submenu's request (#2273, OutboxEntry.INVINCIBLE): a player asking to be invincible is
+## from
+## the tick the world applies it, and acknowledged; asking to stop makes them vulnerable again.
+## The same request sent again changes nothing.
+func _check_invincible_requested() -> String:
+	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.BASIC)
+	var basic: GameState = world.instances[FlowSteps.BASIC]
+	var health: HealthFeature = basic.feature(HealthFeature.ID) as HealthFeature
+	var outbox: Outbox = Outbox.new()
+	var on: Command = Command.new()
+	outbox.post(OutboxEntry.INVINCIBLE, InvincibleChoice.ON).fill(on)
+	var asking: Array[Command] = [on]
+	world.step(asking)
+	var acknowledged: bool = false
+	for event: RefCounted in basic.events:
+		acknowledged = acknowledged or event is RequestApplied
+	if not acknowledged or not health.is_invincible(basic, world.player(0).id):
+		return "a player asking to be invincible isn't, or isn't acknowledged"
+	var off: Command = Command.new()
+	outbox.post(OutboxEntry.INVINCIBLE, InvincibleChoice.OFF).fill(off)
+	var stopping: Array[Command] = [off]
+	world.step(stopping)
+	if health.is_invincible(basic, world.player(0).id):
+		return "a player asking to stop being invincible still is"
+	world.step(asking)
+	if health.is_invincible(basic, world.player(0).id):
+		return "a request to be invincible, sent again, was applied twice"
 	return ""
 
 

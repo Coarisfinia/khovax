@@ -1333,6 +1333,10 @@ msgid "Revive beasts at waystones"
 msgstr ""
 
 #: slices/menu/ui/game_menu.gd
+msgid "Invincible"
+msgstr ""
+
+#: slices/menu/ui/game_menu.gd
 msgid "Menu"
 msgstr ""
 
@@ -1594,6 +1598,10 @@ msgstr ""
 
 #: slices/settings/ui/settings_tab.gd
 msgid "Game"
+msgstr ""
+
+#: slices/settings/ui/settings_tab.gd
+msgid "Debug"
 msgstr ""
 
 #: slices/settings/ui/settings_tab.gd
