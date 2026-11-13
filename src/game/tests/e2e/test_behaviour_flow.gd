@@ -27,8 +27,9 @@ extends RefCounted
 ##
 ## In its hunt hours (#1204), a predator stalks a grazer or weaker wild monster it sights, strikes
 ## it down to 1 HP and no further, and rests; it leaves a stronger one be and roams around its
-## home; it gives up on prey it can't beat; outside its hunt hours it rests no more. A save in
-## the middle of a hunt plays on the same, and the content's Tikazzir hunt in the basic instance.
+## home, walking the ring ROAM_RADIUS from it round one way (#2236), never a random step; it gives
+## up on prey it can't beat; outside its hunt hours it rests no more. A save in the middle of a
+## hunt plays on the same, and the content's Tikazzir hunt in the basic instance.
 ## Hunted prey that's awake flees its hunter at its pace (#1239), a step at a time away from it and
 ## never off ground a ring could enclose it on, so it's cornered where the ground ends; sighted at
 ## the edge of its hunter's sight, it gets out of it, and the hunter roams on. Asleep, it stays put
@@ -180,6 +181,7 @@ func run(_tree: SceneTree) -> String:
 		_check_hunt_saved,
 		_check_content_hunters,
 		_check_hunt_round_wall,
+		_check_hunter_patrols,
 		_check_flight_shuns_dead_end,
 		_check_light_sleeper_wakes,
 		_check_hushed_steps,
@@ -1272,6 +1274,51 @@ func _check_hunt_round_wall() -> String:
 	return "the hunter never got round the wall to its prey: it stands on %s" % (
 		state.entity(hunter).tile
 	)
+
+
+## A hunter with no prey in sight walks a patrol a player can read (#2236): from its home out to
+## the ring ROAM_RADIUS from it, reaching it at the corner its id picks, then round
+## that ring in Hex.ring's order, a tile a step, never a random step.
+func _check_hunter_patrols() -> String:
+	var state: GameState = _hunt_state({ "hun": Vector2i(0, 0) })
+	var hunter: int = _monster_of(state, "hun")
+	var home: Vector2i = state.entity(hunter).tile
+	var schedules: ScheduleFeature = state.feature(ScheduleFeature.ID) as ScheduleFeature
+	var ring: Array[Vector2i] = Hex.ring(HuntFeature.ROAM_RADIUS, home)
+	var corner: int = (hunter % Hex.DIRECTIONS.size()) * HuntFeature.ROAM_RADIUS
+	_to_hunt_hours(state, hunter)
+	var along: int = 0
+	for _tick: int in DayClock.HOURS * DayClock.TICKS_PER_HOUR:
+		if schedules.activity_of(state, hunter) != Schedule.HUNT:
+			break
+		var was: Vector2i = state.entity(hunter).tile
+		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+		var tile: Vector2i = state.entity(hunter).tile
+		if tile == was:
+			continue
+		if Hex.distance(tile, home) > HuntFeature.ROAM_RADIUS or Hex.distance(tile, was) > 1:
+			return "the roaming hunter went from %s to %s, off its patrol round %s" % [
+				was,
+				tile,
+				home,
+			]
+		if not ring.has(was):
+			if Hex.distance(tile, home) <= Hex.distance(was, home):
+				return "the hunter went from %s to %s, not out to its patrol ring" % [was, tile]
+			if ring.has(tile) and tile != ring[corner]:
+				return "the hunter reached its patrol ring at %s, not its corner" % tile
+			continue
+		if tile != _ring_after(ring, was, 1):
+			return "the hunter went from %s to %s, not on round its patrol ring" % [was, tile]
+		along += 1
+	if 2 * along < ring.size():
+		return "the hunter walked only %d tiles round its patrol ring" % along
+	return ""
+
+
+## The tile `turns` along `ring` from its tile `tile`, round either way.
+static func _ring_after(ring: Array[Vector2i], tile: Vector2i, turns: int) -> Vector2i:
+	return ring[posmod(ring.find(tile) + turns, ring.size())]
 
 
 ## Hunted prey with two ways away from its hunter takes the one that leads furthest (#1259): not

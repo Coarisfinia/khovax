@@ -2,8 +2,12 @@ class_name HuntFeature
 extends Feature
 ## Predators hunt (#1204, owner's ground rule, #1199): in the hunt hours of its day
 ## (ScheduleFeature), a wild monster of a `predator` species roams around its home, the tile it
-## stood on when the instance began, up to ROAM_RADIUS from it, a random step at a time at its
-## pace (WildMonsterFeature.chase). On sighting prey within SIGHT, a standing wild monster weaker
+## stood on when the instance began, on a patrol a player can read and never a random step (#2236,
+## #1602): it walks the ring ROAM_RADIUS from its home round one way (Hex.ring's order), a step at
+## a time at its pace (WildMonsterFeature.chase), from one ring tile to the next. Off the ring, at
+## home or back from a hunt, it walks to the ring tile nearest it first; from home that's the
+## corner its id picks, so hunters at home together spread out. On sighting prey within
+## SIGHT, a standing wild monster weaker
 ## than itself (WildMonsterFeature.strength_of) or of a `grazer` species, it stalks it, a step at
 ## a time, and next to it attacks it by the wild monsters' rules: a strike for its strength once
 ## every Tuning.WILD_STRIKE_TICKS at its pace (WildPace.paced, like the wild monsters' strikes),
@@ -40,7 +44,6 @@ var _sighted: Dictionary[int, int] = {}
 ## The hunters whose hunt ended, won or given up, in id order: they rest until their hunt hours
 ## are over.
 var rested: Array[int] = []
-var _rng: Rng
 
 
 func id() -> String:
@@ -60,7 +63,6 @@ func after() -> Array[String]:
 
 ## Every standing wild monster of a predator species is a hunter, at home where it stands.
 func start(state: GameState) -> void:
-	_rng = Rng.new(state.rng_seed, stream())
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	for monster: int in wild.monsters:
 		if _is_predator(state, wild, monster):
@@ -242,14 +244,22 @@ static func _beaten(state: GameState, monster: int) -> bool:
 	return (state.feature(HealthFeature.ID) as HealthFeature).hp_of(state, monster) <= 1
 
 
-## On its tick to step, the hunter on `tile` steps a random way, or back toward its home when that
-## way leads further than ROAM_RADIUS from it.
+## On its tick to step, the hunter on `tile` steps on its patrol (#2236): on its ring toward the
+## next tile round, off it toward the ring tile nearest it, the first of the equally near counted
+## round from the corner its id picks.
 func _roam(state: GameState, wild: WildMonsterFeature, hunter: int, tile: Vector2i) -> void:
 	if (state.tick + hunter) % WildPace.paced(state, WildMonsterFeature.STEP_TICKS, 0) != 0:
 		return
-	var goal: Vector2i = tile + Hex.DIRECTIONS[_rng.below(Hex.DIRECTIONS.size())]
-	if Hex.distance(goal, homes[hunter]) > ROAM_RADIUS:
-		goal = homes[hunter]
+	var ring: Array[Vector2i] = Hex.ring(ROAM_RADIUS, homes[hunter])
+	var corner: int = (hunter % Hex.DIRECTIONS.size()) * ROAM_RADIUS
+	var nearest: int = 0
+	for i: int in ring.size():
+		var near: Vector2i = ring[(corner + i) % ring.size()]
+		if Hex.distance(near, tile) < Hex.distance(ring[(corner + nearest) % ring.size()], tile):
+			nearest = i
+	var goal: Vector2i = ring[(corner + nearest) % ring.size()]
+	if goal == tile:
+		goal = ring[(corner + nearest + 1) % ring.size()]
 	wild.chase(state, hunter, goal)
 
 
@@ -283,17 +293,15 @@ func hash_values() -> Array[int]:
 	values.append_array(_hunts())
 	values.append(rested.size())
 	values.append_array(rested)
-	values.append_array(_rng.hash_values())
 	return values
 
 
-## The hunters' homes, the hunts going on, the resting hunters and the stream's state.
+## The hunters' homes, the hunts going on and the resting hunters.
 func save_values() -> Dictionary:
 	return {
 		"homes": _flat_homes(),
 		"hunts": _hunts(),
 		"rested": rested,
-		"rng": _rng.hash_values(),
 	}
 
 
@@ -308,11 +316,10 @@ func load_values(state: GameState, values: DataReader) -> void:
 	var flat: Array[int] = values.wholes("homes", -DataReader.MOST, DataReader.MOST)
 	var hunts: Array[int] = values.wholes("hunts", 0, DataReader.MOST)
 	var resting: Array[int] = values.wholes("rested", 1, DataReader.MOST)
-	var restored: Rng = Rng.restored(values.wholes("rng", 0, Rng.MASK))
 	if values.failed():
 		return
-	if flat.size() % 3 != 0 or hunts.size() % 3 != 0 or restored == null:
-		values.fail("the hunts' homes, hunts or random stream are cut off")
+	if flat.size() % 3 != 0 or hunts.size() % 3 != 0:
+		values.fail("the hunts' homes or hunts are cut off")
 		return
 	for i: int in range(0, flat.size(), 3):
 		var home: Vector2i = Vector2i(flat[i + 1], flat[i + 2])
@@ -335,7 +342,6 @@ func load_values(state: GameState, values: DataReader) -> void:
 			return
 	rested = resting
 	rested.sort()
-	_rng = restored
 
 
 ## Every hunter's id and home, in id order.
