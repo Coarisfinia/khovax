@@ -34,6 +34,16 @@ extends RefCounted
 ## its files load in the background with progress (#1943). Every faction has a quest for every
 ## territory but the known gaps, and no territory has two samey quests (#639).
 
+## The categories a material may have (#2281), as its schema lists them.
+const MATERIAL_CATEGORIES: Array[String] = [
+	"plant",
+	"animal",
+	"mineral",
+	"metal",
+	"liquid",
+	"catalyst",
+	"essence",
+]
 ## A model a species can wear (#1223), by its id in the resource packs (#1864).
 const MODEL: String = "model_mana_wolf"
 ## The tile blueprints whose pack's model is drawn larger, in hundredths: too small to read
@@ -1627,8 +1637,8 @@ func _check_loot_refused() -> String:
 
 ## Every item a loot, harvest or chest table names exists (#774): a piece of gear or a material,
 ## each read from its own data. A table naming an item that's neither is refused, and so is a
-## material file with a wrong id, no name (#1657) or a field it can't have; then the gear's models
-## (#1581).
+## material file with a wrong id, no name (#1657), no category (#2281) or a field it can't have;
+## then the materials' categories.
 func _check_loot_items() -> String:
 	var materials: MaterialContent = MaterialContent.load_materials()
 	if not materials.problem.is_empty():
@@ -1650,9 +1660,11 @@ func _check_loot_items() -> String:
 	if not made_up.problem.is_empty() or not problem.begins_with("x's table names mos,"):
 		return "a table naming an item there isn't was refused with %s" % problem
 	var cases: Dictionary[String, String] = {
-		"{\"id\": \"y\", \"name\": \"Y\"}": "its id must",
-		"{\"id\": \"x\"}": "it needs a name",
+		"{\"id\": \"y\", \"name\": \"Y\", \"category\": \"plant\"}": "its id must",
+		"{\"id\": \"x\", \"category\": \"plant\"}": "it needs a name",
 		"{\"id\": \"x\", \"name\": \"X\", \"slot\": \"throw\"}": "field slot",
+		"{\"id\": \"x\", \"name\": \"X\"}": "it needs a category",
+		"{\"id\": \"x\", \"name\": \"X\", \"category\": \"rock\"}": "it needs a category",
 		"[\"x\"]": Content.NOT_AN_OBJECT,
 	}
 	var refusing: MaterialContent = MaterialContent.new()
@@ -1660,6 +1672,24 @@ func _check_loot_items() -> String:
 		problem = refusing.add("x", refused)
 		if not problem.begins_with(cases[refused]):
 			return "a material file was refused with %s, not %s" % [problem, cases[refused]]
+	return _check_material_categories(materials)
+
+
+## Every material has a category its schema allows (#2281), so a reader can tell a rock, an ore or
+## a metal from a plant by its data, not by a list of ids; then the gear's models.
+func _check_material_categories(materials: MaterialContent) -> String:
+	var categories: Variant = materials.get("categories")
+	var by_id: Dictionary = categories if categories is Dictionary else {}
+	for id: String in materials.ids:
+		if not MATERIAL_CATEGORIES.has(by_id.get(id, "")):
+			return "the material %s has no category" % id
+	var kept: MaterialContent = MaterialContent.new()
+	var text: String = "{\"id\": \"x\", \"name\": \"X\", \"category\": \"metal\"}"
+	var problem: String = kept.add("x", text)
+	categories = kept.get("categories")
+	by_id = categories if categories is Dictionary else {}
+	if not problem.is_empty() or by_id.get("x") != "metal":
+		return "a metal material file wasn't read with its category: " + problem
 	return _check_gear_models()
 
 
