@@ -2592,10 +2592,11 @@ func _check_player_packs() -> String:
 
 ## The default pack's files that load as resources load in the background (#1943), with progress
 ## that never goes back and ends at 1 once each is in Godot's resource cache, none failing; a file
-## that doesn't exist fails at once rather than being waited on.
+## that doesn't exist fails at once rather than being waited on. Without threads (#2083), the files
+## load in steps, at least one each, here one each, and that load ends whole too.
 func _check_pack_preload() -> String:
 	var pack: ResourcePack = ResourcePacks.loaded()[-1]
-	var loads: PackPreload = PackPreload.start(pack)
+	var loads: PackPreload = PackPreload.start([pack])
 	var last: float = 0.0
 	var deadline: int = Time.get_ticks_msec() + 60_000
 	while not loads.is_done():
@@ -2619,11 +2620,31 @@ func _check_pack_preload() -> String:
 	var broken: ResourcePack = ResourcePack.new()
 	broken.root = "res://"
 	broken.textures = { "pack_missing": "pack_missing.png" }
-	var missing: PackPreload = PackPreload.start(broken)
+	var missing: PackPreload = PackPreload.start([broken])
 	if not missing.is_done() or missing.failed != PackedStringArray(["res://pack_missing.png"]):
 		return "a missing file didn't fail at once: %s" % [missing.failed]
 	if missing.progress() != 1.0:
 		return "a pack whose files all failed isn't done loading: %s" % missing.progress()
+	return _check_stepped_preload(pack)
+
+
+## A load without threads (#2083) of `pack`'s files, in steps of no time, loads one file a step.
+func _check_stepped_preload(pack: ResourcePack) -> String:
+	var files: int = 0
+	for kind: String in ResourcePack.KINDS:
+		var listed: Dictionary = {} if ResourcePack.KINDS[kind].is_empty() else pack.get(kind)
+		files += listed.size()
+	var stepped: PackPreload = PackPreload.start([pack], 0)
+	var steps: int = 1
+	while not stepped.is_done() and steps <= files:
+		steps += 1
+	if steps != files or stepped.progress() != 1.0 or not stepped.failed.is_empty():
+		return "a load without threads took %d steps for %d files: %s, failed %s" % [
+			steps,
+			files,
+			stepped.progress(),
+			stepped.failed,
+		]
 	return ""
 
 

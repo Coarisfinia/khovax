@@ -34,6 +34,24 @@ static var _audio: Dictionary[String, AudioStream] = {}
 static var _mounted: Dictionary[String, ResourcePack] = {}
 ## The default pack, read once: mounted from BUILT_DEFAULT, it can't be mounted again on a reload.
 static var _default: ResourcePack = null
+## The loads of the loaded packs' files (#2083), started once and kept, so each file stays in
+## Godot's resource cache; null until something starts them.
+static var _preload: PackPreload = null
+
+
+## Starts loading the loaded packs' files that load as resources, once, and gives that load, for the
+## boot scene to show its progress until it's done (#2083): the lookups below then find each file
+## in Godot's resource cache. Without threads (the web build) they load in steps on the main
+## thread, so a frame is drawn between steps. A refresh keeps it: a pack added since loads each of
+## its files on its first lookup, as without it. A file that fails to load is left for its lookup,
+## which warns about it once.
+static func preloading() -> PackPreload:
+	if _preload == null:
+		var step: int = PackPreload.ALL_AT_ONCE
+		if not OS.has_feature("threads"):
+			step = PackPreload.STEP_MSEC
+		_preload = PackPreload.start(loaded(), step)
+	return _preload
 
 
 ## The texture `texture_id` from the first loaded pack that has it, or null when none does or its
