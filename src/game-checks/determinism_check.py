@@ -118,6 +118,14 @@ FUNCTION = re.compile(r"\s*(static\s+)?func\b")
 CLASS = re.compile(r"\s*class\s")
 # Annotations may come first, as in INT_VECTOR_MEMBER.
 CONSTANT = re.compile(r"\s*(?:@\w+(?:\([^)]*\))?\s+)*const\s+(\w+)")
+# A function's own declaration of a name hides the one outside it (#2304): a parameter in the whole
+# body, a local from the statement after its own to the end of its block. Only one typed as what
+# can't hold an integer vector unseen does: not Variant, a bare Array or Dictionary, or inferred.
+# A match pattern's `var` binds the matched value, whatever its type.
+PARAMETERS = re.compile(r"\s*(?:static\s+)?func\s+\w+\s*\(")
+PARAMETER = re.compile(r"\s*(\w+)\s*:\s*([\w.]+(?:\[.*\])?)\s*(?:=.*)?", re.DOTALL)
+LOCAL = re.compile(r"\s*(?:var|const)\s+(\w+)\s*:\s*([\w.]+(?:\[[^=]*\])?)\s*(?:=|$)")
+MATCH = re.compile(r"\s*match\b")
 # Reaching a randomness method by name, with call() or a Callable: read on the whole of
 # code_with_random_names, which keeps that string, so a call split over lines is seen too (#2223).
 RANDOM_NAMES = ("shuffle", "pick_random")
@@ -275,6 +283,89 @@ def scopes_of(lines: list[str], continued: set[int]) -> list[Scope]:
     return scopes
 
 
+def statement_starts(lines: list[str], continued: set[int]) -> list[bool]:
+    """Whether each code line starts a statement: not blank, not inside brackets left open and not
+    one of `continued` (scopes_of)."""
+    starts = []
+    depth = 0
+    for index, line in enumerate(lines):
+        starts.append(depth == 0 and bool(line.strip()) and index not in continued)
+        opened = sum(line.count(char) for char in "([{")
+        depth = max(0, depth + opened - sum(line.count(char) for char in ")]}"))
+    return starts
+
+
+def indent_of(line: str) -> int:
+    return len(line) - len(line.lstrip())
+
+
+def top_level_parts(text: str) -> list[str]:
+    """`text` split at its commas outside brackets, e.g. a func's parameters."""
+    parts = [""]
+    depth = 0
+    for char in text:
+        depth += (char in "([{") - (char in ")]}")
+        if char == "," and depth == 0:
+            parts.append("")
+        else:
+            parts[-1] += char
+    return parts
+
+
+def hides(type_name: str) -> bool:
+    """Whether a declaration of this type hides the same name outside its function."""
+    return type_name not in ("Array", "Dictionary") and not re.search(r"\bVariant\b", type_name)
+
+
+def shadowed_names(
+    lines: list[str], scopes: list[Scope], continued: set[int]
+) -> list[frozenset[str]]:
+    """The names each code line's function declares itself, hiding the same names outside it."""
+    starts = statement_starts(lines, continued)
+    shadowed: list[set[str]] = [set() for _ in lines]
+    for at, (_, function) in enumerate(scopes):
+        if function is None:
+            continue
+        if at == function:
+            opening = PARAMETERS.match(lines[at])
+            body = [index for index in range(at, len(lines)) if scopes[index][1] == function]
+            text = "\n".join(lines[at : body[-1] + 1])
+            end = after_parentheses(text, opening.end() - 1) if opening else -1
+            if end < 0:
+                continue
+            names = {
+                hit.group(1)
+                for part in top_level_parts(text[opening.end() : end - 1])
+                if (hit := PARAMETER.fullmatch(part)) and hides(hit.group(2))
+            }
+            # The body, from the line after the parameters close.
+            for index in body:
+                if index > at + text.count("\n", 0, end):
+                    shadowed[index] |= names
+            continue
+        local = LOCAL.match(lines[at])
+        if not starts[at] or not local or not hides(local.group(2)):
+            continue
+        indent = indent_of(lines[at])
+        opener = next(
+            index
+            for index in range(at - 1, -1, -1)
+            if starts[index] and indent_of(lines[index]) < indent
+        )
+        if MATCH.match(lines[opener]):
+            continue
+        following = next((index for index in range(at + 1, len(lines)) if starts[index]), None)
+        if following is None:
+            continue
+        for index in range(following, len(lines)):
+            if scopes[index][1] != function or (
+                lines[index].strip() and indent_of(lines[index]) < indent
+            ):
+                break
+            shadowed[index].add(local.group(1))
+    return [frozenset(names) for names in shadowed]
+
+
 def declared_int_vectors(
     bare: list[str], owners: list[int | None], declaration: re.Pattern[str] = INT_VECTOR_DECLARED
 ) -> dict[int | None, set[str]]:
@@ -310,12 +401,16 @@ def int_vector_members(source: str) -> set[str]:
     }
 
 
-def receiver_in(names: set[str], members: set[str]) -> re.Pattern[str]:
+def receiver_in(
+    names: set[str], members: set[str], through_self: set[str] | frozenset[str] = frozenset()
+) -> re.Pattern[str]:
     """An integer vector written out or one of `names`, as length()'s receiver: the name itself or
     the script's own member, not another object's (`obj.tile`, #2264). A name may end in a
     subscript, which `\b` can't follow (#2261). On another object, one of `members` counts: the
-    rules' integer vector members (#2262)."""
-    own = (rf"(?<![\w.])(?:self\.)?{name}(?!\w)" for name in sorted(names))
+    rules' integer vector members (#2262). One of `through_self` counts only as `self.name`: a
+    local of that name hides the member (#2304)."""
+    own = [rf"(?<![\w.])(?:self\.)?{name}(?!\w)" for name in sorted(names)]
+    own += [rf"(?<![\w.])self\.{name}(?!\w)" for name in sorted(through_self)]
     other = (rf"(?<=[\w)\]])\.{name}(?!\w)" for name in sorted(members))
     return re.compile("|".join([INT_VECTOR_RECEIVER, *own, *other]))
 
@@ -325,7 +420,9 @@ def forbidden_lines(source: str, members: set[str] | None = None) -> list[str]:
     integer vector members the rules declare, in any script (int_vector_members)."""
     code = without_comments(source).rstrip("\n").split("\n")
     bare = code_only(source).split("\n")
-    scopes = scopes_of(bare, continued_lines(source, bare))
+    continued = continued_lines(source, bare)
+    scopes = scopes_of(bare, continued)
+    shadowed = shadowed_names(bare, scopes, continued)
     # The function or class each line's declarations count in.
     owners = [
         function if function is not None else (classes or (None,))[-1]
@@ -348,12 +445,18 @@ def forbidden_lines(source: str, members: set[str] | None = None) -> list[str]:
                 array_constants.setdefault(owner, set()).add(name)
             if name in dictionaries.get(owner, ()):
                 constants.setdefault(owner, set()).add(rf"{name}{DICTIONARY_VALUE}")
-    for line, (classes, _), owner in zip(bare, scopes, owners):
+    for line, (classes, function), owner, hidden in zip(bare, scopes, owners, shadowed):
         *outers, own = None, *classes
-        visible = arrays.get(own, set()) | arrays.get(owner, set())
-        visible = visible.union(*(array_constants.get(outer, set()) for outer in outers))
+        outside = arrays.get(own, set()).union(
+            *(array_constants.get(outer, set()) for outer in outers)
+        )
+        inside = arrays.get(function, set()) if function is not None else set()
         for loop in FOR_LOOP.finditer(line):
-            if loop.group(2) in visible and over_array(line, loop.end()):
+            name = loop.group(2)
+            through_self = loop.group(0).endswith(f"self.{name}")
+            if (
+                name in inside or name in outside and (through_self or name not in hidden)
+            ) and over_array(line, loop.end()):
                 declared.setdefault(owner, set()).add(loop.group(1))
     for owner, names in array_constants.items():
         constants.setdefault(owner, set()).update(rf"{name}{ARRAY_ELEMENT}" for name in names)
@@ -362,18 +465,20 @@ def forbidden_lines(source: str, members: set[str] | None = None) -> list[str]:
     for owner, names in dictionaries.items():
         declared.setdefault(owner, set()).update(rf"{name}{DICTIONARY_VALUE}" for name in names)
 
-    def names_in(scope: Scope) -> set[str]:
-        """Its function's names, its class's and the constants of the classes around that."""
+    def receiver_of(scope: Scope, hidden: frozenset[str]) -> re.Pattern[str]:
+        """For its function's names, its class's and the constants of the classes around that,
+        those outside the function but `hidden` by its own only through self."""
         classes, function = scope
         *outers, own = None, *classes
-        names = set(declared.get(own, set()))
+        outside = declared.get(own, set()).union(*(constants.get(outer, set()) for outer in outers))
+        # An entry is a name, or a name and the element or value reads after it.
+        through_self = {name for name in outside if re.match(r"\w+", name)[0] in hidden}
+        names = outside - through_self
         if function is not None:
             names |= declared.get(function, set())
-        for outer in outers:
-            names |= constants.get(outer, set())
-        return names
+        return receiver_in(names, members or set(), through_self)
 
-    receiver = {scope: receiver_in(names_in(scope), members or set()) for scope in set(scopes)}
+    receiver = {key: receiver_of(*key) for key in set(zip(scopes, shadowed))}
     named = code_with_random_names(source)
     # The line of each randomness method's name.
     by_name = {
@@ -386,7 +491,7 @@ def forbidden_lines(source: str, members: set[str] | None = None) -> list[str]:
         [
             FORBIDDEN.search(line) is not None
             or FORBIDDEN_IN_CODE.search(bare_line) is not None
-            or calls_float_method(bare_line, receiver[scopes[index]])
+            or calls_float_method(bare_line, receiver[scopes[index], shadowed[index]])
             or index in by_name
             for index, (line, bare_line) in enumerate(zip(code, bare))
         ],
