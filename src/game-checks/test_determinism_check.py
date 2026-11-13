@@ -393,6 +393,54 @@ class FormsTest(unittest.TestCase):
             self.assertEqual(forbidden_lines(source), [], source)
 
 
+    def test_an_integer_vector_declared_with_an_inferred_type_is_refused(self) -> None:
+        # `:=` from a constructor or a constant, for locals and members (#2292).
+        for source in (
+            "var tile := Vector2i.ZERO\nvar a := tile.length()",
+            "var step := Vector2i(1, 0)\nvar a := step.length()",
+            "const ORIGIN := Vector3i.ONE\nvar a := ORIGIN.distance_to(b)",
+            "@export var home := Vector2i(abs(x), (y))\nvar a := self.home.length()",
+            "static var spot := Vector2i.ONE * 2\nvar a := spot.abs().length()",
+            "var tile := Vector2i(\n\t1, 0)\nvar a := tile.length()",
+            "func f() -> void:\n\tvar tile := Vector4i(1, 2, 3, 4)\n\tprint(tile.length())",
+            "func f() -> void:\n\tconst STEP := Vector2i.RIGHT\n\tprint(STEP.length())",
+        ):
+            hit = [
+                f"{number}:{line}"
+                for number, line in enumerate(source.split("\n"), 1)
+                if "length(" in line or "distance_to(" in line
+            ]
+            self.assertEqual(forbidden_lines(source), hit, source)
+
+    def test_a_name_inferred_from_anything_else_is_allowed(self) -> None:
+        for source in (
+            'var tile := "x"\nvar a := tile.length()',
+            "var tile := str(Vector2i.ONE)\nvar a := tile.length()",
+            "var tile := Vector2i(1, 2).x\nvar a := tile.length()",
+            "var tile := Vector2i.ONE.x\nvar a := tile.length()",
+            "var tile := Vector2i.ONE\nvar a := obj.tile.length()",
+            "func f() -> void:\n\tvar tile := Vector2i.ONE\n\n\nfunc g(tile: String) -> int:"
+            "\n\treturn tile.length()",
+        ):
+            self.assertEqual(forbidden_lines(source), [], source)
+
+    def test_members_declared_with_an_inferred_type_count_too(self) -> None:
+        source = "\n".join(
+            (
+                "var tile := Vector2i.ZERO",
+                "@export var home := Vector3i(1, 2, 3)",
+                "static var spot := Vector4i(",
+                "\t1, 2, 3, 4)",
+                "const ORIGIN := Vector2i.ONE",
+                "var x := Vector2i(1, 2).x",
+                "var y := Vector2i.ONE.y",
+                'var text := "x"',
+                "func f() -> void:",
+                "\tvar local := Vector2i.ONE",
+            )
+        )
+        self.assertEqual(int_vector_members(source), {"tile", "home", "spot", "ORIGIN"})
+
 class OwnTestTest(unittest.TestCase):
     def test_a_test_module_without_tests_does_not_pass(self) -> None:
         with mock.patch(
