@@ -103,6 +103,11 @@ jobs:
           uv lock --check
           uv run --locked python -c 'import sys; print(f"Python {sys.version}")'
 
+      - name: "⏱️ Check the WSL gdstyle runner gives up on a stalled download and fails cleanly"
+        # gdstyle.py (#2215) runs on agents' machines, not in CI, so its own test runs here (#2244).
+        timeout-minutes: 3
+        run: uv run --locked --package khovax-game-build ../game-build/test_gdstyle.py
+
       - name: "🔗 Link the resource packs"
         # The checks below read the default pack's files through the game's link to them (#1978),
         # before setting up Godot makes it too.
