@@ -89,6 +89,8 @@ RANDOM_NAME = re.compile(rf"""&?["']({"|".join(RANDOM_NAMES)})["']""")
 # What opens the call the name is an argument of: call()'s first, or any of a Callable's.
 CALL_BY_NAME = re.compile(r"\.(call|callv|call_deferred)\s*\(\s*$")
 CALLABLE = re.compile(r"\bCallable(\.create)?\s*\($")
+# A conversion the name may be wrapped in: the call around it counts then.
+CONVERSION = re.compile(r"\b(StringName|String)\s*\(\s*$")
 MARKER = "# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK"
 MARKER_WITH_REASON = re.compile(re.escape(MARKER) + r" \(.*[^ )].*\)")
 HEADER_LINE = re.compile(r"\s*(#|$)")
@@ -128,6 +130,8 @@ def called_by_name(before: str) -> bool:
         elif before[at] in "([{":
             if depth == 0:
                 opener = before[: at + 1]
+                if conversion := CONVERSION.search(opener):
+                    return called_by_name(opener[: conversion.start()])
                 return before[at] == "(" and (
                     CALL_BY_NAME.search(before) is not None or CALLABLE.search(opener) is not None
                 )

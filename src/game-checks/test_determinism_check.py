@@ -80,6 +80,8 @@ REFUSED = (
     'var c := Callable.create(items, "shuffle")',
     'var c := Callable(get_items(filter_items(source)), "shuffle")',
     'items.call ("shuffle", [1, (2)])',
+    'items.call(StringName("shuffle"))',
+    'var c := Callable(items, StringName("pick_random"))',
     "var a := bytes_to_var(x)",
     "var a := bytes_to_var_with_objects(x)",
     "var a := bytes.decode_half(0)",
@@ -134,6 +136,7 @@ ALLOWED = (
     'items.call("sort", "shuffle")',
     'var c := Callable(items, foo("shuffle"))',
     'var a := ["shuffle"]',
+    'var a := StringName("shuffle")',
     "var a := bytes.to_int32_array()",
 )
 
