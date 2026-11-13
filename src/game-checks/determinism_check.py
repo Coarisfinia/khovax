@@ -294,18 +294,25 @@ def forbidden_lines(source: str) -> list[str]:
     ]
     declared = declared_int_vectors(bare, owners)
     arrays = declared_int_vectors(bare, owners, INT_VECTOR_ARRAY_DECLARED)
+    # Each class's constants, which its inner classes reach: integer vectors and arrays of them.
     constants: dict[int | None, set[str]] = {}
-    for index, (line, (classes, function)) in enumerate(zip(bare, scopes)):
-        owner = owners[index]
+    array_constants: dict[int | None, set[str]] = {}
+    for line, (_, function), owner in zip(bare, scopes, owners):
         constant = CONSTANT.match(line)
         if function is None and constant:
             if constant.group(1) in declared.get(owner, ()):
                 constants.setdefault(owner, set()).add(constant.group(1))
             if constant.group(1) in arrays.get(owner, ()):
-                constants.setdefault(owner, set()).add(rf"{constant.group(1)}{SUBSCRIPT}")
+                array_constants.setdefault(owner, set()).add(constant.group(1))
+    for line, (classes, _), owner in zip(bare, scopes, owners):
+        *outers, own = None, *classes
+        visible = arrays.get(own, set()) | arrays.get(owner, set())
+        visible = visible.union(*(array_constants.get(outer, set()) for outer in outers))
         for loop in FOR_LOOP.finditer(line):
-            if loop.group(2) in arrays.get((None, *classes)[-1], set()) | arrays.get(owner, set()):
+            if loop.group(2) in visible:
                 declared.setdefault(owner, set()).add(loop.group(1))
+    for owner, names in array_constants.items():
+        constants.setdefault(owner, set()).update(rf"{name}{SUBSCRIPT}" for name in names)
     for owner, names in arrays.items():
         declared.setdefault(owner, set()).update(rf"{name}{SUBSCRIPT}" for name in names)
 
