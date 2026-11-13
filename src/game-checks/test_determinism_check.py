@@ -240,6 +240,45 @@ class FormsTest(unittest.TestCase):
         ):
             self.assertEqual(forbidden_lines(source), [], source)
 
+    def test_a_declared_vector2i_counts_only_where_it_is_that_name(self) -> None:
+        # Another object's member, a dictionary with the type as a value, and the same name in
+        # another function (#2264).
+        for source in (
+            "var tile: Vector2i\nvar a := obj.tile.length()",
+            "var tile: Vector2i\nvar a := get_obj().tile.length()",
+            "var d := {tile: Vector2i}\nvar a := tile.length()",
+            "var d := {a = 1, tile: Vector2i}\nvar a := tile.length()",
+            "var d := {\n\ttile: Vector2i,\n}\nvar a := tile.length()",
+            "func f(tile: Vector2i) -> void:\n\tpass\n\n\nfunc g(tile: String) -> int:"
+            "\n\treturn tile.length()",
+            "func f() -> void:\n\tvar tile: Vector2i\n\tif true:\n\t\tpass\n\n\n"
+            "func g() -> int:\n\tvar tile := \"x\"\n\treturn tile.length()",
+            "class A:\n\tfunc f(tile: Vector2i) -> void:\n\t\tpass\n\n\tfunc g(tile: String)"
+            " -> int:\n\t\treturn tile.length()",
+        ):
+            self.assertEqual(forbidden_lines(source), [], source)
+
+    def test_a_declared_vector2i_still_counts_in_its_scope(self) -> None:
+        # What #2264's scoping must keep refusing: the line of each length().
+        for source in (
+            "var tile: Vector2i\n\n\nfunc f() -> void:\n\tvar a := tile.length()",
+            "func f() -> void:\n\tvar a := tile.length()\n\n\nvar tile: Vector2i",
+            "var tile: Vector2i\nvar a := self.tile.length()",
+            "func f(tile: Vector2i) -> void:\n\tif true:\n\t\tvar a := tile.length()",
+            "func f(\n\ttile: Vector2i,\n) -> void:\n\tvar a := tile.length()",
+            "func f() -> void:\n\tvar tile: Vector2i\n\n\tvar a := tile.length()",
+            "var d := {}\nvar tile: Vector2i\nvar a := tile.length()",
+            "var d := {f = func(tile: Vector2i) -> void: print(tile.length())}",
+            "var d := {\n\tf = func(tile: Vector2i) -> void:\n\t\tprint(tile.length())\n}",
+            "class A:\n\tvar tile: Vector2i\n\n\nfunc f() -> void:\n\tvar a := tile.length()",
+        ):
+            hit = [
+                f"{number}:{line}"
+                for number, line in enumerate(source.split("\n"), 1)
+                if "length(" in line
+            ]
+            self.assertEqual(forbidden_lines(source), hit, source)
+
 
 class OwnTestTest(unittest.TestCase):
     def test_a_test_module_without_tests_does_not_pass(self) -> None:
