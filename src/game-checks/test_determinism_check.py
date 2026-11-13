@@ -363,6 +363,74 @@ class FormsTest(unittest.TestCase):
             ]
             self.assertEqual(forbidden_lines(source), hit, source)
 
+    def test_a_local_declaration_shadows_one_outside_its_function(self) -> None:
+        # A parameter counts in the whole body, a local from the statement after it to the end of
+        # its block: the same name outside the function is another variable there (#2304).
+        for source in (
+            "var tile: Vector2i\n\n\nfunc f(tile: String) -> int:\n\treturn tile.length()",
+            "var tiles: Array[Vector2i]\n\n\nfunc f(tiles: Array[String]) -> int:"
+            "\n\treturn tiles[0].length()",
+            "var tiles: Array[Vector2i]\n\n\nfunc f(tiles: Array[String]) -> void:"
+            "\n\tfor tile in tiles.slice(1):\n\t\tprint(tile.length())",
+            "var spots: Dictionary[String, Vector2i]\n\n\nfunc f("
+            "\n\tspots: Dictionary[String, String],\n) -> int:\n\treturn spots.get(key).length()",
+            'var tile: Vector2i\n\n\nfunc f() -> int:\n\tvar tile: String = "x"'
+            "\n\tif true:\n\t\tpass\n\treturn tile.length()",
+            "var tile: Vector2i\n\n\nfunc f() -> void:\n\tif true:\n\t\tvar tile: String"
+            "\n\t\tprint(tile.length())",
+            "var tile: Vector2i\n\n\nfunc f(n: int, tile: String = \"x\") -> int:"
+            "\n\treturn tile.length()",
+            "class Inner:\n\tvar tile: Vector2i\n\n\tfunc f(tile: String) -> int:"
+            "\n\t\treturn tile.length()",
+            "const TILE: Vector2i = Vector2i.ONE\n\n\nclass Inner:\n\tfunc f(TILE: String) -> int:"
+            "\n\t\treturn TILE.length()",
+        ):
+            self.assertEqual(forbidden_lines(source), [], source)
+
+    def test_a_declaration_outside_a_function_still_counts_where_nothing_shadows_it(
+        self,
+    ) -> None:
+        # What #2304's shadowing must keep refusing: the line of each length().
+        for source in (
+            # Before the local, after its block, and in the statement that declares it.
+            "var tile: Vector2i\n\n\nfunc f() -> void:\n\tprint(tile.length())"
+            '\n\tvar tile: String = "x"',
+            "var tile: Vector2i\n\n\nfunc f() -> void:\n\tif true:\n\t\tvar tile: String"
+            "\n\tprint(tile.length())",
+            "var tile: Vector2i\n\n\nfunc f() -> void:\n\tvar tile: String = str("
+            "\n\t\ttile.length())",
+            # The member itself, another function, and a lambda's parameter.
+            "var tile: Vector2i\n\n\nfunc f(tile: String) -> void:\n\tprint(self.tile.length())",
+            "var tiles: Array[Vector2i]\n\n\nfunc f(tiles: Array[String]) -> void:"
+            "\n\tfor tile in self.tiles:\n\t\tprint(tile.length())",
+            "var tile: Vector2i\n\n\nfunc f(tile: String) -> void:\n\tpass\n\n\nfunc g() -> void:"
+            "\n\tprint(tile.length())",
+            "var tile: Vector2i\n\n\nfunc f() -> void:"
+            "\n\tvar g := func(tile: String) -> int: return 1"
+            "\n\tprint(tile.length())",
+            # A type that may hold an integer vector, none, or one inferred.
+            "var tile: Vector2i\n\n\nfunc f(tile: Variant) -> void:\n\tprint(tile.length())",
+            "var tile: Vector2i\n\n\nfunc f(tile) -> void:\n\tprint(tile.length())",
+            "var tile: Vector2i\n\n\nfunc f(tile := get_tile()) -> void:\n\tprint(tile.length())",
+            "var tile: Vector2i\n\n\nfunc f() -> void:\n\tvar tile := get_tile()"
+            "\n\tprint(tile.length())",
+            "var tiles: Array[Vector2i]\n\n\nfunc f(tiles: Array) -> void:"
+            "\n\tprint(tiles[0].length())",
+            # A match pattern's binding takes the matched value's type.
+            "var tile: Vector2i\n\n\nfunc f(x: Variant) -> void:\n\tmatch x:"
+            "\n\t\tvar tile: pass"
+            "\n\t\t_: print(tile.length())",
+            # A local declared as one shadows nothing away.
+            "var tile: Vector2i\n\n\nfunc f() -> void:\n\tvar tile: Vector2i"
+            "\n\tprint(tile.length())",
+        ):
+            hit = [
+                f"{number}:{line}"
+                for number, line in enumerate(source.split("\n"), 1)
+                if "length(" in line
+            ]
+            self.assertEqual(forbidden_lines(source), hit, source)
+
     def test_an_integer_vector_member_of_another_script_is_refused(self) -> None:
         # A member some rules script declares as one, reached on any object (#2262).
         for line in (
