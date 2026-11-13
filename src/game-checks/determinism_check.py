@@ -89,8 +89,9 @@ INT_VECTOR_DECLARED = re.compile(r"\b(\w+)\s*:\s*Vector[234]i\b(?!\s*[.(])")
 # Reaching a randomness method by name, with call() or a Callable: read on the whole of
 # code_with_random_names, which keeps that string, so a call split over lines is seen too (#2223).
 RANDOM_NAMES = ("shuffle", "pick_random")
-# A raw string's r stays code like a StringName's &, so it is part of the name (#2254).
-RANDOM_NAME = re.compile(rf"""(?:&|\br)?["']({"|".join(RANDOM_NAMES)})["']""")
+# A raw string's r stays code like a StringName's &, so it is part of the name (#2254); its quotes
+# are one or three of a kind (#2266).
+RANDOM_NAME = re.compile(rf"""(?:&|\br)?("(?:"")?|'(?:'')?)({"|".join(RANDOM_NAMES)})\1""")
 # What opens the call the name is an argument of: call()'s first, or any of a Callable's.
 CALL_BY_NAME = re.compile(r"\.(call|callv|call_deferred)\s*\(\s*$")
 CALLABLE = re.compile(r"\bCallable(\.create)?\s*\($")
@@ -174,7 +175,7 @@ def forbidden_lines(source: str) -> list[str]:
     named = code_with_random_names(source)
     # The line of each randomness method's name.
     by_name = {
-        named.count("\n", 0, hit.start(1))
+        named.count("\n", 0, hit.start(2))
         for hit in RANDOM_NAME.finditer(named)
         if called_by_name(named[: hit.start()], named[hit.end() :])
     }
