@@ -182,6 +182,7 @@ func _open_menu(menu: GameMenu) -> String:
 		HostSettings.DROP_RATE,
 		HostSettings.RESET_DELAY,
 		HostSettings.REVIVE_ON_WAYSTONES,
+		InvincibleChoice.SETTING,
 	]
 	# Every setting, whatever order their owners added their rows in (#1614): each row's submenu,
 	# and so where it shows, is checked on its own (_menu_submenus).
@@ -192,12 +193,12 @@ func _open_menu(menu: GameMenu) -> String:
 		return "the Settings tab lists %s, not every setting" % [listed]
 	# The world's settings have no Auto: Standard at first (#1315, #1316, #1892), and off (#1891).
 	var hosts: Array[String] = []
-	for setting: String in settings.slice(-5):
+	for setting: String in settings.slice(-6, -1):
 		hosts.append(shown[setting])
 	var standard: Array[String] = ["Standard", "Standard (100%)", "Standard (100%)"]
 	if hosts != standard + ["Standard (1 hour)", "Off"]:
 		return "the world's settings aren't Standard at first: %s" % [hosts]
-	for setting: String in settings.slice(0, -5):
+	for setting: String in settings.slice(0, -6):
 		if not shown[setting].begins_with("Auto ("):
 			return "%s isn't on Auto at first: %s" % [setting, shown[setting]]
 	return _menu_submenus(menu)
