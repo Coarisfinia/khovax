@@ -297,7 +297,7 @@ func _check_drinking() -> String:
 	why = _mended(profile, state, "tonic_berry", companions.companion_of(0))
 	if why.is_empty():
 		why = _refused(profile, state, "draught_berry", "a draught while waiting")
-	for _tick: int in DrinkingFeature.WAIT_TICKS - 2:
+	for _tick: int in DrinkingFeature.WAIT_TICKS - 1:
 		_idle(state)
 	if why.is_empty():
 		why = _refused(profile, state, "draught_berry", "a draught a tick before the wait ended")
