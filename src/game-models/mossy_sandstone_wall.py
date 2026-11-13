@@ -56,6 +56,10 @@ MATERIALS = (("sandstone", "sandstone", 1.0),
 SANDSTONE, SHADED, MOSS = range(3)
 # How far a joint's darkness looks, in metres once sized.
 REACH = 0.1
+# The paint's values are rounded to this many decimals before the cuts: another machine's numpy and
+# Blender differ in the last bits, which would move a cut or flip a face across a step, so the
+# build would differ from the committed one (check_rebuild.py).
+DECIMALS = 4
 
 
 def weld(work):
@@ -152,14 +156,15 @@ def main():
 
     # Moss on the blocks' tops and ledges, cut along its edge.
     points, normals = vertex_data(mesh)
-    moss = prop_paint.contour(mesh, prop_paint.mossiness(points, normals), 0.0)
+    moss = prop_paint.contour(mesh, numpy.round(prop_paint.mossiness(points, normals), DECIMALS), 0.0)
     for polygon, above in zip(mesh.polygons, prop_paint.side(mesh, moss, 0.0)):
         polygon.material_index = MOSS if above else SANDSTONE
 
     # The shaded step: the joints between the blocks, and the foot.
     points, normals = vertex_data(mesh)
     shut = prop_paint.occlusion(wall, points, normals, REACH)
-    dark = prop_paint.contour(mesh, prop_paint.darkness(points, shut), prop_paint.Weathering.shaded)
+    dark = prop_paint.contour(mesh, numpy.round(prop_paint.darkness(points, shut), DECIMALS),
+                            prop_paint.Weathering.shaded)
     for polygon, above in zip(mesh.polygons, prop_paint.side(mesh, dark, prop_paint.Weathering.shaded)):
         if above and polygon.material_index == SANDSTONE:
             polygon.material_index = SHADED
