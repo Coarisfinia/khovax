@@ -75,7 +75,9 @@ def cut(work, point, normal):
                                     clear_outer=True)
     edges = [element for element in result["geom_cut"] if isinstance(element, bmesh.types.BMEdge)]
     filled = bmesh.ops.holes_fill(work, edges=[edge for edge in edges if edge.is_valid and edge.is_boundary])
-    bmesh.ops.triangulate(work, faces=filled["faces"], quad_method="BEAUTY", ngon_method="BEAUTY")
+    # Ear clipping, not "beauty": a flat cap's beauty flips hang on ties between equal angles,
+    # which another machine breaks the other way (CI's rebuild then differs).
+    bmesh.ops.triangulate(work, faces=filled["faces"], quad_method="FIXED", ngon_method="EAR_CLIP")
 
 
 def scale_and_length(source_mesh):
@@ -131,6 +133,15 @@ def build(source):
     return wall, size
 
 
+def snap(mesh):
+    """Puts every vertex of `mesh` on a grid of `DECIMALS + 1` decimals (metres): a cut's vertex
+    lands a last bit apart on another machine (its float maths), which reorders the sorted export."""
+    points = numpy.empty(len(mesh.vertices) * 3)
+    mesh.vertices.foreach_get("co", points)
+    mesh.vertices.foreach_set("co", numpy.round(points, DECIMALS + 1))
+    mesh.update()
+
+
 def vertex_data(mesh):
     return (numpy.array([vertex.co[:] for vertex in mesh.vertices]),
             numpy.array([vertex.normal[:] for vertex in mesh.vertices]))
@@ -172,6 +183,8 @@ def main():
     for polygon, above in zip(mesh.polygons, prop_paint.side(mesh, dark, prop_paint.Weathering.shaded)):
         if above and polygon.material_index == SANDSTONE:
             polygon.material_index = SHADED
+    # The cuts' new vertices too, onto the grid (see `snap`) before the UVs are laid from them.
+    snap(mesh)
     prop_paint.box_uv(mesh)
 
     points, _normals = vertex_data(mesh)
