@@ -20,7 +20,7 @@ const UNPLACED_PROPS: Dictionary[String, Array] = {
 }
 ## Static models built before anything places them in the world (#1635): each must load and show
 ## a mesh, until what places it names it and it leaves this list.
-const UNPLACED_MODELS: Array[String] = ["model_starry_egg"]
+const UNPLACED_MODELS: Array[String] = ["model_mossy_sandstone_wall", "model_starry_egg"]
 ## Clip libraries built before the body that plays them (#1935), with the clips each holds: each
 ## loads with its clips on Godot's humanoid skeleton profile (the BoneMap in its .import), so any
 ## body mapped to that profile plays them, until a view names it and it leaves this list.
