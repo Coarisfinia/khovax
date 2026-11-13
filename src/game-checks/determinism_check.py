@@ -281,6 +281,27 @@ def scopes_of(lines: list[str], continued: set[int]) -> list[Scope]:
     return scopes
 
 
+def block_of(lines: list[str], start: int, continued: set[int]) -> range:
+    """The lines of the statement at `start` and of the block it opens, e.g. a loop's body: up to
+    the next statement indented no deeper than it. Lines inside brackets left open, and each of
+    `continued`, continue the statement before them."""
+    indent = len(lines[start]) - len(lines[start].lstrip())
+    depth = 0
+    for index in range(start, len(lines)):
+        line = lines[index]
+        if (
+            index > start
+            and depth == 0
+            and line.strip()
+            and index not in continued
+            and len(line) - len(line.lstrip()) <= indent
+        ):
+            return range(start, index)
+        opened = sum(line.count(char) for char in "([{")
+        depth = max(0, depth + opened - sum(line.count(char) for char in ")]}"))
+    return range(start, len(lines))
+
+
 def declared_int_vectors(
     bare: list[str], owners: list[int | None], declaration: re.Pattern[str] = INT_VECTOR_DECLARED
 ) -> dict[int | None, set[str]]:
@@ -338,7 +359,8 @@ def forbidden_lines(source: str, members: set[str] | None = None) -> list[str]:
     integer vector members the rules declare, in any script (int_vector_members)."""
     code = without_comments(source).rstrip("\n").split("\n")
     bare = code_only(source).split("\n")
-    scopes = scopes_of(bare, continued_lines(source, bare))
+    continued = continued_lines(source, bare)
+    scopes = scopes_of(bare, continued)
     # The function or class each line's declarations count in.
     owners = [
         function if function is not None else (classes or (None,))[-1]
@@ -361,13 +383,16 @@ def forbidden_lines(source: str, members: set[str] | None = None) -> list[str]:
                 array_constants.setdefault(owner, set()).add(name)
             if name in dictionaries.get(owner, ()):
                 constants.setdefault(owner, set()).add(rf"{name}{DICTIONARY_VALUE}")
-    for line, (classes, _), owner in zip(bare, scopes, owners):
+    # A loop variable counts on its loop's lines only: after the loop, the name is another (#2300).
+    loops: dict[int, set[str]] = {}
+    for index, (line, (classes, _), owner) in enumerate(zip(bare, scopes, owners)):
         *outers, own = None, *classes
         visible = arrays.get(own, set()) | arrays.get(owner, set())
         visible = visible.union(*(array_constants.get(outer, set()) for outer in outers))
         for loop in FOR_LOOP.finditer(line):
             if loop.group(2) in visible and over_array(line, loop.end()):
-                declared.setdefault(owner, set()).add(loop.group(1))
+                for at in block_of(bare, index, continued):
+                    loops.setdefault(at, set()).add(loop.group(1))
     for owner, names in array_constants.items():
         constants.setdefault(owner, set()).update(rf"{name}{ARRAY_ELEMENT}" for name in names)
     for owner, names in arrays.items():
@@ -386,7 +411,15 @@ def forbidden_lines(source: str, members: set[str] | None = None) -> list[str]:
             names |= constants.get(outer, set())
         return names
 
-    receiver = {scope: receiver_in(names_in(scope), members or set()) for scope in set(scopes)}
+    receivers: dict[tuple[Scope, frozenset[str]], re.Pattern[str]] = {}
+
+    def receiver_on(index: int) -> re.Pattern[str]:
+        """The receivers on a line: its scope's names and the loop variables of its loops."""
+        key = (scopes[index], frozenset(loops.get(index, set())))
+        if key not in receivers:
+            receivers[key] = receiver_in(names_in(key[0]) | key[1], members or set())
+        return receivers[key]
+
     named = code_with_random_names(source)
     # The line of each randomness method's name.
     by_name = {
@@ -399,7 +432,7 @@ def forbidden_lines(source: str, members: set[str] | None = None) -> list[str]:
         [
             FORBIDDEN.search(line) is not None
             or FORBIDDEN_IN_CODE.search(bare_line) is not None
-            or calls_float_method(bare_line, receiver[scopes[index]])
+            or calls_float_method(bare_line, receiver_on(index))
             or index in by_name
             for index, (line, bare_line) in enumerate(zip(code, bare))
         ],
