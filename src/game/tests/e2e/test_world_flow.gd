@@ -29,6 +29,9 @@ extends RefCounted
 ## factions' territory as flags, which its save data keeps (#637). A walk out through an exit holds
 ## while the content next door isn't read on any machine yet, and goes on once it is (#816). A
 ## player out of HP is sent back to the spawn (#457), and an invincible one never runs out (#1142).
+## Every region a realm's instance can have, each variant's too, has a clearing for every seed
+## (#2323): a tile players walk to from the first start, neither an exit nor a start, at least
+## CLEARING_DISTANCE tiles from every wild monster's spot, where #1872 places its standing stone.
 
 const SEEDS: int = 40
 ## The damage the companion walks through the exit with, to see it arrive as hurt (#716).
@@ -41,6 +44,20 @@ const BESIDE_WILD_TICKS: int = WildAttackFeature.STRIKE_TICKS * 60
 const INSTANCE_SEEDS: int = 6
 ## How many tiles wide every join between region pieces and every exit is at least (#689).
 const SEAM_WIDTH: int = 3
+## How many tiles (hex distance) every region's clearing keeps from every wild monster's spot (#2323).
+const CLEARING_DISTANCE: int = 15
+## The regions that wait for their clearing, each with its issue (#2323): the list only shrinks, and
+## a region on it that has its clearing fails the check until it's taken off.
+const CLEARINGS_WAITING: Dictionary[String, int] = {
+	"brekhal_varn": 2327,
+	"brekhal_varn_opened": 2327,
+	"dhorvone_stolm": 2328,
+	"edhra_tewk": 2326,
+	"hrovumel_stolm": 2330,
+	"ivenwhal_wudhen": 2331,
+	"lymwen_hoall": 2332,
+	"morwe_wudhen": 2325,
+}
 ## The dungeon behind the escort guide's seal (#1591), its end piece and the place marked there.
 const DUNGEON: String = "hrovumel_stolm"
 const DUNGEON_END: String = "shrine"
@@ -91,6 +108,7 @@ func run(tree: SceneTree) -> String:
 	var steps: Array[Callable] = [
 		_check_glade_exit,
 		_check_wide_seams,
+		_check_clearings,
 		_check_refused,
 		_check_exits_reachable,
 		_check_start_variants,
@@ -2146,6 +2164,57 @@ static func _narrow_seam(region: Region) -> String:
 		if touching[pair] < SEAM_WIDTH:
 			return "%s meet along %d tiles" % [pair, touching[pair]]
 	return ""
+
+
+## Every region a realm's instance can have, the blueprint's own and each variant's, has a clearing
+## for every seed (#2323), unless it waits on CLEARINGS_WAITING: the failure names every region and
+## seed without one, and every waiting region that has it.
+func _check_clearings() -> String:
+	var missing: Array[String] = []
+	var done: Array[String] = []
+	for instance_name: String in InstanceBlueprints.names():
+		if Realms.holding(instance_name) == null:
+			continue
+		var regions: Array[String] = [instance_name]
+		for chosen_by: PackedStringArray in InstanceBlueprints.blueprint(instance_name).variants:
+			if not chosen_by[1].is_empty() and not regions.has(chosen_by[1]):
+				regions.append(chosen_by[1])
+		for region_name: String in regions:
+			var variant: String = "" if region_name == instance_name else region_name
+			var lacking: Array[String] = []
+			for seed_value: int in INSTANCE_SEEDS:
+				var region: Region = InstanceBlueprints.region_of(instance_name, seed_value, variant)
+				if not _has_clearing(region):
+					lacking.append("%s (seed %d)" % [region_name, seed_value])
+			if not CLEARINGS_WAITING.has(region_name):
+				missing.append_array(lacking)
+			elif lacking.is_empty():
+				done.append(region_name)
+	if not missing.is_empty():
+		return "no tile %d tiles from every wild monster in %s" % [
+			CLEARING_DISTANCE,
+			", ".join(missing),
+		]
+	if not done.is_empty():
+		return "%s has its clearing: take it off CLEARINGS_WAITING" % ", ".join(done)
+	return ""
+
+
+## Whether `region` has a tile players walk to from the first start, neither an exit nor a start,
+## at least CLEARING_DISTANCE tiles from every wild monster's spot.
+static func _has_clearing(region: Region) -> bool:
+	if not region.problem.is_empty() or region.starts.is_empty():
+		return false
+	var exits: Array[Vector2i] = []
+	for exit: Vector3i in region.exits:
+		exits.append(Vector2i(exit.x, exit.y))
+	for tile: Vector2i in region.reachable(region.starts[0]):
+		var far: bool = region.wild_monsters.all(
+			func(spot: Vector2i) -> bool: return Hex.distance(tile, spot) >= CLEARING_DISTANCE
+		)
+		if far and not exits.has(tile) and not region.starts.has(tile):
+			return true
+	return false
 
 
 ## An exit that doesn't lead off the edge is refused, and no piece may cover the tile outside an
