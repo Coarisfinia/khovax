@@ -354,6 +354,50 @@ class FormsTest(unittest.TestCase):
         ):
             self.assertEqual(forbidden_lines(source), [], source)
 
+    def test_an_element_read_otherwise_is_refused(self) -> None:
+        # Through an array's methods, a deeper subscript, an array-returning call as a loop's
+        # source, and a typed dictionary's values (#2287).
+        for source in (
+            "var tiles: Array[Vector2i]\nvar a := tiles.front().length()",
+            "var tiles: Array[Vector3i]\nvar a := tiles.back().distance_to(b)",
+            "var tiles: Array[Vector2i]\nvar a := tiles.pop_back().abs().length()",
+            "var tiles: Array[Vector2i]\nvar a := self.tiles.pop_front( ).length()",
+            "var tiles: Array[Vector2i]\nvar a := tiles.pop_at(0).length()",
+            "var tiles: Array[Vector4i]\nvar a := tiles.get(ids[i + 1]).length()",
+            "var tiles: Array[Vector2i]\nvar a := tiles[ids[keys[0]]].length()",
+            "func f(tiles: Array[Vector2i]) -> void:\n\tfor tile in tiles.slice(1, size(2)):"
+            "\n\t\tprint(tile.length())",
+            "var tiles: Array[Vector2i]\nfunc f() -> void:\n\tfor tile in self.tiles.duplicate():"
+            "\n\t\tprint(tile.length())",
+            "func f(tiles: Array[Vector2i]) -> void:\n\tfor tile in tiles.filter(func(t: Vector2i)"
+            " -> bool: return t.x > 0).slice(1):\n\t\tprint(tile.length())",
+            'var spots: Dictionary[String, Vector2i]\nvar a := spots["home"].length()',
+            "var spots: Dictionary[StringName, Vector3i]\nvar a := spots[&\"a\"].distance_to(b)",
+            "var spots: Dictionary[String, Vector2i]\nvar a := spots.get(key, Vector2i.ZERO).length()",
+            "func f(spots: Dictionary[Array[int], Vector2i]) -> int:\n\treturn spots[[1]].length()",
+        ):
+            hit = [
+                f"{number}:{line}"
+                for number, line in enumerate(source.split("\n"), 1)
+                if "length(" in line or "distance_to(" in line
+            ]
+            self.assertEqual(forbidden_lines(source), hit, source)
+
+    def test_an_element_read_otherwise_of_anything_else_is_allowed(self) -> None:
+        for source in (
+            "var names: Array[String]\nvar a := names.front().length()",
+            "var names: Array[String]\nvar a := names.get(0).length()",
+            "var tiles: Array[Vector2i]\nvar a := obj.tiles.back().length()",
+            "var tiles: Array[Vector2i]\nvar a := tiles.front_name().length()",
+            "func f(names: Array[String]) -> void:\n\tfor name in names.slice(1):"
+            "\n\t\tprint(name.length())",
+            "var names: Dictionary[Vector2i, String]\nvar a := names[tile].length()",
+            "var names: Dictionary[Vector2i, String]\nvar a := names.get(tile).length()",
+            "var spots: Dictionary[String, Vector2i]\nfunc f() -> void:\n\tfor key in spots:"
+            "\n\t\tprint(key.length())",
+        ):
+            self.assertEqual(forbidden_lines(source), [], source)
+
 
 class OwnTestTest(unittest.TestCase):
     def test_a_test_module_without_tests_does_not_pass(self) -> None:
