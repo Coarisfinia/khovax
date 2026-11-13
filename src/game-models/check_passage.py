@@ -8,7 +8,7 @@ A model built by a script here whose kind (lib/world_scale.py) is `portal` stand
 between two hexes, and the player walks through it along Blender's Y, through its opening at the
 origin. The check casts rays through that passage, `PASSAGE_HALF_WIDTH` to each side of the
 middle and from the ground to the player's height: rays along the walking line, front to back, at
-`HEIGHTS` heights, and rays straight down from the player's height at every step along it. A ray
+every `STEP` up, and rays straight down from the player's height at every step along it. A ray
 may meet the portal (the mesh's piece holding the `portal` bone's vertices, where the player
 steps in), and nothing else: a hit on any other part (the arch, a tentacle) fails. It looks in the
 rest pose and on every `FRAME_STEP`th frame of every clip, since the gate stands in its loop in the
@@ -18,6 +18,7 @@ It prints a line per pose and `PASSAGE CHECK: PASS` or `FAIL` (and exits 1 on a 
 game_shared.log (#1115): a failing line is an error on the .glb, naming where the first blocking
 hit is and how many rays were blocked."""
 
+import math
 import os
 import sys
 
@@ -40,10 +41,9 @@ PORTAL_BONE = "portal"
 # How far to each side of the opening's middle the passage must be clear (metres): the player's
 # shoulders with their arms swinging.
 PASSAGE_HALF_WIDTH = 0.45
-# How many rays across the passage, and up it (the walking line's rays, ground to head).
-ACROSS, HEIGHTS = 9, 12
-# How far apart the downward rays stand along the walking line (metres).
-STEP = 0.05
+# How far apart the rays stand (metres), across the passage, up it and along the walking line:
+# closer than anything that could block the player is thin (the tentacles are far thicker).
+STEP = 0.025
 # Every this many frames of each clip are looked at too.
 FRAME_STEP = 6
 # How far past a hit a ray goes on, to find what lies behind it.
@@ -122,11 +122,13 @@ def look(skin, rig):
     evaluated.to_mesh_clear()
     top = world_scale.PLAYER_HEIGHT
     count, cast, first = 0, 0, None
-    for step in range(ACROSS):
-        x = -PASSAGE_HALF_WIDTH + 2.0 * PASSAGE_HALF_WIDTH * step / (ACROSS - 1)
+    across = int(math.ceil(2.0 * PASSAGE_HALF_WIDTH / STEP))
+    heights = int(math.ceil(top / STEP))
+    for step in range(across + 1):
+        x = -PASSAGE_HALF_WIDTH + 2.0 * PASSAGE_HALF_WIDTH * step / across
         rays = []
-        for number in range(HEIGHTS):
-            z = 0.02 + (top - 0.02) * number / (HEIGHTS - 1)
+        for number in range(heights + 1):
+            z = 0.01 + (top - 0.01) * number / heights
             rays.append((Vector((x, front, z)), Vector((0.0, 1.0, 0.0)), back - front))
         y = front
         while y <= back:
