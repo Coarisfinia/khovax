@@ -515,6 +515,7 @@ class FormsTest(unittest.TestCase):
             "var tile := Vector2i.ONE in tiles\nvar a := tile.length()",
             'var tile := Vector2i.ONE \\\n\tif c else "x"\nvar a := tile.length()',
             "var tile := Vector2i.ONE * (\n\t2) == other\nvar a := tile.length()",
+            'var tile := (Vector2i.ONE\n\tif c else "x")\nvar a := tile.length()',
             "var tile := Vector2i.ONE\nvar a := obj.tile.length()",
             "func f() -> void:\n\tvar tile := Vector2i.ONE\n\n\nfunc g(tile: String) -> int:"
             "\n\treturn tile.length()",
