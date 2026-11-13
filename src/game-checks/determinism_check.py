@@ -92,6 +92,12 @@ INT_VECTOR_DECLARED = re.compile(r"\b(\w+)\s*:\s*Vector[234]i\b(?!\s*[.(])")
 INT_VECTOR_ARRAY_DECLARED = re.compile(r"\b(\w+)\s*:\s*Array\[\s*Vector[234]i\s*\]")
 SUBSCRIPT = r"\[(?:[^\[\]]|\[[^\[\]]*\])*\]"
 FOR_LOOP = re.compile(r"\bfor\s+(\w+)\s+in\s+(?:self\.)?(\w+)\s*:")
+# A member a script declares as one, outside any function: another script reaches it as `obj.tile`,
+# so the check gathers them from every rules script first (#2262).
+INT_VECTOR_MEMBER = re.compile(
+    r"\s*(?:@\w+(?:\([^)]*\))?\s+)*(?:static\s+)?(?:var|const)\s+(\w+)\s*:\s*Vector[234]i\b"
+    r"(?!\s*[.(])"
+)
 # A function's parameters and locals count in its body only (#2264), any other declaration in the
 # class it is in: the file's own or an inner class, which don't reach each other's members. An inner
 # class reaches the constants of the classes around it, though (Godot 4.7, #2288). A function or
@@ -274,16 +280,29 @@ def declared_int_vectors(
     return declared
 
 
-def receiver_in(names: set[str]) -> re.Pattern[str]:
+def int_vector_members(source: str) -> set[str]:
+    """The members a script declares as an integer vector: outside its functions, in any class."""
+    bare = code_only(source).split("\n")
+    return {
+        hit.group(1)
+        for line, (_, function) in zip(bare, scopes_of(bare, continued_lines(source, bare)))
+        if function is None and (hit := INT_VECTOR_MEMBER.match(line))
+    }
+
+
+def receiver_in(names: set[str], members: set[str]) -> re.Pattern[str]:
     """An integer vector written out or one of `names`, as length()'s receiver: the name itself or
     the script's own member, not another object's (`obj.tile`, #2264). A name may end in a
-    subscript, which `\b` can't follow (#2261)."""
+    subscript, which `\b` can't follow (#2261). On another object, one of `members` counts: the
+    rules' integer vector members (#2262)."""
     own = (rf"(?<![\w.])(?:self\.)?{name}(?!\w)" for name in sorted(names))
-    return re.compile("|".join([INT_VECTOR_RECEIVER, *own]))
+    other = (rf"(?<=[\w)\]])\.{name}(?!\w)" for name in sorted(members))
+    return re.compile("|".join([INT_VECTOR_RECEIVER, *own, *other]))
 
 
-def forbidden_lines(source: str) -> list[str]:
-    """The numbered lines of a script that use something the rules never use."""
+def forbidden_lines(source: str, members: set[str] | None = None) -> list[str]:
+    """The numbered lines of a script that use something the rules never use. `members` are the
+    integer vector members the rules declare, in any script (int_vector_members)."""
     code = without_comments(source).rstrip("\n").split("\n")
     bare = code_only(source).split("\n")
     scopes = scopes_of(bare, continued_lines(source, bare))
@@ -327,7 +346,7 @@ def forbidden_lines(source: str) -> list[str]:
             names |= constants.get(outer, set())
         return names
 
-    receiver = {scope: receiver_in(names_in(scope)) for scope in set(scopes)}
+    receiver = {scope: receiver_in(names_in(scope), members or set()) for scope in set(scopes)}
     named = code_with_random_names(source)
     # The line of each randomness method's name.
     by_name = {
@@ -371,6 +390,9 @@ def main() -> int:
         if line.startswith("class_name ") and len(line.split()) > 1
     }
     extends = {f"extends {name}" for name in rule_classes | {"RefCounted"}}
+    members = set().union(
+        *(int_vector_members(Path(file).read_text(encoding="utf-8")) for file in scripts)
+    )
     failed = False
 
     for file in scripts:
@@ -396,7 +418,7 @@ def main() -> int:
         if not extends.intersection(code):
             log.error("rules scripts extend RefCounted or a class of the rules", file)
             failed = True
-        hits = forbidden_lines(source)
+        hits = forbidden_lines(source, members)
         if hits:
             print("\n".join(hits))
             log.error("the rules must stay deterministic: see the lines above", file)

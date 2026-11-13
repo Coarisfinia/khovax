@@ -8,7 +8,7 @@ access) isn't. The check runs this first, so CI's step for the check runs it too
 import unittest
 from unittest import mock
 
-from determinism_check import forbidden_lines, own_test_passes
+from determinism_check import forbidden_lines, int_vector_members, own_test_passes
 
 REFUSED = (
     "items.shuffle()",
@@ -352,6 +352,44 @@ class FormsTest(unittest.TestCase):
                 if "length(" in line
             ]
             self.assertEqual(forbidden_lines(source), hit, source)
+
+    def test_an_integer_vector_member_of_another_script_is_refused(self) -> None:
+        # A member some rules script declares as one, reached on any object (#2262).
+        for line in (
+            "var a := entity.tile.length()",
+            "var a := get_entity().tile.length()",
+            "var a := entities[0].tile.distance_to(b)",
+            "var a := entity.tile.abs().length()",
+            "var a := world.entity.tile.length()",
+        ):
+            self.assertEqual(forbidden_lines(line, {"tile"}), [f"1:{line}"], line)
+
+    def test_another_member_or_a_bare_name_stays_allowed(self) -> None:
+        for line in (
+            "var a := entity.cell.length()",
+            "var a := entity.tiles.length()",
+            "var a := entity.tile_name.length()",
+            "var a := tile.length()",
+        ):
+            self.assertEqual(forbidden_lines(line, {"tile"}), [], line)
+
+    def test_members_are_what_a_script_declares_outside_its_functions(self) -> None:
+        source = "\n".join(
+            (
+                "signal moved(to: Vector2i)",
+                "var tile: Vector2i",
+                "@export var home: Vector3i = Vector3i.ONE",
+                "static var spot: Vector4i",
+                "const ORIGIN: Vector2i = Vector2i.ZERO",
+                "var d := {key: Vector2i(1, 2)}",
+                "var text: String",
+                "class A:",
+                "\tvar inner: Vector2i",
+                "func f(param: Vector2i) -> void:",
+                "\tvar local: Vector2i",
+            )
+        )
+        self.assertEqual(int_vector_members(source), {"tile", "home", "spot", "ORIGIN", "inner"})
 
     def test_an_element_of_an_integer_vector_array_is_refused(self) -> None:
         # A subscript, and a loop variable, over an Array[Vector2i] (#2261).
