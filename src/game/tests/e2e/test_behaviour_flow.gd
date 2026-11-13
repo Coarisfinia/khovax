@@ -42,9 +42,9 @@ extends RefCounted
 ## next member, a pack down to one is gone, and a save plays on the same. The content's Vynakiir
 ## band in Ivenwhal Wudhen.
 ##
-## Babies live beside the grown ones (#1697): each bundle of rolled wild monsters whose species has
-## an earlier form holds babies in WildBabies.CHANCE thousandths of cases, over many seeds within a
-## tolerance; a baby is of the first form of its line (level 1 and unevolved), a grown one keeps its
+## Babies live beside the grown ones (#1697): of the bundles of rolled wild monsters whose species
+## has an earlier form, a count, not a roll, picks the ones with babies (#2239), the same on every
+## seed: three in every five, at WildBabies.CHANCE, the first among them; a baby is of the first form of its line (level 1 and unevolved), a grown one keeps its
 ## species, a monster the region names never starts as a baby, a species with no earlier form has
 ## no babies (owner, on #1722), and a save gives the babies back, in the state hash. In Hrovumel
 ## Stolm, a Vynakiir's baby is a Vynnimu, and every baby there is a first form with a later one.
@@ -120,21 +120,24 @@ const PACK_SPOTS: Dictionary[Vector2i, String] = {
 	Vector2i(3, 2): "sha",
 	Vector2i(4, -2): "lon",
 }
-## The baby flow's bundles (#1697), each of rolled monsters, too far apart to gather into one; a
-## spot the region names beside the first; the species they roll, and its line's first form; how
-## many seeds it rolls, and how far from WildBabies.CHANCE the share of bundles with babies may be,
-## in thousandths.
+## The baby flow's bundles (#1697), each of rolled monsters, too far apart to gather into one, and
+## which of them hold babies (#2239): three in every five, the first among them; a spot the region
+## names beside the first; the species they roll, and its line's first form; and how many seeds it
+## plays, each holding babies in the same bundles.
 const BABY_BUNDLES: Array[Array] = [
 	[Vector2i(-7, 0), Vector2i(-7, 1), Vector2i(-6, 0)],
 	[Vector2i(6, 0), Vector2i(6, 1), Vector2i(7, 0)],
+	[Vector2i(0, -9)],
+	[Vector2i(0, 9)],
+	[Vector2i(9, -9)],
 ]
+const BABY_HELD: Array[bool] = [true, false, true, false, true]
 const BABY_NAMED: Vector2i = Vector2i(-6, 1)
 const BABY_ADULT: String = "big"
 const BABY_FIRST_FORM: String = "pup"
 ## A species with no earlier form (owner, on #1722): it has no babies.
 const BABY_LONE: String = "own"
-const BABY_SEEDS: int = 1000
-const BABY_TOLERANCE: int = 50
+const BABY_SEEDS: int = 20
 ## How many seeds of Hrovumel Stolm the content's baby check plays.
 const CONTENT_BABY_SEEDS: int = 40
 ## A test grazer and drinker (#1203), and what each does in its hours of need.
@@ -1476,11 +1479,14 @@ func _check_content_packs() -> String:
 	return ""
 
 
-## Over BABY_SEEDS seeds, each of the baby flow's bundles (BABY_BUNDLES) holds babies in
-## WildBabies.CHANCE thousandths of cases, within BABY_TOLERANCE: then its last spot only, a baby
-## of its line's first form; its grown ones and the named monster beside them keep their species.
+## On each of BABY_SEEDS seeds, the baby flow's bundles (BABY_BUNDLES) that BABY_HELD marks hold
+## babies, and no other (#2239): a count, not a roll, at WildBabies.CHANCE. A bundle that does holds
+## them on its last spot only, a baby of its line's first form; its grown ones and the named monster
+## beside them keep their species.
 func _check_wild_babies() -> String:
-	var held: int = 0
+	var held: int = BABY_HELD.count(true)
+	if Fixed.ratio(held, BABY_HELD.size()) != WildBabies.CHANCE:
+		return "%d bundles in %d isn't WildBabies.CHANCE" % [held, BABY_HELD.size()]
 	for seed_value: int in BABY_SEEDS:
 		var state: GameState = _baby_state(seed_value)
 		var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
@@ -1489,14 +1495,15 @@ func _check_wild_babies() -> String:
 			at[state.entity(monster).tile] = monster
 		if wild.babies.has(at[BABY_NAMED]) or wild.species_of(at[BABY_NAMED]) != BABY_ADULT:
 			return "the monster the region names started as a baby (seed %d)" % seed_value
-		for bundle: Array in BABY_BUNDLES:
-			var last_spot: Vector2i = bundle[bundle.size() - 1]
-			var last: int = at[last_spot]
-			var expected: String = BABY_FIRST_FORM if wild.babies.has(last) else BABY_ADULT
+		for i: int in BABY_BUNDLES.size():
+			var bundle: Array = BABY_BUNDLES[i]
+			var last: int = at[bundle[bundle.size() - 1]]
+			if wild.babies.has(last) != BABY_HELD[i]:
+				var held_or_not: String = "held no" if BABY_HELD[i] else "held"
+				return "bundle %d %s babies (seed %d)" % [i + 1, held_or_not, seed_value]
+			var expected: String = BABY_FIRST_FORM if BABY_HELD[i] else BABY_ADULT
 			if wild.species_of(last) != expected:
 				return "a bundle's last is a %s, not a %s" % [wild.species_of(last), expected]
-			if wild.babies.has(last):
-				held += 1
 			for spot: Vector2i in bundle.slice(0, bundle.size() - 1):
 				if wild.babies.has(at[spot]) or wild.species_of(at[spot]) != BABY_ADULT:
 					return "more than the last of a bundle of %d started as a baby" % bundle.size()
@@ -1504,12 +1511,6 @@ func _check_wild_babies() -> String:
 		var lone: GameState = _baby_state(seed_value, BABY_LONE)
 		if not (lone.feature(WildMonsterFeature.ID) as WildMonsterFeature).babies.is_empty():
 			return "a species with no earlier form had a baby (seed %d)" % seed_value
-	var share: int = Fixed.ratio(held, BABY_SEEDS * BABY_BUNDLES.size())
-	if absi(share - WildBabies.CHANCE) > BABY_TOLERANCE:
-		return "%d thousandths of the bundles held babies, not about %d" % [
-			share,
-			WildBabies.CHANCE,
-		]
 	return _baby_saved()
 
 
