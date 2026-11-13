@@ -88,7 +88,8 @@ INT_VECTOR_METHOD = re.compile(
 FLOAT_METHOD = re.compile(r"\.(?:length|distance_to)\s*\(")
 INT_VECTOR_DECLARED = re.compile(r"\b(\w+)\s*:\s*Vector[234]i\b(?!\s*[.(])")
 # A function's parameters and locals count in its body only, any other declaration in the whole
-# file (#2264); a function ends at the next line indented no deeper than its func.
+# file (#2264); a function ends at the next statement indented no deeper than its func. A line that
+# starts inside a multi-line string or after a backslash continues its statement (#2271).
 FUNCTION = re.compile(r"\s*(static\s+)?func\b")
 # Reaching a randomness method by name, with call() or a Callable: read on the whole of
 # code_with_random_names, which keeps that string, so a call split over lines is seen too (#2223).
@@ -207,14 +208,28 @@ def innermost_opener(before: str) -> str:
     return ""
 
 
-def functions_of(lines: list[str]) -> list[int | None]:
+def continued_lines(source: str, bare: list[str]) -> set[int]:
+    """The lines that continue the statement before them: those after a backslash, and those that
+    start inside a string (code after a multi-line string's closing quotes)."""
+    continued = {index + 1 for index, line in enumerate(bare) if line.rstrip().endswith("\\")}
+    line = 0
+    for token in tokens(source):
+        breaks = token.text.count("\n")
+        if token.kind == Kind.STRING:
+            continued.update(range(line + 1, line + breaks + 1))
+        line += breaks
+    return continued
+
+
+def functions_of(lines: list[str], continued: set[int]) -> list[int | None]:
     """The function each code line is in, as the index of its func line, or None outside one. A
-    line inside brackets left open continues the line before it, e.g. a func's parameters."""
+    line inside brackets left open continues the line before it, e.g. a func's parameters, and so
+    does each of `continued`."""
     owners: list[int | None] = []
     function: tuple[int, int] | None = None  # Its func line and that line's indentation.
     depth = 0
     for index, line in enumerate(lines):
-        if depth == 0 and line.strip():
+        if depth == 0 and line.strip() and index not in continued:
             indent = len(line) - len(line.lstrip())
             if function is not None and indent <= function[1]:
                 function = None
@@ -251,7 +266,7 @@ def forbidden_lines(source: str) -> list[str]:
     """The numbered lines of a script that use something the rules never use."""
     code = without_comments(source).rstrip("\n").split("\n")
     bare = code_only(source).split("\n")
-    owners = functions_of(bare)
+    owners = functions_of(bare, continued_lines(source, bare))
     declared = declared_int_vectors(bare, owners)
     in_file = declared.get(None, set())
     receiver = {

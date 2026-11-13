@@ -310,6 +310,12 @@ class FormsTest(unittest.TestCase):
             "var d := {\n\tf = func() -> void:\n\t\tvar tile: Vector2i"
             "\n\t\tprint(tile.length())\n}",
             "class A:\n\tvar tile: Vector2i\n\n\nfunc f() -> void:\n\tvar a := tile.length()",
+            # Code after a multi-line string's closing quotes, and a backslash continuation
+            # indented less, continue their statement: the function goes on (#2271).
+            'func f() -> void:\n\tvar tile: Vector2i\n\tvar n := """a\nb""".strip_edges()'
+            "\n\tvar a := tile.length()",
+            "func f() -> void:\n\tvar tile: Vector2i\n\tvar n := 1 + \\\n2"
+            "\n\tvar a := tile.length()",
         ):
             hit = [
                 f"{number}:{line}"
