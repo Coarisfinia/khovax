@@ -127,11 +127,14 @@ CONSTANT = re.compile(r"\s*(?:@\w+(?:\([^)]*\))?\s+)*const\s+(\w+)")
 # A function's own declaration of a name hides the one outside it (#2304): a parameter in the whole
 # body, a local from the statement after its own to the end of its block. Only one typed as what
 # can't hold an integer vector unseen does: not Variant, a bare Array or Dictionary, or inferred.
-# A match pattern's `var` binds the matched value, whatever its type.
+# A match pattern's `var` binds the matched value, whatever its type, and a lambda's parameter may
+# rebind the name inside it: a name any lambda in the function binds stays unhidden there.
 PARAMETERS = re.compile(r"\s*(?:static\s+)?func\s+\w+\s*\(")
 PARAMETER = re.compile(r"\s*(\w+)\s*:\s*([\w.]+(?:\[.*\])?)\s*(?:=.*)?", re.DOTALL)
 LOCAL = re.compile(r"\s*(?:var|const)\s+(\w+)\s*:\s*([\w.]+(?:\[[^=]*\])?)\s*(?:=|$)")
 MATCH = re.compile(r"\s*match\b")
+LAMBDA = re.compile(r"\bfunc\b\s*\w*\s*\(")
+LAMBDA_PARAMETER = re.compile(r"\s*(?:\.\.\.)?(\w+)")
 # Reaching a randomness method by name, with call() or a Callable: read on the whole of
 # code_with_random_names, which keeps that string, so a call split over lines is seen too (#2223).
 RANDOM_NAMES = ("shuffle", "pick_random")
@@ -350,6 +353,7 @@ def shadowed_names(
     """The names each code line's function declares itself, hiding the same names outside it."""
     starts = statement_starts(lines, continued)
     shadowed: list[set[str]] = [set() for _ in lines]
+    rebound: dict[int, set[str]] = {}  # What each function's lambdas bind.
     for at, (_, function) in enumerate(scopes):
         if function is None:
             continue
@@ -358,6 +362,16 @@ def shadowed_names(
             body = [index for index in range(at, len(lines)) if scopes[index][1] == function]
             text = "\n".join(lines[at : body[-1] + 1])
             end = after_parentheses(text, opening.end() - 1) if opening else -1
+            rebound[function] = set()
+            for lambda_ in LAMBDA.finditer(text, end if end >= 0 else len(lines[at])):
+                close = after_parentheses(text, lambda_.end() - 1)
+                rebound[function].update(
+                    hit.group(1)
+                    for part in top_level_parts(
+                        text[lambda_.end() : close - 1 if close >= 0 else None]
+                    )
+                    if (hit := LAMBDA_PARAMETER.match(part))
+                )
             if end < 0:
                 continue
             names = {
@@ -390,7 +404,10 @@ def shadowed_names(
             ):
                 break
             shadowed[index].add(local.group(1))
-    return [frozenset(names) for names in shadowed]
+    return [
+        frozenset(names - rebound.get(function, set()) if function is not None else names)
+        for names, (_, function) in zip(shadowed, scopes)
+    ]
 
 
 def declared_int_vectors(
