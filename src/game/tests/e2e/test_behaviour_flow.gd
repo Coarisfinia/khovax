@@ -3,11 +3,12 @@ extends RefCounted
 ## (#1201) follows the world's tick: a world starts at dawn, night falls at dusk, and a day later
 ## it's dawn again; every instance of the world shares it (#1215), one nobody is in and one loaded
 ## later too, and a save gives it back. Every wild monster gets a daily schedule from its traits and
-## the instance's seed:
-## a diurnal one sleeps one block at night, a nocturnal one one block by day, a cathemeral one in
+## its entity id, with no roll (#2238): a diurnal one sleeps one block at night, a nocturnal one one
+## block by day, a cathemeral one in
 ## bouts by day and at night, a sleepless one never; each need takes its hours, and the rest it
 ## follows its pack, or wanders without one. What it's doing now follows the clock, and a fainted
-## one does nothing. The schedules are the same for the same seed, differ for another, are in the
+## one does nothing. The schedules are the same for any seed, set their bedtimes by the id, are in
+## the
 ## state hash and come back the same from a save. The content's own species, the nocturnal
 ## Ombulumo and the diurnal Tikazzir, follow theirs in an instance the blueprints make.
 ##
@@ -292,15 +293,13 @@ func _check_activity_follows_clock() -> String:
 	return ""
 
 
-## The same seed makes the same schedules, another seed others; they're in the state hash, and a
-## save, taken after one fainted, gives them back the same.
+## The same seed makes the same schedules; they're in the state hash, and a save, taken after one
+## fainted, gives them back the same.
 func _check_deterministic() -> String:
 	var state: GameState = _test_state(SEED, TEST_TRAITS)
 	var again: GameState = _test_state(SEED, TEST_TRAITS)
 	if _days(state) != _days(again) or state.state_hash() != again.state_hash():
 		return "the same seed made other schedules"
-	if _days(_test_state(SEED + 1, TEST_TRAITS)) == _days(state):
-		return "another seed made the same schedules"
 	var other: Dictionary[String, Array] = {}
 	for species: String in TEST_TRAITS:
 		other[species] = TEST_TRAITS["noc"] if species == "diu" else TEST_TRAITS[species]
