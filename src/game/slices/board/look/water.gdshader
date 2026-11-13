@@ -11,8 +11,9 @@ uniform vec4 color : source_color = vec4(1.0);
 uniform vec4 depth_tint : source_color = vec4(0.72, 0.8, 0.92, 1.0);
 // How fast the ripples move: slowly, since the game is designed around motion sickness.
 uniform float ripple_speed = 0.35;
-// The way the water flows, on the ground plane (x, z). Still water gets a slow ripple_speed; a
-// zero flow still draws, rippling along x (#2255).
+// The way the water flows, on the ground plane (x, z), and how fast: the ripples drift along it at
+// full speed from a length of 1, slower below, and a zero flow is still water (#2269), where only
+// the shimmer moves them (its fixed direction, x, only lays out the pattern, #2255).
 uniform vec2 flow_direction = vec2(1.0, 0.35);
 // How many ripples fit one world unit, and how much lighter a ripple's crest is.
 uniform float ripple_scale = 2.2;
@@ -48,10 +49,11 @@ float shore_distance() {
 	return nearest;
 }
 
-// A ripple field from -1 to 1, moving along the flow.
-float ripples(vec2 at, float time) {
-	float first = sin(at.x * 1.3 + sin(at.y * 0.9 + time * 0.7) * 1.4 - time);
-	float second = sin(at.y * 1.7 - sin(at.x * 1.1 - time * 0.5) * 1.2 - time * 0.8);
+// A ripple field from -1 to 1: the inner waves shimmer in place, and drift (0 to 1) moves the
+// whole field along the flow.
+float ripples(vec2 at, float time, float drift) {
+	float first = sin(at.x * 1.3 + sin(at.y * 0.9 + time * 0.7) * 1.4 - time * drift);
+	float second = sin(at.y * 1.7 - sin(at.x * 1.1 - time * 0.5) * 1.2 - time * 0.8 * drift);
 	return (first + second) * 0.5;
 }
 
@@ -59,7 +61,9 @@ void fragment() {
 	// A zero vector has no direction: normalising it gives NaN, which blacks out the water.
 	vec2 flow = length(flow_direction) < 1e-4 ? vec2(1.0, 0.0) : normalize(flow_direction);
 	vec2 along_flow = vec2(dot(world.xz, flow), dot(world.xz, vec2(-flow.y, flow.x)));
-	float ripple = ripples(along_flow * ripple_scale, TIME * ripple_speed);
+	// Capped at 1, so every flow of length 1 or more (the default's included) drifts as before.
+	float drift = min(length(flow_direction), 1.0);
+	float ripple = ripples(along_flow * ripple_scale, TIME * ripple_speed, drift);
 	float to_shore = shore_distance();
 	float deep = smoothstep(0.0, shallow_width, to_shore);
 	vec3 water = color.rgb * COLOR.rgb * mix(vec3(1.0), depth_tint.rgb, deep);

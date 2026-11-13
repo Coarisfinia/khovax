@@ -68,6 +68,7 @@ func _steps() -> Array[Callable]:
 		_check_grid_colors,
 		_check_water_surfaces,
 		_check_still_water,
+		_check_still_water_calm,
 		_check_player_placement,
 		_check_player_model,
 		_check_view_models,
@@ -333,6 +334,25 @@ func _check_still_water(_main: Node) -> String:
 	for line: int in lines.size():
 		if lines[line].contains("normalize(") and not lines[line].contains("length("):
 			return "water.gdshader:%d normalises a vector with no length test" % (line + 1)
+	return ""
+
+
+## Still water stands still (#2269): the ripples drift along the flow only as fast as it flows, so
+## a zero `flow_direction` leaves a standing pattern with only the shimmer moving it, while the
+## default flow drifts. The headless renderer can't draw it, so `WaterRipples` runs the shader's own
+## ripple lines, with the arguments the fragment passes them, and watches their time average.
+func _check_still_water_calm(_main: Node) -> String:
+	var ripples: WaterRipples = WaterRipples.new(WaterSurface.SHADER.code)
+	if not ripples.problem().is_empty():
+		return "water.gdshader %s" % ripples.problem()
+	var still: float = ripples.standing(Vector2.ZERO)
+	var flowing: float = ripples.standing(Vector2(1.0, 0.35))
+	if not ripples.problem().is_empty():
+		return "water.gdshader %s" % ripples.problem()
+	if still < 0.25:
+		return "still water's ripples drift: their time average is %.3f, not standing" % still
+	if flowing > 0.1:
+		return "flowing water's ripples stand still: their time average is %.3f" % flowing
 	return ""
 
 
