@@ -7,6 +7,7 @@ same two sources CI uses. Arguments go to gdstyle, which runs in the caller's fo
 """
 
 import hashlib
+import http.client
 import json
 import os
 import platform
@@ -16,11 +17,24 @@ import sys
 import tarfile
 import tempfile
 import urllib.request
+import zlib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 RELEASE = "https://github.com/atelico/gdstyle/releases/download/v{version}/gdstyle-x86_64-unknown-linux-gnu.tar.gz"
 SHA256 = re.compile(r"^ *GDSTYLE_SHA256: *([0-9a-f]{64}) *$", re.MULTILINE)
+# Per connection attempt and per read: a download that stalls this long gives up rather than hang.
+TIMEOUT_SECONDS = 60
+# Every way a download or an archive can fail: each ends in one clean message, never a traceback.
+FAILURES = (
+    OSError,
+    EOFError,
+    ValueError,
+    KeyError,
+    zlib.error,
+    http.client.HTTPException,
+    tarfile.TarError,
+)
 
 
 def install(version: str, sha256: str, binary: Path) -> None:
@@ -29,12 +43,16 @@ def install(version: str, sha256: str, binary: Path) -> None:
     binary.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=binary.parent) as folder:
         archive = Path(folder) / "gdstyle.tar.gz"
-        urllib.request.urlretrieve(RELEASE.format(version=version), archive)
-        actual = hashlib.sha256(archive.read_bytes()).hexdigest()
+        with urllib.request.urlopen(RELEASE.format(version=version), timeout=TIMEOUT_SECONDS) as response:
+            # A whole read: a download cut short raises IncompleteRead rather than passing short.
+            data = response.read()
+        archive.write_bytes(data)
+        actual = hashlib.sha256(data).hexdigest()
         if actual != sha256:
             raise ValueError(f"the download's checksum is {actual}, CI's is {sha256}")
         unpacked = Path(folder) / "gdstyle"
-        with tarfile.open(archive) as tar:
+        # The release is a .tar.gz; naming it keeps a refusal to one line, unlike auto-detection.
+        with tarfile.open(archive, "r:gz") as tar:
             member = tar.extractfile("gdstyle")
             if member is None:
                 raise ValueError("the archive's gdstyle isn't a file")
@@ -59,8 +77,8 @@ def main() -> int:
     if not os.access(binary, os.X_OK):
         try:
             install(version, sha256, binary)
-        except (OSError, ValueError) as error:
-            print(f"gdstyle.py: {error}", file=sys.stderr)
+        except FAILURES as error:
+            print(f"gdstyle.py: {type(error).__name__}: {error}", file=sys.stderr)
             return 1
     os.execv(binary, [str(binary), *sys.argv[1:]])
 

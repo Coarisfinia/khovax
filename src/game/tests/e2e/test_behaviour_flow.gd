@@ -3,11 +3,12 @@ extends RefCounted
 ## (#1201) follows the world's tick: a world starts at dawn, night falls at dusk, and a day later
 ## it's dawn again; every instance of the world shares it (#1215), one nobody is in and one loaded
 ## later too, and a save gives it back. Every wild monster gets a daily schedule from its traits and
-## the instance's seed:
-## a diurnal one sleeps one block at night, a nocturnal one one block by day, a cathemeral one in
+## its entity id, with no roll (#2238): a diurnal one sleeps one block at night, a nocturnal one one
+## block by day, a cathemeral one in
 ## bouts by day and at night, a sleepless one never; each need takes its hours, and the rest it
 ## follows its pack, or wanders without one. What it's doing now follows the clock, and a fainted
-## one does nothing. The schedules are the same for the same seed, differ for another, are in the
+## one does nothing. The schedules are the same for any seed, set their bedtimes by the id, are in
+## the
 ## state hash and come back the same from a save. The content's own species, the nocturnal
 ## Ombulumo and the diurnal Tikazzir, follow theirs in an instance the blueprints make.
 ##
@@ -160,6 +161,7 @@ func run(_tree: SceneTree) -> String:
 		_check_rhythms,
 		_check_activity_follows_clock,
 		_check_deterministic,
+		_check_day_from_id,
 		_check_content_species,
 		_check_sleep_follows_schedule,
 		_check_woken_stays_awake,
@@ -291,15 +293,13 @@ func _check_activity_follows_clock() -> String:
 	return ""
 
 
-## The same seed makes the same schedules, another seed others; they're in the state hash, and a
-## save, taken after one fainted, gives them back the same.
+## The same seed makes the same schedules; they're in the state hash, and a save, taken after one
+## fainted, gives them back the same.
 func _check_deterministic() -> String:
 	var state: GameState = _test_state(SEED, TEST_TRAITS)
 	var again: GameState = _test_state(SEED, TEST_TRAITS)
 	if _days(state) != _days(again) or state.state_hash() != again.state_hash():
 		return "the same seed made other schedules"
-	if _days(_test_state(SEED + 1, TEST_TRAITS)) == _days(state):
-		return "another seed made the same schedules"
 	var other: Dictionary[String, Array] = {}
 	for species: String in TEST_TRAITS:
 		other[species] = TEST_TRAITS["noc"] if species == "diu" else TEST_TRAITS[species]
@@ -318,6 +318,35 @@ func _check_deterministic() -> String:
 		return "a save didn't give back which wild monsters sleep"
 	if slept.state_hash() != state.state_hash() or slept.state_hash() == loaded.state_hash():
 		return "who sleeps isn't in the state hash"
+	return ""
+
+
+## A monster's day follows from its species' traits and its entity id, never from a roll (#2238):
+## another seed gives the same days; a diurnal one goes to sleep its id modulo BEDTIME_SPREAD hours
+## after dusk and a nocturnal one as many after dawn; and the hour it wakes goes to its first need.
+func _check_day_from_id() -> String:
+	var state: GameState = _test_state(SEED, TEST_TRAITS)
+	if _days(_test_state(SEED + 1, TEST_TRAITS)) != _days(state):
+		return "another seed made other schedules"
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	for monster: int in wild.monsters:
+		var traits: Array = TEST_TRAITS[wild.species_of(monster)]
+		var dusk_or_dawn: int = DayClock.DUSK
+		if traits.has(SpeciesBehaviour.NOCTURNAL):
+			dusk_or_dawn = DayClock.DAWN
+		elif not traits.has(SpeciesBehaviour.DIURNAL):
+			continue
+		var day: Array[int] = _schedules(state).day_of(monster)
+		var bedtime: int = dusk_or_dawn + monster % Schedule.BEDTIME_SPREAD
+		if day[bedtime] != Schedule.SLEEP or day[bedtime - 1] == Schedule.SLEEP:
+			return "monster %d didn't go to sleep at %d o'clock" % [monster, bedtime]
+		var wakes: int = (bedtime + Schedule.SLEEP_HOURS) % DayClock.HOURS
+		var first_need: int = Schedule.NONE
+		for need: String in SpeciesBehaviour.NEEDS:
+			if traits.has(need) and first_need == Schedule.NONE:
+				first_need = Schedule.NEED_ACTIVITIES[need]
+		if day[wakes] != first_need:
+			return "monster %d didn't wake at %d o'clock to its first need" % [monster, wakes]
 	return ""
 
 
