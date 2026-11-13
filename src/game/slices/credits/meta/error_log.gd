@@ -98,6 +98,15 @@ static func saved() -> PackedByteArray:
 	return text.to_utf8_buffer()
 
 
+## This launch's last `count` lines of the log, blank ones left out, to show on screen (#1817).
+static func newest(count: int) -> String:
+	var lines: PackedStringArray = []
+	for line: String in FileAccess.get_file_as_string(PATH).split("\n", false):
+		if not line.strip_edges().is_empty():
+			var _added: bool = lines.append(line)
+	return "\n".join(lines.slice(maxi(lines.size() - count, 0)))
+
+
 ## The log's first lines: the game and the build's version, then the platform and the engine.
 static func header() -> String:
 	return "%s %s\n%s %s, Godot %s\n\n" % [

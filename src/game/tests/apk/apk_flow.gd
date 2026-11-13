@@ -31,6 +31,9 @@ const FINGER: int = 0
 ## flows' FlowSteps (#915).
 const GLADE: String = "lumwen_hoal"
 const FOREST: String = "morwe_wudhen"
+## The Credits tab, whose error log button the web flow presses, and what its note says first.
+const CREDITS: String = "res://slices/credits/ui/credits_tab.tscn"
+const BROWSER_MAY_ASK: String = "Your browser may ask to allow the download"
 
 ## The game's state hash when the walk ended, which game/test_mode.gd reports with the result.
 var final_hash: int = 0
@@ -109,20 +112,39 @@ func _play(driver: GameDriver, tree: SceneTree, origin: Vector2, leg: int, tick:
 ## On the web, saves the error log the way a player with only a controller does (#1598): the
 ## Credits tab's save button, focused, pressed with a controller's A. The page has had no click or
 ## key press, so the browser has to let the download through without any user activation;
-## src/game-web-e2e/web_e2e.py checks that it arrives and holds the log. Elsewhere the button
-## hides, and nothing is saved.
+## src/game-web-e2e/web_e2e.py checks that it arrives and holds the log. Then the tab has to show
+## the note under the button (#1817). Elsewhere the button hides, and nothing is saved.
 func _save_log_by_controller(main: Node) -> String:
 	if not OS.has_feature("web"):
 		return ""
-	var save: ErrorLogButton = ErrorLogButton.new()
-	main.add_child(save)
+	var page: Node = (load(CREDITS) as PackedScene).instantiate()
+	main.add_child(page)
+	var save: ErrorLogButton = page.get_node("ErrorLog") as ErrorLogButton
 	if not save.visible:
-		save.queue_free()
+		page.queue_free()
 		return "the error log's save button doesn't show on the web"
 	save.grab_focus()
 	_press_a(true)
 	_press_a(false)
-	save.queue_free()
+	var result: String = _log_note(page)
+	page.queue_free()
+	return result
+
+
+## After the save the Credits tab says, under the button, that the browser may ask to allow the
+## download, which a controller can't answer, and shows the log's newest lines, for a player with
+## only a controller to read or photograph (#1817).
+static func _log_note(page: Node) -> String:
+	var note: Label = page.get_node_or_null("ErrorLogNote") as Label
+	if note == null or not note.is_visible_in_tree():
+		return "after the save the Credits tab shows no note under the error log's button"
+	var logged: String = FileAccess.get_file_as_string(ErrorLog.PATH).strip_edges()
+	var newest: String = logged.get_slice("\n", logged.get_slice_count("\n") - 1)
+	if not note.text.contains(BROWSER_MAY_ASK) or not note.text.contains(newest):
+		return (
+			"the note under the error log's button doesn't say the browser may ask and show the"
+			+ " log's newest line (%s): %s" % [newest, note.text]
+		)
 	return ""
 
 
