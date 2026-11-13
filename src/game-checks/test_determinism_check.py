@@ -295,6 +295,23 @@ class FormsTest(unittest.TestCase):
         ):
             self.assertEqual(forbidden_lines(source), [], source)
 
+    def test_a_declaration_outside_a_function_counts_only_in_its_class(self) -> None:
+        # An inner class's members and the outer class's don't reach each other, and Godot doesn't
+        # warn when one shadows the other (#2288).
+        for source in (
+            "var tile: Vector2i\n\n\nclass Inner:\n\textends RefCounted\n\n\tvar tile: String"
+            ' = "ab"\n\n\tfunc f() -> int:\n\t\treturn tile.length()',
+            "var tile: Vector2i\n\n\nclass Inner:\n\tfunc f(tile: String) -> int:"
+            "\n\t\treturn tile.length()",
+            "static var tile: Vector2i\n\n\nclass Inner:\n\tvar tile: String"
+            "\n\tvar a := tile.length()",
+            "class Inner:\n\tvar tile: Vector2i\n\n\nfunc f() -> void:\n\tvar a := tile.length()",
+            "class Inner:\n\tvar tile: Vector2i\n\n\nvar a := tile.length()",
+            "class A:\n\tvar tile: Vector2i\n\n\nclass B:\n\tfunc f() -> void:"
+            "\n\t\tvar a := tile.length()",
+        ):
+            self.assertEqual(forbidden_lines(source), [], source)
+
     def test_a_declared_vector2i_still_counts_in_its_scope(self) -> None:
         # What #2264's scoping must keep refusing: the line of each length().
         for source in (
@@ -309,13 +326,21 @@ class FormsTest(unittest.TestCase):
             "var d := {\n\tf = func(tile: Vector2i) -> void:\n\t\tprint(tile.length())\n}",
             "var d := {\n\tf = func() -> void:\n\t\tvar tile: Vector2i"
             "\n\t\tprint(tile.length())\n}",
-            "class A:\n\tvar tile: Vector2i\n\n\nfunc f() -> void:\n\tvar a := tile.length()",
             # Code after a multi-line string's closing quotes, and a backslash continuation
             # indented less, continue their statement: the function goes on (#2271).
             'func f() -> void:\n\tvar tile: Vector2i\n\tvar n := """a\nb""".strip_edges()'
             "\n\tvar a := tile.length()",
             "func f() -> void:\n\tvar tile: Vector2i\n\tvar n := 1 + \\\n2"
             "\n\tvar a := tile.length()",
+            # In its own class, and an outer class's constant, which an inner class reaches (#2288).
+            "class Inner:\n\tvar tile: Vector2i\n\n\tfunc f() -> void:\n\t\tvar a := tile.length()",
+            "class Inner:\n\tvar tile: Vector2i\n\tvar a := tile.length()",
+            "var tile: Vector2i\n\n\nclass Inner:\n\tpass\n\n\nfunc f() -> void:"
+            "\n\tvar a := tile.length()",
+            "const TILE: Vector2i = Vector2i.ONE\n\n\nclass Inner:\n\tfunc f() -> void:"
+            "\n\t\tvar a := TILE.length()",
+            "class A:\n\tconst TILE: Vector2i = Vector2i.ONE\n\n\tclass B:\n\t\tfunc f() -> void:"
+            "\n\t\t\tvar a := TILE.length()",
         ):
             hit = [
                 f"{number}:{line}"
