@@ -92,7 +92,7 @@ INT_VECTOR_DECLARED = re.compile(r"\b(\w+)\s*:\s*Vector[234]i\b(?!\s*[.(])")
 # own methods return (#2261, #2287). So are a typed dictionary's values, read by subscript or get().
 INT_VECTOR_ARRAY_DECLARED = re.compile(r"\b(\w+)\s*:\s*Array\[\s*Vector[234]i\s*\]")
 INT_VECTOR_DICTIONARY_DECLARED = re.compile(
-    r"\b(\w+)\s*:\s*Dictionary\[\s*\w+(?:\[[^\[\]]*\])?\s*,\s*Vector[234]i\s*\]"
+    r"\b(\w+)\s*:\s*Dictionary\[\s*[\w.]+(?:\[[^\[\]]*\])?\s*,\s*Vector[234]i\s*\]"
 )
 SUBSCRIPT = r"\[(?:[^\[\]]|\[(?:[^\[\]]|\[[^\[\]]*\])*\])*\]"
 # An element method's arguments are matched as balanced parentheses by calls_float_method.
