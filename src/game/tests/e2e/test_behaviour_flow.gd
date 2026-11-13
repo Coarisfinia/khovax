@@ -44,10 +44,11 @@ extends RefCounted
 ##
 ## Babies live beside the grown ones (#1697): of the bundles of rolled wild monsters whose species
 ## has an earlier form, a count, not a roll, picks the ones with babies (#2239), the same on every
-## seed: three in every five, at WildBabies.CHANCE, the first among them; a baby is of the first form of its line (level 1 and unevolved), a grown one keeps its
-## species, a monster the region names never starts as a baby, a species with no earlier form has
-## no babies (owner, on #1722), and a save gives the babies back, in the state hash. In Hrovumel
-## Stolm, a Vynakiir's baby is a Vynnimu, and every baby there is a first form with a later one.
+## seed: three in every five, at WildBabies.CHANCE, the first among them; a baby is of the first
+## form of its line (level 1 and unevolved), a grown one keeps its species, a monster the region
+## names never starts as a baby, a species with no earlier form has no babies (owner, on #1722),
+## and a save gives the babies back, in the state hash. In Hrovumel Stolm, a Vynakiir's baby is a
+## Vynnimu, and every baby there is a first form with a later one.
 ##
 ## In its grazing hours a grazer walks to the nearest grass and eats there, and in its drinking
 ## hours a drinker finds its way round a rock wall to the nearest water and drinks (#1203).
