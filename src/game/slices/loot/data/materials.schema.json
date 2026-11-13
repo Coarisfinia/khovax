@@ -5,7 +5,7 @@
 	"description": "A material (#774): an item the loot, harvest and chest tables may give that isn't a piece of gear, kept in the player's profile by its id with how many they have. One file per material, named after its id, so the content flow can refuse a table naming an item that doesn't exist. An id is never reused or changed once shipped.",
 	"type": "object",
 	"additionalProperties": false,
-	"required": ["id", "name"],
+	"required": ["id", "name", "category"],
 	"properties": {
 		"id": {
 			"description": "Stable, never reused: lowercase words joined by underscores.",
@@ -17,6 +17,10 @@
 			"type": "string",
 			"x-translate": true,
 			"pattern": "\\S"
+		},
+		"category": {
+			"description": "What kind of material it is (#2281), so a reader can tell one from another by its data, not by a list of ids: a tonic refuses every mineral (rock, ore, a shard or core of rock) and every metal (#2038). A plant grows; an animal part comes from a creature; a liquid is drunk or poured; a catalyst is mana that sets a change off; an essence is an element made into a thing.",
+			"enum": ["plant", "animal", "mineral", "metal", "liquid", "catalyst", "essence"]
 		},
 		"model": {
 			"description": "Its 3D model (every item has one, #1579): a model id in the resource packs (#1864) that a pack has. Optional until every material has one (#1585, #1586).",
