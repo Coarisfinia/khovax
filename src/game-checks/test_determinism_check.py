@@ -376,6 +376,7 @@ class FormsTest(unittest.TestCase):
             "class A:\n\tconst CORNERS: Array[Vector4i] = []\nvar a := A.CORNERS[0].length()",
             'var spots: Dictionary[String, Vector2i]\nvar a := obj.spots["home"].length()',
             "static var spots: Dictionary[int, Vector2i]\nvar a := obj.spots.get(k).length()",
+            "var spots: Dictionary[Rules.Kind, Vector2i]\nvar a := obj.spots[k].length()",
         ):
             hit = [
                 f"{number}:{line}"

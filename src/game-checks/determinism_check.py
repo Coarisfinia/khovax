@@ -111,7 +111,7 @@ INT_VECTOR_MEMBER = re.compile(rf"{MEMBER}Vector[234]i\b(?!\s*[.(])")
 INT_VECTOR_COLLECTION_MEMBERS = (
     (re.compile(rf"{MEMBER}Array\[\s*Vector[234]i\s*\]"), ARRAY_ELEMENT),
     (
-        re.compile(rf"{MEMBER}Dictionary\[\s*\w+(?:\[[^\[\]]*\])?\s*,\s*Vector[234]i\s*\]"),
+        re.compile(rf"{MEMBER}Dictionary\[\s*[\w.]+(?:\[[^\[\]]*\])?\s*,\s*Vector[234]i\s*\]"),
         DICTIONARY_VALUE,
     ),
 )
