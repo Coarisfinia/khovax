@@ -309,6 +309,10 @@ class FormsTest(unittest.TestCase):
             "class Inner:\n\tvar tile: Vector2i\n\n\nvar a := tile.length()",
             "class A:\n\tvar tile: Vector2i\n\n\nclass B:\n\tfunc f() -> void:"
             "\n\t\tvar a := tile.length()",
+            "var tiles: Array[Vector2i]\n\n\nclass Inner:\n\tvar tiles: Array[String]"
+            "\n\tvar a := tiles.front().length()",
+            "var spots: Dictionary[String, Vector2i]\n\n\nclass Inner:"
+            "\n\tvar spots: Dictionary[String, String]\n\tvar a := spots.get(key).length()",
         ):
             self.assertEqual(forbidden_lines(source), [], source)
 
@@ -345,6 +349,10 @@ class FormsTest(unittest.TestCase):
             "\n\t\tvar a := TILES[0].length()",
             "class Inner:\n\tfunc f() -> void:\n\t\tfor tile in TILES:\n\t\t\tprint(tile.length())"
             "\n\n\nconst TILES: Array[Vector2i] = []",
+            "const TILES: Array[Vector2i] = []\n\n\nclass Inner:\n\tfunc f() -> void:"
+            "\n\t\tfor tile in TILES.slice(1):\n\t\t\tprint(tile.length())",
+            "const SPOTS: Dictionary[String, Vector2i] = {}\n\n\nclass Inner:"
+            "\n\tvar a := SPOTS.get(key).length()",
         ):
             hit = [
                 f"{number}:{line}"
@@ -418,6 +426,53 @@ class FormsTest(unittest.TestCase):
             " -> int:\n\treturn tiles[0].length()",
             "func f(tiles: Array[Vector2i]) -> void:\n\tpass\n\n\nfunc g(tiles: Array[String])"
             " -> void:\n\tfor tile in tiles:\n\t\tprint(tile.length())",
+        ):
+            self.assertEqual(forbidden_lines(source), [], source)
+
+    def test_an_element_read_otherwise_is_refused(self) -> None:
+        # Through an array's methods, a deeper subscript, an array-returning call as a loop's
+        # source, and a typed dictionary's values (#2287).
+        for source in (
+            "var tiles: Array[Vector2i]\nvar a := tiles.front().length()",
+            "var tiles: Array[Vector3i]\nvar a := tiles.back().distance_to(b)",
+            "var tiles: Array[Vector2i]\nvar a := tiles.pop_back().abs().length()",
+            "var tiles: Array[Vector2i]\nvar a := self.tiles.pop_front( ).length()",
+            "var tiles: Array[Vector2i]\nvar a := tiles.pop_at(0).length()",
+            "var tiles: Array[Vector2i]\nvar a := tiles.front ().length()",
+            "var spots: Dictionary[String, Vector2i]\nvar a := spots.get (key).length()",
+            "var spots: Dictionary[Rules.Kind, Vector2i]\nvar a := spots[kind].length()",
+            "var tiles: Array[Vector4i]\nvar a := tiles.get(ids[i + 1]).length()",
+            "var tiles: Array[Vector2i]\nvar a := tiles[ids[keys[0]]].length()",
+            "func f(tiles: Array[Vector2i]) -> void:\n\tfor tile in tiles.slice(1, size(2)):"
+            "\n\t\tprint(tile.length())",
+            "var tiles: Array[Vector2i]\nfunc f() -> void:\n\tfor tile in self.tiles.duplicate():"
+            "\n\t\tprint(tile.length())",
+            "func f(tiles: Array[Vector2i]) -> void:\n\tfor tile in tiles.filter(func(t: Vector2i)"
+            " -> bool: return t.x > 0).slice(1):\n\t\tprint(tile.length())",
+            'var spots: Dictionary[String, Vector2i]\nvar a := spots["home"].length()',
+            "var spots: Dictionary[StringName, Vector3i]\nvar a := spots[&\"a\"].distance_to(b)",
+            "var spots: Dictionary[String, Vector2i]"
+            "\nvar a := spots.get(key, Vector2i.ZERO).length()",
+        ):
+            hit = [
+                f"{number}:{line}"
+                for number, line in enumerate(source.split("\n"), 1)
+                if "length(" in line or "distance_to(" in line
+            ]
+            self.assertEqual(forbidden_lines(source), hit, source)
+
+    def test_an_element_read_otherwise_of_anything_else_is_allowed(self) -> None:
+        for source in (
+            "var names: Array[String]\nvar a := names.front().length()",
+            "var names: Array[String]\nvar a := names.get(0).length()",
+            "var tiles: Array[Vector2i]\nvar a := obj.tiles.back().length()",
+            "var tiles: Array[Vector2i]\nvar a := tiles.front_name().length()",
+            "func f(names: Array[String]) -> void:\n\tfor name in names.slice(1):"
+            "\n\t\tprint(name.length())",
+            "var names: Dictionary[Vector2i, String]\nvar a := names[tile].length()",
+            "var names: Dictionary[Vector2i, String]\nvar a := names.get(tile).length()",
+            "var spots: Dictionary[String, Vector2i]\nfunc f() -> void:\n\tfor key in spots:"
+            "\n\t\tprint(key.length())",
         ):
             self.assertEqual(forbidden_lines(source), [], source)
 
