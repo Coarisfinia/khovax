@@ -292,34 +292,44 @@ func _check_drinking() -> String:
 	var why: String = _refused(profile, state, "tonic_berry", "a tonic with no companion out")
 	if not why.is_empty():
 		return why
-	Simulation.step(state, [Command.new()])
+	_idle(state)
 	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
 	var companion_id: int = companions.companion_of(0)
 	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
-	var _companion_hurt: bool = health.hurt(state, companion_id, health.max_hp_of(state, companion_id) - 1)
+	var _companion_hurt: bool = health.hurt(
+		state,
+		companion_id,
+		health.max_hp_of(state, companion_id) - 1,
+	)
 	var _player_hurt: bool = health.hurt(state, player.id, HealthFeature.PLAYER_HP - 1)
 	var expected: int = 1 + Fixed.scale(health.max_hp_of(state, companion_id), 300)
 	why = _drunk(profile, state, "tonic_berry")
 	if why.is_empty() and health.hp_of(state, companion_id) != expected:
-		why = "a berry tonic left the companion %d HP, not %d" % [health.hp_of(state, companion_id), expected]
+		why = "a berry tonic left the companion %d HP, not %d" % [
+			health.hp_of(state, companion_id),
+			expected,
+		]
 	if why.is_empty():
 		why = _refused(profile, state, "draught_berry", "a draught while waiting")
 	for _tick: int in DrinkingFeature.WAIT_TICKS - 2:
-		Simulation.step(state, [Command.new()])
+		_idle(state)
 	if why.is_empty():
 		why = _refused(profile, state, "draught_berry", "a draught a tick before the wait ended")
-	Simulation.step(state, [Command.new()])
+	_idle(state)
 	if why.is_empty():
 		why = _drunk(profile, state, "draught_berry")
 	expected = 1 + Fixed.scale(HealthFeature.PLAYER_HP, 300)
 	if why.is_empty() and health.hp_of(state, player.id) != expected:
-		why = "a berry draught left the player %d HP, not %d" % [health.hp_of(state, player.id), expected]
+		why = "a berry draught left the player %d HP, not %d" % [
+			health.hp_of(state, player.id),
+			expected,
+		]
 	if why.is_empty():
 		why = _refused(profile, state, "draught_berry", "a draught none of is left")
 	if not why.is_empty():
 		return why
 	for _tick: int in DrinkingFeature.WAIT_TICKS:
-		Simulation.step(state, [Command.new()])
+		_idle(state)
 	var knockdown: KnockdownFeature = state.feature(KnockdownFeature.ID) as KnockdownFeature
 	knockdown.knock_down(player.id)
 	return _refused(profile, state, "draught_moss", "a draught for a knocked-down player")
@@ -337,7 +347,8 @@ func _drunk(profile: Profile, state: GameState, brew: String) -> String:
 	var command: Command = Command.new()
 	profile.outbox.entries[0].fill(command)
 	var _dropped: bool = profile.outbox.drop(profile.outbox.entries[0].id)
-	Simulation.step(state, [command])
+	var commands: Array[Command] = [command]
+	Simulation.step(state, commands)
 	return ""
 
 
@@ -350,3 +361,9 @@ func _refused(profile: Profile, state: GameState, brew: String, what: String) ->
 	if refusal.is_empty() or profile.materials != held or not profile.outbox.entries.is_empty():
 		return "%s wasn't refused before anything was spent: %s" % [what, refusal]
 	return ""
+
+
+## Steps `state` once with player 0 standing.
+static func _idle(state: GameState) -> void:
+	var commands: Array[Command] = [Command.new()]
+	Simulation.step(state, commands)
