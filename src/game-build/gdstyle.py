@@ -51,7 +51,8 @@ def install(version: str, sha256: str, binary: Path) -> None:
         if actual != sha256:
             raise ValueError(f"the download's checksum is {actual}, CI's is {sha256}")
         unpacked = Path(folder) / "gdstyle"
-        with tarfile.open(archive) as tar:
+        # The release is a .tar.gz; naming it keeps a refusal to one line, unlike auto-detection.
+        with tarfile.open(archive, "r:gz") as tar:
             member = tar.extractfile("gdstyle")
             if member is None:
                 raise ValueError("the archive's gdstyle isn't a file")
