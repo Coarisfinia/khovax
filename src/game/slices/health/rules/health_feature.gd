@@ -13,7 +13,11 @@ extends Feature
 ## every feature that hurts or heals can require it, and it names neither (#821). A later rule can
 ## shield an entity (`shield`, a player a dialog holds, #981): no hit hurts it, and a wild monster
 ## doesn't pick it as a target. A player can be invincible (`make_invincible`, the `--invincible`
-## launch option, #1142): no hit hurts them either, but wild monsters still fight them.
+## launch option, #1142): no hit hurts them either, but wild monsters still fight them. A player's
+## request of the kind OutboxEntry.INVINCIBLE (the Settings tab's Debug submenu, #2273) makes them
+## invincible, or vulnerable again, from the tick it's applied; like every request, it's applied
+## once (OutboxReceipts), and one with data that's neither 0 nor 1 is acknowledged and changes
+## nothing.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "health"
@@ -58,13 +62,32 @@ func requires() -> Array[String]:
 	return [KnockdownFeature.ID]
 
 
-## A player revived this tick gets REVIVED_HP of their HP back (#479).
-func step(state: GameState, _commands: Array[Command]) -> void:
+## A player revived this tick gets REVIVED_HP of their HP back (#479); a player asking to be
+## invincible, or to stop, is so from now on (#2273).
+func step(state: GameState, commands: Array[Command]) -> void:
+	_apply_invincible_requests(state, commands)
 	for event: RefCounted in state.events:
 		var revived: PlayerRevived = event as PlayerRevived
 		if revived != null and state.entity(revived.entity_id) != null:
 			var full_hp: int = max_hp_of(state, revived.entity_id)
 			_damage[revived.entity_id] = full_hp - Fixed.scale(full_hp, REVIVED_HP)
+
+
+## Carries out the players' requests to be invincible or not (OutboxEntry.INVINCIBLE), in slot
+## order, acknowledging every one, kept in their world store like `make_invincible`.
+func _apply_invincible_requests(state: GameState, commands: Array[Command]) -> void:
+	for slot: int in GameState.MAX_PLAYERS:
+		var command: Command = Command.of(commands, slot)
+		var asking: bool = command != null and command.request_kind == OutboxEntry.INVINCIBLE
+		if not asking or state.player(slot) == null:
+			continue
+		if not OutboxReceipts.take(state, slot, ID, command):
+			continue
+		var entry: Dictionary = state.store(slot, ID)
+		if command.request_data == 1:
+			entry[INVINCIBLE] = 1
+		elif command.request_data == 0:
+			var _dropped: bool = entry.erase(INVINCIBLE)
 
 
 ## Gives `entity_id` its species' HP: its feature calls this when it adds or restores it. A wild

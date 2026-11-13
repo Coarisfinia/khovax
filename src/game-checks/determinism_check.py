@@ -87,6 +87,11 @@ INT_VECTOR_METHOD = re.compile(
 )
 FLOAT_METHOD = re.compile(r"\.(?:length|distance_to)\s*\(")
 INT_VECTOR_DECLARED = re.compile(r"\b(\w+)\s*:\s*Vector[234]i\b(?!\s*[.(])")
+# An Array[Vector2i]'s elements are integer vectors too: a subscript of it (brackets inside, one
+# level deep) and a loop variable over it (#2261).
+INT_VECTOR_ARRAY_DECLARED = re.compile(r"\b(\w+)\s*:\s*Array\[\s*Vector[234]i\s*\]")
+SUBSCRIPT = r"\[(?:[^\[\]]|\[[^\[\]]*\])*\]"
+FOR_LOOP = re.compile(r"\bfor\s+(\w+)\s+in\s+(?:self\.)?(\w+)\s*:")
 # A function's parameters and locals count in its body only (#2264), any other declaration in the
 # class it is in: the file's own or an inner class, which don't reach each other's members. An inner
 # class reaches the constants of the classes around it, though (Godot 4.7, #2288). A function or
@@ -252,12 +257,14 @@ def scopes_of(lines: list[str], continued: set[int]) -> list[Scope]:
     return scopes
 
 
-def declared_int_vectors(bare: list[str], owners: list[int | None]) -> dict[int | None, set[str]]:
-    """The names declared as an integer vector, by the function or class they count in (None: the
-    file's own class)."""
+def declared_int_vectors(
+    bare: list[str], owners: list[int | None], declaration: re.Pattern[str] = INT_VECTOR_DECLARED
+) -> dict[int | None, set[str]]:
+    """The names declared as an integer vector (or what `declaration` declares), by the function
+    or class they count in (None: the file's own class)."""
     joined = "\n".join(bare)
     declared: dict[int | None, set[str]] = {}
-    for hit in INT_VECTOR_DECLARED.finditer(joined):
+    for hit in declaration.finditer(joined):
         before = joined[: hit.start()]
         # A dictionary entry, not a declaration: a key in braces, not a lambda's local in them.
         if innermost_opener(before) == "{" and before.rstrip().endswith(("{", ",")):
@@ -269,8 +276,9 @@ def declared_int_vectors(bare: list[str], owners: list[int | None]) -> dict[int 
 
 def receiver_in(names: set[str]) -> re.Pattern[str]:
     """An integer vector written out or one of `names`, as length()'s receiver: the name itself or
-    the script's own member, not another object's (`obj.tile`, #2264)."""
-    own = (rf"(?<![\w.])(?:self\.)?{name}\b" for name in sorted(names))
+    the script's own member, not another object's (`obj.tile`, #2264). A name may end in a
+    subscript, which `\b` can't follow (#2261)."""
+    own = (rf"(?<![\w.])(?:self\.)?{name}(?!\w)" for name in sorted(names))
     return re.compile("|".join([INT_VECTOR_RECEIVER, *own]))
 
 
@@ -285,11 +293,21 @@ def forbidden_lines(source: str) -> list[str]:
         for classes, function in scopes
     ]
     declared = declared_int_vectors(bare, owners)
+    arrays = declared_int_vectors(bare, owners, INT_VECTOR_ARRAY_DECLARED)
     constants: dict[int | None, set[str]] = {}
-    for index, (line, (_, function)) in enumerate(zip(bare, scopes)):
+    for index, (line, (classes, function)) in enumerate(zip(bare, scopes)):
+        owner = owners[index]
         constant = CONSTANT.match(line)
-        if function is None and constant and constant.group(1) in declared.get(owners[index], ()):
-            constants.setdefault(owners[index], set()).add(constant.group(1))
+        if function is None and constant:
+            if constant.group(1) in declared.get(owner, ()):
+                constants.setdefault(owner, set()).add(constant.group(1))
+            if constant.group(1) in arrays.get(owner, ()):
+                constants.setdefault(owner, set()).add(rf"{constant.group(1)}{SUBSCRIPT}")
+        for loop in FOR_LOOP.finditer(line):
+            if loop.group(2) in arrays.get((None, *classes)[-1], set()) | arrays.get(owner, set()):
+                declared.setdefault(owner, set()).add(loop.group(1))
+    for owner, names in arrays.items():
+        declared.setdefault(owner, set()).update(rf"{name}{SUBSCRIPT}" for name in names)
 
     def names_in(scope: Scope) -> set[str]:
         """Its function's names, its class's and the constants of the classes around that."""
