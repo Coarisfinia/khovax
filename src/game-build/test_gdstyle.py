@@ -29,7 +29,7 @@ TIMEOUT_SECONDS = 1
 # The test's own deadline for the whole download: short, so a trickling one gives up quickly too.
 DEADLINE_SECONDS = 2
 # A trickling server sends a byte this often, well under the read timeout.
-TRICKLE_SECONDS = 0.25
+TRICKLE_SECONDS = 1.5  # fail-first (#2270): planted, gaps longer than the read timeout
 # A run still going after this is hanging.
 RUN_LIMIT_SECONDS = 30
 # The stand-in release is local: a proxy set on the machine running the test must not carry it
@@ -185,6 +185,7 @@ class GdstyleDownloadTest(unittest.TestCase):
         started = time.monotonic()
         code, output, cache = self.run_install(archive({"gdstyle": os.urandom(4096)}), trickle=True)
         self.assert_fails_cleanly(code, output, cache)
+        self.assertIn("took longer than", output)  # the deadline ended it, not the read timeout
         self.assertLess(time.monotonic() - started, RUN_LIMIT_SECONDS)
 
     def test_trickling_headers_give_up(self) -> None:
@@ -192,6 +193,7 @@ class GdstyleDownloadTest(unittest.TestCase):
         started = time.monotonic()
         code, output, cache = self.run_install(archive({"gdstyle": b"x"}), slow_headers=True)
         self.assert_fails_cleanly(code, output, cache)
+        self.assertIn("took longer than", output)  # the deadline ended it, not the read timeout
         self.assertLess(time.monotonic() - started, RUN_LIMIT_SECONDS)
 
     def test_cut_download(self) -> None:
