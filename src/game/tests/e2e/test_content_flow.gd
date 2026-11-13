@@ -2632,7 +2632,8 @@ func _check_pack_preload() -> String:
 func _check_stepped_preload(pack: ResourcePack) -> String:
 	var files: int = 0
 	for kind: String in ResourcePack.KINDS:
-		files += 0 if ResourcePack.KINDS[kind].is_empty() else (pack.get(kind) as Dictionary).size()
+		var listed: Dictionary = {} if ResourcePack.KINDS[kind].is_empty() else pack.get(kind)
+		files += listed.size()
 	var stepped: PackPreload = PackPreload.start([pack], 0)
 	var steps: int = 1
 	while not stepped.is_done() and steps <= files:
