@@ -1244,7 +1244,7 @@ func _check_hunt_round_wall() -> String:
 
 
 ## A hunter with no prey in sight walks a patrol a player can read (#2236): from its home out to
-## the ring ROAM_RADIUS from it, reaching it at the tile after the corner its id picks, then round
+## the ring ROAM_RADIUS from it, reaching it at the corner its id picks, then round
 ## that ring in Hex.ring's order, a tile a step, never a random step.
 func _check_hunter_patrols() -> String:
 	var state: GameState = _hunt_state({ "hun": Vector2i(0, 0) })
@@ -1272,8 +1272,8 @@ func _check_hunter_patrols() -> String:
 		if not ring.has(was):
 			if Hex.distance(tile, home) <= Hex.distance(was, home):
 				return "the hunter went from %s to %s, not out to its patrol ring" % [was, tile]
-			if ring.has(tile) and tile != _ring_after(ring, ring[corner], 1):
-				return "the hunter reached its patrol ring at %s, not after its corner" % tile
+			if ring.has(tile) and tile != ring[corner]:
+				return "the hunter reached its patrol ring at %s, not its corner" % tile
 			continue
 		if tile != _ring_after(ring, was, 1):
 			return "the hunter went from %s to %s, not on round its patrol ring" % [was, tile]

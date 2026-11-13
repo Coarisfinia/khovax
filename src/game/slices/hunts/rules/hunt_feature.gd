@@ -4,9 +4,9 @@ extends Feature
 ## (ScheduleFeature), a wild monster of a `predator` species roams around its home, the tile it
 ## stood on when the instance began, on a patrol a player can read and never a random step (#2236,
 ## #1602): it walks the ring ROAM_RADIUS from its home round one way (Hex.ring's order), a step at
-## a time at its pace (WildMonsterFeature.chase), always to the tile after the ring tile nearest
-## it. Off the ring, at home or back from a hunt, that leads it out or back to it; its id sets
-## where round the ring it starts, so hunters at home together spread out. On sighting prey within
+## a time at its pace (WildMonsterFeature.chase), from one ring tile to the next. Off the ring, at
+## home or back from a hunt, it walks to the ring tile nearest it first; from home that's the
+## corner its id picks, so hunters at home together spread out. On sighting prey within
 ## SIGHT, a standing wild monster weaker
 ## than itself (WildMonsterFeature.strength_of) or of a `grazer` species, it stalks it, a step at
 ## a time, and next to it attacks it by the wild monsters' rules: a strike for its strength once
@@ -244,9 +244,9 @@ static func _beaten(state: GameState, monster: int) -> bool:
 	return (state.feature(HealthFeature.ID) as HealthFeature).hp_of(state, monster) <= 1
 
 
-## On its tick to step, the hunter on `tile` steps on its patrol (#2236): toward the tile after the
-## one of its ring nearest it, the first of the equally near counted round from its start, a
-## corner of the ring its id picks.
+## On its tick to step, the hunter on `tile` steps on its patrol (#2236): on its ring toward the
+## next tile round, off it toward the ring tile nearest it, the first of the equally near counted
+## round from the corner its id picks.
 func _roam(state: GameState, wild: WildMonsterFeature, hunter: int, tile: Vector2i) -> void:
 	if (state.tick + hunter) % WildPace.paced(state, WildMonsterFeature.STEP_TICKS, 0) != 0:
 		return
@@ -257,7 +257,10 @@ func _roam(state: GameState, wild: WildMonsterFeature, hunter: int, tile: Vector
 		var near: Vector2i = ring[(corner + i) % ring.size()]
 		if Hex.distance(near, tile) < Hex.distance(ring[(corner + nearest) % ring.size()], tile):
 			nearest = i
-	wild.chase(state, hunter, ring[(corner + nearest + 1) % ring.size()])
+	var goal: Vector2i = ring[(corner + nearest) % ring.size()]
+	if goal == tile:
+		goal = ring[(corner + nearest + 1) % ring.size()]
+	wild.chase(state, hunter, goal)
 
 
 ## The hunter's hunt ends, and it rests until its hunt hours are over.
