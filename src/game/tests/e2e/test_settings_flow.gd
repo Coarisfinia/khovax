@@ -1033,6 +1033,7 @@ func _menu_submenus(menu: GameMenu) -> String:
 		HostSettings.DROP_RATE: SettingsTab.WORLD,
 		HostSettings.RESET_DELAY: SettingsTab.WORLD,
 		HostSettings.REVIVE_ON_WAYSTONES: SettingsTab.WORLD,
+		InvincibleChoice.SETTING: SettingsTab.DEBUG,
 	}
 	for setting: String in homes:
 		if tab.submenu_of(setting) != homes[setting]:
@@ -1128,26 +1129,28 @@ func _menu_difficulty(menu: GameMenu, tab: SettingsTab) -> String:
 
 ## The Debug submenu (#2273), last in the list, holds the Invincible row, Off at first, with no
 ## Auto button: stepping it on says On at once and posts the request to the profile's outbox for
-## the world (the outbox kind 8); stepping back says Off again.
+## the world (OutboxEntry.INVINCIBLE); stepping back says Off again.
 func _menu_debug(menu: GameMenu, tab: SettingsTab) -> String:
-	if tab.submenu_titles().keys().back() != "Debug":
+	if tab.submenu_titles().keys().back() != SettingsTab.DEBUG:
 		return "the Settings tab's last submenu isn't Debug: %s" % [tab.submenu_titles().keys()]
-	tab.opener("Debug").pressed.emit()
-	var next: Button = tab.button("invincible", "Next")
-	if tab.open_submenu() != "Debug" or not next.is_visible_in_tree():
+	tab.opener(SettingsTab.DEBUG).pressed.emit()
+	var next: Button = tab.button(InvincibleChoice.SETTING, "Next")
+	if tab.open_submenu() != SettingsTab.DEBUG or not next.is_visible_in_tree():
 		return "the Debug button doesn't show the Invincible row"
-	if next.get_parent().has_node("Auto") or tab.shown["invincible"] != "Off":
-		return "the Invincible row has an Auto button, or says %s" % tab.shown["invincible"]
+	var at_first: String = tab.shown[InvincibleChoice.SETTING]
+	if next.get_parent().has_node("Auto") or at_first != "Off":
+		return "the Invincible row has an Auto button, or says %s" % at_first
 	next.pressed.emit()
 	var outbox: Outbox = (menu.driver.holder as ProfileHolder).keeper.profile.outbox
 	var asked: bool = false
 	for request: OutboxEntry in outbox.entries:
-		asked = asked or (request.kind == 8 and request.data == 1)
-	var said: String = tab.shown["invincible"]
-	tab.button("invincible", "Previous").pressed.emit()
-	if said != "On" or not asked or tab.shown["invincible"] != "Off":
+		var on: bool = request.data == InvincibleChoice.ON
+		asked = asked or (request.kind == OutboxEntry.INVINCIBLE and on)
+	var said: String = tab.shown[InvincibleChoice.SETTING]
+	tab.button(InvincibleChoice.SETTING, "Previous").pressed.emit()
+	if said != "On" or not asked or tab.shown[InvincibleChoice.SETTING] != "Off":
 		return "stepping invincibility on says %s, asking the world: %s" % [said, asked]
-	tab.back_button("Debug").pressed.emit()
+	tab.back_button(SettingsTab.DEBUG).pressed.emit()
 	return ""
 
 

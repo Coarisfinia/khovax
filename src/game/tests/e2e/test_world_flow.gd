@@ -266,7 +266,8 @@ func _check_invincible() -> String:
 	return ""
 
 
-## The Debug submenu's request (#2273, the outbox kind 8): a player asking to be invincible is from
+## The Debug submenu's request (#2273, OutboxEntry.INVINCIBLE): a player asking to be invincible is
+## from
 ## the tick the world applies it, and acknowledged; asking to stop makes them vulnerable again.
 ## The same request sent again changes nothing.
 func _check_invincible_requested() -> String:
@@ -275,7 +276,7 @@ func _check_invincible_requested() -> String:
 	var health: HealthFeature = basic.feature(HealthFeature.ID) as HealthFeature
 	var outbox: Outbox = Outbox.new()
 	var on: Command = Command.new()
-	outbox.post(8, 1).fill(on)
+	outbox.post(OutboxEntry.INVINCIBLE, InvincibleChoice.ON).fill(on)
 	var asking: Array[Command] = [on]
 	world.step(asking)
 	var acknowledged: bool = false
@@ -284,7 +285,7 @@ func _check_invincible_requested() -> String:
 	if not acknowledged or not health.is_invincible(basic, world.player(0).id):
 		return "a player asking to be invincible isn't, or isn't acknowledged"
 	var off: Command = Command.new()
-	outbox.post(8, 0).fill(off)
+	outbox.post(OutboxEntry.INVINCIBLE, InvincibleChoice.OFF).fill(off)
 	var stopping: Array[Command] = [off]
 	world.step(stopping)
 	if health.is_invincible(basic, world.player(0).id):
