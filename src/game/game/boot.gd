@@ -75,13 +75,14 @@ func _ready() -> void:
 
 ## Each frame shows how far the packs' files have loaded, and once they all have, loads the game
 ## and then counts its first frames under the fog. The load is polled until it's done, even with
-## the bar full: one dropped before would leave its files' loads behind.
+## the bar full: one dropped before would leave its files' loads behind. Each poll of the load
+## without threads loads a step, so it's asked whether it's done only once its progress is full:
+## one step a frame.
 func _process(_delta: float) -> void:
 	if game == null:
-		if not _loads.is_done():
-			bar.value = _loads.progress()
+		bar.value = _loads.progress()
+		if bar.value < bar.max_value or not _loads.is_done():
 			return
-		bar.value = bar.max_value
 		_report("packs loaded")
 		var scene: PackedScene = load(GAME) as PackedScene
 		if scene == null:
