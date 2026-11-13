@@ -1,0 +1,103 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://github.com/Coarisfinia/khovax/slices/tonics/data/tonics.schema.json",
+	"title": "Tonic",
+	"description": "A tonic (#2090, the potion design on #2049): a vial crafted at the base from a carrier, one primary ingredient that sets its effect and at most one trait that sets its trade-off, for the out companion or for the player. It lists its own ingredients, so no other material ever goes into it, and every brew it allows, each with its exact cost and values. Crafting a brew spends its cost from the player's profile, which counts the brew like a material. One file per tonic, named after its id. No ids are ever reused or changed once shipped.",
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["id", "carrier", "catalyst", "primaries", "traits", "targets", "brews"],
+	"$defs": {
+		"id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+		"seconds": { "type": "integer", "minimum": 0, "maximum": 3600 }
+	},
+	"properties": {
+		"id": {
+			"description": "Stable, never reused: lowercase words joined by underscores.",
+			"$ref": "#/$defs/id"
+		},
+		"carrier": {
+			"description": "The material every brew is carried in (a liquid), which sets no effect itself.",
+			"$ref": "#/$defs/id"
+		},
+		"catalyst": {
+			"description": "The material only the Shared trait adds, never a primary.",
+			"$ref": "#/$defs/id"
+		},
+		"primaries": {
+			"description": "Each primary ingredient, by its material id, with the effect it sets: one primary per brew.",
+			"type": "object",
+			"minProperties": 1,
+			"propertyNames": { "pattern": "^[a-z][a-z0-9_]*$" },
+			"additionalProperties": { "enum": ["mend", "regrowth", "ward", "quicken", "fortify"] }
+		},
+		"traits": {
+			"description": "The traits a brew may take, none included: at most one per brew.",
+			"type": "array",
+			"uniqueItems": true,
+			"minItems": 1,
+			"items": { "enum": ["none", "strong", "lasting", "shared", "slow_release"] }
+		},
+		"targets": {
+			"description": "Who a brew helps, each with the prefix of its brews' ids: the out companion's are tonics, the player's own are draughts, so the name tells them apart.",
+			"type": "object",
+			"minProperties": 1,
+			"additionalProperties": false,
+			"properties": {
+				"companion": { "$ref": "#/$defs/id" },
+				"player": { "$ref": "#/$defs/id" }
+			}
+		},
+		"brews": {
+			"description": "Every brew the tonic allows, one per target, primary and trait.",
+			"type": "array",
+			"minItems": 1,
+			"items": {
+				"type": "object",
+				"additionalProperties": false,
+				"required": ["id", "name", "target", "primary", "trait", "cost", "potency", "seconds"],
+				"properties": {
+					"id": {
+						"description": "Its target's prefix, its primary, then its trait unless it's none: tonic_bone_strong, draught_moss.",
+						"$ref": "#/$defs/id"
+					},
+					"name": {
+						"description": "The player-facing name, in plain words, naming tonic or draught so its target reads from the name.",
+						"type": "string",
+						"x-translate": true,
+						"pattern": "\\S"
+					},
+					"target": { "enum": ["companion", "player"] },
+					"primary": { "$ref": "#/$defs/id" },
+					"trait": { "enum": ["none", "strong", "lasting", "shared", "slow_release"] },
+					"cost": {
+						"description": "The materials crafting it spends, by id: only the carrier, its primary and, for Shared, the catalyst.",
+						"type": "object",
+						"minProperties": 2,
+						"propertyNames": { "pattern": "^[a-z][a-z0-9_]*$" },
+						"additionalProperties": { "type": "integer", "minimum": 1, "maximum": 1000 }
+					},
+					"potency": {
+						"description": "Its effect's strength in thousandths: of full HP for a heal (each second for Regrowth), of a hit for Ward, of the wait between strikes for Quicken, added to strike damage for Fortify.",
+						"type": "integer",
+						"minimum": 1,
+						"maximum": 999
+					},
+					"seconds": {
+						"description": "How long its effect lasts; 0 for Mend, which heals at once.",
+						"$ref": "#/$defs/seconds"
+					},
+					"delay_seconds": {
+						"description": "How long after drinking its effect starts: only Slow-release waits. 0 when left out.",
+						"$ref": "#/$defs/seconds"
+					},
+					"reach_tiles": {
+						"description": "How far other players' same targets are reached: only Shared reaches. 0 when left out.",
+						"type": "integer",
+						"minimum": 0,
+						"maximum": 10
+					}
+				}
+			}
+		}
+	}
+}

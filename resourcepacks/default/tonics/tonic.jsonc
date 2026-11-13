@@ -1,0 +1,55 @@
+// The tonic (#2090), the first potion of the design on #2049: a vial crafted at the base and drunk
+// for the out companion (a tonic) or for the player (a draught). Dew carries it, one primary sets
+// its effect, and at most one trait sets its trade-off; crystal goes only into a Shared brew. Rock,
+// ore, metal and hide are never brewed (#2038). Every brew the design's table allows is listed, with
+// its cost and values: potency in thousandths, durations in seconds. Placeholders, to tune (#960).
+{
+	"id": "tonic",
+	"carrier": "dew",
+	"catalyst": "crystal",
+	"primaries": { "berry": "mend", "moss": "regrowth", "pondweed": "ward", "feather": "quicken", "bone": "fortify" },
+	"traits": ["none", "strong", "lasting", "shared", "slow_release"],
+	"targets": { "companion": "tonic", "player": "draught" },
+	"brews": [
+		// The out companion: tonics.
+		{ "id": "tonic_berry", "name": "Berry tonic", "target": "companion", "primary": "berry", "trait": "none", "cost": { "dew": 1, "berry": 2 }, "potency": 300, "seconds": 0 },
+		{ "id": "tonic_berry_strong", "name": "Strong berry tonic", "target": "companion", "primary": "berry", "trait": "strong", "cost": { "dew": 1, "berry": 3 }, "potency": 450, "seconds": 0 },
+		{ "id": "tonic_berry_shared", "name": "Shared berry tonic", "target": "companion", "primary": "berry", "trait": "shared", "cost": { "dew": 1, "berry": 2, "crystal": 1 }, "potency": 150, "seconds": 0, "reach_tiles": 3 },
+		{ "id": "tonic_berry_slow_release", "name": "Slow-release berry tonic", "target": "companion", "primary": "berry", "trait": "slow_release", "cost": { "dew": 1, "berry": 2 }, "potency": 450, "seconds": 0, "delay_seconds": 5 },
+		{ "id": "tonic_moss", "name": "Moss tonic", "target": "companion", "primary": "moss", "trait": "none", "cost": { "dew": 1, "moss": 2 }, "potency": 25, "seconds": 20 },
+		{ "id": "tonic_moss_strong", "name": "Strong moss tonic", "target": "companion", "primary": "moss", "trait": "strong", "cost": { "dew": 1, "moss": 3 }, "potency": 37, "seconds": 10 },
+		{ "id": "tonic_moss_lasting", "name": "Lasting moss tonic", "target": "companion", "primary": "moss", "trait": "lasting", "cost": { "dew": 2, "moss": 2 }, "potency": 12, "seconds": 40 },
+		{ "id": "tonic_moss_shared", "name": "Shared moss tonic", "target": "companion", "primary": "moss", "trait": "shared", "cost": { "dew": 1, "moss": 2, "crystal": 1 }, "potency": 12, "seconds": 20, "reach_tiles": 3 },
+		{ "id": "tonic_moss_slow_release", "name": "Slow-release moss tonic", "target": "companion", "primary": "moss", "trait": "slow_release", "cost": { "dew": 1, "moss": 2 }, "potency": 37, "seconds": 20, "delay_seconds": 5 },
+		{ "id": "tonic_pondweed", "name": "Pondweed tonic", "target": "companion", "primary": "pondweed", "trait": "none", "cost": { "dew": 1, "pondweed": 2 }, "potency": 200, "seconds": 30 },
+		{ "id": "tonic_pondweed_strong", "name": "Strong pondweed tonic", "target": "companion", "primary": "pondweed", "trait": "strong", "cost": { "dew": 1, "pondweed": 3 }, "potency": 300, "seconds": 15 },
+		{ "id": "tonic_pondweed_lasting", "name": "Lasting pondweed tonic", "target": "companion", "primary": "pondweed", "trait": "lasting", "cost": { "dew": 2, "pondweed": 2 }, "potency": 100, "seconds": 60 },
+		{ "id": "tonic_pondweed_shared", "name": "Shared pondweed tonic", "target": "companion", "primary": "pondweed", "trait": "shared", "cost": { "dew": 1, "pondweed": 2, "crystal": 1 }, "potency": 100, "seconds": 30, "reach_tiles": 3 },
+		{ "id": "tonic_pondweed_slow_release", "name": "Slow-release pondweed tonic", "target": "companion", "primary": "pondweed", "trait": "slow_release", "cost": { "dew": 1, "pondweed": 2 }, "potency": 300, "seconds": 30, "delay_seconds": 5 },
+		{ "id": "tonic_feather", "name": "Feather tonic", "target": "companion", "primary": "feather", "trait": "none", "cost": { "dew": 1, "feather": 2 }, "potency": 200, "seconds": 20 },
+		{ "id": "tonic_feather_strong", "name": "Strong feather tonic", "target": "companion", "primary": "feather", "trait": "strong", "cost": { "dew": 1, "feather": 3 }, "potency": 300, "seconds": 10 },
+		{ "id": "tonic_feather_lasting", "name": "Lasting feather tonic", "target": "companion", "primary": "feather", "trait": "lasting", "cost": { "dew": 2, "feather": 2 }, "potency": 100, "seconds": 40 },
+		{ "id": "tonic_feather_shared", "name": "Shared feather tonic", "target": "companion", "primary": "feather", "trait": "shared", "cost": { "dew": 1, "feather": 2, "crystal": 1 }, "potency": 100, "seconds": 20, "reach_tiles": 3 },
+		{ "id": "tonic_feather_slow_release", "name": "Slow-release feather tonic", "target": "companion", "primary": "feather", "trait": "slow_release", "cost": { "dew": 1, "feather": 2 }, "potency": 300, "seconds": 20, "delay_seconds": 5 },
+		{ "id": "tonic_bone", "name": "Bone tonic", "target": "companion", "primary": "bone", "trait": "none", "cost": { "dew": 1, "bone": 2 }, "potency": 200, "seconds": 20 },
+		{ "id": "tonic_bone_strong", "name": "Strong bone tonic", "target": "companion", "primary": "bone", "trait": "strong", "cost": { "dew": 1, "bone": 3 }, "potency": 300, "seconds": 10 },
+		{ "id": "tonic_bone_lasting", "name": "Lasting bone tonic", "target": "companion", "primary": "bone", "trait": "lasting", "cost": { "dew": 2, "bone": 2 }, "potency": 100, "seconds": 40 },
+		{ "id": "tonic_bone_shared", "name": "Shared bone tonic", "target": "companion", "primary": "bone", "trait": "shared", "cost": { "dew": 1, "bone": 2, "crystal": 1 }, "potency": 100, "seconds": 20, "reach_tiles": 3 },
+		{ "id": "tonic_bone_slow_release", "name": "Slow-release bone tonic", "target": "companion", "primary": "bone", "trait": "slow_release", "cost": { "dew": 1, "bone": 2 }, "potency": 300, "seconds": 20, "delay_seconds": 5 },
+		// The player themselves: draughts.
+		{ "id": "draught_berry", "name": "Berry draught", "target": "player", "primary": "berry", "trait": "none", "cost": { "dew": 1, "berry": 2 }, "potency": 300, "seconds": 0 },
+		{ "id": "draught_berry_strong", "name": "Strong berry draught", "target": "player", "primary": "berry", "trait": "strong", "cost": { "dew": 1, "berry": 3 }, "potency": 450, "seconds": 0 },
+		{ "id": "draught_berry_shared", "name": "Shared berry draught", "target": "player", "primary": "berry", "trait": "shared", "cost": { "dew": 1, "berry": 2, "crystal": 1 }, "potency": 150, "seconds": 0, "reach_tiles": 3 },
+		{ "id": "draught_berry_slow_release", "name": "Slow-release berry draught", "target": "player", "primary": "berry", "trait": "slow_release", "cost": { "dew": 1, "berry": 2 }, "potency": 450, "seconds": 0, "delay_seconds": 5 },
+		{ "id": "draught_moss", "name": "Moss draught", "target": "player", "primary": "moss", "trait": "none", "cost": { "dew": 1, "moss": 2 }, "potency": 25, "seconds": 20 },
+		{ "id": "draught_moss_strong", "name": "Strong moss draught", "target": "player", "primary": "moss", "trait": "strong", "cost": { "dew": 1, "moss": 3 }, "potency": 37, "seconds": 10 },
+		{ "id": "draught_moss_lasting", "name": "Lasting moss draught", "target": "player", "primary": "moss", "trait": "lasting", "cost": { "dew": 2, "moss": 2 }, "potency": 12, "seconds": 40 },
+		{ "id": "draught_moss_shared", "name": "Shared moss draught", "target": "player", "primary": "moss", "trait": "shared", "cost": { "dew": 1, "moss": 2, "crystal": 1 }, "potency": 12, "seconds": 20, "reach_tiles": 3 },
+		{ "id": "draught_moss_slow_release", "name": "Slow-release moss draught", "target": "player", "primary": "moss", "trait": "slow_release", "cost": { "dew": 1, "moss": 2 }, "potency": 37, "seconds": 20, "delay_seconds": 5 },
+		{ "id": "draught_pondweed", "name": "Pondweed draught", "target": "player", "primary": "pondweed", "trait": "none", "cost": { "dew": 1, "pondweed": 2 }, "potency": 200, "seconds": 30 },
+		{ "id": "draught_pondweed_strong", "name": "Strong pondweed draught", "target": "player", "primary": "pondweed", "trait": "strong", "cost": { "dew": 1, "pondweed": 3 }, "potency": 300, "seconds": 15 },
+		{ "id": "draught_pondweed_lasting", "name": "Lasting pondweed draught", "target": "player", "primary": "pondweed", "trait": "lasting", "cost": { "dew": 2, "pondweed": 2 }, "potency": 100, "seconds": 60 },
+		{ "id": "draught_pondweed_shared", "name": "Shared pondweed draught", "target": "player", "primary": "pondweed", "trait": "shared", "cost": { "dew": 1, "pondweed": 2, "crystal": 1 }, "potency": 100, "seconds": 30, "reach_tiles": 3 },
+		{ "id": "draught_pondweed_slow_release", "name": "Slow-release pondweed draught", "target": "player", "primary": "pondweed", "trait": "slow_release", "cost": { "dew": 1, "pondweed": 2 }, "potency": 300, "seconds": 30, "delay_seconds": 5 }
+	]
+}

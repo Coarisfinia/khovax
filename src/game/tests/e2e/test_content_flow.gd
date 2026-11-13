@@ -2361,7 +2361,7 @@ func _check_pack_manifests() -> String:
 		+ " \"realms\": {\"w\": \"realms/w.md\"}, \"quests\": {\"u\": \"quests/u.jsonc\"},"
 		+ " \"species\": {\"s\": \"species/s.jsonc\"}, \"tiles\": {\"t\": \"tiles/t.jsonc\"},"
 		+ " \"loot_tables\": {\"l\": \"loot/l.jsonc\"}, \"materials\": {\"x\": \"loot/x.jsonc\"},"
-		+ " \"harvest_tables\": {\"h\": \"harvest/h.jsonc\"},"
+		+ " \"harvest_tables\": {\"h\": \"harvest/h.jsonc\"}, \"tonics\": {\"o\": \"o.jsonc\"},"
 		+ " \"translations\": {}%s}"
 	)
 	var cog: String = "resourcepacks/default/textures/game-icons/cog.svg"
@@ -2473,6 +2473,8 @@ func _text_section_cases(valid: String, other: String) -> Dictionary[String, Str
 		),
 		"a material that isn't JSONC": valid.replace("loot/x.jsonc", "loot/x.md"),
 		"no materials": valid.replace(", \"materials\": {\"x\": \"loot/x.jsonc\"}", ""),
+		"a tonic that isn't JSONC": valid.replace("o.jsonc", "o.md"),
+		"no tonics": valid.replace(" \"tonics\": {\"o\": \"o.jsonc\"},", ""),
 	}
 
 
@@ -2785,7 +2787,7 @@ func _pack_manifest(pack_id: String) -> String:
 		+ " \"regions\": {\"r\": \"regions/r.md\"},"
 		+ " \"region_pieces\": {}, \"realms\": {}, \"quests\": {}, \"species\": {},"
 		+ " \"translations\": {}, \"tiles\": {}, \"loot_tables\": {},"
-		+ " \"materials\": {}, \"harvest_tables\": {}}"
+		+ " \"materials\": {}, \"harvest_tables\": {}, \"tonics\": {}}"
 	) % pack_id
 
 
