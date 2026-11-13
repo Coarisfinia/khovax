@@ -49,6 +49,13 @@ OPENING = 1.02
 # about its root towards the arch's line (radians) and reaches this share as far over the ground,
 # blending in over its first band so it still leaves the arch's foot where it did.
 DRAW_TURN, DRAW_REACH = math.radians(25.0), 0.5
+# The passage through the opening (#2157): the player walks through on the ground, so the portal
+# slab reaches down to it, and each tentacle bends out of the walking line where it crossed it.
+# Below the player's height every tentacle keeps at least `CLEAR` (metres, the game's) from the
+# opening's middle, a little more than check_passage.py's passage so their sway stays out of it;
+# the push fades out by `CLEAR_FADE` from the middle and over `CLEAR_RISE` above the player's
+# height, so the tentacles' far reaches and the arch keep their shape.
+CLEAR, CLEAR_FADE, CLEAR_RISE = 0.55, (0.6, 1.0), 0.3
 
 # The portal is the smallest of the mesh's pieces (a thin slab behind the arch's opening), the
 # arch the largest; the other two each hold one side's pair of tentacles.
@@ -164,6 +171,29 @@ def draw_in(skin, feet, depth):
             offset = Matrix.Rotation(angle, 2) @ (point.xy - root.xy)
             reach = 1.0 - share * (1.0 - DRAW_REACH)
             point.x, point.y = root.x + reach * offset.x, root.y + reach * offset.y
+
+
+def clear_passage(skin, feet):
+    """Bends the tentacles out of the walking line (`CLEAR`): each vertex moves away from the
+    opening's middle along X, most where it lay nearest, so none stays closer than `CLEAR` below
+    the player's height. The move never crosses the middle, and keeps each side's order."""
+    top = world_scale.PLAYER_HEIGHT
+    for index in feet:
+        point = skin.data.vertices[index].co
+        away = abs(point.x)
+        push = math.hypot(away, CLEAR) - away
+        push *= 1.0 - smoothstep(CLEAR_FADE[0], CLEAR_FADE[1], away)
+        push *= 1.0 - smoothstep(top, top + CLEAR_RISE, point.z)
+        point.x += push if point.x >= 0.0 else -push
+
+
+def ground_portal(skin, portal):
+    """Stretches the portal slab down to the ground (#2157), its top kept where it was: the player
+    steps into it on the ground rather than passing under its lower edge."""
+    low, high = bounds([skin.data.vertices[index].co for index in portal])
+    for index in portal:
+        point = skin.data.vertices[index].co
+        point.z = high.z - (high.z - point.z) * high.z / (high.z - low.z)
 
 
 def armature(portal_middle, portal_size, tentacles):
@@ -323,6 +353,7 @@ def build(out):
     low, high = bounds([vertex.co for vertex in skin.data.vertices])
     depth = (high.y - low.y) / 2.0
     draw_in(skin, pieces[1] + pieces[2], depth)
+    clear_passage(skin, pieces[1] + pieces[2])
     cut_portal(skin, pieces[-1])
     # The cut portal is found again as the piece filling the slab's bounds, whatever order the
     # cuts left the vertices in; the arch stays the largest piece.
@@ -330,6 +361,8 @@ def build(out):
     portal = next(piece for piece in pieces[1:] if bounds([skin.data.vertices[index].co for index in piece])
                   == (portal_low, portal_high))
     pieces = [pieces[0]] + [piece for piece in pieces[1:] if piece is not portal] + [portal]
+    ground_portal(skin, portal)
+    portal_low, portal_high = bounds([skin.data.vertices[index].co for index in portal])
     points = [vertex.co.copy() for vertex in skin.data.vertices]
     low, high = bounds(points)
     portal_middle = (portal_low + portal_high) / 2.0
