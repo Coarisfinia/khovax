@@ -401,6 +401,8 @@ class FormsTest(unittest.TestCase):
             "var tiles: Array[Vector2i]\nvar a := tiles.pop_back().abs().length()",
             "var tiles: Array[Vector2i]\nvar a := self.tiles.pop_front( ).length()",
             "var tiles: Array[Vector2i]\nvar a := tiles.pop_at(0).length()",
+            "var tiles: Array[Vector2i]\nvar a := tiles.front ().length()",
+            "var spots: Dictionary[String, Vector2i]\nvar a := spots.get (key).length()",
             "var tiles: Array[Vector4i]\nvar a := tiles.get(ids[i + 1]).length()",
             "var tiles: Array[Vector2i]\nvar a := tiles[ids[keys[0]]].length()",
             "func f(tiles: Array[Vector2i]) -> void:\n\tfor tile in tiles.slice(1, size(2)):"

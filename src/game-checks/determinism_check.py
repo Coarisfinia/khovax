@@ -97,9 +97,9 @@ INT_VECTOR_DICTIONARY_DECLARED = re.compile(
 SUBSCRIPT = r"\[(?:[^\[\]]|\[(?:[^\[\]]|\[[^\[\]]*\])*\])*\]"
 # An element method's arguments are matched as balanced parentheses by calls_float_method.
 ARRAY_ELEMENT = (
-    rf"(?:{SUBSCRIPT}|\.(?:front|back|pop_back|pop_front)\(\s*\)|\.(?:get|pop_at)(?=\())"
+    rf"(?:{SUBSCRIPT}|\.(?:front|back|pop_back|pop_front)\s*\(\s*\)|\.(?:get|pop_at)\s*(?=\())"
 )
-DICTIONARY_VALUE = rf"(?:{SUBSCRIPT}|\.get(?=\())"
+DICTIONARY_VALUE = rf"(?:{SUBSCRIPT}|\.get\s*(?=\())"
 FOR_LOOP = re.compile(r"\bfor\s+(\w+)\s+in\s+(?:self\.)?(\w+)")
 ARRAY_METHOD = re.compile(r"\.(?:slice|duplicate|filter)\s*(?=\()")
 LOOP_END = re.compile(r"\s*:")
