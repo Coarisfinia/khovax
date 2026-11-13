@@ -63,56 +63,21 @@ DECIMALS = 4
 
 
 def weld(work):
-    """Joins the seam splits by position, so the surface shades whole, not island by island. By
-    hand rather than with `remove_doubles`, whose search runs on several threads and picks other
-    survivors with another thread count (CI's rebuild then differs)."""
-    first = {}
-    targets = {}
-    for vert in work.verts:
-        key = tuple(round(value, 5) for value in vert.co)
-        if key in first:
-            targets[vert] = first[key]
-        else:
-            first[key] = vert
-    bmesh.ops.weld_verts(work, targetmap=targets)
-
-
-def canonical(work):
-    """Rebuilds `work` in a fixed order: its vertices by position (on a fine grid, download units),
-    its faces by their vertices, each starting at its lowest one. bisect_plane hands back faces in
-    an order, and starting at a corner, that change with the thread count, and the next step's
-    choices (a cap's triangles) follow them, so CI's rebuild would differ from the committed file;
-    from a fixed order every step comes out alike."""
-    points = sorted({tuple(round(value, 6) for value in vert.co) for vert in work.verts})
-    index = {point: place for place, point in enumerate(points)}
-    faces = set()
-    for face in work.faces:
-        ring = [index[tuple(round(value, 6) for value in vert.co)] for vert in face.verts]
-        # A sliver whose corners met on the grid is dropped.
-        ring = [place for step, place in enumerate(ring) if place != ring[step - 1]]
-        if len(set(ring)) < 3 or len(set(ring)) != len(ring):
-            continue
-        start = ring.index(min(ring))
-        faces.add(tuple(ring[start:] + ring[:start]))
-    work.clear()
-    verts = [work.verts.new(point) for point in points]
-    for face in sorted(faces):
-        work.faces.new([verts[place] for place in face])
-    work.verts.index_update()
-    work.faces.index_update()
+    """Joins the seam splits by position, so the surface shades whole, not island by island."""
+    bmesh.ops.remove_doubles(work, verts=work.verts, dist=1e-5)
 
 
 def cut(work, point, normal):
     """Cuts `work` at the plane through `point`, keeping the side `normal` points away from, and
     closes the cut with flat faces."""
-    canonical(work)
-    bmesh.ops.bisect_plane(work, geom=work.verts[:] + work.edges[:] + work.faces[:], dist=1e-6,
-                           plane_co=point, plane_no=normal, clear_outer=True)
-    canonical(work)
-    filled = bmesh.ops.holes_fill(work, edges=[edge for edge in work.edges if edge.is_boundary])
-    # Ear clipping, not "beauty": a flat cap's beauty flips hang on ties between equal angles.
+    geom = work.verts[:] + work.edges[:] + work.faces[:]
+    result = bmesh.ops.bisect_plane(work, geom=geom, dist=1e-6, plane_co=point, plane_no=normal,
+                                    clear_outer=True)
+    edges = [element for element in result["geom_cut"] if isinstance(element, bmesh.types.BMEdge)]
+    filled = bmesh.ops.holes_fill(work, edges=[edge for edge in edges if edge.is_valid and edge.is_boundary])
+    # Ear clipping, not "beauty": a flat cap's beauty flips hang on ties between equal angles,
+    # which another machine breaks the other way (CI's rebuild then differs).
     bmesh.ops.triangulate(work, faces=filled["faces"], quad_method="FIXED", ngon_method="EAR_CLIP")
-    canonical(work)
 
 
 def scale_and_length(source_mesh):
@@ -159,7 +124,6 @@ def build(source):
     # the sorted export; on a fine grid they land alike, the flat ends exactly at the edge's ends.
     for vert in stack.verts:
         vert.co = Vector([round(value, DECIMALS + 1) for value in vert.co])
-    canonical(stack)
     mesh = bpy.data.meshes.new("MossySandstoneWall")
     stack.to_mesh(mesh)
     stack.free()
@@ -179,17 +143,8 @@ def snap(mesh):
 
 
 def vertex_data(mesh):
-    """Each vertex's position and normal. The normal is summed from its faces' here, in their
-    order: Blender sums them on several threads, which leaves last bits that change with the
-    thread count, and the paint's cuts would follow them (CI's rebuild then differs)."""
-    normals = numpy.zeros((len(mesh.vertices), 3))
-    for polygon in mesh.polygons:
-        weighted = numpy.array(polygon.normal[:]) * polygon.area
-        for index in polygon.vertices:
-            normals[index] += weighted
-    lengths = numpy.linalg.norm(normals, axis=1, keepdims=True)
     return (numpy.array([vertex.co[:] for vertex in mesh.vertices]),
-            numpy.round(normals / numpy.maximum(lengths, 1e-12), DECIMALS + 2))
+            numpy.array([vertex.normal[:] for vertex in mesh.vertices]))
 
 
 def main():
