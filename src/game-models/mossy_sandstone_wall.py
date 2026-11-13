@@ -32,7 +32,7 @@ from mathutils import Matrix, Vector
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-from lib import prop_paint, scene, world_scale  # noqa: E402
+from lib import fixed_order, prop_paint, scene, world_scale  # noqa: E402
 
 SOURCE = os.path.join(HERE, "sources", "mossy_sandstone_wall.glb")
 FPS = 30
@@ -62,24 +62,6 @@ REACH = 0.1
 DECIMALS = 4
 
 
-def weld(work):
-    """Joins the seam splits by position, so the surface shades whole, not island by island."""
-    bmesh.ops.remove_doubles(work, verts=work.verts, dist=1e-5)
-
-
-def cut(work, point, normal):
-    """Cuts `work` at the plane through `point`, keeping the side `normal` points away from, and
-    closes the cut with flat faces."""
-    geom = work.verts[:] + work.edges[:] + work.faces[:]
-    result = bmesh.ops.bisect_plane(work, geom=geom, dist=1e-6, plane_co=point, plane_no=normal,
-                                    clear_outer=True)
-    edges = [element for element in result["geom_cut"] if isinstance(element, bmesh.types.BMEdge)]
-    filled = bmesh.ops.holes_fill(work, edges=[edge for edge in edges if edge.is_valid and edge.is_boundary])
-    # Ear clipping, not "beauty": a flat cap's beauty flips hang on ties between equal angles,
-    # which another machine breaks the other way (CI's rebuild then differs).
-    bmesh.ops.triangulate(work, faces=filled["faces"], quad_method="FIXED", ngon_method="EAR_CLIP")
-
-
 def scale_and_length(source_mesh):
     """The scale that makes the stacked windows a wall's height, and each window's length in the
     download's units (an edge's at that scale)."""
@@ -94,10 +76,10 @@ def window(source_mesh, start, length):
     grass's top, moved so its foot is at z 0 and its middle at x 0 (download units)."""
     work = bmesh.new()
     work.from_mesh(source_mesh)
-    weld(work)
-    cut(work, Vector((start, 0.0, 0.0)), Vector((-1.0, 0.0, 0.0)))
-    cut(work, Vector((start + length, 0.0, 0.0)), Vector((1.0, 0.0, 0.0)))
-    cut(work, Vector((0.0, 0.0, GRASS_TOP)), Vector((0.0, 0.0, -1.0)))
+    fixed_order.weld(work)
+    fixed_order.cut(work, Vector((start, 0.0, 0.0)), Vector((-1.0, 0.0, 0.0)))
+    fixed_order.cut(work, Vector((start + length, 0.0, 0.0)), Vector((1.0, 0.0, 0.0)))
+    fixed_order.cut(work, Vector((0.0, 0.0, GRASS_TOP)), Vector((0.0, 0.0, -1.0)))
     bmesh.ops.translate(work, verts=work.verts, vec=Vector((-(start + length / 2.0), 0.0, -GRASS_TOP)))
     return work
 
@@ -124,6 +106,7 @@ def build(source):
     # the sorted export; on a fine grid they land alike, the flat ends exactly at the edge's ends.
     for vert in stack.verts:
         vert.co = Vector([round(value, DECIMALS + 1) for value in vert.co])
+    fixed_order.canonical(stack)
     mesh = bpy.data.meshes.new("MossySandstoneWall")
     stack.to_mesh(mesh)
     stack.free()
@@ -133,18 +116,11 @@ def build(source):
     return wall, size
 
 
-def snap(mesh):
-    """Puts every vertex of `mesh` on a grid of `DECIMALS + 1` decimals (metres): a cut's vertex
-    lands a last bit apart on another machine (its float maths), which reorders the sorted export."""
-    points = numpy.empty(len(mesh.vertices) * 3)
-    mesh.vertices.foreach_get("co", points)
-    mesh.vertices.foreach_set("co", numpy.round(points, DECIMALS + 1))
-    mesh.update()
-
-
 def vertex_data(mesh):
+    """Each vertex's position and normal, the normal summed here in a fixed order (lib/fixed_order.py):
+    Blender's own differs with the thread count, and the paint's cuts would follow it."""
     return (numpy.array([vertex.co[:] for vertex in mesh.vertices]),
-            numpy.array([vertex.normal[:] for vertex in mesh.vertices]))
+            fixed_order.vertex_normals(mesh, DECIMALS + 2))
 
 
 def main():
@@ -183,8 +159,9 @@ def main():
     for polygon, above in zip(mesh.polygons, prop_paint.side(mesh, dark, prop_paint.Weathering.shaded)):
         if above and polygon.material_index == SANDSTONE:
             polygon.material_index = SHADED
-    # The cuts' new vertices too, onto the grid (see `snap`) before the UVs are laid from them.
-    snap(mesh)
+    # The cuts' new vertices too, onto the grid before the UVs are laid from them: a cut's vertex
+    # lands a last bit apart on another machine (its float maths), which reorders the sorted export.
+    fixed_order.snap(mesh, DECIMALS + 1)
     prop_paint.box_uv(mesh)
 
     points, _normals = vertex_data(mesh)

@@ -207,6 +207,10 @@ a second model could use goes into the library or a generic tool, never into one
   - `scene`: a clean scene at the clip rate, `apply_scale`, `triangles`, and `export_glb` (the
     export settings the game takes: GLB, skins, one animation per NLA track, Y up, every mesh's
     faces in a fixed order so a rebuild gives the same bytes).
+  - `fixed_order` (#2317): mesh steps that build the same file on any count of Blender's threads:
+    `weld` in place of `remove_doubles`, `canonical` (a bmesh rebuilt in a fixed order), `cut`
+    in place of `bisect_plane`, `vertex_normals` summed in the faces' order (area-weighted, so not
+    Blender's own) and `snap` to a grid. A script that cuts or merges uses them.
   - `materials`: cel-friendly flat colours and emissive glows (`palette`).
   - `prop_paint` (#1853): the props' shared CC0 texture set and its triplanar mapping, moss and
     shade (below, "Props from a bare shape").
@@ -511,8 +515,8 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
   mesh without a rig or clips (as `mana_gems.py`). `check_glb.gd` and `check_ground.py` expect a
   rigged creature and don't apply.
 - **Shading in patches:** clearing the custom normals leaves the seam splits apart, so a smooth
-  surface shades island by island. Weld by position (`bmesh.ops.remove_doubles`, UVs stay on the
-  corners) and shade smooth by angle, keeping a crack's rim sharp.
+  surface shades island by island. Weld by position (`fixed_order.weld`, not `remove_doubles`,
+  whose survivors change with the thread count; UVs stay on the corners) and shade smooth by angle, keeping a crack's rim sharp.
 
 **The traps found on Fohossa (#1619)**, a four-legged Meshy auto-rig with a long trunk:
 - **One piece for every leg:** with a long spine between the hips' fork and the withers' fork,
