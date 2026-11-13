@@ -516,6 +516,42 @@ class FormsTest(unittest.TestCase):
         ):
             self.assertEqual(forbidden_lines(source), [], source)
 
+    def test_a_loop_variable_counts_only_inside_its_loop(self) -> None:
+        # After its loop ends, the same name is another variable (#2300).
+        for source in (
+            "func f(tiles: Array[Vector2i]) -> void:\n\tfor tile in tiles:\n\t\tpass"
+            '\n\tvar tile: String = "x"\n\tprint(tile.length())',
+            "func f(tiles: Array[Vector2i]) -> void:\n\tfor tile in tiles: pass"
+            '\n\tvar tile: String = "x"\n\tprint(tile.length())',
+            "func f(tiles: Array[Vector2i]) -> void:\n\tif true:\n\t\tfor tile in tiles:"
+            '\n\t\t\tpass\n\tvar tile: String = "x"\n\tprint(tile.length())',
+            "func f(tiles: Array[Vector2i]) -> void:\n\tfor tile in tiles:\n\t\tpass\n\n\n"
+            'func g() -> int:\n\tvar tile: String = "x"\n\treturn tile.length()',
+        ):
+            self.assertEqual(forbidden_lines(source), [], source)
+
+    def test_a_loop_variable_still_counts_in_its_loop(self) -> None:
+        # What #2300's scoping must keep refusing: the line of each length().
+        for source in (
+            "func f(tiles: Array[Vector2i]) -> void:\n\tfor tile in tiles: print(tile.length())",
+            "func f(tiles: Array[Vector2i]) -> void:\n\tfor tile in tiles:\n\t\tif true:"
+            "\n\t\t\tprint(tile.length())",
+            "func f(tiles: Array[Vector2i]) -> void:\n\tfor tile in tiles:\n\t\tpass\n"
+            "\n\t\tprint(tile.length())",
+            "func f(tiles: Array[Vector2i]) -> void:\n\tfor tile in tiles:\n\t\tvar n := 1 + \\"
+            "\n2\n\t\tprint(tile.length())",
+            "func f(tiles: Array[Vector2i]) -> void:\n\tfor tile in tiles:\n\t\tvar n := ["
+            "\n\t1,\n\t]\n\t\tprint(tile.length())",
+            "func f(tiles: Array[Vector2i]) -> void:\n\tfor tile in tiles:\n\t\tpass"
+            "\n\tfor tile in tiles:\n\t\tprint(tile.length())",
+        ):
+            hit = [
+                f"{number}:{line}"
+                for number, line in enumerate(source.split("\n"), 1)
+                if "length(" in line
+            ]
+            self.assertEqual(forbidden_lines(source), hit, source)
+
 
     def test_a_call_to_a_function_returning_an_integer_vector_is_refused(self) -> None:
         # The script's own function, called on its own or on self (#2263).
