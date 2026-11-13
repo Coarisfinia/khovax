@@ -11,7 +11,6 @@ extends Content
 const KEY: String = "materials"
 ## Its schema, which says the fields a material file may have (SchemaFields, #825).
 const SCHEMA: String = "res://slices/loot/data/materials.schema.json"
-
 ## The categories a material may have (#2281), as its schema lists them: what kind of material it
 ## is, so a reader tells a rock from a plant by its data, not by a list of today's ids.
 const CATEGORIES: Array[String] = [
