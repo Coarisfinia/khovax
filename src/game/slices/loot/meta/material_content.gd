@@ -11,11 +11,24 @@ extends Content
 const KEY: String = "materials"
 ## Its schema, which says the fields a material file may have (SchemaFields, #825).
 const SCHEMA: String = "res://slices/loot/data/materials.schema.json"
+## The categories a material may have (#2281), as its schema lists them: what kind of material it
+## is, so a reader tells a rock from a plant by its data, not by a list of today's ids.
+const CATEGORIES: Array[String] = [
+	"plant",
+	"animal",
+	"mineral",
+	"metal",
+	"liquid",
+	"catalyst",
+	"essence",
+]
 
 ## Every material's id, in file name order.
 var ids: Array[String] = []
 ## Every material's player-facing name (#1657), by id, as its file gives it, untranslated.
 var names: Dictionary[String, String] = {}
+## Every material's category (CATEGORIES), by id.
+var categories: Dictionary[String, String] = {}
 
 
 ## Every material the resource packs list (ResourcePacks.materials), read and checked.
@@ -46,8 +59,11 @@ func add(file_id: String, text: String) -> String:
 	var why: String = Content.unknown_field(data, SchemaFields.at(SCHEMA))
 	if why.is_empty():
 		why = Content.id_problem(id, file_id)
+	var category: String = Content.text_of(data.get("category"))
 	if why.is_empty() and name.strip_edges().is_empty():
 		why = "it needs a name"
+	if why.is_empty() and not CATEGORIES.has(category):
+		why = "it needs a category, one of %s (#2281)" % ", ".join(CATEGORIES)
 	if (why.is_empty()
 			and data.has("model")
 			and not ResourcePacks.has_model(Content.text_of(data["model"]))):
@@ -55,6 +71,7 @@ func add(file_id: String, text: String) -> String:
 	if why.is_empty():
 		ids.append(id)
 		names[id] = name
+		categories[id] = category
 	return why
 
 

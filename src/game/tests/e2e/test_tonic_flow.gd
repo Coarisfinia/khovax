@@ -2,7 +2,8 @@ extends RefCounted
 ## Tonic flow (#2090, the potion design on #2049): the default pack's tonic lists every allowed cell
 ## of the design's matrix, and nothing else: 24 tonics for the out companion, 14 draughts for the
 ## player, each with the cost and the values the design's table gives it. A tonic breaking the
-## design's rules is refused: rock, ore, metal or hide in it, crystal anywhere but a Shared brew, a
+## design's rules is refused: rock, ore, metal or hide in it, a pack's new ore or rock too, by its
+## category (#2281), crystal anywhere but a Shared brew, a
 ## lasting Mend, a draught that strikes, or a brew with two primaries or two traits. Crafting a brew
 ## spends its exact cost from the profile and counts one more of it, and a craft that can't be is
 ## refused and changes nothing.
@@ -168,7 +169,37 @@ func _check_refused() -> String:
 	for wrong: String in cases:
 		if not _refuses(JSON.stringify(cases[wrong])):
 			return "a tonic with %s was read" % wrong
+	return _check_new_minerals(base)
+
+
+## A rock, ore or metal a resource pack adds, which no list of today's ids names, is refused by its
+## category (#2281): the default pack's tonic with it as a primary isn't read.
+func _check_new_minerals(base: Dictionary) -> String:
+	var added: Dictionary[String, String] = { "iron": "metal", "flint": "mineral" }
+	var materials: MaterialContent = MaterialContent.load_materials()
+	for id: String in added:
+		var text: String = '{ "id": "%s", "name": "%s", "category": "%s" }'
+		var why: String = materials.add(id, text % [id, id.capitalize(), added[id]])
+		if not why.is_empty():
+			return "a pack's %s material %s was refused: %s" % [added[id], id, why]
+	var kept: MaterialContent = MaterialContent.cached()
+	_keep_materials(materials)
+	var read: Array[String] = []
+	for id: String in added:
+		if not _refuses(JSON.stringify(_changed(base, "primaries", id, "ward"))):
+			read.append(id)
+	# The session's own materials go back, so no later check finds them unread.
+	_keep_materials(kept)
+	if not read.is_empty():
+		return "a tonic with a pack's %s as a primary was read" % [read]
 	return ""
+
+
+## Keeps `materials` in the content cache (ContentCatalog) as the session's materials.
+func _keep_materials(materials: MaterialContent) -> void:
+	ContentCatalog.forget(MaterialContent.KEY)
+	var with_them: Callable = func() -> Content: return materials
+	var _kept: Content = ContentCatalog.kept(MaterialContent.KEY, with_them)
 
 
 ## Whether a tonic file holding `text` is refused.

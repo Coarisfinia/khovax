@@ -66,6 +66,8 @@ const WEB_PASSIVE: String = "tikazzir_kazri_tazri"
 const ROSTER_SCREEN: Vector2 = Vector2(1280.0, 720.0)
 ## Where _check_roster's profile is saved, apart from the player's own: it spends a revive item.
 const ROSTER_PROFILE: String = "user://test_world_profile.json"
+## How many ticks _check_idle_bookkeeping counts what the idle instances ask (#2296).
+const IDLE_TICKS: int = 20
 
 ## The made-up crown _check_room_caught gives CROWN_KIND.
 var _crown: TileBlueprint
@@ -114,6 +116,7 @@ func run(tree: SceneTree) -> String:
 		_check_story_beat,
 		_check_territory,
 		_check_start_kept,
+		_check_idle_bookkeeping,
 		_check_start_corrupted,
 		_check_sent_to_spawn,
 		_check_invincible,
@@ -1457,6 +1460,33 @@ func _idle_until(world: World, until: int) -> void:
 		world.step(_still())
 
 
+## An idle instance costs the tick next to nothing (#2296): with every instance next to the forest
+## loaded and nobody but the player in the forest, the ticks after the first ask the source no
+## variant, as the flags haven't changed, and the host's reset delay at most once a tick, however
+## many instances lie idle.
+func _check_idle_bookkeeping() -> String:
+	var source: CountingSource = CountingSource.new()
+	var world: World = World.new(source, 3, FlowSteps.FOREST)
+	for target: String in world.instances[FlowSteps.FOREST].region.exit_blueprints:
+		if world.instance(target) == null:
+			return "the forest's neighbour %s doesn't load" % target
+	if world.instances.size() < 3:
+		return "the forest has fewer than two neighbours to leave idle"
+	world.step(_still())
+	source.variants = 0
+	source.resets = 0
+	for _tick: int in IDLE_TICKS:
+		world.step(_still())
+	if source.variants != 0 or source.resets > IDLE_TICKS:
+		return "%d idle instances asked the source %d variants and %d reset delays in %d ticks" % [
+			world.instances.size() - 1,
+			source.variants,
+			source.resets,
+			IDLE_TICKS,
+		]
+	return ""
+
+
 ## Walks player 0 one step in `direction`, through the world, until they stand still again, noting
 ## the instances they entered meanwhile.
 func _walk_in(world: World, direction: int) -> void:
@@ -2171,3 +2201,20 @@ class RisingSource:
 	func variant(instance_name: String, flags: Array[String]) -> String:
 		var risen: bool = instance_name == FlowSteps.GLADE and flags.has(RISEN)
 		return FlowSteps.ARENA if risen else ""
+
+
+## The blueprints, counting how often the world asks them a variant and the host's reset delay
+## (#2296).
+class CountingSource:
+	extends BlueprintSource
+
+	var variants: int = 0
+	var resets: int = 0
+
+	func variant(instance_name: String, flags: Array[String]) -> String:
+		variants += 1
+		return super.variant(instance_name, flags)
+
+	func reset_ticks(stores: Array[PlayerStore]) -> int:
+		resets += 1
+		return super.reset_ticks(stores)

@@ -32,9 +32,16 @@ static func set_flag(world: World, flag: String, on: bool = true) -> void:
 	world.lay_out_again()
 
 
-## The variant of the blueprint `instance_name` the flags of `world` choose now (#529).
+## The variant of the blueprint `instance_name` the flags of `world` choose now (#529). The source
+## chooses by the name and the flags alone, so the world keeps its answers until the flags change
+## (World.chosen, #2296): an idle instance's check each tick asks it nothing.
 static func chosen_variant(world: World, instance_name: String) -> String:
-	return world.source.variant(instance_name, world.flags)
+	if world.chosen_for != world.flags:
+		world.chosen.clear()
+		world.chosen_for = world.flags.duplicate()
+	if not world.chosen.has(instance_name):
+		world.chosen[instance_name] = world.source.variant(instance_name, world.flags)
+	return world.chosen[instance_name]
 
 
 ## The variant of the blueprint `instance_name` as it is in `world`: the one it was loaded from
