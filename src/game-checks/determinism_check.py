@@ -431,25 +431,35 @@ def forbidden_lines(
     for owner, names in dictionaries.items():
         declared.setdefault(owner, set()).update(rf"{name}{DICTIONARY_VALUE}" for name in names)
 
-    # Each inner class's line by its name, and the class each class extends.
-    inner: dict[str, int] = {}
+    # Each inner class's line and the classes around it, by its name, and the class each class
+    # extends.
+    inner: dict[str, list[tuple[int, tuple[int, ...]]]] = {}
     parents: dict[int | None, str] = {}
-    for index, (line, (_, function), owner) in enumerate(zip(bare, scopes, owners)):
+    for index, (line, (classes, function), owner) in enumerate(zip(bare, scopes, owners)):
         if function is None and (named_class := CLASS_NAMED.match(line)):
-            inner[named_class.group(1)] = index
+            inner.setdefault(named_class.group(1), []).append((index, classes[:-1]))
         if function is None and (base := EXTENDS.match(line)):
             parents[owner] = base.group(1)
+
+    def resolved(base: str, owner: int | None) -> int | None:
+        """The inner class `base` names in `owner`'s extends: the nearest one around it."""
+        around = () if owner is None else scopes[owner][0][:-1]
+        visible = [
+            (len(outer), at) for at, outer in inner.get(base, []) if around[: len(outer)] == outer
+        ]
+        return max(visible)[1] if visible else None
 
     def inherited(owner: int | None, seen: set[int | None]) -> set[str]:
         """What a class has from the classes it extends: in this file, or another rules class."""
         base = parents.get(owner)
         if base is None:
             return set()
-        if base not in inner:
+        at = resolved(base, owner)
+        if at is None:
             return set((bases or {}).get(base, set()))
-        if inner[base] in seen:
+        if at in seen:
             return set()
-        return declared.get(inner[base], set()) | inherited(inner[base], seen | {inner[base]})
+        return declared.get(at, set()) | inherited(at, seen | {at})
 
     def names_in(scope: Scope) -> set[str]:
         """Its function's names, its class's, those its class inherits and the constants of the

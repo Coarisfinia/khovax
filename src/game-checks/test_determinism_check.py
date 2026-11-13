@@ -456,6 +456,10 @@ class FormsTest(unittest.TestCase):
             "extends Base\n\n\nfunc f() -> void:\n\tvar a := tile.length()",
             "class_name Leaf extends Base\n\n\nfunc f() -> void:\n\tvar a := tile.length()",
             "extends RefCounted\n\n\nclass B extends Base:\n\tvar a := tile.length()",
+            # The nearest class of that name around it, not a later one elsewhere.
+            "class First:\n\tclass A:\n\t\tvar tile: Vector2i\n\n\tclass B extends A:"
+            "\n\t\tvar a := tile.length()\n\n\nclass Second:\n\tclass A:"
+            "\n\t\tvar tile: String",
         ):
             hit = [
                 f"{number}:{line}"
@@ -472,7 +476,7 @@ class FormsTest(unittest.TestCase):
             "extends Other\n\n\nfunc f() -> void:\n\tvar a := tile.length()",
             'extends "res://base.gd"\n\n\nfunc f() -> void:\n\tvar a := tile.length()',
             "extends Base\n\n\nclass B:\n\tvar tile: String\n\tvar a := tile.length()",
-            # Classes extending each other in a circle compile to nothing, but mustn't hang the check.
+            # Classes extending each other in a circle never compile, but mustn't hang the check.
             "class A extends B:\n\tpass\n\n\nclass B extends A:\n\tvar a := tile.length()",
         ):
             self.assertEqual(forbidden_lines(source, set(), bases), [], source)
