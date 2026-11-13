@@ -362,6 +362,40 @@ class FormsTest(unittest.TestCase):
         )
         self.assertEqual(int_vector_members(source), {"tile", "home", "spot", "ORIGIN", "inner"})
 
+    def test_an_element_of_another_scripts_integer_vector_array_is_refused(self) -> None:
+        # An Array[Vector2i] or typed dictionary member, read on another object as #2287 reads
+        # the script's own (#2299). The members come from the script itself here; main() gathers
+        # them from every rules script.
+        for source in (
+            "var tiles: Array[Vector2i]\nvar a := obj.tiles[0].length()",
+            "var tiles: Array[Vector2i]\nvar a := obj.tiles.front().length()",
+            "var tiles: Array[Vector2i]\nvar a := obj.tiles.back().length()",
+            "var tiles: Array[Vector3i]\nvar a := get_world().tiles.get(i).distance_to(b)",
+            "var tiles: Array[Vector2i]\nvar a := obj.tiles[ids[0]].abs().length()",
+            "@export var tiles: Array[Vector2i]\nvar a := entities[0].tiles.pop_back().length()",
+            "class A:\n\tconst CORNERS: Array[Vector4i] = []\nvar a := A.CORNERS[0].length()",
+            'var spots: Dictionary[String, Vector2i]\nvar a := obj.spots["home"].length()',
+            "static var spots: Dictionary[int, Vector2i]\nvar a := obj.spots.get(k).length()",
+        ):
+            hit = [
+                f"{number}:{line}"
+                for number, line in enumerate(source.split("\n"), 1)
+                if "length(" in line or "distance_to(" in line
+            ]
+            self.assertEqual(forbidden_lines(source, int_vector_members(source)), hit, source)
+
+    def test_another_scripts_array_member_read_otherwise_stays_allowed(self) -> None:
+        for source in (
+            "var tiles: Array[Vector2i]\nvar a := obj.tiles.size()",
+            "var tiles: Array[Vector2i]\nvar a := obj.tiles_name[0].length()",
+            "var tiles: Array[Vector2i]\nvar a := obj.tiles.front_name().length()",
+            "var names: Array[String]\nvar a := obj.names[0].length()",
+            "var names: Dictionary[Vector2i, String]\nvar a := obj.names[tile].length()",
+            "func f() -> void:\n\tvar tiles: Array[Vector2i] = []\n\tprint(tiles)"
+            "\n\n\nfunc g() -> int:\n\treturn obj.tiles[0].length()",
+        ):
+            self.assertEqual(forbidden_lines(source, int_vector_members(source)), [], source)
+
     def test_an_element_of_an_integer_vector_array_is_refused(self) -> None:
         # A subscript, and a loop variable, over an Array[Vector2i] (#2261).
         for source in (
@@ -382,7 +416,6 @@ class FormsTest(unittest.TestCase):
     def test_an_element_of_any_other_array_is_allowed(self) -> None:
         for source in (
             "var names: Array[String]\nvar a := names[0].length()",
-            "var tiles: Array[Vector2i]\nvar a := obj.tiles[0].length()",
             "var tiles: Array[Vector2i]\nvar a := tiles.size()",
             "func f(names: Array[String]) -> void:\n\tfor name in names:\n\t\tprint(name.length())",
             "func f(tiles: Array[Vector2i]) -> void:\n\tpass\n\n\nfunc g(tiles: Array[String])"
@@ -428,7 +461,6 @@ class FormsTest(unittest.TestCase):
         for source in (
             "var names: Array[String]\nvar a := names.front().length()",
             "var names: Array[String]\nvar a := names.get(0).length()",
-            "var tiles: Array[Vector2i]\nvar a := obj.tiles.back().length()",
             "var tiles: Array[Vector2i]\nvar a := tiles.front_name().length()",
             "func f(names: Array[String]) -> void:\n\tfor name in names.slice(1):"
             "\n\t\tprint(name.length())",
