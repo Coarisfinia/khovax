@@ -568,6 +568,14 @@ msgstr ""
 msgid "Error log: save it as a file"
 msgstr ""
 
+#: slices/credits/ui/error_log_button.gd
+msgid "Your browser may ask to allow the download; answer it with the mouse or keyboard."
+msgstr ""
+
+#: slices/credits/ui/error_log_button.gd
+msgid "The log's newest lines:"
+msgstr ""
+
 #: slices/damage_numbers/look/damage_numbers_view.gd
 msgid "miss"
 msgstr ""
