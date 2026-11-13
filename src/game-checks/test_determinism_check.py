@@ -91,6 +91,15 @@ REFUSED = (
     "var a := bytes.to_float32_array()",
     "var a := bytes.to_float64_array()",
     'var a := text.similarity("b")',
+    # A name behind a raw-string prefix or grouping parentheses (#2254).
+    'items.call(r"shuffle")',
+    "items.callv(r'pick_random', [])",
+    'var c := Callable(items, r"shuffle")',
+    'items.call(("shuffle"))',
+    'items.call( ( ("pick_random") ) )',
+    'var c := Callable(items, ("shuffle"))',
+    'items.call(StringName(("shuffle")))',
+    'items.call((r"shuffle"))',
 )
 
 ALLOWED = (
@@ -138,6 +147,11 @@ ALLOWED = (
     'var a := ["shuffle"]',
     'var a := StringName("shuffle")',
     "var a := bytes.to_int32_array()",
+    # Grouping parentheses that aren't call()'s first argument (#2254).
+    'var a := ("shuffle")',
+    'var a := foo(("shuffle"))',
+    'items.call(("sort"), ("shuffle"))',
+    'var a := r"shuffle"',
 )
 
 
