@@ -1244,13 +1244,15 @@ func _check_hunt_round_wall() -> String:
 
 
 ## A hunter with no prey in sight walks a patrol a player can read (#2236): from its home out to
-## the ring ROAM_RADIUS from it, then round that ring one way, a tile a step, never a random step.
+## the ring ROAM_RADIUS from it, reaching it at the tile after the corner its id picks, then round
+## that ring in Hex.ring's order, a tile a step, never a random step.
 func _check_hunter_patrols() -> String:
 	var state: GameState = _hunt_state({ "hun": Vector2i(0, 0) })
 	var hunter: int = _monster_of(state, "hun")
 	var home: Vector2i = state.entity(hunter).tile
 	var schedules: ScheduleFeature = state.feature(ScheduleFeature.ID) as ScheduleFeature
 	var ring: Array[Vector2i] = Hex.ring(HuntFeature.ROAM_RADIUS, home)
+	var corner: int = (hunter % Hex.DIRECTIONS.size()) * HuntFeature.ROAM_RADIUS
 	_to_hunt_hours(state, hunter)
 	var along: int = 0
 	for _tick: int in DayClock.HOURS * DayClock.TICKS_PER_HOUR:
@@ -1270,16 +1272,14 @@ func _check_hunter_patrols() -> String:
 		if not ring.has(was):
 			if Hex.distance(tile, home) <= Hex.distance(was, home):
 				return "the hunter went from %s to %s, not out to its patrol ring" % [was, tile]
+			if ring.has(tile) and tile != _ring_after(ring, ring[corner], 1):
+				return "the hunter reached its patrol ring at %s, not after its corner" % tile
 			continue
-		var forward: bool = tile == _ring_after(ring, was, 1)
-		if not forward and tile != _ring_after(ring, was, -1):
-			return "the hunter left its patrol ring from %s to %s" % [was, tile]
-		# The way round is the first step's along the ring, and every later step keeps it.
-		if along != 0 and (along > 0) != forward:
-			return "the hunter turned back on its patrol ring at %s" % was
-		along += 1 if forward else -1
-	if 2 * absi(along) < ring.size():
-		return "the hunter walked only %d tiles round its patrol ring" % absi(along)
+		if tile != _ring_after(ring, was, 1):
+			return "the hunter went from %s to %s, not on round its patrol ring" % [was, tile]
+		along += 1
+	if 2 * along < ring.size():
+		return "the hunter walked only %d tiles round its patrol ring" % along
 	return ""
 
 
