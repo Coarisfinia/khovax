@@ -216,6 +216,12 @@ func _step() -> bool:
 	var commands: Array[Command] = schedule.take(tick)
 	var before: GameState = state
 	world.step(commands)
+	# PLANTED for #2293's fail-first, removed next: each tick costs more than the last.
+	var planted: int = 0
+	for i: int in world.tick * 100:
+		planted += i
+	if planted < 0:
+		push_error("the planted growth overflowed")
 	last_commands = commands
 	recording.record(world, commands)
 	# Only co-op has anyone to compare hashes with (#2084). Its hash reads only the instances that
