@@ -251,13 +251,13 @@ func _roam(state: GameState, wild: WildMonsterFeature, hunter: int, tile: Vector
 	if (state.tick + hunter) % WildPace.paced(state, WildMonsterFeature.STEP_TICKS, 0) != 0:
 		return
 	var ring: Array[Vector2i] = Hex.ring(ROAM_RADIUS, homes[hunter])
-	var start: int = (hunter % Hex.DIRECTIONS.size()) * ROAM_RADIUS
+	var corner: int = (hunter % Hex.DIRECTIONS.size()) * ROAM_RADIUS
 	var nearest: int = 0
 	for i: int in ring.size():
-		var near: Vector2i = ring[(start + i) % ring.size()]
-		if Hex.distance(near, tile) < Hex.distance(ring[(start + nearest) % ring.size()], tile):
+		var near: Vector2i = ring[(corner + i) % ring.size()]
+		if Hex.distance(near, tile) < Hex.distance(ring[(corner + nearest) % ring.size()], tile):
 			nearest = i
-	wild.chase(state, hunter, ring[(start + nearest + 1) % ring.size()])
+	wild.chase(state, hunter, ring[(corner + nearest + 1) % ring.size()])
 
 
 ## The hunter's hunt ends, and it rests until its hunt hours are over.
