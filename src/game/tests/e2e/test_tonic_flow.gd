@@ -294,21 +294,7 @@ func _check_drinking() -> String:
 		return why
 	_idle(state)
 	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
-	var companion_id: int = companions.companion_of(0)
-	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
-	var _companion_hurt: bool = health.hurt(
-		state,
-		companion_id,
-		health.max_hp_of(state, companion_id) - 1,
-	)
-	var _player_hurt: bool = health.hurt(state, player.id, HealthFeature.PLAYER_HP - 1)
-	var expected: int = 1 + Fixed.scale(health.max_hp_of(state, companion_id), 300)
-	why = _drunk(profile, state, "tonic_berry")
-	if why.is_empty() and health.hp_of(state, companion_id) != expected:
-		why = "a berry tonic left the companion %d HP, not %d" % [
-			health.hp_of(state, companion_id),
-			expected,
-		]
+	why = _mended(profile, state, "tonic_berry", companions.companion_of(0))
 	if why.is_empty():
 		why = _refused(profile, state, "draught_berry", "a draught while waiting")
 	for _tick: int in DrinkingFeature.WAIT_TICKS - 2:
@@ -316,14 +302,13 @@ func _check_drinking() -> String:
 	if why.is_empty():
 		why = _refused(profile, state, "draught_berry", "a draught a tick before the wait ended")
 	_idle(state)
-	if why.is_empty():
-		why = _drunk(profile, state, "draught_berry")
-	expected = 1 + Fixed.scale(HealthFeature.PLAYER_HP, 300)
-	if why.is_empty() and health.hp_of(state, player.id) != expected:
-		why = "a berry draught left the player %d HP, not %d" % [
-			health.hp_of(state, player.id),
-			expected,
-		]
+	return why if not why.is_empty() else _check_draught(profile, state, player)
+
+
+## Once the wait is over, a berry draught mends `player`; then none is left, and a knocked-down
+## player drinks no draught.
+func _check_draught(profile: Profile, state: GameState, player: Entity) -> String:
+	var why: String = _mended(profile, state, "draught_berry", player.id)
 	if why.is_empty():
 		why = _refused(profile, state, "draught_berry", "a draught none of is left")
 	if not why.is_empty():
@@ -333,6 +318,19 @@ func _check_drinking() -> String:
 	var knockdown: KnockdownFeature = state.feature(KnockdownFeature.ID) as KnockdownFeature
 	knockdown.knock_down(player.id)
 	return _refused(profile, state, "draught_moss", "a draught for a knocked-down player")
+
+
+## Hurts `target_id` in `state` down to 1 HP, then drinks the berry `brew` (300 thousandths) from
+## `profile`: the target then has 1 HP plus that share of their full HP. Returns why not, or "".
+func _mended(profile: Profile, state: GameState, brew: String, target_id: int) -> String:
+	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
+	var full_hp: int = health.max_hp_of(state, target_id)
+	var _hurt: bool = health.hurt(state, target_id, full_hp - 1)
+	var why: String = _drunk(profile, state, brew)
+	var expected: int = 1 + Fixed.scale(full_hp, 300)
+	if why.is_empty() and health.hp_of(state, target_id) != expected:
+		why = "%s left its target %d HP, not %d" % [brew, health.hp_of(state, target_id), expected]
+	return why
 
 
 ## Drinks one `brew` from `profile` for player 0 in `state` and sends its request in their next
