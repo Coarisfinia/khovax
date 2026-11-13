@@ -89,7 +89,7 @@ FLOAT_METHOD = re.compile(r"\.(?:length|distance_to)\s*\(")
 INT_VECTOR_DECLARED = re.compile(r"\b(\w+)\s*:\s*Vector[234]i\b(?!\s*[.(])")
 # A var or const declared with `:=` from a constructor or a constant (#2292), on its own or in
 # integer arithmetic. What a member access on either reads (`Vector2i(1, 2).x`), a comparison, a
-# ternary or a boolean is not one, so builds_int_vector() reads the rest of the line after it, and
+# ternary or a boolean is not one, so builds_int_vector() reads the rest of the statement, and
 # `call` marks a constructor whose closing parenthesis it looks past. Other expressions stay
 # untracked (#2294).
 INFERRED = r"(?:var|const)\s+(\w+)\s*:=\s*Vector[234]i(?:(?P<call>\()|\.[A-Z_]+\b)"
@@ -288,7 +288,7 @@ def scopes_of(lines: list[str], continued: set[int]) -> list[Scope]:
 def builds_int_vector(code: str, hit: re.Match[str], offset: int = 0) -> bool:
     """Whether an inferred declaration `hit` (INFERRED) holds an integer vector: after its constant,
     or its constructor's closing parenthesis, in `code`, where the match starts at `offset`, no
-    member access follows, and the rest of the line is no comparison, ternary or boolean."""
+    member access follows, and the rest of the statement is no comparison, ternary or boolean."""
     if "call" not in hit.re.groupindex:
         return True  # Not an inferred declaration.
     if hit.group("call") is None:
@@ -297,8 +297,22 @@ def builds_int_vector(code: str, hit: re.Match[str], offset: int = 0) -> bool:
         end = after_parentheses(code, offset + hit.start("call"))
     if end < 0 or MEMBER_ACCESS.match(code, end):
         return False
-    line_end = code.find("\n", end)
-    return not NOT_A_VECTOR.search(code, end, len(code) if line_end < 0 else line_end)
+    return not NOT_A_VECTOR.search(code, end, statement_end(code, end))
+
+
+def statement_end(code: str, at: int) -> int:
+    """Where the statement going on at `at` in `code` ends: the first line break outside brackets
+    opened since `at` and not after a backslash, or the end of `code`."""
+    depth = 0
+    for index in range(at, len(code)):
+        char = code[index]
+        if char in "([{":
+            depth += 1
+        elif char in ")]}":
+            depth -= 1
+        elif char == "\n" and depth <= 0 and not code[at:index].rstrip(" \t").endswith("\\"):
+            return index
+    return len(code)
 
 
 def declared_int_vectors(

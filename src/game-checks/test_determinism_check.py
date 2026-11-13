@@ -487,6 +487,8 @@ class FormsTest(unittest.TestCase):
             "@export var home := Vector2i(abs(x), (y))\nvar a := self.home.length()",
             "static var spot := Vector2i.ONE * 2\nvar a := spot.abs().length()",
             "var tile := Vector2i(\n\t1, 0)\nvar a := tile.length()",
+            "var tile := Vector2i.ONE * \\\n\t2\nvar a := tile.length()",
+            "var tile := Vector2i(1, 2) * (\n\t2)\nvar a := tile.length()",
             "func f() -> void:\n\tvar tile := Vector4i(1, 2, 3, 4)\n\tprint(tile.length())",
             "func f() -> void:\n\tconst STEP := Vector2i.RIGHT\n\tprint(STEP.length())",
             # In its own class, and an outer class's constant, which an inner class reaches (#2288).
@@ -511,6 +513,8 @@ class FormsTest(unittest.TestCase):
             'var tile := Vector2i.ONE if c else "x"\nvar a := tile.length()',
             "var tile := Vector2i(1, 2) == other\nvar a := tile.length()",
             "var tile := Vector2i.ONE in tiles\nvar a := tile.length()",
+            'var tile := Vector2i.ONE \\\n\tif c else "x"\nvar a := tile.length()',
+            "var tile := Vector2i.ONE * (\n\t2) == other\nvar a := tile.length()",
             "var tile := Vector2i.ONE\nvar a := obj.tile.length()",
             "func f() -> void:\n\tvar tile := Vector2i.ONE\n\n\nfunc g(tile: String) -> int:"
             "\n\treturn tile.length()",
