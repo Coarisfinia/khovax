@@ -64,8 +64,8 @@ FORBIDDEN_IN_CODE = re.compile(
             r"|bytes_to_var_with_objects)\s*\(",
             r"\bPacked(Vector2|Vector3|Vector4|Color)Array\b",
             # Float members of PackedByteArray and String (#2223).
-            r"\.(decode_half|decode_float|decode_double|to_float32_array|to_float64_array"
-            r"|similarity)\s*\(",
+            r"\.(decode_half|decode_float|decode_double|decode_var|to_float32_array"
+            r"|to_float64_array|similarity)\s*\(",
             r"\bTYPE_FLOAT\b",
         )
     )
@@ -85,11 +85,10 @@ INT_VECTOR_DECLARED = re.compile(r"\b(\w+)\s*:\s*Vector[234]i\b(?!\s*[.(])")
 # Reaching a randomness method by name, with call() or a Callable: read on the whole of
 # code_with_random_names, which keeps that string, so a call split over lines is seen too (#2223).
 RANDOM_NAMES = ("shuffle", "pick_random")
-RANDOM_BY_NAME = re.compile(
-    r"(?:\.(?:call|callv|call_deferred)\s*\(\s*"
-    rf"|\bCallable(?:\.create)?\s*\((?:[^()]|\([^()]*\))*?,\s*)"
-    rf"""&?["'](?P<name>{"|".join(RANDOM_NAMES)})["']"""
-)
+RANDOM_NAME = re.compile(rf"""&?["']({"|".join(RANDOM_NAMES)})["']""")
+# What opens the call the name is an argument of: call()'s first, or any of a Callable's.
+CALL_BY_NAME = re.compile(r"\.(call|callv|call_deferred)\s*\(\s*$")
+CALLABLE = re.compile(r"\bCallable(\.create)?\s*\($")
 MARKER = "# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK"
 MARKER_WITH_REASON = re.compile(re.escape(MARKER) + r" \(.*[^ )].*\)")
 HEADER_LINE = re.compile(r"\s*(#|$)")
@@ -120,6 +119,22 @@ def code_with_random_names(source: str) -> str:
     )
 
 
+def called_by_name(before: str) -> bool:
+    """Whether a name, after the code `before` it, is the method a call() or a Callable reaches."""
+    depth = 0
+    for at in range(len(before) - 1, -1, -1):
+        if before[at] in ")]}":
+            depth += 1
+        elif before[at] in "([{":
+            if depth == 0:
+                opener = before[: at + 1]
+                return before[at] == "(" and (
+                    CALL_BY_NAME.search(before) is not None or CALLABLE.search(opener) is not None
+                )
+            depth -= 1
+    return False
+
+
 def forbidden_lines(source: str) -> list[str]:
     """The numbered lines of a script that use something the rules never use."""
     code = without_comments(source).rstrip("\n").split("\n")
@@ -131,7 +146,11 @@ def forbidden_lines(source: str) -> list[str]:
     )
     named = code_with_random_names(source)
     # The line of each randomness method's name.
-    by_name = {named.count("\n", 0, hit.start("name")) for hit in RANDOM_BY_NAME.finditer(named)}
+    by_name = {
+        named.count("\n", 0, hit.start(1))
+        for hit in RANDOM_NAME.finditer(named)
+        if called_by_name(named[: hit.start()])
+    }
     return numbered(
         code,
         [
