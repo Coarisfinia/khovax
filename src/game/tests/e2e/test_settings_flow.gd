@@ -1080,6 +1080,8 @@ func _submenus_open(menu: GameMenu, tab: SettingsTab, anti_aliasing: Button) -> 
 	if tab.get_viewport().gui_get_focus_owner() != tab.opener(SettingsTab.GRAPHICS):
 		return "going back doesn't move the focus onto the submenu's button"
 	var difficulty: String = _menu_difficulty(menu, tab)
+	if difficulty.is_empty():
+		difficulty = _menu_debug(menu, tab)
 	if not difficulty.is_empty():
 		return difficulty
 	tab.opener(SettingsTab.GAME).pressed.emit()
@@ -1121,6 +1123,31 @@ func _menu_difficulty(menu: GameMenu, tab: SettingsTab) -> String:
 	tab.back_button(SettingsTab.DIFFICULTY).pressed.emit()
 	if tab.open_submenu() != SettingsTab.LIST or next.is_visible_in_tree():
 		return "the Difficulty submenu's Back button doesn't return to the list"
+	return ""
+
+
+## The Debug submenu (#2273), last in the list, holds the Invincible row, Off at first, with no
+## Auto button: stepping it on says On at once and posts the request to the profile's outbox for
+## the world (the outbox kind 8); stepping back says Off again.
+func _menu_debug(menu: GameMenu, tab: SettingsTab) -> String:
+	if tab.submenu_titles().keys().back() != "Debug":
+		return "the Settings tab's last submenu isn't Debug: %s" % [tab.submenu_titles().keys()]
+	tab.opener("Debug").pressed.emit()
+	var next: Button = tab.button("invincible", "Next")
+	if tab.open_submenu() != "Debug" or not next.is_visible_in_tree():
+		return "the Debug button doesn't show the Invincible row"
+	if next.get_parent().has_node("Auto") or tab.shown["invincible"] != "Off":
+		return "the Invincible row has an Auto button, or says %s" % tab.shown["invincible"]
+	next.pressed.emit()
+	var outbox: Outbox = (menu.driver.holder as ProfileHolder).keeper.profile.outbox
+	var asked: bool = false
+	for request: OutboxEntry in outbox.entries:
+		asked = asked or (request.kind == 8 and request.data == 1)
+	var said: String = tab.shown["invincible"]
+	tab.button("invincible", "Previous").pressed.emit()
+	if said != "On" or not asked or tab.shown["invincible"] != "Off":
+		return "stepping invincibility on says %s, asking the world: %s" % [said, asked]
+	tab.back_button("Debug").pressed.emit()
 	return ""
 
 
