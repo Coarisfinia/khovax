@@ -311,6 +311,25 @@ func _menu_monsters(menu: GameMenu, main: Node) -> String:
 	tab.materials.refresh()
 	if tab.materials.shown != (["Berry: 1", "Moss: 3"] as Array[String]):
 		return "the Character tab's materials are %s, not the ones found" % [tab.materials.shown]
+	return _menu_brews(tab, main)
+
+
+## A crafted tonic is counted like a material (#2090), and the Character tab lists it by its own
+## name, not as an unknown material (#2282).
+func _menu_brews(tab: CharacterTab, main: Node) -> String:
+	var dew: Gain = Gain.new()
+	dew.materials.assign({ "dew": 1 })
+	var keeper: ProfileKeeper = FlowGame.holder(main).keeper
+	var taken: String = keeper.take(dew, Time.get_ticks_msec())
+	var crafted: String = TonicCrafting.craft(keeper.profile, "tonic_moss")
+	tab.materials.refresh()
+	var expected: Array[String] = ["Berry: 1", "Moss: 1", "Moss tonic: 1"]
+	if not taken.is_empty() or not crafted.is_empty() or tab.materials.shown != expected:
+		return "the Character tab lists %s after crafting a moss tonic: %s %s" % [
+			tab.materials.shown,
+			taken,
+			crafted,
+		]
 	return _menu_factions(tab, main)
 
 
