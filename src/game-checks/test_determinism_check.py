@@ -491,6 +491,7 @@ class FormsTest(unittest.TestCase):
             "var a := tile().length()",
             "var a := self.tile().distance_to(b)",
             "var a := tile().abs().length()",
+            "var a := tile ().length()",
         ):
             self.assertEqual(forbidden_lines(source + line), [f"3:{line}"], line)
 
@@ -501,6 +502,7 @@ class FormsTest(unittest.TestCase):
             "var a := get_world().grid.tile_at(x).distance_to(b)",
             "var a := entities[0].tile_at((1 + 2) * 3).mini(4).length()",
             "var a := tile_at(x).length()",
+            "var a := obj.tile_at (x).length()",
         ):
             self.assertEqual(forbidden_lines(line, functions={"tile_at"}), [f"1:{line}"], line)
 

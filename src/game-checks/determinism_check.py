@@ -349,8 +349,8 @@ def receiver_in(
     (#2263)."""
     own = (rf"(?<![\w.])(?:self\.)?{name}(?!\w)" for name in sorted(names))
     other = (rf"(?<=[\w)\]])\.{name}(?!\w)" for name in sorted(members))
-    own_call = (rf"(?<![\w.])(?:self\.)?{name}(?=\()" for name in sorted(own_calls))
-    other_call = (rf"(?<=[\w)\]])(?<!\bself)\.{name}(?=\()" for name in sorted(other_calls))
+    own_call = (rf"(?<![\w.])(?:self\.)?{name}\s*(?=\()" for name in sorted(own_calls))
+    other_call = (rf"(?<=[\w)\]])(?<!\bself)\.{name}\s*(?=\()" for name in sorted(other_calls))
     return re.compile("|".join([INT_VECTOR_RECEIVER, *own, *other, *own_call, *other_call]))
 
 
