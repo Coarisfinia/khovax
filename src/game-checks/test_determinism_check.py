@@ -69,6 +69,8 @@ REFUSED = (
     "var a := Vector2i(get_x(get_y()), 4).length()",
     "var a := Vector2i(f(g(h(1))), 4).length()",
     "var a := Vector2i.ONE.clamp(Vector2i(f(g(1)), 0), b).length()",
+    # A declared name that starts another declared one (#2223).
+    "var size: Vector2i\nvar size_max: Vector2i\nvar a := size_max.length()",
     "var a := tile.aspect()",
     "var a := PackedFloat32Array()",
     "var a := PackedFloat64Array()",
