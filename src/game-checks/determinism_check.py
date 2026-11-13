@@ -87,15 +87,15 @@ INT_VECTOR_METHOD = re.compile(
 )
 FLOAT_METHOD = re.compile(r"\.(?:length|distance_to)\s*\(")
 INT_VECTOR_DECLARED = re.compile(r"\b(\w+)\s*:\s*Vector[234]i\b(?!\s*[.(])")
-# A var or const declared with `:=` from a constructor or a constant (#2292): what a member access
-# on either reads (`Vector2i(1, 2).x`, `Vector2i.ONE.y`) is not one, so `call` marks a constructor
-# whose closing parenthesis builds_int_vector() looks past. Other expressions stay untracked
-# (#2294).
-INFERRED = (
-    r"(?:var|const)\s+(\w+)\s*:=\s*Vector[234]i(?:(?P<call>\()|\.[A-Z_]+\b(?!\s*[.(\[]))"
-)
+# A var or const declared with `:=` from a constructor or a constant (#2292), on its own or in
+# integer arithmetic. What a member access on either reads (`Vector2i(1, 2).x`), a comparison, a
+# ternary or a boolean is not one, so builds_int_vector() reads the rest of the line after it, and
+# `call` marks a constructor whose closing parenthesis it looks past. Other expressions stay
+# untracked (#2294).
+INFERRED = r"(?:var|const)\s+(\w+)\s*:=\s*Vector[234]i(?:(?P<call>\()|\.[A-Z_]+\b)"
 INT_VECTOR_INFERRED = re.compile(rf"\b{INFERRED}")
-MEMBER_ACCESS = re.compile(r"\s*[.\[]")
+MEMBER_ACCESS = re.compile(r"\s*[.\[(]")
+NOT_A_VECTOR = re.compile(r"\b(?:if|else|and|or|not|in|is|as)\b|[=!<>&|]")
 # An Array[Vector2i]'s elements are integer vectors too: a subscript of it (brackets inside, two
 # levels deep), what its element methods return, and a loop variable over it or over the arrays its
 # own methods return (#2261, #2287). So are a typed dictionary's values, read by subscript or get().
@@ -286,12 +286,19 @@ def scopes_of(lines: list[str], continued: set[int]) -> list[Scope]:
 
 
 def builds_int_vector(code: str, hit: re.Match[str], offset: int = 0) -> bool:
-    """Whether an inferred declaration `hit` (INFERRED) holds an integer vector: no member access
-    follows its constructor's closing parenthesis in `code`, where the match starts at `offset`."""
-    if hit.groupdict().get("call") is None:
-        return True
-    end = after_parentheses(code, offset + hit.start("call"))
-    return end >= 0 and not MEMBER_ACCESS.match(code, end)
+    """Whether an inferred declaration `hit` (INFERRED) holds an integer vector: after its constant,
+    or its constructor's closing parenthesis, in `code`, where the match starts at `offset`, no
+    member access follows, and the rest of the line is no comparison, ternary or boolean."""
+    if "call" not in hit.re.groupindex:
+        return True  # Not an inferred declaration.
+    if hit.group("call") is None:
+        end = offset + hit.end()
+    else:
+        end = after_parentheses(code, offset + hit.start("call"))
+    if end < 0 or MEMBER_ACCESS.match(code, end):
+        return False
+    line_end = code.find("\n", end)
+    return not NOT_A_VECTOR.search(code, end, len(code) if line_end < 0 else line_end)
 
 
 def declared_int_vectors(

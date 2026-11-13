@@ -508,6 +508,9 @@ class FormsTest(unittest.TestCase):
             "var tile := str(Vector2i.ONE)\nvar a := tile.length()",
             "var tile := Vector2i(1, 2).x\nvar a := tile.length()",
             "var tile := Vector2i.ONE.x\nvar a := tile.length()",
+            'var tile := Vector2i.ONE if c else "x"\nvar a := tile.length()',
+            "var tile := Vector2i(1, 2) == other\nvar a := tile.length()",
+            "var tile := Vector2i.ONE in tiles\nvar a := tile.length()",
             "var tile := Vector2i.ONE\nvar a := obj.tile.length()",
             "func f() -> void:\n\tvar tile := Vector2i.ONE\n\n\nfunc g(tile: String) -> int:"
             "\n\treturn tile.length()",
@@ -527,6 +530,7 @@ class FormsTest(unittest.TestCase):
                 "const ORIGIN := Vector2i.ONE",
                 "var x := Vector2i(1, 2).x",
                 "var y := Vector2i.ONE.y",
+                'var z := Vector2i(1, 2) if c else "x"',
                 'var text := "x"',
                 "func f() -> void:",
                 "\tvar local := Vector2i.ONE",
