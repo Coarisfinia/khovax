@@ -16,6 +16,7 @@ import stat
 import sys
 import tarfile
 import tempfile
+import threading
 import urllib.request
 import zlib
 from pathlib import Path
@@ -25,6 +26,9 @@ RELEASE = "https://github.com/atelico/gdstyle/releases/download/v{version}/gdsty
 SHA256 = re.compile(r"^ *GDSTYLE_SHA256: *([0-9a-f]{64}) *$", re.MULTILINE)
 # Per connection attempt and per read: a download that stalls this long gives up rather than hang.
 TIMEOUT_SECONDS = 60
+# For the whole download, headers included: one that trickles in under the read timeout gives up
+# after this (#2256). The release is a few megabytes.
+DEADLINE_SECONDS = 600
 # Every way a download or an archive can fail: each ends in one clean message, never a traceback.
 FAILURES = (
     OSError,
@@ -37,15 +41,37 @@ FAILURES = (
 )
 
 
+def download(url: str) -> bytes:
+    """The whole body at `url`, or TimeoutError once DEADLINE_SECONDS have passed, however slowly
+    the name lookup, the connection, the headers or the body arrive. The download runs in a daemon
+    thread, which the process leaves behind when it gives up; it only holds bytes in memory."""
+    result: list[bytes | Exception] = []
+
+    def fetch() -> None:
+        try:
+            with urllib.request.urlopen(url, timeout=TIMEOUT_SECONDS) as response:
+                # A whole read: a download cut short raises IncompleteRead rather than passing short.
+                result.append(response.read())
+        except Exception as error:  # handed to the caller, which reports it
+            result.append(error)
+
+    thread = threading.Thread(target=fetch, daemon=True)
+    thread.start()
+    thread.join(DEADLINE_SECONDS)
+    if not result:
+        raise TimeoutError(f"the download took longer than {DEADLINE_SECONDS} s")
+    if isinstance(result[0], Exception):
+        raise result[0]
+    return result[0]
+
+
 def install(version: str, sha256: str, binary: Path) -> None:
     """Downloads the release, checks it, and puts the binary at `binary` with one rename, so a
     parallel run sees either no binary or a whole one."""
     binary.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=binary.parent) as folder:
         archive = Path(folder) / "gdstyle.tar.gz"
-        with urllib.request.urlopen(RELEASE.format(version=version), timeout=TIMEOUT_SECONDS) as response:
-            # A whole read: a download cut short raises IncompleteRead rather than passing short.
-            data = response.read()
+        data = download(RELEASE.format(version=version))
         archive.write_bytes(data)
         actual = hashlib.sha256(data).hexdigest()
         if actual != sha256:
