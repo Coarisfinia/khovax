@@ -44,7 +44,7 @@ const BESIDE_WILD_TICKS: int = WildAttackFeature.STRIKE_TICKS * 60
 const INSTANCE_SEEDS: int = 6
 ## How many tiles wide every join between region pieces and every exit is at least (#689).
 const SEAM_WIDTH: int = 3
-## How many tiles (hex distance) every region's clearing keeps from every wild monster's spot (#2323).
+## How many tiles (hex distance) every region's clearing keeps from every wild monster (#2323).
 const CLEARING_DISTANCE: int = 15
 ## The regions that wait for their clearing, each with its issue (#2323): the list only shrinks, and
 ## a region on it that has its clearing fails the check until it's taken off.
@@ -98,14 +98,8 @@ var _entered: Array[String] = []
 
 
 func run(tree: SceneTree) -> String:
-	for instance_name: String in InstanceBlueprints.names():
-		var problem: String = InstanceBlueprints.exit_problem(instance_name)
-		if not problem.is_empty():
-			return problem
-	# Without a way back, no exit can lead to it either: exit_problem refuses that.
-	if not InstanceBlueprints.region_of(FlowSteps.BASIC, 0).exits.is_empty():
-		return "the playground, which only the tests play, has an exit"
 	var steps: Array[Callable] = [
+		_check_exit_problems,
 		_check_glade_exit,
 		_check_wide_seams,
 		_check_clearings,
@@ -2166,6 +2160,18 @@ static func _narrow_seam(region: Region) -> String:
 	return ""
 
 
+## Every exit leads to a blueprint that exists and has the way back, and the playground has none.
+func _check_exit_problems() -> String:
+	for instance_name: String in InstanceBlueprints.names():
+		var problem: String = InstanceBlueprints.exit_problem(instance_name)
+		if not problem.is_empty():
+			return problem
+	# Without a way back, no exit can lead to it either: exit_problem refuses that.
+	if not InstanceBlueprints.region_of(FlowSteps.BASIC, 0).exits.is_empty():
+		return "the playground, which only the tests play, has an exit"
+	return ""
+
+
 ## Every region a realm's instance can have, the blueprint's own and each variant's, has a clearing
 ## for every seed (#2323), unless it waits on CLEARINGS_WAITING: the failure names every region and
 ## seed without one, and every waiting region that has it.
@@ -2183,7 +2189,11 @@ func _check_clearings() -> String:
 			var variant: String = "" if region_name == instance_name else region_name
 			var lacking: Array[String] = []
 			for seed_value: int in INSTANCE_SEEDS:
-				var region: Region = InstanceBlueprints.region_of(instance_name, seed_value, variant)
+				var region: Region = InstanceBlueprints.region_of(
+					instance_name,
+					seed_value,
+					variant,
+				)
 				if not _has_clearing(region):
 					lacking.append("%s (seed %d)" % [region_name, seed_value])
 			if not CLEARINGS_WAITING.has(region_name):
