@@ -116,7 +116,8 @@ INT_VECTOR_MEMBER = re.compile(
 # multi-line string or after a backslash continues its statement (#2271).
 FUNCTION = re.compile(r"\s*(static\s+)?func\b")
 CLASS = re.compile(r"\s*class\s")
-CONSTANT = re.compile(r"\s*const\s+(\w+)")
+# Annotations may come first, as in INT_VECTOR_MEMBER.
+CONSTANT = re.compile(r"\s*(?:@\w+(?:\([^)]*\))?\s+)*const\s+(\w+)")
 # Reaching a randomness method by name, with call() or a Callable: read on the whole of
 # code_with_random_names, which keeps that string, so a call split over lines is seen too (#2223).
 RANDOM_NAMES = ("shuffle", "pick_random")
