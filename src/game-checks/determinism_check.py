@@ -60,7 +60,12 @@ FORBIDDEN_IN_CODE = re.compile(
             r"|linear_to_db)\s*\(",
             r"\bto_float\s*\(",
             r"\b(PI|TAU|INF|NAN)\b",
-            r"\.aspect\s*\(|\bPackedFloat(32|64)Array\b|\bstr_to_var\s*\(",
+            r"\.aspect\s*\(|\bPackedFloat(32|64)Array\b|\b(str_to_var|bytes_to_var"
+            r"|bytes_to_var_with_objects)\s*\(",
+            r"\bPacked(Vector2|Vector3|Vector4|Color)Array\b",
+            # Float members of PackedByteArray and String (#2223).
+            r"\.(decode_half|decode_float|decode_double|to_float32_array|to_float64_array"
+            r"|similarity)\s*\(",
             r"\bTYPE_FLOAT\b",
         )
     )
@@ -77,10 +82,13 @@ INT_VECTOR_CHAIN = (
     rf"(?:\.(?:abs|clamp|clampi|max|maxi|min|mini|sign|snapped|snappedi){INT_VECTOR_ARGUMENTS})*"
 )
 INT_VECTOR_DECLARED = re.compile(r"\b(\w+)\s*:\s*Vector[234]i\b(?!\s*[.(])")
-# Reaching a randomness method by name: read on code_with_random_names, which keeps that string.
+# Reaching a randomness method by name, with call() or a Callable: read on the whole of
+# code_with_random_names, which keeps that string, so a call split over lines is seen too (#2223).
 RANDOM_NAMES = ("shuffle", "pick_random")
 RANDOM_BY_NAME = re.compile(
-    rf"""\.(call|callv|call_deferred)\s*\(\s*&?["']({"|".join(RANDOM_NAMES)})["']"""
+    r"(?:\.(?:call|callv|call_deferred)\s*\(\s*"
+    rf"|\bCallable(?:\.create)?\s*\((?:[^()]|\([^()]*\))*?,\s*)"
+    rf"""&?["'](?P<name>{"|".join(RANDOM_NAMES)})["']"""
 )
 MARKER = "# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK"
 MARKER_WITH_REASON = re.compile(re.escape(MARKER) + r" \(.*[^ )].*\)")
@@ -121,15 +129,17 @@ def forbidden_lines(source: str) -> list[str]:
     float_length = re.compile(
         rf"(?:{'|'.join(receivers)}){INT_VECTOR_CHAIN}\.(?:length|distance_to)\s*\("
     )
-    named = code_with_random_names(source).split("\n")
+    named = code_with_random_names(source)
+    # The line of each randomness method's name.
+    by_name = {named.count("\n", 0, hit.start("name")) for hit in RANDOM_BY_NAME.finditer(named)}
     return numbered(
         code,
         [
             FORBIDDEN.search(line) is not None
             or FORBIDDEN_IN_CODE.search(bare_line) is not None
             or float_length.search(bare_line) is not None
-            or RANDOM_BY_NAME.search(named_line) is not None
-            for line, bare_line, named_line in zip(code, bare, named)
+            or index in by_name
+            for index, (line, bare_line) in enumerate(zip(code, bare))
         ],
     )
 
