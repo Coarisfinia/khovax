@@ -392,7 +392,6 @@ class FormsTest(unittest.TestCase):
         ):
             self.assertEqual(forbidden_lines(source), [], source)
 
-
     def test_an_integer_vector_declared_with_an_inferred_type_is_refused(self) -> None:
         # `:=` from a constructor or a constant, for locals and members (#2292).
         for source in (
