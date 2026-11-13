@@ -373,7 +373,8 @@ class FormsTest(unittest.TestCase):
             " -> bool: return t.x > 0).slice(1):\n\t\tprint(tile.length())",
             'var spots: Dictionary[String, Vector2i]\nvar a := spots["home"].length()',
             "var spots: Dictionary[StringName, Vector3i]\nvar a := spots[&\"a\"].distance_to(b)",
-            "var spots: Dictionary[String, Vector2i]\nvar a := spots.get(key, Vector2i.ZERO).length()",
+            "var spots: Dictionary[String, Vector2i]"
+            "\nvar a := spots.get(key, Vector2i.ZERO).length()",
             "func f(spots: Dictionary[Array[int], Vector2i]) -> int:\n\treturn spots[[1]].length()",
         ):
             hit = [

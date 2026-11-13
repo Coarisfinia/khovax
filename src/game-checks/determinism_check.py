@@ -87,11 +87,22 @@ INT_VECTOR_METHOD = re.compile(
 )
 FLOAT_METHOD = re.compile(r"\.(?:length|distance_to)\s*\(")
 INT_VECTOR_DECLARED = re.compile(r"\b(\w+)\s*:\s*Vector[234]i\b(?!\s*[.(])")
-# An Array[Vector2i]'s elements are integer vectors too: a subscript of it (brackets inside, one
-# level deep) and a loop variable over it (#2261).
+# An Array[Vector2i]'s elements are integer vectors too: a subscript of it (brackets inside, two
+# levels deep), what its element methods return, and a loop variable over it or over the arrays its
+# own methods return (#2261, #2287). So are a typed dictionary's values, read by subscript or get().
 INT_VECTOR_ARRAY_DECLARED = re.compile(r"\b(\w+)\s*:\s*Array\[\s*Vector[234]i\s*\]")
-SUBSCRIPT = r"\[(?:[^\[\]]|\[[^\[\]]*\])*\]"
-FOR_LOOP = re.compile(r"\bfor\s+(\w+)\s+in\s+(?:self\.)?(\w+)\s*:")
+INT_VECTOR_DICTIONARY_DECLARED = re.compile(
+    r"\b(\w+)\s*:\s*Dictionary\[\s*\w+(?:\[[^\[\]]*\])?\s*,\s*Vector[234]i\s*\]"
+)
+SUBSCRIPT = r"\[(?:[^\[\]]|\[(?:[^\[\]]|\[[^\[\]]*\])*\])*\]"
+# An element method's arguments are matched as balanced parentheses by calls_float_method.
+ARRAY_ELEMENT = (
+    rf"(?:{SUBSCRIPT}|\.(?:front|back|pop_back|pop_front)\(\s*\)|\.(?:get|pop_at)(?=\())"
+)
+DICTIONARY_VALUE = rf"(?:{SUBSCRIPT}|\.get(?=\())"
+FOR_LOOP = re.compile(r"\bfor\s+(\w+)\s+in\s+(?:self\.)?(\w+)")
+ARRAY_METHOD = re.compile(r"\.(?:slice|duplicate|filter)\s*(?=\()")
+LOOP_END = re.compile(r"\s*:")
 # A function's parameters and locals count in its body only, any other declaration in the whole
 # file (#2264); a function ends at the next statement indented no deeper than its func. A line that
 # starts inside a multi-line string or after a backslash continues its statement (#2271).
@@ -263,6 +274,14 @@ def declared_int_vectors(
     return declared
 
 
+def over_array(line: str, at: int) -> bool:
+    """Whether a loop's source, from `at` in `line` after an array's name, is that array or what a
+    chain of its own array-returning methods makes of it, up to the loop's colon."""
+    while at >= 0 and (method := ARRAY_METHOD.match(line, at)):
+        at = after_parentheses(line, method.end())
+    return at >= 0 and LOOP_END.match(line, at) is not None
+
+
 def receiver_in(names: set[str]) -> re.Pattern[str]:
     """An integer vector written out or one of `names`, as length()'s receiver: the name itself or
     the script's own member, not another object's (`obj.tile`, #2264). A name may end in a
@@ -280,10 +299,15 @@ def forbidden_lines(source: str) -> list[str]:
     arrays = declared_int_vectors(bare, owners, INT_VECTOR_ARRAY_DECLARED)
     for index, line in enumerate(bare):
         for loop in FOR_LOOP.finditer(line):
-            if loop.group(2) in arrays.get(None, set()) | arrays.get(owners[index], set()):
+            if loop.group(2) in arrays.get(None, set()) | arrays.get(owners[index], set()) and (
+                over_array(line, loop.end())
+            ):
                 declared.setdefault(owners[index], set()).add(loop.group(1))
     for owner, names in arrays.items():
-        declared.setdefault(owner, set()).update(rf"{name}{SUBSCRIPT}" for name in names)
+        declared.setdefault(owner, set()).update(rf"{name}{ARRAY_ELEMENT}" for name in names)
+    dictionaries = declared_int_vectors(bare, owners, INT_VECTOR_DICTIONARY_DECLARED)
+    for owner, names in dictionaries.items():
+        declared.setdefault(owner, set()).update(rf"{name}{DICTIONARY_VALUE}" for name in names)
     in_file = declared.get(None, set())
     receiver = {
         owner: receiver_in(in_file | declared.get(owner, set())) for owner in set(owners)
