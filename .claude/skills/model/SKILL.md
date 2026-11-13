@@ -853,7 +853,8 @@ clips. Ask the owner only when it's unclear what should move how.
 
 14. **Rebuild (#1085):** `uv run --locked --package khovax-game-models
    src/game-models/check_rebuild.py src/game-models/<name>.py resourcepacks/default/models/<name>/<name>.glb` builds the model twice,
-   side by side, and compares the two builds with each other and with the committed `.glb`; it
+   side by side, on 1 and 4 of Blender's threads (#2317), and compares the two builds with each
+   other and with the committed `.glb`; it
    must print `REBUILD CHECK: PASS`. On a difference it names what differs (the JSON's part, or
    each mesh's indices or attribute and each clip's channel, by how much): indices that only move
    point to a face order, values off by a hair to float noise. Run it after the last build, before

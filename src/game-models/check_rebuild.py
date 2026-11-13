@@ -1,6 +1,9 @@
 """Checks that a model script builds the same file every time (#1085): it builds the model twice,
 side by side, and compares the two .glb files byte for byte; with the committed .glb, it compares
-that too, which tells whether a pull request's .glb is what its script builds.
+that too, which tells whether a pull request's .glb is what its script builds. The two builds run
+Blender on `THREADS` threads, one on each (#2317): a script whose model follows Blender's thread
+count (its normals, remove_doubles, bisect_plane's order) would otherwise pass here and build
+another file on a machine with another count of cores.
 
     uv run --locked --package khovax-game-models src/game-models/check_rebuild.py \
         src/game-models/<name>.py \
@@ -48,11 +51,15 @@ WIDTHS = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4, "MAT2": 4, "MAT3": 9, "M
 FORMATS = {5120: "b", 5121: "B", 5122: "h", 5123: "H", 5125: "I", 5126: "f"}
 # One model reports at a time, so the lines of models built at once never mix.
 REPORT = threading.Lock()
+# The thread counts of a model's two builds (Blender's --threads), one each: a build that follows
+# the count shows as two builds that differ.
+THREADS = (1, 4)
 
 
-def build(script: Path, out: Path, output: Path) -> subprocess.Popen:
-    command = [sys.executable, str(BLENDER), "--background", "--factory-startup", "--python", str(script),
-               "--", str(out)]
+def build(script: Path, out: Path, output: Path, threads: int) -> subprocess.Popen:
+    # --threads before --python, which Blender runs where it reads it.
+    command = [sys.executable, str(BLENDER), "--background", "--factory-startup", "--threads", str(threads),
+               "--python", str(script), "--", str(out)]
     return subprocess.Popen(command, stdout=output.open("w"), stderr=subprocess.STDOUT)
 
 
@@ -122,13 +129,13 @@ def scripted_models() -> list[tuple[str, str | None]]:
 
 
 def check(script_path: str, committed: Path | None, keep: Path | None = None) -> bool:
-    """Builds the script twice and compares the builds, and the committed .glb when there is one;
+    """Builds the script twice, on each of `THREADS`, and compares the builds, and the committed .glb when there is one;
     true when they're all the same bytes. The first build is copied to keep, when given."""
     script = Path(script_path).resolve()
     with tempfile.TemporaryDirectory(prefix="check_rebuild_") as scratch:
         outs = [Path(scratch) / f"build{index}.glb" for index in (1, 2)]
         outputs = [Path(scratch) / f"build{index}.log" for index in (1, 2)]
-        runs = [build(script, out, output) for out, output in zip(outs, outputs)]
+        runs = [build(script, out, output, threads) for out, output, threads in zip(outs, outputs, THREADS)]
         try:
             codes = [run.wait() for run in runs]
         finally:
@@ -157,7 +164,7 @@ def compare(script: Path, script_path: str, committed: Path | None, keep: Path |
         if speeds:
             (keep / (committed.name + ".speeds")).write_text(speeds.group(1) + "\n")
     same = True
-    pairs = [(f"{script.name}: the two builds", outs[0], outs[1], script_path)]
+    pairs = [(f"{script.name}: the builds on {THREADS[0]} and {THREADS[1]} threads", outs[0], outs[1], script_path)]
     if committed is not None:
         pairs.append((f"{script.name}: the build and {committed}", outs[0], committed, str(committed)))
     for label, a, b, file in pairs:
