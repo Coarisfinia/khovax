@@ -1,7 +1,7 @@
 # The pack builder
 
 Builds a resource pack for the game: textures, models, sounds, regions, realms, quests, species, tile kinds,
-translations, loot tables, harvest tables and materials that add to or replace the game's own. A pack is data,
+translations, loot tables, harvest tables, materials and tonics that add to or replace the game's own. A pack is data,
 never code. The builder refuses anything else, and the game checks every pack again before it
 loads it.
 
@@ -34,6 +34,7 @@ my_pack/
   harvest_tables/... harvest tables: .jsonc, in the game's loot table format, by species id
   loot_tables/...   loot tables: .jsonc, in the game's loot table format
   materials/...     materials: .jsonc, in the game's material format
+  tonics/...        tonics: .jsonc, in the game's tonic format
 ```
 
 Only those file types are allowed, plus `.jsonc` and Godot's `.import` files. A `.import` file may
@@ -60,7 +61,8 @@ may point only at plain files inside the pack. Anything else gets the whole pack
 	"tiles": { "my_tile": "tiles/my_tile.jsonc" },
 	"loot_tables": { "my_loot": "loot_tables/my_loot.jsonc" },
 	"harvest_tables": { "my_species": "harvest_tables/my_species.jsonc" },
-	"materials": { "my_material": "materials/my_material.jsonc" }
+	"materials": { "my_material": "materials/my_material.jsonc" },
+	"tonics": { "my_tonic": "tonics/my_tonic.jsonc" }
 }
 ```
 
