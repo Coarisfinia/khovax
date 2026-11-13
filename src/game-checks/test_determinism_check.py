@@ -353,6 +353,8 @@ class FormsTest(unittest.TestCase):
             "\n\t\tfor tile in TILES.slice(1):\n\t\t\tprint(tile.length())",
             "const SPOTS: Dictionary[String, Vector2i] = {}\n\n\nclass Inner:"
             "\n\tvar a := SPOTS.get(key).length()",
+            '@warning_ignore("unused_private_class_variable") const TILE: Vector2i = Vector2i.ONE'
+            "\n\n\nclass Inner:\n\tvar a := TILE.length()",
         ):
             hit = [
                 f"{number}:{line}"
