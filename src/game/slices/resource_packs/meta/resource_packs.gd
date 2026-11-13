@@ -151,6 +151,12 @@ static func materials() -> Dictionary[String, String]:
 	return _every("materials")
 
 
+## Every tonic (#2090) the loaded packs have, its file as a res:// path by its id, in id order: the
+## first pack that has an id gives its file, so a player's pack can add or replace one.
+static func tonics() -> Dictionary[String, String]:
+	return _every("tonics")
+
+
 ## Every resource of the ResourcePack.LISTED section `kind` the loaded packs have, its file as a
 ## res:// path by its id, in id order: the first pack that has an id gives its file.
 static func _every(kind: String) -> Dictionary[String, String]:

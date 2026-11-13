@@ -24,7 +24,7 @@ GAME = Path(__file__).resolve().parents[1] / "game"
 PACK_ROOT = GAME.parents[1] / "resourcepacks" / "default"
 SINGLE = (
     "textures", "models", "audio", "regions", "realms", "quests", "species", "tiles", "translations", "loot_tables",
-    "materials", "harvest_tables",
+    "materials", "harvest_tables", "tonics",
 )
 LISTS = ("region_pieces",)
 # The .import lines that tie the file to the game's project: its uid and imported files.

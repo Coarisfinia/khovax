@@ -338,6 +338,7 @@ def entries() -> tuple[list[Entry], list[tuple[str, str]]]:
         "resourcepacks/default/loot_tables/*.jsonc",
         "resourcepacks/default/harvest_tables/*.jsonc",
         "resourcepacks/default/materials/*.jsonc",
+        "resourcepacks/default/tonics/*.jsonc",
     )
     # The tools and tests are never shown to a player.
     files = [path for path in files if not path.startswith(("tools/", "tests/"))]

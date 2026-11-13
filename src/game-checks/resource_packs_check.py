@@ -1,7 +1,7 @@
 """Validates the default resource pack (#1860): the game's own resources, its textures, its models
 (#1864), its sounds (#2014), its region files, region pieces and realms (#1861), its quests
 (#1888), its species (#1903), its translation catalogues (#1902), its tile blueprints (#1901) and its loot tables and
-materials (#1953), and harvest tables (#1990), described by the same manifest a player's pack
+materials (#1953), harvest tables (#1990) and tonics (#2090), described by the same manifest a player's pack
 will have (#1858), and looked up only through ResourcePacks. It fails when
 - the manifest (game_shared.resource_packs.MANIFEST) is missing or isn't a JSON object;
 - an id doesn't resolve: it isn't an id (Ids), or its file isn't tracked, isn't imported by Godot
@@ -10,18 +10,19 @@ will have (#1858), and looked up only through ResourcePacks. It fails when
   blueprint, loot table, harvest table or material, a .po catalogue named after its locale);
 - a resource is unreferenced: the manifest lists it but no script (outside its comments), scene,
   resource or content file of the game's names its id as a string (but for the realms, the
-  quests, species, catalogues, tile blueprints, loot and harvest tables and materials, which the
+  quests, species, catalogues, tile blueprints, loot and harvest tables, materials and tonics, which the
   game finds by listing the pack), or a file of its kind (a model under
   resourcepacks/default/models/, an image under resourcepacks/default/textures/, a sound under resourcepacks/default/audio/, a region file or piece under
   resourcepacks/default/regions/, a realm in resourcepacks/default/realms/, a quest in
   resourcepacks/default/quests/, a species in resourcepacks/default/species/, a catalogue under
   resourcepacks/default/translations/, a tile blueprint in resourcepacks/default/tiles/, a loot table, harvest table or
-  material in resourcepacks/default/loot_tables/, harvest_tables/ or materials/) is in the
+  material in resourcepacks/default/loot_tables/, harvest_tables/ or materials/, a tonic in
+  resourcepacks/default/tonics/) is in the
   repository but not in the manifest;
-- a quest's, species', loot table's, harvest table's or material's entry isn't its own file
+- a quest's, species', loot table's, harvest table's, material's or tonic's entry isn't its own file
   (resourcepacks/default/quests/<id>.jsonc, resourcepacks/default/species/<id>.jsonc,
   resourcepacks/default/loot_tables/<id>.jsonc, resourcepacks/default/harvest_tables/<id>.jsonc,
-  resourcepacks/default/materials/<id>.jsonc), so it's named
+  resourcepacks/default/materials/<id>.jsonc, resourcepacks/default/tonics/<id>.jsonc), so it's named
   after its file (#72);
 - a file is listed outside its kind's folder in the default pack's own folder at the repository's
   root (PACK_ROOT, #1978; MOVED);
@@ -103,6 +104,7 @@ MOVED = {
     "loot_tables": "loot_tables",
     "harvest_tables": "harvest_tables",
     "materials": "materials",
+    "tonics": "tonics",
     "translations": "translations",
 }
 # Where the default pack's manifest lay before it moved into the pack's own folder (#1978).
@@ -134,6 +136,8 @@ LOOT_TABLES = f"{PACK_ROOT}loot_tables"
 MATERIALS = f"{PACK_ROOT}materials"
 # Harvest tables use the same format, one per species (#1990).
 HARVEST_TABLES = f"{PACK_ROOT}harvest_tables"
+# Where the default pack's tonics lie (#2090); their schema stays in the tonics slice (#412).
+TONICS = f"{PACK_ROOT}tonics"
 # Each kind of resource the manifest lists, by its section.
 KINDS: dict[str, Kind] = {
     "textures": Kind("texture", IMAGES, True, TEXTURES),
@@ -159,6 +163,8 @@ KINDS: dict[str, Kind] = {
     "loot_tables": Kind("loot table", (".jsonc",), False, f"{LOOT_TABLES}/*.jsonc", listed=True),
     "harvest_tables": Kind("harvest table", (".jsonc",), False, f"{HARVEST_TABLES}/*.jsonc", listed=True),
     "materials": Kind("material", (".jsonc",), False, f"{MATERIALS}/*.jsonc", listed=True),
+    # Every tonic the packs have can be brewed, so nothing names one to look it up (#2090).
+    "tonics": Kind("tonic", (".jsonc",), False, f"{TONICS}/*.jsonc", listed=True),
 }
 # The project setting through which Godot would load catalogues itself, around the pack (#1902).
 PROJECT = Path("project.godot")
@@ -424,6 +430,7 @@ def main() -> int:
         ("loot_tables", LOOT_TABLES, "loot table"),
         ("materials", MATERIALS, "material"),
         ("harvest_tables", HARVEST_TABLES, "harvest table"),
+        ("tonics", TONICS, "tonic"),
     ):
         problems += [
             (f"{noun} {entry_id}'s file is {paths}, not {folder}/{entry_id}.jsonc", MANIFEST.as_posix())
@@ -431,7 +438,7 @@ def main() -> int:
             if paths != [f"{folder}/{entry_id}.jsonc"]
         ]
     tracked = set(
-        git_files(MODEL_FILES, TEXTURES, SOUNDS, REGIONS, REALMS, f"{PACK_ROOT}translations", QUESTS, SPECIES, TILES, LOOT_TABLES, MATERIALS, HARVEST_TABLES)
+        git_files(MODEL_FILES, TEXTURES, SOUNDS, REGIONS, REALMS, f"{PACK_ROOT}translations", QUESTS, SPECIES, TILES, LOOT_TABLES, MATERIALS, HARVEST_TABLES, TONICS)
     )
     models = {path for paths in entries["models"].values() for path in paths}
     used_by_models = model_images(sorted(models & tracked))
