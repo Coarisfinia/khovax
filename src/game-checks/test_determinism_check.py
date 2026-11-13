@@ -65,6 +65,12 @@ REFUSED = (
     "var a := Vector3i.ONE.abs().distance_to(other)",
     "var e := Expression.new()",
     "var a := Vector2i.ONE.snapped(Vector2i(2, 2)).length()",
+    # A call nested more than one level inside the receiver or a chained method (#2223).
+    "var a := Vector2i(get_x(get_y()), 4).length()",
+    "var a := Vector2i(f(g(h(1))), 4).length()",
+    "var a := Vector2i.ONE.clamp(Vector2i(f(g(1)), 0), b).length()",
+    # A declared name that starts another declared one (#2223).
+    "var size: Vector2i\nvar size_max: Vector2i\nvar a := size_max.length()",
     "var a := tile.aspect()",
     "var a := PackedFloat32Array()",
     "var a := PackedFloat64Array()",
@@ -100,6 +106,11 @@ REFUSED = (
     'var c := Callable(items, ("shuffle"))',
     'items.call(StringName(("shuffle")))',
     'items.call((r"shuffle"))',
+    # A name in a triple-quoted string (#2266).
+    'items.call("""shuffle""")',
+    "items.callv('''pick_random''', [])",
+    'var c := Callable(items, r"""shuffle""")',
+    "items.call(&'''pick_random''')",
 )
 
 ALLOWED = (
@@ -147,6 +158,9 @@ ALLOWED = (
     'var a := ["shuffle"]',
     'var a := StringName("shuffle")',
     "var a := bytes.to_int32_array()",
+    # A deeply nested integer vector that isn't length()'s receiver (#2223).
+    "var a := f(Vector2i(g(h(1)), 2)).length()",
+    "var a := Vector2i(f(g(1)), 2).x + text.length()",
     # Grouping parentheses that aren't call()'s first argument (#2254).
     'var a := ("shuffle")',
     'var a := foo(("shuffle"))',
@@ -158,6 +172,9 @@ ALLOWED = (
     'items.call(("shuffle") + suffix)',
     'items.call(StringName("shuffle") + suffix)',
     'items.call(StringName(x + "shuffle"))',
+    # A triple-quoted name that isn't call()'s whole first argument (#2266).
+    'var a := """shuffle"""',
+    'items.call("""shuffle""" + "d")',
 )
 
 # Variant.Type constants of types that hold floats, and of their integer twins (#2247).
@@ -259,6 +276,47 @@ class FormsTest(unittest.TestCase):
             "var d := {tile: Vector2i.ONE}\nvar a := tile.length()",
         ):
             self.assertEqual(forbidden_lines(source), [], source)
+
+    def test_a_declared_vector2i_counts_only_where_it_is_that_name(self) -> None:
+        # Another object's member, a dictionary with the type as a value, and the same name in
+        # another function (#2264).
+        for source in (
+            "var tile: Vector2i\nvar a := obj.tile.length()",
+            "var tile: Vector2i\nvar a := get_obj().tile.length()",
+            "var d := {tile: Vector2i}\nvar a := tile.length()",
+            "var d := {a = 1, tile: Vector2i}\nvar a := tile.length()",
+            "var d := {\n\ttile: Vector2i,\n}\nvar a := tile.length()",
+            "func f(tile: Vector2i) -> void:\n\tpass\n\n\nfunc g(tile: String) -> int:"
+            "\n\treturn tile.length()",
+            "func f() -> void:\n\tvar tile: Vector2i\n\tif true:\n\t\tpass\n\n\n"
+            "func g() -> int:\n\tvar tile := \"x\"\n\treturn tile.length()",
+            "class A:\n\tfunc f(tile: Vector2i) -> void:\n\t\tpass\n\n\tfunc g(tile: String)"
+            " -> int:\n\t\treturn tile.length()",
+        ):
+            self.assertEqual(forbidden_lines(source), [], source)
+
+    def test_a_declared_vector2i_still_counts_in_its_scope(self) -> None:
+        # What #2264's scoping must keep refusing: the line of each length().
+        for source in (
+            "var tile: Vector2i\n\n\nfunc f() -> void:\n\tvar a := tile.length()",
+            "func f() -> void:\n\tvar a := tile.length()\n\n\nvar tile: Vector2i",
+            "var tile: Vector2i\nvar a := self.tile.length()",
+            "func f(tile: Vector2i) -> void:\n\tif true:\n\t\tvar a := tile.length()",
+            "func f(\n\ttile: Vector2i,\n) -> void:\n\tvar a := tile.length()",
+            "func f() -> void:\n\tvar tile: Vector2i\n\n\tvar a := tile.length()",
+            "var d := {}\nvar tile: Vector2i\nvar a := tile.length()",
+            "var d := {f = func(tile: Vector2i) -> void: print(tile.length())}",
+            "var d := {\n\tf = func(tile: Vector2i) -> void:\n\t\tprint(tile.length())\n}",
+            "var d := {\n\tf = func() -> void:\n\t\tvar tile: Vector2i"
+            "\n\t\tprint(tile.length())\n}",
+            "class A:\n\tvar tile: Vector2i\n\n\nfunc f() -> void:\n\tvar a := tile.length()",
+        ):
+            hit = [
+                f"{number}:{line}"
+                for number, line in enumerate(source.split("\n"), 1)
+                if "length(" in line
+            ]
+            self.assertEqual(forbidden_lines(source), hit, source)
 
 
 class OwnTestTest(unittest.TestCase):
