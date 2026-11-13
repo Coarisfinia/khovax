@@ -26,6 +26,10 @@ SCRIPT = Path(__file__).resolve().with_name("gdstyle.py")
 VERSION = "0.0.0-test"
 # The test's own download timeout: short, so a stalled download gives up quickly.
 TIMEOUT_SECONDS = 1
+# The test's own deadline for the whole download: short, so a trickling one gives up quickly too.
+DEADLINE_SECONDS = 2
+# A trickling server sends a byte this often, well under the read timeout.
+TRICKLE_SECONDS = 0.25
 # A run still going after this is hanging.
 RUN_LIMIT_SECONDS = 30
 
@@ -44,7 +48,8 @@ def archive(members: dict[str, bytes]) -> bytes:
 
 class Release(BaseHTTPRequestHandler):
     """Serves the server's `body`, or with `stall` sends the headers and then nothing, or with
-    `cut` the first ten bytes of it and then closes."""
+    `trickle` one byte of it at a time, never waiting as long as the read timeout, or with `cut`
+    the first ten bytes of it and then closes."""
 
     def do_GET(self) -> None:
         body: bytes = self.server.body  # type: ignore[attr-defined]
@@ -54,6 +59,16 @@ class Release(BaseHTTPRequestHandler):
         self.wfile.flush()
         if self.server.stall:  # type: ignore[attr-defined]
             self.server.release.wait()  # type: ignore[attr-defined]
+            return
+        if self.server.trickle:  # type: ignore[attr-defined]
+            for index in range(len(body)):
+                if self.server.release.wait(TRICKLE_SECONDS):  # type: ignore[attr-defined]
+                    return
+                try:
+                    self.wfile.write(body[index : index + 1])
+                    self.wfile.flush()
+                except OSError:
+                    return
             return
         if self.server.cut:  # type: ignore[attr-defined]
             self.wfile.write(body[:10])
@@ -76,19 +91,26 @@ def child(root: str, url: str) -> int:
     gdstyle.ROOT = Path(root)
     gdstyle.RELEASE = url
     gdstyle.TIMEOUT_SECONDS = TIMEOUT_SECONDS
+    gdstyle.DEADLINE_SECONDS = DEADLINE_SECONDS
     sys.argv = [str(SCRIPT), "--version"]
     return gdstyle.main()
 
 
 class GdstyleDownloadTest(unittest.TestCase):
     def run_install(
-        self, body: bytes, sha256: str | None = None, *, stall: bool = False, cut: bool = False
+        self,
+        body: bytes,
+        sha256: str | None = None,
+        *,
+        stall: bool = False,
+        trickle: bool = False,
+        cut: bool = False,
     ) -> tuple[int | None, str, Path]:
         """gdstyle.py's exit code (None when it was still running), its output and its cache,
         served `body`, with the stand-in repository pinning `sha256` (the body's by default)."""
         server = ThreadingHTTPServer(("127.0.0.1", 0), Release)
         server.daemon_threads = True
-        server.body, server.stall, server.cut = body, stall, cut  # type: ignore[attr-defined]
+        server.body, server.stall, server.trickle, server.cut = body, stall, trickle, cut  # type: ignore[attr-defined]
         server.release = threading.Event()  # type: ignore[attr-defined]
         threading.Thread(target=server.serve_forever, daemon=True).start()
         self.addCleanup(server.server_close)
@@ -134,6 +156,14 @@ class GdstyleDownloadTest(unittest.TestCase):
     def test_stalled_download_gives_up(self) -> None:
         started = time.monotonic()
         code, output, cache = self.run_install(archive({"gdstyle": b"x"}), stall=True)
+        self.assert_fails_cleanly(code, output, cache)
+        self.assertLess(time.monotonic() - started, RUN_LIMIT_SECONDS)
+
+    def test_trickling_download_gives_up(self) -> None:
+        # A byte every quarter second never trips the read timeout; at that pace the whole
+        # archive would take minutes, so only the overall deadline ends it.
+        started = time.monotonic()
+        code, output, cache = self.run_install(archive({"gdstyle": os.urandom(4096)}), trickle=True)
         self.assert_fails_cleanly(code, output, cache)
         self.assertLess(time.monotonic() - started, RUN_LIMIT_SECONDS)
 
