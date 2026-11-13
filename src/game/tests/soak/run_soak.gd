@@ -4,21 +4,21 @@ extends SceneTree
 ## The soak test (#1311): the game must not get slower the longer the player walks around. It
 ## boots the main scene on a fresh world at the world's start, with the world and the profile saved
 ## as the game saves them, into files of the soak's own. The player first stands on their start
-## tile while the soak measures a window of frames there: the start. Then an explorer
+## tile while the soak measures WINDOWS windows of frames there: the start. Then an explorer
 ## (SoakExplorer) walks them to the nearest ground they haven't stood on yet, over and over, until
 ## they have stood on every tile of the instance they can reach, which takes minutes, well over the
 ## half minute after which the frame rate used to sink, and back to the start tile, where the soak
-## measures a second window: the end. The same view, the same instance: what differs is everything
-## the walk left behind (the trail, the explored ground, the saved world). Every frame runs one
-## tick, so the walk is the same on every machine however fast it draws. It runs on its own, apart
-## from the e2e flows, since it takes minutes (CI's `soak` job, under a virtual display so the
-## renderer really draws):
+## measures as many windows again: the end. The same view, the same instance: what differs is
+## everything the walk left behind (the trail, the explored ground, the saved world). Every frame
+## runs one tick, so the walk is the same on every machine however fast it draws. It runs on its
+## own, apart from the e2e flows, since it takes minutes (CI's `soak` job, under a virtual display
+## so the renderer really draws):
 ##   uv run --locked src/game-offscreen/offscreen.py -- --path src/game \
 ##       -s res://tests/soak/run_soak.gd
 ## Headless it measures the frames without the renderer's share.
 ##
 ## With `-- tour` (#2084) the explorer is a TourExplorer instead: it walks through the exits into
-## every instance it can reach and back home, so the end window is measured with all of them
+## every instance it can reach and back home, so the end's windows are measured with all of them
 ## loaded behind the player, as after a while of play. CI runs it headless, where the frame is the
 ## game's own work, which the software renderer's share would otherwise hide.
 ##
@@ -33,6 +33,10 @@ extends SceneTree
 ## It fails when any is more than GROWTH_BOUND times higher at the end than at the start, or when
 ## the walk didn't explore its instance (or tour the world) and come back in time, or on any error
 ## logged. On the way it prints the same measures every few seconds with what has grown by then.
+##
+## The start and the end each count the middle of their windows' measures, not one window's (#2293):
+## on a shared runner one window's medians could be off by a busy few seconds, and the tick, a
+## millisecond or less, by enough to cross the bound with nothing grown.
 
 ## Where the soak keeps the world and the profile it plays, never the player's own.
 const WORLD_PATH: String = "user://soak_world.json"
@@ -40,6 +44,8 @@ const PROFILE_PATH: String = "user://soak_profile.json"
 const SEED: int = 1311
 ## Each window's frames, one tick each: five seconds of game time.
 const WINDOW: int = Simulation.TICKS_PER_SECOND * 5
+## The windows measured at the start and at the end, of which the middle measure counts (#2293).
+const WINDOWS: int = 3
 ## Frames the player stands before a window is measured: the boot and the fog first opening at the
 ## start, the camera and the fog settling at the end.
 const SETTLE_START: int = Simulation.TICKS_PER_SECOND * 10
@@ -52,8 +58,6 @@ const GROWTH_BOUND: float = 1.5
 const LEAST_EXPLORED: int = 300
 ## The fewest instances a tour has to walk into, home included, for the measurement to count.
 const LEAST_REACHED: int = 5
-## Every how many frames the reference work runs.
-const REFERENCE_EVERY: int = 10
 ## How many tiles the reference work fills a dictionary with.
 const REFERENCE_SIZE: int = 3000
 
@@ -71,7 +75,9 @@ var _frame_usec: Array[int] = []
 var _reference_usec: Array[int] = []
 var _tick_usec: Array[int] = []
 var _draws: Array[int] = []
-## The start window's and the end window's measures, once taken.
+## The windows measured so far at the start, or at the end.
+var _measured: Array[SoakWindow] = []
+## The middle of the start's windows' measures and of the end's, once taken.
 var _start: SoakWindow
 var _end: SoakWindow
 var _frames: int = 0
@@ -86,8 +92,9 @@ func _process(_delta: float) -> bool:
 		_frame_usec.append(now - _last_usec - _explorer.spent_usec)
 		_draws.append(_draw_calls())
 	_explorer.spent_usec = 0
-	if _frames % REFERENCE_EVERY == 0:
-		_reference_usec.append(_reference())
+	# Every frame, so each window's reference is the median of as many samples as its tick (#2293):
+	# one sample every ten frames left ten, too few to steady a ratio of a millisecond or less.
+	_reference_usec.append(_reference())
 	_frames += 1
 	if _home_frames >= 0:
 		_home_frames += 1
@@ -161,23 +168,26 @@ func _finish(code: int) -> void:
 	QuietQuit.quit(self, code)
 
 
-## Starts and closes the windows: a progress report every WINDOW frames, the start window while the
-## player stands at first, then the walk, and the end window once they stand back home.
+## Starts and closes the windows: a progress report every WINDOW frames, the start's windows while
+## the player stands at first, then the walk, and the end's once they stand back home.
 func _measure() -> void:
-	if _frames == SETTLE_START:
-		_begin_window()
-	if _home_frames == SETTLE_END:
+	if _frames == SETTLE_START or _home_frames == SETTLE_END:
 		_begin_window()
 	if _frame_usec.size() < WINDOW:
 		return
 	var window: SoakWindow = _close_window()
 	if _start == null and _frames >= SETTLE_START + WINDOW:
-		_start = window
-		print("the start: ", window.line())
-		_explorer.explore()
+		_measured.append(window)
+		if _measured.size() == WINDOWS:
+			_start = SoakWindow.middle(_measured)
+			_measured.clear()
+			print("the start: ", _start.line())
+			_explorer.explore()
 	elif _home_frames >= SETTLE_END + WINDOW:
-		_end = window
-		print("the end:   ", window.line())
+		_measured.append(window)
+		if _measured.size() == WINDOWS:
+			_end = SoakWindow.middle(_measured)
+			print("the end:   ", _end.line())
 
 
 func _begin_window() -> void:
