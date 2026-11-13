@@ -76,9 +76,8 @@ FORBIDDEN_IN_CODE = re.compile(
 )
 # An integer vector's length() and distance_to() are floats, a String's length() a whole number,
 # and a pattern can't see types: so they count on a Vector2i, Vector3i or Vector4i written out or on
-# a name the file declares as one. Scripts type
-# every declaration (AGENTS.md); a dictionary entry's value (`a: Vector2i(1, 2)`, `a: Vector2i.ONE`)
-# declares nothing.
+# a name declared as one. Scripts type every declaration (AGENTS.md); a dictionary entry's value
+# (`a: Vector2i(1, 2)`, `a: Vector2i.ONE`, `a: Vector2i`) declares nothing (#2264).
 # A receiver written out, and the integer vector methods a chain may call on it: their arguments
 # are matched as balanced parentheses, at any depth (#2223).
 INT_VECTOR_RECEIVER = r"\bVector[234]i(?:(?=\()|\.[A-Z_]+)"
@@ -88,6 +87,9 @@ INT_VECTOR_METHOD = re.compile(
 )
 FLOAT_METHOD = re.compile(r"\.(?:length|distance_to)\s*\(")
 INT_VECTOR_DECLARED = re.compile(r"\b(\w+)\s*:\s*Vector[234]i\b(?!\s*[.(])")
+# A function's parameters and locals count in its body only, any other declaration in the whole
+# file (#2264); a function ends at the next line indented no deeper than its func.
+FUNCTION = re.compile(r"\s*(static\s+)?func\b")
 # Reaching a randomness method by name, with call() or a Callable: read on the whole of
 # code_with_random_names, which keeps that string, so a call split over lines is seen too (#2223).
 RANDOM_NAMES = ("shuffle", "pick_random")
@@ -191,13 +193,69 @@ def calls_float_method(line: str, receiver: re.Pattern[str]) -> bool:
     return False
 
 
+def innermost_opener(before: str) -> str:
+    """The bracket still open at the end of the code `before`, or "" if none is."""
+    depth = 0
+    for char in reversed(before):
+        if char in ")]}":
+            depth += 1
+        elif char in "([{":
+            if depth == 0:
+                return char
+            depth -= 1
+    return ""
+
+
+def functions_of(lines: list[str]) -> list[int | None]:
+    """The function each code line is in, as the index of its func line, or None outside one. A
+    line inside brackets left open continues the line before it, e.g. a func's parameters."""
+    owners: list[int | None] = []
+    function: tuple[int, int] | None = None  # Its func line and that line's indentation.
+    depth = 0
+    for index, line in enumerate(lines):
+        if depth == 0 and line.strip():
+            indent = len(line) - len(line.lstrip())
+            if function is not None and indent <= function[1]:
+                function = None
+            if function is None and FUNCTION.match(line):
+                function = (index, indent)
+        owners.append(None if function is None else function[0])
+        opened = sum(line.count(char) for char in "([{")
+        depth = max(0, depth + opened - sum(line.count(char) for char in ")]}"))
+    return owners
+
+
+def declared_int_vectors(bare: list[str], owners: list[int | None]) -> dict[int | None, set[str]]:
+    """The names declared as an integer vector, by the function they count in (None: the file)."""
+    joined = "\n".join(bare)
+    declared: dict[int | None, set[str]] = {}
+    for hit in INT_VECTOR_DECLARED.finditer(joined):
+        before = joined[: hit.start()]
+        # A dictionary entry, not a declaration: a key in braces, not a lambda's local in them.
+        if innermost_opener(before) == "{" and before.rstrip().endswith(("{", ",")):
+            continue
+        owner = owners[joined.count("\n", 0, hit.start())]
+        declared.setdefault(owner, set()).add(hit.group(1))
+    return declared
+
+
+def receiver_in(names: set[str]) -> re.Pattern[str]:
+    """An integer vector written out or one of `names`, as length()'s receiver: the name itself or
+    the script's own member, not another object's (`obj.tile`, #2264)."""
+    own = (rf"(?<![\w.])(?:self\.)?{name}\b" for name in sorted(names))
+    return re.compile("|".join([INT_VECTOR_RECEIVER, *own]))
+
+
 def forbidden_lines(source: str) -> list[str]:
     """The numbered lines of a script that use something the rules never use."""
     code = without_comments(source).rstrip("\n").split("\n")
     bare = code_only(source).split("\n")
-    declared = INT_VECTOR_DECLARED.findall("\n".join(bare))
-    receivers = [INT_VECTOR_RECEIVER, *(rf"\b{name}\b" for name in declared)]
-    receiver = re.compile("|".join(receivers))
+    owners = functions_of(bare)
+    declared = declared_int_vectors(bare, owners)
+    in_file = declared.get(None, set())
+    receiver = {
+        owner: receiver_in(in_file | declared.get(owner, set())) for owner in set(owners)
+    }
     named = code_with_random_names(source)
     # The line of each randomness method's name.
     by_name = {
@@ -210,7 +268,7 @@ def forbidden_lines(source: str) -> list[str]:
         [
             FORBIDDEN.search(line) is not None
             or FORBIDDEN_IN_CODE.search(bare_line) is not None
-            or calls_float_method(bare_line, receiver)
+            or calls_float_method(bare_line, receiver[owners[index]])
             or index in by_name
             for index, (line, bare_line) in enumerate(zip(code, bare))
         ],
