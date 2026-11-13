@@ -1,7 +1,7 @@
-"""Tests that gdstyle.py (#2215) gives up on a stalled download, and that every failed install ends
-with one clean message and a non-zero exit, never a traceback, and caches nothing (#2244). Each
-run downloads from a local stand-in for GitHub's release, in its own cache, against a stand-in
-repository whose pin and checksum match the archive served.
+"""Tests that gdstyle.py (#2215) gives up on a stalled or trickling download (#2256), and that
+every failed install ends with one clean message and a non-zero exit, never a traceback, and caches
+nothing (#2244). Each run downloads from a local stand-in for GitHub's release, in its own cache,
+against a stand-in repository whose pin and checksum match the archive served.
 
     uv run --locked --package khovax-game-build src/game-build/test_gdstyle.py
 """
@@ -32,6 +32,15 @@ DEADLINE_SECONDS = 2
 TRICKLE_SECONDS = 0.25
 # A run still going after this is hanging.
 RUN_LIMIT_SECONDS = 30
+# The stand-in release is local: a proxy set on the machine running the test must not carry it
+# (#2256), so the child gets none, whatever the case of the variable's name.
+PROXY_VARIABLES = {"http_proxy", "https_proxy", "all_proxy", "no_proxy"}
+
+
+def child_environment(cache: Path) -> dict[str, str]:
+    """The test's environment without any proxy, with its own cache and localhost exempted."""
+    env = {name: value for name, value in os.environ.items() if name.lower() not in PROXY_VARIABLES}
+    return {**env, "no_proxy": "127.0.0.1,localhost", "XDG_CACHE_HOME": str(cache)}
 
 
 def archive(members: dict[str, bytes]) -> bytes:
@@ -48,11 +57,27 @@ def archive(members: dict[str, bytes]) -> bytes:
 
 class Release(BaseHTTPRequestHandler):
     """Serves the server's `body`, or with `stall` sends the headers and then nothing, or with
-    `trickle` one byte of it at a time, never waiting as long as the read timeout, or with `cut`
-    the first ten bytes of it and then closes."""
+    `trickle` one byte of it at a time, never waiting as long as the read timeout, or with
+    `slow_headers` its headers that way, or with `cut` the first ten bytes of it and then closes."""
+
+    def send_slowly(self, data: bytes) -> None:
+        """Sends `data` a byte at a time, until it is sent, the client leaves or the test ends."""
+        for index in range(len(data)):
+            if self.server.release.wait(TRICKLE_SECONDS):  # type: ignore[attr-defined]
+                return
+            try:
+                self.wfile.write(data[index : index + 1])
+                self.wfile.flush()
+            except OSError:
+                return
 
     def do_GET(self) -> None:
         body: bytes = self.server.body  # type: ignore[attr-defined]
+        if self.server.slow_headers:  # type: ignore[attr-defined]
+            # One header line, under http.client's limit for a line, that takes hours to arrive.
+            self.wfile.write(b"HTTP/1.1 200 OK\r\n")
+            self.send_slowly(b"X-Slow: " + b"a" * 60000 + b"\r\n\r\n")
+            return
         self.send_response(200)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
@@ -61,14 +86,7 @@ class Release(BaseHTTPRequestHandler):
             self.server.release.wait()  # type: ignore[attr-defined]
             return
         if self.server.trickle:  # type: ignore[attr-defined]
-            for index in range(len(body)):
-                if self.server.release.wait(TRICKLE_SECONDS):  # type: ignore[attr-defined]
-                    return
-                try:
-                    self.wfile.write(body[index : index + 1])
-                    self.wfile.flush()
-                except OSError:
-                    return
+            self.send_slowly(body)
             return
         if self.server.cut:  # type: ignore[attr-defined]
             self.wfile.write(body[:10])
@@ -104,13 +122,15 @@ class GdstyleDownloadTest(unittest.TestCase):
         *,
         stall: bool = False,
         trickle: bool = False,
+        slow_headers: bool = False,
         cut: bool = False,
     ) -> tuple[int | None, str, Path]:
         """gdstyle.py's exit code (None when it was still running), its output and its cache,
         served `body`, with the stand-in repository pinning `sha256` (the body's by default)."""
         server = ThreadingHTTPServer(("127.0.0.1", 0), Release)
         server.daemon_threads = True
-        server.body, server.stall, server.trickle, server.cut = body, stall, trickle, cut  # type: ignore[attr-defined]
+        server.body, server.stall, server.cut = body, stall, cut  # type: ignore[attr-defined]
+        server.trickle, server.slow_headers = trickle, slow_headers  # type: ignore[attr-defined]
         server.release = threading.Event()  # type: ignore[attr-defined]
         threading.Thread(target=server.serve_forever, daemon=True).start()
         self.addCleanup(server.server_close)
@@ -129,7 +149,7 @@ class GdstyleDownloadTest(unittest.TestCase):
         try:
             done = subprocess.run(
                 [sys.executable, "-I", __file__, "--child", str(root), url],
-                env={**os.environ, "XDG_CACHE_HOME": str(cache)},
+                env=child_environment(cache),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 timeout=RUN_LIMIT_SECONDS,
@@ -164,6 +184,13 @@ class GdstyleDownloadTest(unittest.TestCase):
         # archive would take minutes, so only the overall deadline ends it.
         started = time.monotonic()
         code, output, cache = self.run_install(archive({"gdstyle": os.urandom(4096)}), trickle=True)
+        self.assert_fails_cleanly(code, output, cache)
+        self.assertLess(time.monotonic() - started, RUN_LIMIT_SECONDS)
+
+    def test_trickling_headers_give_up(self) -> None:
+        # The same, before urlopen has even returned: the deadline covers the headers too.
+        started = time.monotonic()
+        code, output, cache = self.run_install(archive({"gdstyle": b"x"}), slow_headers=True)
         self.assert_fails_cleanly(code, output, cache)
         self.assertLess(time.monotonic() - started, RUN_LIMIT_SECONDS)
 
