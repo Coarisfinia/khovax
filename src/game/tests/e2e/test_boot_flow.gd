@@ -93,7 +93,9 @@ func _steps() -> Array[Callable]:
 ## Launching (#243): the project starts in the boot scene, which shows thick fog over the whole
 ## screen at once, with a caption saying the world is loading (#270), and starts loading the game
 ## only once that fog has been drawn, so the page never waits on a blank splash; it starts the
-## game under the fog as the current scene, and then lifts the fog and leaves.
+## game under the fog as the current scene, and then lifts the fog and leaves. Under the caption a
+## bar shows how far the packs' files have loaded (#2083), and it's full, with every file the
+## loaded packs give in Godot's resource cache, by the time the game starts.
 func _check_boot(tree: SceneTree) -> String:
 	if str(ProjectSettings.get_setting("application/run/main_scene")) != "res://game/boot.tscn":
 		return "the project doesn't start in the boot scene"
@@ -102,6 +104,9 @@ func _check_boot(tree: SceneTree) -> String:
 	var fogged: bool = boot.cover.color == Boot.FOG and boot.game == null
 	fogged = fogged and boot.caption.text == boot.loading_text()
 	fogged = fogged and boot.caption.is_visible_in_tree()
+	var bars: Array[Node] = boot.cover.find_children("*", "ProgressBar", true, false)
+	var bar: ProgressBar = null if bars.is_empty() else bars[0] as ProgressBar
+	fogged = fogged and bar != null and bar.is_visible_in_tree()
 	# Nothing loads before the fog has been drawn once.
 	fogged = fogged and not boot.is_processing()
 	# A game that never starts fails the flow on the runner's timeout.
@@ -111,6 +116,11 @@ func _check_boot(tree: SceneTree) -> String:
 		result = "the boot scene didn't show fog first and then start the game"
 	elif tree.current_scene != game or not boot.cover.visible:
 		result = "the started game isn't the current scene under the fog"
+	elif bar.value != bar.max_value or not _uncached_pack_file().is_empty():
+		result = "the game started before the packs had loaded: %s, %s" % [
+			bar.value,
+			_uncached_pack_file(),
+		]
 	else:
 		await tree.create_timer(Boot.LIFT_SECONDS + 1.0).timeout
 		if is_instance_valid(boot):
@@ -121,6 +131,18 @@ func _check_boot(tree: SceneTree) -> String:
 		game.queue_free()
 	await tree.process_frame
 	return result
+
+
+## The first file of the loaded packs that loads as a resource but isn't in Godot's resource cache,
+## or "" when every one is.
+func _uncached_pack_file() -> String:
+	for pack: ResourcePack in ResourcePacks.loaded():
+		for kind: String in ResourcePack.KINDS:
+			var files: Dictionary = {} if ResourcePack.KINDS[kind].is_empty() else pack.get(kind)
+			for file: Variant in files.values():
+				if not ResourceLoader.has_cached(pack.root + str(file)):
+					return pack.root + str(file)
+	return ""
 
 
 ## Launch options (#237) read as given: a seed, an instance blueprint, invincibility and a user
