@@ -1,5 +1,6 @@
-"""Checks that the player can walk through a portal (#2157): along the walking line through the
-opening, from the ground to the player's height, nothing but the portal itself stands in the way.
+"""Checks that the player can walk through a portal while it's open (#2157): along the walking line
+through the opening, from the ground to the player's height, nothing but the portal itself stands
+in the way.
 
     uv run --locked src/game-models/blender.py --background --factory-startup \
         --python src/game-models/check_passage.py -- <model.glb> [<model.glb> ...]
@@ -10,9 +11,11 @@ origin. The check casts rays through that passage, `PASSAGE_HALF_WIDTH` to each 
 middle and from the ground to the player's height: rays along the walking line, front to back, at
 every `STEP` up, and rays straight down from the player's height at every step along it. A ray
 may meet the portal (the mesh's piece holding the `portal` bone's vertices, where the player
-steps in), and nothing else: a hit on any other part (the arch, a tentacle) fails. It looks in the
-rest pose and on every `FRAME_STEP`th frame of every clip, since the gate stands in its loop in the
-game. Every other model passes, so CI runs it on every .glb.
+steps in), and nothing else: a hit on any other part (the arch, a tentacle) fails. A portal is
+passable only while it's open, holding its `OPEN` clip (the tentacle gate sitting on the ground,
+its tentacles withdrawn: the owner, on #2321), so the check looks at every `FRAME_STEP`th frame of
+that clip and its last; a portal without it fails. Its other poses (standing, in its Idle) may block
+the way. Every other model passes, so CI runs it on every .glb.
 
 It prints a line per pose and `PASSAGE CHECK: PASS` or `FAIL` (and exits 1 on a fail), through
 game_shared.log (#1115): a failing line is an error on the .glb, naming where the first blocking
@@ -36,6 +39,8 @@ from lib import ground, imported, world_scale  # noqa: E402
 
 # The kind of model the player walks through.
 PORTAL = "portal"
+# The clip a portal holds while the player can walk through it.
+OPEN = "Sitting"
 # The bone whose vertices are the portal's (the piece holding them is the portal).
 PORTAL_BONE = "portal"
 # How far to each side of the opening's middle the passage must be clear (metres): the player's
@@ -155,20 +160,15 @@ def check(glb):
     if rig is None or len(skins) != 1:
         return ["PASSAGE %s FAIL: a portal needs one skinned mesh on a rig" % model], False
     skin = skins[0]
-    poses = [("rest", None, None)]
-    if rig.animation_data is not None:
-        for action in sorted(bpy.data.actions, key=lambda action: action.name):
-            start, end = (int(round(value)) for value in action.frame_range)
-            poses += [(action.name, action, frame) for frame in range(start, end + 1, FRAME_STEP)]
+    action = bpy.data.actions.get(OPEN)
+    if rig.animation_data is None or action is None:
+        return ["PASSAGE %s FAIL: no %s clip, the pose the player walks through it in" % (model, OPEN)], False
+    start, end = (int(round(value)) for value in action.frame_range)
+    poses = [(OPEN, action, frame) for frame in sorted(set(range(start, end + 1, FRAME_STEP)) | {end})]
     worst = {}
     for name, action, frame in poses:
-        if action is None:
-            rig.data.pose_position = "REST"
-            bpy.context.scene.frame_set(bpy.context.scene.frame_current)
-        else:
-            rig.data.pose_position = "POSE"
-            imported.play(rig, action)
-            bpy.context.scene.frame_set(frame)
+        imported.play(rig, action)
+        bpy.context.scene.frame_set(frame)
         found = look(skin, rig)
         if found is None:
             return ["PASSAGE %s FAIL: no vertex is the %s bone's, so no portal to step into" % (
@@ -185,7 +185,7 @@ def check(glb):
                          " ground to %.2f m) hit more than the portal%s, first at x %.2f, y %.2f,"
                          " z %.2f" % (model, name, count, cast, PASSAGE_HALF_WIDTH,
                                       world_scale.PLAYER_HEIGHT,
-                                      "" if frame is None else " (frame %d)" % frame,
+                                      " (frame %d)" % frame,
                                       first.x, first.y, first.z))
         else:
             lines.append("PASSAGE %s ok %s: %d rays through the passage meet only the portal" % (
