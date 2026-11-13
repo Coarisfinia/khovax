@@ -152,6 +152,12 @@ ALLOWED = (
     'var a := foo(("shuffle"))',
     'items.call(("sort"), ("shuffle"))',
     'var a := r"shuffle"',
+    # The name is only part of the argument (#2254).
+    'items.call(("shuffle" + "d"))',
+    'items.call("shuffle" + "d")',
+    'items.call(("shuffle") + suffix)',
+    'items.call(StringName("shuffle") + suffix)',
+    'items.call(StringName(x + "shuffle"))',
 )
 
 
