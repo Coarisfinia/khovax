@@ -408,6 +408,11 @@ class FormsTest(unittest.TestCase):
             "var tile: Vector2i\n\n\nfunc f() -> void:"
             "\n\tvar g := func(tile: String) -> int: return 1"
             "\n\tprint(tile.length())",
+            # A lambda rebinding the name inside a function that hides it.
+            "var tile: Vector2i\n\n\nfunc f(tile: String) -> void:"
+            "\n\tvar g := func(tile: Variant) -> int: return tile.length()",
+            "var tile: Vector2i\n\n\nfunc f() -> void:\n\tvar tile: String"
+            "\n\tvar g := func(tile) -> int:\n\t\treturn tile.length()",
             # A type that may hold an integer vector, none, or one inferred.
             "var tile: Vector2i\n\n\nfunc f(tile: Variant) -> void:\n\tprint(tile.length())",
             "var tile: Vector2i\n\n\nfunc f(tile) -> void:\n\tprint(tile.length())",
