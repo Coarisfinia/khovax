@@ -324,6 +324,36 @@ class FormsTest(unittest.TestCase):
             ]
             self.assertEqual(forbidden_lines(source), hit, source)
 
+    def test_an_element_of_an_integer_vector_array_is_refused(self) -> None:
+        # A subscript, and a loop variable, over an Array[Vector2i] (#2261).
+        for source in (
+            "var tiles: Array[Vector2i] = []\nvar a := tiles[0].length()",
+            "var tiles: Array[Vector3i]\nvar a := tiles[i + 1].distance_to(b)",
+            "var tiles: Array[Vector4i]\nvar a := tiles[ids[0]].abs().length()",
+            "var tiles: Array[Vector2i]\nvar a := self.tiles[0].length()",
+            "func f(tiles: Array[Vector2i]) -> void:\n\tfor tile in tiles:"
+            "\n\t\tprint(tile.length())",
+        ):
+            hit = [
+                f"{number}:{line}"
+                for number, line in enumerate(source.split("\n"), 1)
+                if "length(" in line or "distance_to(" in line
+            ]
+            self.assertEqual(forbidden_lines(source), hit, source)
+
+    def test_an_element_of_any_other_array_is_allowed(self) -> None:
+        for source in (
+            "var names: Array[String]\nvar a := names[0].length()",
+            "var tiles: Array[Vector2i]\nvar a := obj.tiles[0].length()",
+            "var tiles: Array[Vector2i]\nvar a := tiles.size()",
+            "func f(names: Array[String]) -> void:\n\tfor name in names:\n\t\tprint(name.length())",
+            "func f(tiles: Array[Vector2i]) -> void:\n\tpass\n\n\nfunc g(tiles: Array[String])"
+            " -> int:\n\treturn tiles[0].length()",
+            "func f(tiles: Array[Vector2i]) -> void:\n\tpass\n\n\nfunc g(tiles: Array[String])"
+            " -> void:\n\tfor tile in tiles:\n\t\tprint(tile.length())",
+        ):
+            self.assertEqual(forbidden_lines(source), [], source)
+
 
 class OwnTestTest(unittest.TestCase):
     def test_a_test_module_without_tests_does_not_pass(self) -> None:
