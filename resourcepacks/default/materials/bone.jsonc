@@ -1,2 +1,2 @@
 // A bone (#687), which felled monsters drop.
-{ "id": "bone", "name": "Bone" }
+{ "id": "bone", "name": "Bone", "category": "animal" }

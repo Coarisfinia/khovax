@@ -295,6 +295,27 @@ class FormsTest(unittest.TestCase):
         ):
             self.assertEqual(forbidden_lines(source), [], source)
 
+    def test_a_declaration_outside_a_function_counts_only_in_its_class(self) -> None:
+        # An inner class's members and the outer class's don't reach each other, and Godot doesn't
+        # warn when one shadows the other (#2288).
+        for source in (
+            "var tile: Vector2i\n\n\nclass Inner:\n\textends RefCounted\n\n\tvar tile: String"
+            ' = "ab"\n\n\tfunc f() -> int:\n\t\treturn tile.length()',
+            "var tile: Vector2i\n\n\nclass Inner:\n\tfunc f(tile: String) -> int:"
+            "\n\t\treturn tile.length()",
+            "static var tile: Vector2i\n\n\nclass Inner:\n\tvar tile: String"
+            "\n\tvar a := tile.length()",
+            "class Inner:\n\tvar tile: Vector2i\n\n\nfunc f() -> void:\n\tvar a := tile.length()",
+            "class Inner:\n\tvar tile: Vector2i\n\n\nvar a := tile.length()",
+            "class A:\n\tvar tile: Vector2i\n\n\nclass B:\n\tfunc f() -> void:"
+            "\n\t\tvar a := tile.length()",
+            "var tiles: Array[Vector2i]\n\n\nclass Inner:\n\tvar tiles: Array[String]"
+            "\n\tvar a := tiles.front().length()",
+            "var spots: Dictionary[String, Vector2i]\n\n\nclass Inner:"
+            "\n\tvar spots: Dictionary[String, String]\n\tvar a := spots.get(key).length()",
+        ):
+            self.assertEqual(forbidden_lines(source), [], source)
+
     def test_a_declared_vector2i_still_counts_in_its_scope(self) -> None:
         # What #2264's scoping must keep refusing: the line of each length().
         for source in (
@@ -309,13 +330,31 @@ class FormsTest(unittest.TestCase):
             "var d := {\n\tf = func(tile: Vector2i) -> void:\n\t\tprint(tile.length())\n}",
             "var d := {\n\tf = func() -> void:\n\t\tvar tile: Vector2i"
             "\n\t\tprint(tile.length())\n}",
-            "class A:\n\tvar tile: Vector2i\n\n\nfunc f() -> void:\n\tvar a := tile.length()",
             # Code after a multi-line string's closing quotes, and a backslash continuation
             # indented less, continue their statement: the function goes on (#2271).
             'func f() -> void:\n\tvar tile: Vector2i\n\tvar n := """a\nb""".strip_edges()'
             "\n\tvar a := tile.length()",
             "func f() -> void:\n\tvar tile: Vector2i\n\tvar n := 1 + \\\n2"
             "\n\tvar a := tile.length()",
+            # In its own class, and an outer class's constant, which an inner class reaches (#2288).
+            "class Inner:\n\tvar tile: Vector2i\n\n\tfunc f() -> void:\n\t\tvar a := tile.length()",
+            "class Inner:\n\tvar tile: Vector2i\n\tvar a := tile.length()",
+            "var tile: Vector2i\n\n\nclass Inner:\n\tpass\n\n\nfunc f() -> void:"
+            "\n\tvar a := tile.length()",
+            "const TILE: Vector2i = Vector2i.ONE\n\n\nclass Inner:\n\tfunc f() -> void:"
+            "\n\t\tvar a := TILE.length()",
+            "class A:\n\tconst TILE: Vector2i = Vector2i.ONE\n\n\tclass B:\n\t\tfunc f() -> void:"
+            "\n\t\t\tvar a := TILE.length()",
+            "const TILES: Array[Vector2i] = []\n\n\nclass Inner:\n\tfunc f() -> void:"
+            "\n\t\tvar a := TILES[0].length()",
+            "class Inner:\n\tfunc f() -> void:\n\t\tfor tile in TILES:\n\t\t\tprint(tile.length())"
+            "\n\n\nconst TILES: Array[Vector2i] = []",
+            "const TILES: Array[Vector2i] = []\n\n\nclass Inner:\n\tfunc f() -> void:"
+            "\n\t\tfor tile in TILES.slice(1):\n\t\t\tprint(tile.length())",
+            "const SPOTS: Dictionary[String, Vector2i] = {}\n\n\nclass Inner:"
+            "\n\tvar a := SPOTS.get(key).length()",
+            '@warning_ignore("unused_private_class_variable") const TILE: Vector2i = Vector2i.ONE'
+            "\n\n\nclass Inner:\n\tvar a := TILE.length()",
         ):
             hit = [
                 f"{number}:{line}"
@@ -392,6 +431,53 @@ class FormsTest(unittest.TestCase):
         ):
             self.assertEqual(forbidden_lines(source), [], source)
 
+    def test_an_element_read_otherwise_is_refused(self) -> None:
+        # Through an array's methods, a deeper subscript, an array-returning call as a loop's
+        # source, and a typed dictionary's values (#2287).
+        for source in (
+            "var tiles: Array[Vector2i]\nvar a := tiles.front().length()",
+            "var tiles: Array[Vector3i]\nvar a := tiles.back().distance_to(b)",
+            "var tiles: Array[Vector2i]\nvar a := tiles.pop_back().abs().length()",
+            "var tiles: Array[Vector2i]\nvar a := self.tiles.pop_front( ).length()",
+            "var tiles: Array[Vector2i]\nvar a := tiles.pop_at(0).length()",
+            "var tiles: Array[Vector2i]\nvar a := tiles.front ().length()",
+            "var spots: Dictionary[String, Vector2i]\nvar a := spots.get (key).length()",
+            "var spots: Dictionary[Rules.Kind, Vector2i]\nvar a := spots[kind].length()",
+            "var tiles: Array[Vector4i]\nvar a := tiles.get(ids[i + 1]).length()",
+            "var tiles: Array[Vector2i]\nvar a := tiles[ids[keys[0]]].length()",
+            "func f(tiles: Array[Vector2i]) -> void:\n\tfor tile in tiles.slice(1, size(2)):"
+            "\n\t\tprint(tile.length())",
+            "var tiles: Array[Vector2i]\nfunc f() -> void:\n\tfor tile in self.tiles.duplicate():"
+            "\n\t\tprint(tile.length())",
+            "func f(tiles: Array[Vector2i]) -> void:\n\tfor tile in tiles.filter(func(t: Vector2i)"
+            " -> bool: return t.x > 0).slice(1):\n\t\tprint(tile.length())",
+            'var spots: Dictionary[String, Vector2i]\nvar a := spots["home"].length()',
+            "var spots: Dictionary[StringName, Vector3i]\nvar a := spots[&\"a\"].distance_to(b)",
+            "var spots: Dictionary[String, Vector2i]"
+            "\nvar a := spots.get(key, Vector2i.ZERO).length()",
+        ):
+            hit = [
+                f"{number}:{line}"
+                for number, line in enumerate(source.split("\n"), 1)
+                if "length(" in line or "distance_to(" in line
+            ]
+            self.assertEqual(forbidden_lines(source), hit, source)
+
+    def test_an_element_read_otherwise_of_anything_else_is_allowed(self) -> None:
+        for source in (
+            "var names: Array[String]\nvar a := names.front().length()",
+            "var names: Array[String]\nvar a := names.get(0).length()",
+            "var tiles: Array[Vector2i]\nvar a := obj.tiles.back().length()",
+            "var tiles: Array[Vector2i]\nvar a := tiles.front_name().length()",
+            "func f(names: Array[String]) -> void:\n\tfor name in names.slice(1):"
+            "\n\t\tprint(name.length())",
+            "var names: Dictionary[Vector2i, String]\nvar a := names[tile].length()",
+            "var names: Dictionary[Vector2i, String]\nvar a := names.get(tile).length()",
+            "var spots: Dictionary[String, Vector2i]\nfunc f() -> void:\n\tfor key in spots:"
+            "\n\t\tprint(key.length())",
+        ):
+            self.assertEqual(forbidden_lines(source), [], source)
+
     def test_an_integer_vector_declared_with_an_inferred_type_is_refused(self) -> None:
         # `:=` from a constructor or a constant, for locals and members (#2292).
         for source in (
@@ -403,6 +489,11 @@ class FormsTest(unittest.TestCase):
             "var tile := Vector2i(\n\t1, 0)\nvar a := tile.length()",
             "func f() -> void:\n\tvar tile := Vector4i(1, 2, 3, 4)\n\tprint(tile.length())",
             "func f() -> void:\n\tconst STEP := Vector2i.RIGHT\n\tprint(STEP.length())",
+            # In its own class, and an outer class's constant, which an inner class reaches (#2288).
+            "class Inner:\n\tvar tile := Vector2i.ONE\n\n\tfunc f() -> void:"
+            "\n\t\tprint(tile.length())",
+            "const TILE := Vector2i(1, 2)\n\n\nclass Inner:\n\tfunc f() -> void:"
+            "\n\t\tprint(TILE.length())",
         ):
             hit = [
                 f"{number}:{line}"
@@ -420,6 +511,9 @@ class FormsTest(unittest.TestCase):
             "var tile := Vector2i.ONE\nvar a := obj.tile.length()",
             "func f() -> void:\n\tvar tile := Vector2i.ONE\n\n\nfunc g(tile: String) -> int:"
             "\n\treturn tile.length()",
+            # A member of one class doesn't count in another (#2288).
+            "class Inner:\n\tvar tile := Vector2i.ONE\n\n\nvar a := tile.length()",
+            "var tile := Vector2i(1, 2)\n\n\nclass Inner:\n\tvar a := tile.length()",
         ):
             self.assertEqual(forbidden_lines(source), [], source)
 
@@ -439,6 +533,7 @@ class FormsTest(unittest.TestCase):
             )
         )
         self.assertEqual(int_vector_members(source), {"tile", "home", "spot", "ORIGIN"})
+
 
 class OwnTestTest(unittest.TestCase):
     def test_a_test_module_without_tests_does_not_pass(self) -> None:

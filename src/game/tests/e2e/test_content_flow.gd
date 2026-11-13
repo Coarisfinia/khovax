@@ -34,6 +34,16 @@ extends RefCounted
 ## its files load in the background with progress (#1943). Every faction has a quest for every
 ## territory but the known gaps, and no territory has two samey quests (#639).
 
+## The categories a material may have (#2281), as its schema lists them.
+const MATERIAL_CATEGORIES: Array[String] = [
+	"plant",
+	"animal",
+	"mineral",
+	"metal",
+	"liquid",
+	"catalyst",
+	"essence",
+]
 ## A model a species can wear (#1223), by its id in the resource packs (#1864).
 const MODEL: String = "model_mana_wolf"
 ## The tile blueprints whose pack's model is drawn larger, in hundredths: too small to read
@@ -1627,8 +1637,8 @@ func _check_loot_refused() -> String:
 
 ## Every item a loot, harvest or chest table names exists (#774): a piece of gear or a material,
 ## each read from its own data. A table naming an item that's neither is refused, and so is a
-## material file with a wrong id, no name (#1657) or a field it can't have; then the gear's models
-## (#1581).
+## material file with a wrong id, no name (#1657), no category (#2281) or a field it can't have;
+## then the materials' categories.
 func _check_loot_items() -> String:
 	var materials: MaterialContent = MaterialContent.load_materials()
 	if not materials.problem.is_empty():
@@ -1650,9 +1660,11 @@ func _check_loot_items() -> String:
 	if not made_up.problem.is_empty() or not problem.begins_with("x's table names mos,"):
 		return "a table naming an item there isn't was refused with %s" % problem
 	var cases: Dictionary[String, String] = {
-		"{\"id\": \"y\", \"name\": \"Y\"}": "its id must",
-		"{\"id\": \"x\"}": "it needs a name",
+		"{\"id\": \"y\", \"name\": \"Y\", \"category\": \"plant\"}": "its id must",
+		"{\"id\": \"x\", \"category\": \"plant\"}": "it needs a name",
 		"{\"id\": \"x\", \"name\": \"X\", \"slot\": \"throw\"}": "field slot",
+		"{\"id\": \"x\", \"name\": \"X\"}": "it needs a category",
+		"{\"id\": \"x\", \"name\": \"X\", \"category\": \"rock\"}": "it needs a category",
 		"[\"x\"]": Content.NOT_AN_OBJECT,
 	}
 	var refusing: MaterialContent = MaterialContent.new()
@@ -1660,6 +1672,24 @@ func _check_loot_items() -> String:
 		problem = refusing.add("x", refused)
 		if not problem.begins_with(cases[refused]):
 			return "a material file was refused with %s, not %s" % [problem, cases[refused]]
+	return _check_material_categories(materials)
+
+
+## Every material has a category its schema allows (#2281), so a reader can tell a rock, an ore or
+## a metal from a plant by its data, not by a list of ids; then the gear's models.
+func _check_material_categories(materials: MaterialContent) -> String:
+	var categories: Variant = materials.get("categories")
+	var by_id: Dictionary = categories if categories is Dictionary else {}
+	for id: String in materials.ids:
+		if not MATERIAL_CATEGORIES.has(by_id.get(id, "")):
+			return "the material %s has no category" % id
+	var kept: MaterialContent = MaterialContent.new()
+	var text: String = "{\"id\": \"x\", \"name\": \"X\", \"category\": \"metal\"}"
+	var problem: String = kept.add("x", text)
+	categories = kept.get("categories")
+	by_id = categories if categories is Dictionary else {}
+	if not problem.is_empty() or by_id.get("x") != "metal":
+		return "a metal material file wasn't read with its category: " + problem
 	return _check_gear_models()
 
 
@@ -2592,10 +2622,11 @@ func _check_player_packs() -> String:
 
 ## The default pack's files that load as resources load in the background (#1943), with progress
 ## that never goes back and ends at 1 once each is in Godot's resource cache, none failing; a file
-## that doesn't exist fails at once rather than being waited on.
+## that doesn't exist fails at once rather than being waited on. Without threads (#2083), the files
+## load in steps, at least one each, here one each, and that load ends whole too.
 func _check_pack_preload() -> String:
 	var pack: ResourcePack = ResourcePacks.loaded()[-1]
-	var loads: PackPreload = PackPreload.start(pack)
+	var loads: PackPreload = PackPreload.start([pack])
 	var last: float = 0.0
 	var deadline: int = Time.get_ticks_msec() + 60_000
 	while not loads.is_done():
@@ -2619,11 +2650,31 @@ func _check_pack_preload() -> String:
 	var broken: ResourcePack = ResourcePack.new()
 	broken.root = "res://"
 	broken.textures = { "pack_missing": "pack_missing.png" }
-	var missing: PackPreload = PackPreload.start(broken)
+	var missing: PackPreload = PackPreload.start([broken])
 	if not missing.is_done() or missing.failed != PackedStringArray(["res://pack_missing.png"]):
 		return "a missing file didn't fail at once: %s" % [missing.failed]
 	if missing.progress() != 1.0:
 		return "a pack whose files all failed isn't done loading: %s" % missing.progress()
+	return _check_stepped_preload(pack)
+
+
+## A load without threads (#2083) of `pack`'s files, in steps of no time, loads one file a step.
+func _check_stepped_preload(pack: ResourcePack) -> String:
+	var files: int = 0
+	for kind: String in ResourcePack.KINDS:
+		var listed: Dictionary = {} if ResourcePack.KINDS[kind].is_empty() else pack.get(kind)
+		files += listed.size()
+	var stepped: PackPreload = PackPreload.start([pack], 0)
+	var steps: int = 1
+	while not stepped.is_done() and steps <= files:
+		steps += 1
+	if steps != files or stepped.progress() != 1.0 or not stepped.failed.is_empty():
+		return "a load without threads took %d steps for %d files: %s, failed %s" % [
+			steps,
+			files,
+			stepped.progress(),
+			stepped.failed,
+		]
 	return ""
 
 

@@ -12,18 +12,12 @@ const EFFECTS: Array[String] = ["mend", "regrowth", "ward", "quicken", "fortify"
 const TRAITS: Array[String] = ["none", "strong", "lasting", "shared", "slow_release"]
 ## Who a brew can help: the player's out companion, or the player themselves.
 const TARGETS: Array[String] = ["companion", "player"]
-## What is never brewed (#2038, #2049): rock, ore and metal, hide, which fits no sensible brew, the
-## revive herb, which is the revive item, and the seed pod, the one respec item.
-const NEVER_BREWED: Array[String] = [
-	"stone",
-	"copper",
-	"rime_shard",
-	"magma_core",
-	"arcane_crystal",
-	"hide",
-	"revive_herb",
-	"seed_pod",
-]
+## The material categories never brewed (#2038, #2049, #2281): rock, ore and metal, whichever
+## pack adds them.
+const NEVER_BREWED_CATEGORIES: Array[String] = ["mineral", "metal"]
+## The materials never brewed whatever their category: hide, which fits no sensible brew, the revive
+## herb, which is the revive item, and the seed pod, the one respec item.
+const NEVER_BREWED: Array[String] = ["hide", "revive_herb", "seed_pod"]
 
 ## Its id, by its file.
 var id: String = ""
@@ -77,16 +71,19 @@ func _read_choices(raw_traits: Variant, raw_targets: Variant) -> String:
 
 
 ## Why the ingredients break the design's rules, or "": the carrier, the catalyst and each primary
-## are materials, distinct, and none of them is ever brewed.
+## are materials, distinct, and none of them is ever brewed, by its id or its category.
 func _ingredients_problem() -> String:
 	var ingredients: Array[String] = [carrier, catalyst]
 	ingredients.append_array(primaries.keys())
-	var known: Array[String] = MaterialContent.cached().ids
+	var materials: MaterialContent = MaterialContent.cached()
 	for ingredient: String in ingredients:
 		if NEVER_BREWED.has(ingredient):
 			return "%s is never brewed (#2038, #2049)" % ingredient
-		if not known.has(ingredient):
+		if not materials.ids.has(ingredient):
 			return "its ingredient %s is no material" % ingredient
+		var category: String = materials.categories.get(ingredient, "")
+		if NEVER_BREWED_CATEGORIES.has(category):
+			return "%s is a %s, never brewed (#2038, #2281)" % [ingredient, category]
 		if ingredients.count(ingredient) > 1:
 			return "%s is in it twice: one role per ingredient" % ingredient
 	return ""
