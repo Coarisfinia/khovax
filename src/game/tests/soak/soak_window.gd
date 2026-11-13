@@ -73,14 +73,10 @@ static func middle(windows: Array[SoakWindow]) -> SoakWindow:
 ## The middle sample, or of an even count the mean of the two middle ones (rounded down); 0 for
 ## none.
 static func median(samples: Array[int]) -> int:
-	if samples.is_empty():
-		return 0
-	var sorted: Array[int] = samples.duplicate()
-	sorted.sort()
-	var middle_at: int = sorted.size() >> 1
-	if sorted.size() % 2 == 1:
-		return sorted[middle_at]
-	return (sorted[middle_at - 1] + sorted[middle_at]) >> 1
+	var values: Array[float] = []
+	for sample: int in samples:
+		values.append(sample)
+	return floori(median_of(values))
 
 
 ## The middle value, or of an even count the mean of the two middle ones; 0 for none.
