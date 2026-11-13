@@ -9,9 +9,10 @@ browsers are never installed). The flow must end in the state hash the headless 
 commit ended in (#876), from the EXPECTED_HASH variable. At its end the flow saves the error log
 with a controller's press alone (#1598): the run checks that the browser let it through as a
 download named errors.log holding the web build's log, while the page never had user activation,
-as for a player who only ever pressed a controller. The flow presses A on a save button it adds and
-focuses itself, so this proves the browser lets a controller's press save the log, not that a
-controller can reach the button in the Credits tab.
+as for a player who only ever pressed a controller, and the flow checks that the tab then shows its
+note with the log's newest lines (#1817). The flow presses A on the save button of a Credits tab it
+adds and focuses itself, so this proves the browser lets a controller's press save the log, not
+that a controller can reach the button in the menu.
 
     CHROME=<chrome-headless-shell> EXPECTED_HASH=<hash> \
         uv run --locked --package khovax-game-web-e2e src/game-web-e2e/web_e2e.py [build/web-test]

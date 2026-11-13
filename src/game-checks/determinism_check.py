@@ -87,6 +87,11 @@ INT_VECTOR_METHOD = re.compile(
 )
 FLOAT_METHOD = re.compile(r"\.(?:length|distance_to)\s*\(")
 INT_VECTOR_DECLARED = re.compile(r"\b(\w+)\s*:\s*Vector[234]i\b(?!\s*[.(])")
+# An Array[Vector2i]'s elements are integer vectors too: a subscript of it (brackets inside, one
+# level deep) and a loop variable over it (#2261).
+INT_VECTOR_ARRAY_DECLARED = re.compile(r"\b(\w+)\s*:\s*Array\[\s*Vector[234]i\s*\]")
+SUBSCRIPT = r"\[(?:[^\[\]]|\[[^\[\]]*\])*\]"
+FOR_LOOP = re.compile(r"\bfor\s+(\w+)\s+in\s+(?:self\.)?(\w+)\s*:")
 # A member a script declares as one, outside any function: another script reaches it as `obj.tile`,
 # so the check gathers them from every rules script first (#2262).
 INT_VECTOR_MEMBER = re.compile(
@@ -247,11 +252,14 @@ def functions_of(lines: list[str], continued: set[int]) -> list[int | None]:
     return owners
 
 
-def declared_int_vectors(bare: list[str], owners: list[int | None]) -> dict[int | None, set[str]]:
-    """The names declared as an integer vector, by the function they count in (None: the file)."""
+def declared_int_vectors(
+    bare: list[str], owners: list[int | None], declaration: re.Pattern[str] = INT_VECTOR_DECLARED
+) -> dict[int | None, set[str]]:
+    """The names declared as an integer vector (or what `declaration` declares), by the function
+    they count in (None: the file)."""
     joined = "\n".join(bare)
     declared: dict[int | None, set[str]] = {}
-    for hit in INT_VECTOR_DECLARED.finditer(joined):
+    for hit in declaration.finditer(joined):
         before = joined[: hit.start()]
         # A dictionary entry, not a declaration: a key in braces, not a lambda's local in them.
         if innermost_opener(before) == "{" and before.rstrip().endswith(("{", ",")):
@@ -273,10 +281,11 @@ def int_vector_members(source: str) -> set[str]:
 
 def receiver_in(names: set[str], members: set[str]) -> re.Pattern[str]:
     """An integer vector written out or one of `names`, as length()'s receiver: the name itself or
-    the script's own member, not another object's (`obj.tile`, #2264). On another object, one of
-    `members` counts: the rules' integer vector members (#2262)."""
-    own = (rf"(?<![\w.])(?:self\.)?{name}\b" for name in sorted(names))
-    other = (rf"(?<=[\w)\]])\.{name}\b" for name in sorted(members))
+    the script's own member, not another object's (`obj.tile`, #2264). A name may end in a
+    subscript, which `\b` can't follow (#2261). On another object, one of `members` counts: the
+    rules' integer vector members (#2262)."""
+    own = (rf"(?<![\w.])(?:self\.)?{name}(?!\w)" for name in sorted(names))
+    other = (rf"(?<=[\w)\]])\.{name}(?!\w)" for name in sorted(members))
     return re.compile("|".join([INT_VECTOR_RECEIVER, *own, *other]))
 
 
@@ -287,6 +296,13 @@ def forbidden_lines(source: str, members: set[str] | None = None) -> list[str]:
     bare = code_only(source).split("\n")
     owners = functions_of(bare, continued_lines(source, bare))
     declared = declared_int_vectors(bare, owners)
+    arrays = declared_int_vectors(bare, owners, INT_VECTOR_ARRAY_DECLARED)
+    for index, line in enumerate(bare):
+        for loop in FOR_LOOP.finditer(line):
+            if loop.group(2) in arrays.get(None, set()) | arrays.get(owners[index], set()):
+                declared.setdefault(owners[index], set()).add(loop.group(1))
+    for owner, names in arrays.items():
+        declared.setdefault(owner, set()).update(rf"{name}{SUBSCRIPT}" for name in names)
     in_file = declared.get(None, set())
     receiver = {
         owner: receiver_in(in_file | declared.get(owner, set()), members or set())

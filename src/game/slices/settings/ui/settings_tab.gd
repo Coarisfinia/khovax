@@ -27,6 +27,8 @@ const WORLD: String = "World"
 const GRAPHICS: String = "Graphics"
 const INTERFACE: String = "Interface"
 const GAME: String = "Game"
+## The cheats (#1777, #2273), last.
+const DEBUG: String = "Debug"
 ## The list of submenus, as `open_submenu` names it while none is open.
 const LIST: String = ""
 ## The README's downloads, where every build can be fetched (#1312).
@@ -117,6 +119,7 @@ func submenu_titles() -> Dictionary[String, String]:
 		GRAPHICS: tr("Graphics"),
 		INTERFACE: tr("Interface"),
 		GAME: tr("Game"),
+		DEBUG: tr("Debug"),
 	}
 
 

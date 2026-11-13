@@ -14,11 +14,18 @@ size_flags_horizontal = 0
 text = "Report a bug"
 script = ExtResource("3_report")
 
-[node name="ErrorLog" type="Button" parent="."]
+[node name="ErrorLog" type="Button" parent="." node_paths=PackedStringArray("note")]
 layout_mode = 2
 size_flags_horizontal = 0
 text = "Error log: save it as a file"
 script = ExtResource("2_log")
+note = NodePath("../ErrorLogNote")
+
+[node name="ErrorLogNote" type="Label" parent="."]
+visible = false
+auto_translate_mode = 2
+layout_mode = 2
+autowrap_mode = 3
 
 [node name="Text" type="RichTextLabel" parent="."]
 layout_mode = 2
