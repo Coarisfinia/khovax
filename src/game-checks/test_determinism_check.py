@@ -341,6 +341,10 @@ class FormsTest(unittest.TestCase):
             "\n\t\tvar a := TILE.length()",
             "class A:\n\tconst TILE: Vector2i = Vector2i.ONE\n\n\tclass B:\n\t\tfunc f() -> void:"
             "\n\t\t\tvar a := TILE.length()",
+            "const TILES: Array[Vector2i] = []\n\n\nclass Inner:\n\tfunc f() -> void:"
+            "\n\t\tvar a := TILES[0].length()",
+            "class Inner:\n\tfunc f() -> void:\n\t\tfor tile in TILES:\n\t\t\tprint(tile.length())"
+            "\n\n\nconst TILES: Array[Vector2i] = []",
         ):
             hit = [
                 f"{number}:{line}"
