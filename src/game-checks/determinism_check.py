@@ -75,12 +75,14 @@ FORBIDDEN_IN_CODE = re.compile(
 # a name the file declares as one. Scripts type
 # every declaration (AGENTS.md); a dictionary entry's value (`a: Vector2i(1, 2)`, `a: Vector2i.ONE`)
 # declares nothing.
-INT_VECTOR_ARGUMENTS = r"\((?:[^()]|\([^()]*\))*\)"  # A call inside them, one level deep.
-INT_VECTOR_RECEIVER = rf"\bVector[234]i(?:{INT_VECTOR_ARGUMENTS}|\.[A-Z_]+)"
+# A receiver written out, and the integer vector methods a chain may call on it: their arguments
+# are matched as balanced parentheses, at any depth (#2223).
+INT_VECTOR_RECEIVER = r"\bVector[234]i(?:(?=\()|\.[A-Z_]+)"
 # What an integer vector's own methods return is an integer vector again.
-INT_VECTOR_CHAIN = (
-    rf"(?:\.(?:abs|clamp|clampi|max|maxi|min|mini|sign|snapped|snappedi){INT_VECTOR_ARGUMENTS})*"
+INT_VECTOR_METHOD = re.compile(
+    r"\.(?:abs|clamp|clampi|max|maxi|min|mini|sign|snapped|snappedi)(?=\()"
 )
+FLOAT_METHOD = re.compile(r"\.(?:length|distance_to)\s*\(")
 INT_VECTOR_DECLARED = re.compile(r"\b(\w+)\s*:\s*Vector[234]i\b(?!\s*[.(])")
 # Reaching a randomness method by name, with call() or a Callable: read on the whole of
 # code_with_random_names, which keeps that string, so a call split over lines is seen too (#2223).
@@ -139,15 +141,40 @@ def called_by_name(before: str) -> bool:
     return False
 
 
+def after_parentheses(line: str, at: int) -> int:
+    """Where the balanced parentheses opening at `at` end in `line`, or -1 if they never close."""
+    depth = 0
+    for index in range(at, len(line)):
+        if line[index] == "(":
+            depth += 1
+        elif line[index] == ")":
+            depth -= 1
+            if depth == 0:
+                return index + 1
+    return -1
+
+
+def calls_float_method(line: str, receiver: re.Pattern[str]) -> bool:
+    """Whether `line` calls length() or distance_to() on an integer vector `receiver` matches,
+    directly or through a chain of the vector's own methods."""
+    for hit in receiver.finditer(line):
+        at = hit.end()
+        if line.startswith("(", at):
+            at = after_parentheses(line, at)
+        while at >= 0 and (method := INT_VECTOR_METHOD.match(line, at)):
+            at = after_parentheses(line, method.end())
+        if at >= 0 and FLOAT_METHOD.match(line, at):
+            return True
+    return False
+
+
 def forbidden_lines(source: str) -> list[str]:
     """The numbered lines of a script that use something the rules never use."""
     code = without_comments(source).rstrip("\n").split("\n")
     bare = code_only(source).split("\n")
     declared = INT_VECTOR_DECLARED.findall("\n".join(bare))
     receivers = [INT_VECTOR_RECEIVER, *(rf"\b{name}" for name in declared)]
-    float_length = re.compile(
-        rf"(?:{'|'.join(receivers)}){INT_VECTOR_CHAIN}\.(?:length|distance_to)\s*\("
-    )
+    receiver = re.compile("|".join(receivers))
     named = code_with_random_names(source)
     # The line of each randomness method's name.
     by_name = {
@@ -160,7 +187,7 @@ def forbidden_lines(source: str) -> list[str]:
         [
             FORBIDDEN.search(line) is not None
             or FORBIDDEN_IN_CODE.search(bare_line) is not None
-            or float_length.search(bare_line) is not None
+            or calls_float_method(bare_line, receiver)
             or index in by_name
             for index, (line, bare_line) in enumerate(zip(code, bare))
         ],
