@@ -7,9 +7,9 @@ in the way.
 
 A model built by a script here whose kind (lib/world_scale.py) is `portal` stands on the edge
 between two hexes, and the player walks through it along Blender's Y, through its opening at the
-origin. The check casts rays through that passage, `PASSAGE_HALF_WIDTH` to each side of the
-middle and from the ground to the player's height: rays along the walking line, front to back, at
-every `STEP` up, and rays straight down from the player's height at every step along it. A ray
+origin. The check casts rays along the walking line, front to back, through the player's outline
+(`OUTLINE`: as wide as the player is at each height, from the ground to the top of their head),
+`STEP` apart across and up it. A ray
 may meet the portal (the mesh's piece holding the `portal` bone's vertices, where the player
 steps in), and nothing else: a hit on any other part (the arch, a tentacle) fails. A portal is
 passable only while it's open, holding its `OPEN` clip (the tentacle gate sitting on the ground,
@@ -43,11 +43,13 @@ PORTAL = "portal"
 OPEN = "Sitting"
 # The bone whose vertices are the portal's (the piece holding them is the portal).
 PORTAL_BONE = "portal"
-# How far to each side of the opening's middle the passage must be clear (metres): the player's
-# shoulders with their arms swinging.
-PASSAGE_HALF_WIDTH = 0.45
-# How far apart the rays stand (metres), across the passage, up it and along the walking line:
-# closer than anything that could block the player is thin (the tentacles are far thicker).
+# The player's outline, seen from the front: up to each height (metres), how far to each side of
+# the middle the passage must be clear. Measured on the players' figure standing in its Idle as
+# PlayerView shows it (lib/world_scale.py's player), each band rounded up: its feet, its arms and
+# hands, its shoulders and its head, up to the player's height.
+OUTLINE = ((0.6, 0.42), (1.3, 0.53), (1.4, 0.35), (1.9, 0.31), (2.1, 0.26), (world_scale.PLAYER_HEIGHT, 0.19))
+# How far apart the rays stand (metres), across the outline and up it: closer than anything that
+# could block the player is thin.
 STEP = 0.025
 # Every this many frames of each clip are looked at too.
 FRAME_STEP = 6
@@ -125,23 +127,15 @@ def look(skin, rig):
     front = min(vertex.co.y for vertex in mesh.vertices) - 0.1
     back = max(vertex.co.y for vertex in mesh.vertices) + 0.1
     evaluated.to_mesh_clear()
-    top = world_scale.PLAYER_HEIGHT
     count, cast, first = 0, 0, None
-    across = int(math.ceil(2.0 * PASSAGE_HALF_WIDTH / STEP))
-    heights = int(math.ceil(top / STEP))
-    for step in range(across + 1):
-        x = -PASSAGE_HALF_WIDTH + 2.0 * PASSAGE_HALF_WIDTH * step / across
-        rays = []
-        for number in range(heights + 1):
-            z = 0.01 + (top - 0.01) * number / heights
-            rays.append((Vector((x, front, z)), Vector((0.0, 1.0, 0.0)), back - front))
-        y = front
-        while y <= back:
-            rays.append((Vector((x, y, top)), Vector((0.0, 0.0, -1.0)), top - 0.01))
-            y += STEP
-        for start, direction, length in rays:
+    for number in range(int(math.ceil(world_scale.PLAYER_HEIGHT / STEP)) + 1):
+        z = min(0.01 + number * STEP, world_scale.PLAYER_HEIGHT)
+        half = next(width for height, width in OUTLINE if z <= height)
+        across = int(math.ceil(2.0 * half / STEP))
+        for step in range(across + 1):
+            x = -half + 2.0 * half * step / across
             cast += 1
-            hit = blocked(tree, portal, start, direction, length)
+            hit = blocked(tree, portal, Vector((x, front, z)), Vector((0.0, 1.0, 0.0)), back - front)
             if hit is not None:
                 count += 1
                 first = first or hit
@@ -181,10 +175,9 @@ def check(glb):
     for name, (count, cast, first, frame) in worst.items():
         if count:
             passed = False
-            lines.append("PASSAGE %s FAIL %s: %d of %d rays through the passage (%.2f m each side,"
-                         " ground to %.2f m) hit more than the portal%s, first at x %.2f, y %.2f,"
-                         " z %.2f" % (model, name, count, cast, PASSAGE_HALF_WIDTH,
-                                      world_scale.PLAYER_HEIGHT,
+            lines.append("PASSAGE %s FAIL %s: %d of %d rays through the player's outline (ground to"
+                         " %.2f m) hit more than the portal%s, first at x %.2f, y %.2f,"
+                         " z %.2f" % (model, name, count, cast, world_scale.PLAYER_HEIGHT,
                                       " (frame %d)" % frame,
                                       first.x, first.y, first.z))
         else:
