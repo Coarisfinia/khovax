@@ -146,6 +146,11 @@ class GdstyleDownloadTest(unittest.TestCase):
     def test_archive_without_gdstyle(self) -> None:
         self.assert_fails_cleanly(*self.run_install(archive({"other": b"x"})))
 
+    def test_truncated_archive(self) -> None:
+        # Its checksum matches, so only unpacking finds the gzip stream ends early.
+        whole = archive({"gdstyle": os.urandom(65536)})
+        self.assert_fails_cleanly(*self.run_install(whole[: len(whole) // 2]))
+
     def test_not_an_archive(self) -> None:
         self.assert_fails_cleanly(*self.run_install(b"not a tar file"))
 

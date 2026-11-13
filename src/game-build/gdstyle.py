@@ -25,7 +25,7 @@ SHA256 = re.compile(r"^ *GDSTYLE_SHA256: *([0-9a-f]{64}) *$", re.MULTILINE)
 # Per connection attempt and per read: a download that stalls this long gives up rather than hang.
 TIMEOUT_SECONDS = 60
 # Every way a download or an archive can fail: each ends in one clean message, never a traceback.
-FAILURES = (OSError, ValueError, KeyError, http.client.HTTPException, tarfile.TarError)
+FAILURES = (OSError, EOFError, ValueError, KeyError, http.client.HTTPException, tarfile.TarError)
 
 
 def install(version: str, sha256: str, binary: Path) -> None:
