@@ -100,6 +100,11 @@ REFUSED = (
     'var c := Callable(items, ("shuffle"))',
     'items.call(StringName(("shuffle")))',
     'items.call((r"shuffle"))',
+    # A name in a triple-quoted string (#2266).
+    'items.call("""shuffle""")',
+    "items.callv('''pick_random''', [])",
+    'var c := Callable(items, r"""shuffle""")',
+    "items.call(&'''pick_random''')",
 )
 
 ALLOWED = (
@@ -158,6 +163,9 @@ ALLOWED = (
     'items.call(("shuffle") + suffix)',
     'items.call(StringName("shuffle") + suffix)',
     'items.call(StringName(x + "shuffle"))',
+    # A triple-quoted name that isn't call()'s whole first argument (#2266).
+    'var a := """shuffle"""',
+    'items.call("""shuffle""" + "d")',
 )
 
 # Variant.Type constants of types that hold floats, and of their integer twins (#2247).
