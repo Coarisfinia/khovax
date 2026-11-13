@@ -182,17 +182,24 @@ func _check_new_minerals(base: Dictionary) -> String:
 		var why: String = materials.add(id, text % [id, id.capitalize(), added[id]])
 		if not why.is_empty():
 			return "a pack's %s material %s was refused: %s" % [added[id], id, why]
-	ContentCatalog.forget(MaterialContent.KEY)
-	var with_them: Callable = func() -> Content: return materials
-	var _kept: Content = ContentCatalog.kept(MaterialContent.KEY, with_them)
+	var kept: MaterialContent = MaterialContent.cached()
+	_keep_materials(materials)
 	var read: Array[String] = []
 	for id: String in added:
 		if not _refuses(JSON.stringify(_changed(base, "primaries", id, "ward"))):
 			read.append(id)
-	ContentCatalog.forget(MaterialContent.KEY)
+	# The session's own materials go back, so no later check finds them unread.
+	_keep_materials(kept)
 	if not read.is_empty():
 		return "a tonic with a pack's %s as a primary was read" % [read]
 	return ""
+
+
+## Keeps `materials` in the content cache (ContentCatalog) as the session's materials.
+func _keep_materials(materials: MaterialContent) -> void:
+	ContentCatalog.forget(MaterialContent.KEY)
+	var with_them: Callable = func() -> Content: return materials
+	var _kept: Content = ContentCatalog.kept(MaterialContent.KEY, with_them)
 
 
 ## Whether a tonic file holding `text` is refused.
