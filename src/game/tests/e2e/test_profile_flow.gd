@@ -1028,7 +1028,7 @@ func _check_outbox_refused(text: String, request: Dictionary) -> String:
 		[request, request],
 		[request.merged({ "id": "abl2345" }, true)],
 		[request.merged({ "id": 7 }, true)],
-		[request.merged({ "kind": 9 }, true)],
+		[request.merged({ "kind": OutboxEntry.KINDS.max() + 1 }, true)],
 		[{ "id": request["id"], "kind": OutboxEntry.TERRITORY }],
 		{ "entries": [request] },
 	]:
