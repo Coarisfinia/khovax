@@ -65,6 +65,12 @@ REFUSED = (
     "var a := Vector3i.ONE.abs().distance_to(other)",
     "var e := Expression.new()",
     "var a := Vector2i.ONE.snapped(Vector2i(2, 2)).length()",
+    # A call nested more than one level inside the receiver or a chained method (#2223).
+    "var a := Vector2i(get_x(get_y()), 4).length()",
+    "var a := Vector2i(f(g(h(1))), 4).length()",
+    "var a := Vector2i.ONE.clamp(Vector2i(f(g(1)), 0), b).length()",
+    # A declared name that starts another declared one (#2223).
+    "var size: Vector2i\nvar size_max: Vector2i\nvar a := size_max.length()",
     "var a := tile.aspect()",
     "var a := PackedFloat32Array()",
     "var a := PackedFloat64Array()",
@@ -100,6 +106,11 @@ REFUSED = (
     'var c := Callable(items, ("shuffle"))',
     'items.call(StringName(("shuffle")))',
     'items.call((r"shuffle"))',
+    # A name in a triple-quoted string (#2266).
+    'items.call("""shuffle""")',
+    "items.callv('''pick_random''', [])",
+    'var c := Callable(items, r"""shuffle""")',
+    "items.call(&'''pick_random''')",
 )
 
 ALLOWED = (
@@ -147,6 +158,9 @@ ALLOWED = (
     'var a := ["shuffle"]',
     'var a := StringName("shuffle")',
     "var a := bytes.to_int32_array()",
+    # A deeply nested integer vector that isn't length()'s receiver (#2223).
+    "var a := f(Vector2i(g(h(1)), 2)).length()",
+    "var a := Vector2i(f(g(1)), 2).x + text.length()",
     # Grouping parentheses that aren't call()'s first argument (#2254).
     'var a := ("shuffle")',
     'var a := foo(("shuffle"))',
@@ -158,6 +172,9 @@ ALLOWED = (
     'items.call(("shuffle") + suffix)',
     'items.call(StringName("shuffle") + suffix)',
     'items.call(StringName(x + "shuffle"))',
+    # A triple-quoted name that isn't call()'s whole first argument (#2266).
+    'var a := """shuffle"""',
+    'items.call("""shuffle""" + "d")',
 )
 
 # Variant.Type constants of types that hold floats, and of their integer twins (#2247).

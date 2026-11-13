@@ -78,12 +78,14 @@ FORBIDDEN_IN_CODE = re.compile(
 # and a pattern can't see types: so they count on a Vector2i, Vector3i or Vector4i written out or on
 # a name declared as one. Scripts type every declaration (AGENTS.md); a dictionary entry's value
 # (`a: Vector2i(1, 2)`, `a: Vector2i.ONE`, `a: Vector2i`) declares nothing (#2264).
-INT_VECTOR_ARGUMENTS = r"\((?:[^()]|\([^()]*\))*\)"  # A call inside them, one level deep.
-INT_VECTOR_RECEIVER = rf"\bVector[234]i(?:{INT_VECTOR_ARGUMENTS}|\.[A-Z_]+)"
+# A receiver written out, and the integer vector methods a chain may call on it: their arguments
+# are matched as balanced parentheses, at any depth (#2223).
+INT_VECTOR_RECEIVER = r"\bVector[234]i(?:(?=\()|\.[A-Z_]+)"
 # What an integer vector's own methods return is an integer vector again.
-INT_VECTOR_CHAIN = (
-    rf"(?:\.(?:abs|clamp|clampi|max|maxi|min|mini|sign|snapped|snappedi){INT_VECTOR_ARGUMENTS})*"
+INT_VECTOR_METHOD = re.compile(
+    r"\.(?:abs|clamp|clampi|max|maxi|min|mini|sign|snapped|snappedi)(?=\()"
 )
+FLOAT_METHOD = re.compile(r"\.(?:length|distance_to)\s*\(")
 INT_VECTOR_DECLARED = re.compile(r"\b(\w+)\s*:\s*Vector[234]i\b(?!\s*[.(])")
 # A member a script declares as one, outside any function: another script reaches it as `obj.tile`,
 # so the check gathers them from every rules script first (#2262).
@@ -97,8 +99,9 @@ FUNCTION = re.compile(r"\s*(static\s+)?func\b")
 # Reaching a randomness method by name, with call() or a Callable: read on the whole of
 # code_with_random_names, which keeps that string, so a call split over lines is seen too (#2223).
 RANDOM_NAMES = ("shuffle", "pick_random")
-# A raw string's r stays code like a StringName's &, so it is part of the name (#2254).
-RANDOM_NAME = re.compile(rf"""(?:&|\br)?["']({"|".join(RANDOM_NAMES)})["']""")
+# A raw string's r stays code like a StringName's &, so it is part of the name (#2254); its quotes
+# are one or three of a kind (#2266).
+RANDOM_NAME = re.compile(rf"""(?:&|\br)?("(?:"")?|'(?:'')?)({"|".join(RANDOM_NAMES)})\1""")
 # What opens the call the name is an argument of: call()'s first, or any of a Callable's.
 CALL_BY_NAME = re.compile(r"\.(call|callv|call_deferred)\s*\(\s*$")
 CALLABLE = re.compile(r"\bCallable(\.create)?\s*\($")
@@ -170,6 +173,33 @@ def called_by_name(before: str, after: str) -> bool:
     return False
 
 
+def after_parentheses(line: str, at: int) -> int:
+    """Where the balanced parentheses opening at `at` end in `line`, or -1 if they never close."""
+    depth = 0
+    for index in range(at, len(line)):
+        if line[index] == "(":
+            depth += 1
+        elif line[index] == ")":
+            depth -= 1
+            if depth == 0:
+                return index + 1
+    return -1
+
+
+def calls_float_method(line: str, receiver: re.Pattern[str]) -> bool:
+    """Whether `line` calls length() or distance_to() on an integer vector `receiver` matches,
+    directly or through a chain of the vector's own methods."""
+    for hit in receiver.finditer(line):
+        at = hit.end()
+        if line.startswith("(", at):
+            at = after_parentheses(line, at)
+        while at >= 0 and (method := INT_VECTOR_METHOD.match(line, at)):
+            at = after_parentheses(line, method.end())
+        if at >= 0 and FLOAT_METHOD.match(line, at):
+            return True
+    return False
+
+
 def innermost_opener(before: str) -> str:
     """The bracket still open at the end of the code `before`, or "" if none is."""
     depth = 0
@@ -226,16 +256,13 @@ def int_vector_members(source: str) -> set[str]:
     }
 
 
-def float_length_in(names: set[str], members: set[str]) -> re.Pattern[str]:
-    """An integer vector's length() or distance_to(), on a vector written out or on one of `names`:
-    the name itself or the script's own member, not another object's (`obj.tile`, #2264). On
-    another object, one of `members` counts: the rules' integer vector members (#2262)."""
+def receiver_in(names: set[str], members: set[str]) -> re.Pattern[str]:
+    """An integer vector written out or one of `names`, as length()'s receiver: the name itself or
+    the script's own member, not another object's (`obj.tile`, #2264). On another object, one of
+    `members` counts: the rules' integer vector members (#2262)."""
     own = (rf"(?<![\w.])(?:self\.)?{name}\b" for name in sorted(names))
     other = (rf"(?<=[\w)\]])\.{name}\b" for name in sorted(members))
-    receivers = [INT_VECTOR_RECEIVER, *own, *other]
-    return re.compile(
-        rf"(?:{'|'.join(receivers)}){INT_VECTOR_CHAIN}\.(?:length|distance_to)\s*\("
-    )
+    return re.compile("|".join([INT_VECTOR_RECEIVER, *own, *other]))
 
 
 def forbidden_lines(source: str, members: set[str] | None = None) -> list[str]:
@@ -246,13 +273,14 @@ def forbidden_lines(source: str, members: set[str] | None = None) -> list[str]:
     owners = functions_of(bare)
     declared = declared_int_vectors(bare, owners)
     in_file = declared.get(None, set())
-    float_length = {
-        owner: float_length_in(in_file | declared.get(owner, set()), members or set()) for owner in set(owners)
+    receiver = {
+        owner: receiver_in(in_file | declared.get(owner, set()), members or set())
+        for owner in set(owners)
     }
     named = code_with_random_names(source)
     # The line of each randomness method's name.
     by_name = {
-        named.count("\n", 0, hit.start(1))
+        named.count("\n", 0, hit.start(2))
         for hit in RANDOM_NAME.finditer(named)
         if called_by_name(named[: hit.start()], named[hit.end() :])
     }
@@ -261,7 +289,7 @@ def forbidden_lines(source: str, members: set[str] | None = None) -> list[str]:
         [
             FORBIDDEN.search(line) is not None
             or FORBIDDEN_IN_CODE.search(bare_line) is not None
-            or float_length[owners[index]].search(bare_line) is not None
+            or calls_float_method(bare_line, receiver[owners[index]])
             or index in by_name
             for index, (line, bare_line) in enumerate(zip(code, bare))
         ],
