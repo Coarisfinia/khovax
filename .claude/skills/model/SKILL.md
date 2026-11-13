@@ -386,6 +386,10 @@ a second model could use goes into the library or a generic tool, never into one
   measures each model against the world's scale (`lib/world_scale.py`): a model that isn't a
   monster by the kind its script names, the players' figure against the player's height (step
   23). `test_world_scale.py` tests it on boxes of each kind, sized to it or off it.
+- **The passage check (#2157):** `src/game-models/check_passage.py -- <model.glb> [...]` casts
+  rays through a `portal`'s opening, from the ground to the player's height, in its rest pose and
+  through its clips, and fails any that meets more than the portal (the piece holding the
+  `portal` bone's vertices): the player walks through it on the ground.
 - **The dimensions check (#1299):** `src/game-models/check_dimensions.py -- <model.glb> [...]`
   measures each limb at rest per body plan (forearm against upper arm, shin against thigh, the
   foreleg against the shoulder's height) and fails a measure outside its range
