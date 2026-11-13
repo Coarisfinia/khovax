@@ -40,41 +40,59 @@ const NEED_HOURS: Dictionary[String, int] = {
 }
 
 
-## The day of a monster with the behaviour `traits` (its species', SpeciesBehaviour), one activity
-## per hour from midnight, drawn from `rng`: when it goes to sleep and which waking hours its needs
-## take. Traits without a rhythm or a need (a species the content doesn't know) give a day of
-## wandering.
-static func made(traits: Array, rng: Rng) -> Array[int]:
+## The day of a monster with the behaviour `traits` (its species', SpeciesBehaviour) and the entity
+## id `monster`, one activity per hour from midnight, with no roll (#2238): its id, modulo
+## BEDTIME_SPREAD, is how many hours after dusk (diurnal) or dawn (nocturnal) it goes to sleep, so
+## monsters of one species keep one rhythm without all sleeping at once; a cathemeral one starts
+## each bout as many hours into its quarter of the day (modulo the room a quarter leaves). Its needs
+## take evenly spaced hours of its waking day, counted from the hour it wakes (dawn plus the same
+## offset for a sleepless one), taking turns in their fixed order. Traits without a rhythm or a
+## need (a species the content doesn't know) give a day of wandering.
+static func made(traits: Array, monster: int) -> Array[int]:
 	var awake: int = WANDER
 	if traits.has(SpeciesBehaviour.PACK_SPECIES) or traits.has(SpeciesBehaviour.PACK_TYPE):
 		awake = FOLLOW_PACK
 	var day: Array[int] = []
 	for _hour: int in DayClock.HOURS:
 		day.append(awake)
+	var late: int = posmod(monster, BEDTIME_SPREAD)
+	var wakes: int = DayClock.DAWN + late
 	if traits.has(SpeciesBehaviour.DIURNAL):
-		_sleep(day, DayClock.DUSK + rng.below(BEDTIME_SPREAD), SLEEP_HOURS)
+		wakes = _sleep(day, DayClock.DUSK + late, SLEEP_HOURS)
 	elif traits.has(SpeciesBehaviour.NOCTURNAL):
-		_sleep(day, DayClock.DAWN + rng.below(BEDTIME_SPREAD), SLEEP_HOURS)
+		wakes = _sleep(day, DayClock.DAWN + late, SLEEP_HOURS)
 	elif traits.has(SpeciesBehaviour.CATHEMERAL):
+		var into: int = posmod(monster, BOUT_SPAN - BOUT_HOURS + 1)
 		for span: int in range(0, DayClock.HOURS, BOUT_SPAN):
-			_sleep(day, span + rng.below(BOUT_SPAN - BOUT_HOURS + 1), BOUT_HOURS)
+			wakes = _sleep(day, span + into, BOUT_HOURS)
 	var waking: Array[int] = []
-	for hour: int in DayClock.HOURS:
+	for i: int in DayClock.HOURS:
+		var hour: int = (wakes + i) % DayClock.HOURS
 		if day[hour] != SLEEP:
 			waking.append(hour)
-	# In the needs' fixed order, so the same traits always draw the same way.
-	for need: String in SpeciesBehaviour.NEEDS:
-		if not traits.has(need):
-			continue
-		for _slot: int in NEED_HOURS[need]:
-			if waking.is_empty():
-				break
-			var hour: int = waking.pop_at(rng.below(waking.size()))
-			day[hour] = NEED_ACTIVITIES[need]
+	var needs: Array[int] = _need_turns(traits)
+	for slot: int in needs.size():
+		day[waking[Fixed.mul_div(slot, waking.size(), needs.size())]] = needs[slot]
 	return day
 
 
-## Marks `hours` hours of `day` asleep from `bedtime` on, wrapping past midnight.
-static func _sleep(day: Array[int], bedtime: int, hours: int) -> void:
+## The activities of the needs in `traits`, one per hour they take, taking turns in the needs'
+## fixed order (graze, drink, graze, ...) until each has its hours.
+static func _need_turns(traits: Array) -> Array[int]:
+	var turns: Array[int] = []
+	var most: int = 0
+	for need: String in SpeciesBehaviour.NEEDS:
+		most = maxi(most, NEED_HOURS[need])
+	for turn: int in most:
+		for need: String in SpeciesBehaviour.NEEDS:
+			if traits.has(need) and turn < NEED_HOURS[need]:
+				turns.append(NEED_ACTIVITIES[need])
+	return turns
+
+
+## Marks `hours` hours of `day` asleep from `bedtime` on, wrapping past midnight, and gives the hour
+## it wakes.
+static func _sleep(day: Array[int], bedtime: int, hours: int) -> int:
 	for i: int in hours:
 		day[(bedtime + i) % DayClock.HOURS] = SLEEP
+	return (bedtime + hours) % DayClock.HOURS

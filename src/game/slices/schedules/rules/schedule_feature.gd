@@ -1,10 +1,10 @@
 class_name ScheduleFeature
 extends Feature
 ## Every wild monster's daily schedule (#1201, owner's ground rule, #1199): made once, when the
-## instance loads, from its species' behaviour traits (Schedule) and the instance's seed, and what
-## it's doing now by the DayClock (`activity_of`), for the behaviours that act on it (#1202 to
-## #1205). Each monster draws from a random stream of its own, seeded from the instance's seed and
-## its entity id, so its day never depends on the other monsters, and follows from what the save
+## instance loads, from its species' behaviour traits and its entity id (Schedule, with no roll,
+## #2238), and what it's doing now by the DayClock (`activity_of`), for the behaviours that act on
+## it
+## (#1202 to #1205). Its day never depends on the other monsters, and follows from what the save
 ## holds already: a loaded instance makes them again, the same, rather than saving them. The
 ## schedules are in the state hash. It doesn't step: the time of day follows from the world's tick.
 ## A pack member lives by its leader's day instead of its own (`follow`, PackFeature, #1205).
@@ -81,7 +81,7 @@ func follow(state: GameState, entity_id: int, leader: int) -> void:
 		return
 	if leader == entity_id:
 		var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
-		_days[entity_id] = _made_day(state, entity_id, wild.species_of(entity_id))
+		_days[entity_id] = _made_day(entity_id, wild.species_of(entity_id))
 	else:
 		_days[entity_id] = _days[leader].duplicate()
 
@@ -91,7 +91,7 @@ func entity_removed(_state: GameState, removed_id: int) -> void:
 
 
 ## Makes the days again for the wild monsters the save restored, which WildMonsterFeature loaded
-## before it: the same, since each follows from the seed, its entity id and its species.
+## before it: the same, since each follows from its entity id and its species.
 func load_values(state: GameState, _values: DataReader) -> void:
 	_make_days(state)
 
@@ -107,15 +107,15 @@ func hash_values() -> Array[int]:
 	return values
 
 
-## Makes every wild monster's day, standing or fainted, each from its own stream.
+## Makes every wild monster's day, standing or fainted.
 func _make_days(state: GameState) -> void:
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	_days.clear()
 	for monster: int in wild.monsters + wild.fainted:
-		_days[monster] = _made_day(state, monster, wild.species_of(monster))
+		_days[monster] = _made_day(monster, wild.species_of(monster))
 
 
-## The day of the wild monster with this entity id, of `species`, from its own stream.
-func _made_day(state: GameState, monster: int, species: String) -> Array[int]:
+## The day of the wild monster with this entity id, of `species`.
+func _made_day(monster: int, species: String) -> Array[int]:
 	var its_traits: Array = traits.get(species, [])
-	return Schedule.made(its_traits, Rng.new(state.rng_seed, StateHash.mix(stream(), monster)))
+	return Schedule.made(its_traits, monster)
