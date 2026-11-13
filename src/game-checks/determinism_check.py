@@ -104,10 +104,16 @@ FOR_LOOP = re.compile(r"\bfor\s+(\w+)\s+in\s+(?:self\.)?(\w+)")
 ARRAY_METHOD = re.compile(r"\.(?:slice|duplicate|filter)\s*(?=\()")
 LOOP_END = re.compile(r"\s*:")
 # A member a script declares as one, outside any function: another script reaches it as `obj.tile`,
-# so the check gathers them from every rules script first (#2262).
-INT_VECTOR_MEMBER = re.compile(
-    r"\s*(?:@\w+(?:\([^)]*\))?\s+)*(?:static\s+)?(?:var|const)\s+(\w+)\s*:\s*Vector[234]i\b"
-    r"(?!\s*[.(])"
+# so the check gathers them from every rules script first (#2262). So are its Array[Vector2i] and
+# typed dictionary members, with how another script reads their elements (#2299).
+MEMBER = r"\s*(?:@\w+(?:\([^)]*\))?\s+)*(?:static\s+)?(?:var|const)\s+(\w+)\s*:\s*"
+INT_VECTOR_MEMBER = re.compile(rf"{MEMBER}Vector[234]i\b(?!\s*[.(])")
+INT_VECTOR_COLLECTION_MEMBERS = (
+    (re.compile(rf"{MEMBER}Array\[\s*Vector[234]i\s*\]"), ARRAY_ELEMENT),
+    (
+        re.compile(rf"{MEMBER}Dictionary\[\s*[\w.]+(?:\[[^\[\]]*\])?\s*,\s*Vector[234]i\s*\]"),
+        DICTIONARY_VALUE,
+    ),
 )
 # A function's parameters and locals count in its body only (#2264), any other declaration in the
 # class it is in: the file's own or an inner class, which don't reach each other's members. An inner
@@ -283,6 +289,27 @@ def scopes_of(lines: list[str], continued: set[int]) -> list[Scope]:
     return scopes
 
 
+def block_of(lines: list[str], start: int, continued: set[int]) -> range:
+    """The lines of the statement at `start` and of the block it opens, e.g. a loop's body: up to
+    the next statement indented no deeper than it. Lines inside brackets left open, and each of
+    `continued`, continue the statement before them."""
+    indent = len(lines[start]) - len(lines[start].lstrip())
+    depth = 0
+    for index in range(start, len(lines)):
+        line = lines[index]
+        if (
+            index > start
+            and depth == 0
+            and line.strip()
+            and index not in continued
+            and len(line) - len(line.lstrip()) <= indent
+        ):
+            return range(start, index)
+        opened = sum(line.count(char) for char in "([{")
+        depth = max(0, depth + opened - sum(line.count(char) for char in ")]}"))
+    return range(start, len(lines))
+
+
 def statement_starts(lines: list[str], continued: set[int]) -> list[bool]:
     """Whether each code line starts a statement: not blank, not inside brackets left open and not
     one of `continued` (scopes_of)."""
@@ -392,13 +419,20 @@ def over_array(line: str, at: int) -> bool:
 
 
 def int_vector_members(source: str) -> set[str]:
-    """The members a script declares as an integer vector: outside its functions, in any class."""
+    """The members a script declares as an integer vector, outside its functions, in any class: a
+    vector's name, and an integer vector array's or typed dictionary's with how its element is read
+    (#2299), as receivers on another object."""
     bare = code_only(source).split("\n")
-    return {
-        hit.group(1)
-        for line, (_, function) in zip(bare, scopes_of(bare, continued_lines(source, bare)))
-        if function is None and (hit := INT_VECTOR_MEMBER.match(line))
-    }
+    members: set[str] = set()
+    for line, (_, function) in zip(bare, scopes_of(bare, continued_lines(source, bare))):
+        if function is not None:
+            continue
+        if hit := INT_VECTOR_MEMBER.match(line):
+            members.add(hit.group(1))
+        for declaration, element in INT_VECTOR_COLLECTION_MEMBERS:
+            if hit := declaration.match(line):
+                members.add(rf"{hit.group(1)}{element}")
+    return members
 
 
 def receiver_in(
@@ -407,8 +441,8 @@ def receiver_in(
     """An integer vector written out or one of `names`, as length()'s receiver: the name itself or
     the script's own member, not another object's (`obj.tile`, #2264). A name may end in a
     subscript, which `\b` can't follow (#2261). On another object, one of `members` counts: the
-    rules' integer vector members (#2262). One of `through_self` counts only as `self.name`: a
-    local of that name hides the member (#2304)."""
+    rules' integer vector members and their elements (#2262, #2299). One of `through_self` counts
+    only as `self.name`: a local of that name hides the member (#2304)."""
     own = [rf"(?<![\w.])(?:self\.)?{name}(?!\w)" for name in sorted(names)]
     own += [rf"(?<![\w.])self\.{name}(?!\w)" for name in sorted(through_self)]
     other = (rf"(?<=[\w)\]])\.{name}(?!\w)" for name in sorted(members))
@@ -445,7 +479,9 @@ def forbidden_lines(source: str, members: set[str] | None = None) -> list[str]:
                 array_constants.setdefault(owner, set()).add(name)
             if name in dictionaries.get(owner, ()):
                 constants.setdefault(owner, set()).add(rf"{name}{DICTIONARY_VALUE}")
-    for line, (classes, function), owner, hidden in zip(bare, scopes, owners, shadowed):
+    # A loop variable counts on its loop's lines only: after the loop, the name is another (#2300).
+    loops: dict[int, set[str]] = {}
+    for index, (line, (classes, function)) in enumerate(zip(bare, scopes)):
         *outers, own = None, *classes
         outside = arrays.get(own, set()).union(
             *(array_constants.get(outer, set()) for outer in outers)
@@ -455,9 +491,10 @@ def forbidden_lines(source: str, members: set[str] | None = None) -> list[str]:
             name = loop.group(2)
             through_self = loop.group(0).endswith(f"self.{name}")
             if (
-                name in inside or name in outside and (through_self or name not in hidden)
+                name in inside or name in outside and (through_self or name not in shadowed[index])
             ) and over_array(line, loop.end()):
-                declared.setdefault(owner, set()).add(loop.group(1))
+                for at in block_of(bare, index, continued):
+                    loops.setdefault(at, set()).add(loop.group(1))
     for owner, names in array_constants.items():
         constants.setdefault(owner, set()).update(rf"{name}{ARRAY_ELEMENT}" for name in names)
     for owner, names in arrays.items():
@@ -465,20 +502,27 @@ def forbidden_lines(source: str, members: set[str] | None = None) -> list[str]:
     for owner, names in dictionaries.items():
         declared.setdefault(owner, set()).update(rf"{name}{DICTIONARY_VALUE}" for name in names)
 
-    def receiver_of(scope: Scope, hidden: frozenset[str]) -> re.Pattern[str]:
-        """For its function's names, its class's and the constants of the classes around that,
-        those outside the function but `hidden` by its own only through self."""
-        classes, function = scope
-        *outers, own = None, *classes
-        outside = declared.get(own, set()).union(*(constants.get(outer, set()) for outer in outers))
-        # An entry is a name, or a name and the element or value reads after it.
-        through_self = {name for name in outside if re.match(r"\w+", name)[0] in hidden}
-        names = outside - through_self
-        if function is not None:
-            names |= declared.get(function, set())
-        return receiver_in(names, members or set(), through_self)
+    receivers: dict[tuple[Scope, frozenset[str], frozenset[str]], re.Pattern[str]] = {}
 
-    receiver = {key: receiver_of(*key) for key in set(zip(scopes, shadowed))}
+    def receiver_on(index: int) -> re.Pattern[str]:
+        """The receivers on a line: its function's names, its class's and the constants of the
+        classes around that, those outside the function but hidden by its own only through self,
+        and the loop variables of its loops."""
+        key = (scopes[index], frozenset(loops.get(index, set())), shadowed[index])
+        if key not in receivers:
+            (classes, function), in_loops, hidden = key
+            *outers, own = None, *classes
+            outside = declared.get(own, set()).union(
+                *(constants.get(outer, set()) for outer in outers)
+            )
+            # An entry is a name, or a name and the element or value reads after it.
+            through_self = {name for name in outside if re.match(r"\w+", name)[0] in hidden}
+            names = outside - through_self | in_loops
+            if function is not None:
+                names |= declared.get(function, set())
+            receivers[key] = receiver_in(names, members or set(), through_self)
+        return receivers[key]
+
     named = code_with_random_names(source)
     # The line of each randomness method's name.
     by_name = {
@@ -491,7 +535,7 @@ def forbidden_lines(source: str, members: set[str] | None = None) -> list[str]:
         [
             FORBIDDEN.search(line) is not None
             or FORBIDDEN_IN_CODE.search(bare_line) is not None
-            or calls_float_method(bare_line, receiver[scopes[index], shadowed[index]])
+            or calls_float_method(bare_line, receiver_on(index))
             or index in by_name
             for index, (line, bare_line) in enumerate(zip(code, bare))
         ],
