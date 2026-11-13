@@ -243,19 +243,14 @@ background; only wait in the foreground for a result the very next step needs.
   Set it up as the owner's laptop-wide agent notes describe, with this repository's values:
   `REPO=Coarisfinia/khovax`,
   `WORKFLOW=ci.yml`, `GH=agent-gh`, `ACTIVITY_GH=gh`, `SELF='coarisfinia-ai-agent[bot]'` (it has
-  no default), `DISMISS_STALE_BOT_REVIEWS=1` (owner, #1551: it dismisses CodeRabbit's stale
-  change request itself, below), `REVIEW_BOTS=coderabbitai` (`Flixbox/household-brain#299`: it
-  holds `READY_TO_MERGE` for a draft the owner approved until CodeRabbit has reviewed its head;
-  `Flixbox/household-brain#324` makes it wait only for a review that was asked for),
-  `READY_APPROVED_DRAFTS=1` (owner, #1667: it marks a draft ready once the owner approves its head,
-  below), `CLEAR_QUESTION_LABEL=1` (owner, `Flixbox/household-brain#372`: it takes the `question`
+  no default), `DISMISS_STALE_BOT_REVIEWS=1` (owner, #1551: it dismisses a bot's stale change
+  request itself, below), `READY_APPROVED_DRAFTS=1` (owner, #1667: it marks a draft ready once
+  the owner approves its head, below), `CLEAR_QUESTION_LABEL=1` (owner, `Flixbox/household-brain#372`: it takes the `question`
   label off a pull request once the owner has approved it, or once it merged or closed, and reports
-  `QUESTION_CLEARED`; it acts only while the `GH` token's viewer is a bot), `RESOLVE_BOT_REVIEWS=coderabbitai` (owner, #1603: once CodeRabbit's change request on the head is
-  settled, every thread resolved and CI green, it posts `@coderabbitai resolve` whatever the merge
-  risk, and reports `BOT_RESOLVE_ASKED`) and `CLEARED_LABEL=subagent-cleared`
-  (`Flixbox/household-brain#331`: with `DISMISS_STALE_BOT_REVIEWS=1` it dismisses settled
-  CodeRabbit change requests on a pull request so labelled, below). `.claude/watcher.env` holds
-  them all, for the plugin's own monitor and for
+  `QUESTION_CLEARED`; it acts only while the `GH` token's viewer is a bot) and
+  `CLEARED_LABEL=subagent-cleared` (`Flixbox/household-brain#331`: with
+  `DISMISS_STALE_BOT_REVIEWS=1` it dismisses settled bot change requests on a pull request so
+  labelled, below). `.claude/watcher.env` holds them all, for the plugin's own monitor and for
   `bun --env-file=.claude/watcher.env <watcher>/src/watch-project.ts --follow`; the environment
   still wins. The watcher finds the owner, whose reviews count, itself: the organisation's one
   human admin (`Flixbox/household-brain#296`); `OWNER` only overrides that. On a failing CI run,
@@ -272,9 +267,8 @@ background; only wait in the foreground for a result the very next step needs.
 - **A review thread is settled with a reply that starts exactly `Resolved: <reason>`** (owner's
   rule, #1433): `Resolved: fixed in <sha>, …` or `Resolved: not changing, because …`. That one
   reply answers the comment and asks for the thread to be resolved, and the project watcher
-  resolves it and reports `THREAD_RESOLVED`. This holds for every reviewer's thread, CodeRabbit's
-  included, except one that waits on the owner's decision: that one is answered and left open
-  (above). Only when no watcher runs, resolve it yourself with `resolve-review-thread PRRT_<id>`.
+  resolves it and reports `THREAD_RESOLVED`. This holds for every reviewer's thread, except
+  one that waits on the owner's decision: that one is answered and left open (above). Only when no watcher runs, resolve it yourself with `resolve-review-thread PRRT_<id>`.
   The watcher's `reply-review-thread <pr> <comment-id|PRRT_id> <body>` helper
   (`Flixbox/household-brain#307`) sends such a reply through GraphQL (below) and waits out a rate
   limit once: `bun --env-file=.claude/watcher.env <watcher>/src/reply-review-thread.ts …`.
@@ -289,9 +283,7 @@ background; only wait in the foreground for a result the very next step needs.
   head anyway, the watcher marks it ready itself and reports `DRAFT_READIED`
   (`Flixbox/household-brain#301`, `Flixbox/household-brain#316`); only on `APPROVED_DRAFT` (an older
   head approved, or marking it ready failed) run `agent-gh pr ready <n>` yourself, then queue it
-  (below). Until `Flixbox/household-brain#324` is live, the watcher's `REVIEW_BOTS` hold never
-  reports `READY_TO_MERGE` for such a draft without a CodeRabbit review: don't wait for that event,
-  queue it once it may be queued.
+  (below).
 - **Reply in a review thread through GraphQL, not REST** (#1573): the bot's REST calls (the
   `pulls/<n>/comments/<id>/replies` endpoint, review reads) got HTTP 403 "API rate limit exceeded
   for installation" in bursts while `rate_limit` still showed much of the hourly quota left: many
@@ -344,18 +336,12 @@ background; only wait in the foreground for a result the very next step needs.
     pull request that changed while it was being approved gets that approval taken back at once.)
     Queue it once that approval is there.
 
-  **CodeRabbit reviews at most once per pull request** (owner's ground rule, #1783): its automatic
-  reviews are off (`.coderabbit.yml`), and its approval is no part of the rule above. Only for a
-  complex pull request, and only after the review subagent's review, the main session may ask for
-  one CodeRabbit review, through the watcher (`Flixbox/household-brain#324`); its points are
-  settled before queueing. Agents never ask it themselves. A settled CodeRabbit change request
-  still blocks the merge, and no second review may replace it after a fix push
-  (`Flixbox/household-brain#331`): once the review subagent has cleared a non-user-facing pull
-  request, the main session (never an implementation agent) labels it `subagent-cleared`, and once
-  CI is green at the head and it is no draft, the watcher dismisses CodeRabbit's change requests
+  **Only the main session labels a pull request `subagent-cleared`** (never an implementation
+  agent), once the review subagent has cleared it; only the owner's or the agent bot's labelling
+  counts. A settled bot change request still blocks the merge (`Flixbox/household-brain#331`):
+  once CI is green at the head and it is no draft, the watcher dismisses the bot change requests
   submitted before the label was last put on, each once settled by `Resolved:` replies
-  (`REVIEW_DISMISSED`). Only the owner's or the agent bot's labelling counts. A change request
-  after that needs a new clearance: label off and on again.
+  (`REVIEW_DISMISSED`). A change request after that needs a new clearance: label off and on again.
 - **Merging:** once the pull request may be queued (above), read it for unanswered comments (an
   approval and a comment often arrive together), then enable auto-merge with
   `agent-queue Coarisfinia/khovax <n>` (`Flixbox/household-brain#354`, `#356`), alone in its own
@@ -1001,15 +987,11 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   A wrong release gets a new version, never a moved tag.
 - **Pull requests opened with the owner's account can't be approved by the owner.** The bot opens
   them.
-- **`.coderabbit.yml` is a copy of the organization's CodeRabbit settings** (owner's rule, #1340):
-  both are kept identical by hand, so a change to one goes into the other in the same step (the
-  organization's side is the YAML editor in CodeRabbit's organization settings, with the owner's
-  browser login). Automatic approvals have no security-risk limit.
-- **A stale change request from CodeRabbit is dismissed, not waited out** (owner's rule, #1390):
+- **A stale change request from a bot is dismissed, not waited out** (owner's rule, #1390):
   GitHub blocks merging while any reviewer's latest review is CHANGES_REQUESTED, even with the
   owner's approval. "protect main" doesn't dismiss reviews on a push, which keeps the owner's
-  approval across rebases but keeps CodeRabbit's old change requests too. So:
-  1. Answer or fix every CodeRabbit comment, and settle its thread with a `Resolved: <reason>`
+  approval across rebases but keeps a bot's old change requests too. So:
+  1. Answer or fix every comment of the bot's, and settle its thread with a `Resolved: <reason>`
      reply (above), only once it is fixed or answered. When no watcher runs, resolve it with
      `resolve-review-thread PRRT_<id>` (owner, #1363). The unresolved threads' ids:
      `agent-gh api graphql -f query='{repository(owner:"Coarisfinia",name:"khovax"){pullRequest(number:<n>){reviewThreads(first:100){nodes{id isResolved}}}}}' --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved | not) | .id'`.
@@ -1018,24 +1000,14 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
      (`DISMISS_STALE_BOT_REVIEWS=1`, owner, #1551) once the owner has approved (or the pull request
      is labelled `subagent-cleared` since before the change request, above), CI is green and
      every review thread is settled, whether it was left on an older commit or is on the head and
-     was settled with `Resolved:` replies, and reports `REVIEW_DISMISSED`. Agents don't run
-     `dismiss-stale-coderabbit` (#1390) any more. The watcher reports `REVIEW_DISMISS_FAILED`
-     only once per review, so on the first one tell the owner on the pull request at once.
+     was settled with `Resolved:` replies, and reports `REVIEW_DISMISSED`. The watcher
+     reports `REVIEW_DISMISS_FAILED` only once per review, so on the first one tell the owner on the pull request at once.
 
   Fix what a change request on the head commit asks, then settle each of its threads with a
   `Resolved:` reply: the watcher dismisses it once the owner has approved, or once the main
-  session has labelled the pull request `subagent-cleared` after it (above); CodeRabbit never reviews the
-  fix push. A person's change request is never dismissed. Never post
-  `@coderabbitai` commands yourself: the watcher posts `@coderabbitai resolve` when it is due
-  (`RESOLVE_BOT_REVIEWS`, above). `resolve-review-thread` lives in `~/.local/bin` on the owner's machine,
+  session has labelled the pull request `subagent-cleared` after it (above). A person's change
+  request is never dismissed. `resolve-review-thread` lives in `~/.local/bin` on the owner's machine,
   not in the repository.
-- **CodeRabbit's approval no longer counts for merging** (owner's ground rule, #1783, replacing
-  #1363's low-risk rule): queueing follows "When a pull request may be queued" above, whatever
-  CodeRabbit rates a pull request. Its Triage rule "Merge low-risk changes" (in its app, not
-  `.coderabbit.yml`) is paused; if it ever queues a pull request on its own, take it off the queue
-  unless that pull request meets the queue rule above: `agent-gh pr merge <n> --disable-auto`,
-  and, when it already has a queue entry, the GraphQL `dequeuePullRequest(input:{id:<PR node
-  id>})` mutation, which removes it.
 
 ### Toolchain
 
