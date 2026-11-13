@@ -1694,7 +1694,7 @@ func _check_material_categories(materials: MaterialContent) -> String:
 
 
 ## The categories the materials schema's category field lists (MaterialContent.SCHEMA), or none
-## when it lists none.
+## when it lists none or anything but text.
 func _schema_categories() -> Array[String]:
 	var node: Variant = Content.json_of(Content.text_in(MaterialContent.SCHEMA))
 	for key: String in ["properties", "category", "enum"]:
@@ -1703,7 +1703,10 @@ func _schema_categories() -> Array[String]:
 	var listed: Array = node if node is Array else []
 	var categories: Array[String] = []
 	for category: Variant in listed:
-		categories.append(str(category))
+		if not category is String:
+			return []
+		var text: String = category
+		categories.append(text)
 	return categories
 
 
