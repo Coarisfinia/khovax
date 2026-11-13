@@ -28,8 +28,11 @@ VERSION = "0.0.0-test"
 TIMEOUT_SECONDS = 1
 # The test's own deadline for the whole download: short, so a trickling one gives up quickly too.
 DEADLINE_SECONDS = 2
+# The trickling cases' read timeout: far longer than the deadline and the trickle's gaps, so even on
+# a loaded runner only the deadline can end them (#2270).
+TRICKLE_TIMEOUT_SECONDS = 10
 # A trickling server sends a byte this often, well under the read timeout.
-TRICKLE_SECONDS = 1.5  # fail-first (#2270): planted, gaps longer than the read timeout
+TRICKLE_SECONDS = 0.25
 # A run still going after this is hanging.
 RUN_LIMIT_SECONDS = 30
 # The stand-in release is local: a proxy set on the machine running the test must not carry it
@@ -99,16 +102,17 @@ class Release(BaseHTTPRequestHandler):
         pass
 
 
-def child(root: str, url: str) -> int:
+def child(root: str, url: str, timeout: str) -> int:
     """Runs gdstyle.py's main against the stand-in repository at `root` and release at `url`, with
-    the test's timeout: the test runs this in a subprocess, so a hanging download can be timed."""
+    the read timeout `timeout` and the test's deadline: the test runs this in a subprocess, so a
+    hanging download can be timed."""
     spec = importlib.util.spec_from_file_location("gdstyle", SCRIPT)
     assert spec is not None and spec.loader is not None
     gdstyle = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(gdstyle)
     gdstyle.ROOT = Path(root)
     gdstyle.RELEASE = url
-    gdstyle.TIMEOUT_SECONDS = TIMEOUT_SECONDS
+    gdstyle.TIMEOUT_SECONDS = float(timeout)
     gdstyle.DEADLINE_SECONDS = DEADLINE_SECONDS
     sys.argv = [str(SCRIPT), "--version"]
     return gdstyle.main()
@@ -124,9 +128,11 @@ class GdstyleDownloadTest(unittest.TestCase):
         trickle: bool = False,
         slow_headers: bool = False,
         cut: bool = False,
+        timeout: float = TIMEOUT_SECONDS,
     ) -> tuple[int | None, str, Path]:
         """gdstyle.py's exit code (None when it was still running), its output and its cache,
-        served `body`, with the stand-in repository pinning `sha256` (the body's by default)."""
+        served `body`, with the stand-in repository pinning `sha256` (the body's by default) and
+        `timeout` as the download's read timeout."""
         server = ThreadingHTTPServer(("127.0.0.1", 0), Release)
         server.daemon_threads = True
         server.body, server.stall, server.cut = body, stall, cut  # type: ignore[attr-defined]
@@ -148,7 +154,7 @@ class GdstyleDownloadTest(unittest.TestCase):
         url = f"http://127.0.0.1:{port}/v{{version}}/gdstyle.tar.gz"
         try:
             done = subprocess.run(
-                [sys.executable, "-I", __file__, "--child", str(root), url],
+                [sys.executable, "-I", __file__, "--child", str(root), url, str(timeout)],
                 env=child_environment(cache),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -180,10 +186,12 @@ class GdstyleDownloadTest(unittest.TestCase):
         self.assertLess(time.monotonic() - started, RUN_LIMIT_SECONDS)
 
     def test_trickling_download_gives_up(self) -> None:
-        # A byte every quarter second never trips the read timeout; at that pace the whole
+        # A byte every quarter second never trips the long read timeout; at that pace the whole
         # archive would take minutes, so only the overall deadline ends it.
         started = time.monotonic()
-        code, output, cache = self.run_install(archive({"gdstyle": os.urandom(4096)}), trickle=True)
+        code, output, cache = self.run_install(
+            archive({"gdstyle": os.urandom(4096)}), trickle=True, timeout=TRICKLE_TIMEOUT_SECONDS
+        )
         self.assert_fails_cleanly(code, output, cache)
         self.assertIn("took longer than", output)  # the deadline ended it, not the read timeout
         self.assertLess(time.monotonic() - started, RUN_LIMIT_SECONDS)
@@ -191,7 +199,9 @@ class GdstyleDownloadTest(unittest.TestCase):
     def test_trickling_headers_give_up(self) -> None:
         # The same, before urlopen has even returned: the deadline covers the headers too.
         started = time.monotonic()
-        code, output, cache = self.run_install(archive({"gdstyle": b"x"}), slow_headers=True)
+        code, output, cache = self.run_install(
+            archive({"gdstyle": b"x"}), slow_headers=True, timeout=TRICKLE_TIMEOUT_SECONDS
+        )
         self.assert_fails_cleanly(code, output, cache)
         self.assertIn("took longer than", output)  # the deadline ended it, not the read timeout
         self.assertLess(time.monotonic() - started, RUN_LIMIT_SECONDS)
@@ -221,5 +231,5 @@ class GdstyleDownloadTest(unittest.TestCase):
 
 if __name__ == "__main__":
     if sys.argv[1:2] == ["--child"]:
-        sys.exit(child(sys.argv[2], sys.argv[3]))
+        sys.exit(child(sys.argv[2], sys.argv[3], sys.argv[4]))
     unittest.main()
