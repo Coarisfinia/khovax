@@ -16,8 +16,13 @@ static func build(_setup: FeatureSetup) -> DrinkingFeature:
 		if not CommandCodes.file(by_code, code, brew.id):
 			push_error("brew %s shares its code with another" % brew.id)
 			continue
-		doses[code] = TonicDose.new(brew.target == "player", _mend_of(brew))
+		doses[code] = _dose_of(brew)
 	return DrinkingFeature.new(doses)
+
+
+## What drinking `brew` does: who it helps and what it mends.
+static func _dose_of(brew: TonicBrew) -> TonicDose:
+	return TonicDose.new(brew.target == "player", _mend_of(brew))
 
 
 ## The share of its target's full HP `brew` heals at once: a Mend's potency, unless it waits
