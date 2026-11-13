@@ -345,6 +345,8 @@ def forbidden_lines(source: str, members: set[str] | None = None) -> list[str]:
                 constants.setdefault(owner, set()).add(name)
             if name in arrays.get(owner, ()):
                 array_constants.setdefault(owner, set()).add(name)
+            if name in dictionaries.get(owner, ()):
+                constants.setdefault(owner, set()).add(rf"{name}{DICTIONARY_VALUE}")
     for line, (classes, _), owner in zip(bare, scopes, owners):
         *outers, own = None, *classes
         visible = arrays.get(own, set()) | arrays.get(owner, set())
