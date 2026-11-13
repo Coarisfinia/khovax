@@ -62,6 +62,10 @@ FORBIDDEN_IN_CODE = re.compile(
             r"\b(PI|TAU|INF|NAN)\b",
             r"\.aspect\s*\(|\bPackedFloat(32|64)Array\b|\bstr_to_var\s*\(",
             r"\bTYPE_FLOAT\b",
+            # The float-backed types' own constants, which type_convert() builds them from (#2247):
+            # `\b` keeps their integer twins (TYPE_VECTOR2I, TYPE_RECT2I) allowed.
+            r"\bTYPE_(VECTOR[234]|RECT2|TRANSFORM[23]D|PLANE|QUATERNION|AABB|BASIS|PROJECTION"
+            r"|COLOR|PACKED_(FLOAT32|FLOAT64|VECTOR[234]|COLOR)_ARRAY)\b",
         )
     )
 )
