@@ -1,6 +1,7 @@
 extends Node
 ## Hands the menu what the slices after its own add to it (#1614), so the menu never names them:
-## the player's Might and gear panels in its Character tab, the damage numbers' rows in its Settings
+## the player's Might and gear panels in its Character tab, the crafted tonics' names in its
+## materials (#2282), the damage numbers' rows in its Settings
 ## tab, and the quest list's column, which its open button stands above on a screen held upright
 ## (#1465). The Quests tab and the codex book are the menu's own children in the main scene instead.
 ## The two panels are this node's children in the main scene, so the profile's tie
@@ -40,6 +41,13 @@ func _add_panels(tab: CharacterTab) -> void:
 	remove_child(gear)
 	tab.add_panel(gear, tab.materials)
 	var _fitted: int = tab.fitted.connect(gear.fit)
+	tab.materials.names = _brew_name
+
+
+## The untranslated name of the tonic or draught `id` (#2282), or "" when no tonic brews it.
+func _brew_name(id: String) -> String:
+	var brew: TonicBrew = TonicContent.cached().brews.get(id)
+	return brew.name if brew != null else ""
 
 
 ## Makes the quest list room below the menu's open button, which reaches `below` pixels down from

@@ -105,10 +105,16 @@ FOR_LOOP = re.compile(r"\bfor\s+(\w+)\s+in\s+(?:self\.)?(\w+)")
 ARRAY_METHOD = re.compile(r"\.(?:slice|duplicate|filter)\s*(?=\()")
 LOOP_END = re.compile(r"\s*:")
 # A member a script declares as one, outside any function: another script reaches it as `obj.tile`,
-# so the check gathers them from every rules script first (#2262).
-INT_VECTOR_MEMBER = re.compile(
-    r"\s*(?:@\w+(?:\([^)]*\))?\s+)*(?:static\s+)?(?:var|const)\s+(\w+)\s*:\s*Vector[234]i\b"
-    r"(?!\s*[.(])"
+# so the check gathers them from every rules script first (#2262). So are its Array[Vector2i] and
+# typed dictionary members, with how another script reads their elements (#2299).
+MEMBER = r"\s*(?:@\w+(?:\([^)]*\))?\s+)*(?:static\s+)?(?:var|const)\s+(\w+)\s*:\s*"
+INT_VECTOR_MEMBER = re.compile(rf"{MEMBER}Vector[234]i\b(?!\s*[.(])")
+INT_VECTOR_COLLECTION_MEMBERS = (
+    (re.compile(rf"{MEMBER}Array\[\s*Vector[234]i\s*\]"), ARRAY_ELEMENT),
+    (
+        re.compile(rf"{MEMBER}Dictionary\[\s*[\w.]+(?:\[[^\[\]]*\])?\s*,\s*Vector[234]i\s*\]"),
+        DICTIONARY_VALUE,
+    ),
 )
 # A function declared to return one: a call to it counts as one, in its class or on another object
 # (#2263). Its name opens its parameters, and its return type follows their closing parenthesis.
@@ -306,13 +312,20 @@ def over_array(line: str, at: int) -> bool:
 
 
 def int_vector_members(source: str) -> set[str]:
-    """The members a script declares as an integer vector: outside its functions, in any class."""
+    """The members a script declares as an integer vector, outside its functions, in any class: a
+    vector's name, and an integer vector array's or typed dictionary's with how its element is read
+    (#2299), as receivers on another object."""
     bare = code_only(source).split("\n")
-    return {
-        hit.group(1)
-        for line, (_, function) in zip(bare, scopes_of(bare, continued_lines(source, bare)))
-        if function is None and (hit := INT_VECTOR_MEMBER.match(line))
-    }
+    members: set[str] = set()
+    for line, (_, function) in zip(bare, scopes_of(bare, continued_lines(source, bare))):
+        if function is not None:
+            continue
+        if hit := INT_VECTOR_MEMBER.match(line):
+            members.add(hit.group(1))
+        for declaration, element in INT_VECTOR_COLLECTION_MEMBERS:
+            if hit := declaration.match(line):
+                members.add(rf"{hit.group(1)}{element}")
+    return members
 
 
 def function_returns(bare: list[str], scopes: list[Scope]) -> dict[int | None, dict[str, bool]]:
@@ -344,9 +357,9 @@ def receiver_in(
     """An integer vector written out or one of `names`, as length()'s receiver: the name itself or
     the script's own member, not another object's (`obj.tile`, #2264). A name may end in a
     subscript, which `\b` can't follow (#2261). On another object, one of `members` counts: the
-    rules' integer vector members (#2262). A call to one of `own_calls` counts on its own or on
-    self, and one to `other_calls` on another object: functions returning an integer vector
-    (#2263)."""
+    rules' integer vector members and their elements (#2262, #2299). A call to one of `own_calls`
+    counts on its own or on self, and one to `other_calls` on another object: functions returning
+    an integer vector (#2263)."""
     own = (rf"(?<![\w.])(?:self\.)?{name}(?!\w)" for name in sorted(names))
     other = (rf"(?<=[\w)\]])\.{name}(?!\w)" for name in sorted(members))
     own_call = (rf"(?<![\w.])(?:self\.)?{name}\s*(?=\()" for name in sorted(own_calls))
