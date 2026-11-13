@@ -310,6 +310,11 @@ def int_vector_members(source: str) -> set[str]:
     }
 
 
+def inherited_members(sources: list[str]) -> dict[str, set[str]]:
+    """Fail-first stub (#2306): the fix fills it in."""
+    return {}
+
+
 def receiver_in(names: set[str], members: set[str]) -> re.Pattern[str]:
     """An integer vector written out or one of `names`, as length()'s receiver: the name itself or
     the script's own member, not another object's (`obj.tile`, #2264). A name may end in a
@@ -320,7 +325,9 @@ def receiver_in(names: set[str], members: set[str]) -> re.Pattern[str]:
     return re.compile("|".join([INT_VECTOR_RECEIVER, *own, *other]))
 
 
-def forbidden_lines(source: str, members: set[str] | None = None) -> list[str]:
+def forbidden_lines(
+    source: str, members: set[str] | None = None, bases: dict[str, set[str]] | None = None
+) -> list[str]:
     """The numbered lines of a script that use something the rules never use. `members` are the
     integer vector members the rules declare, in any script (int_vector_members)."""
     code = without_comments(source).rstrip("\n").split("\n")
