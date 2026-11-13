@@ -132,7 +132,7 @@ const BABY_BUNDLES: Array[Array] = [
 	[Vector2i(0, 9)],
 	[Vector2i(9, -9)],
 ]
-const BABY_HELD: Array[bool] = [true, false, true, false, true]
+const BABY_HELD: Array[bool] = [true, true, false, true, false]
 const BABY_NAMED: Vector2i = Vector2i(-6, 1)
 const BABY_ADULT: String = "big"
 const BABY_FIRST_FORM: String = "pup"
