@@ -8,7 +8,12 @@ access) isn't. The check runs this first, so CI's step for the check runs it too
 import unittest
 from unittest import mock
 
-from determinism_check import forbidden_lines, int_vector_members, own_test_passes
+from determinism_check import (
+    forbidden_lines,
+    int_vector_functions,
+    int_vector_members,
+    own_test_passes,
+)
 
 REFUSED = (
     "items.shuffle()",
@@ -391,6 +396,68 @@ class FormsTest(unittest.TestCase):
             " -> void:\n\tfor tile in tiles:\n\t\tprint(tile.length())",
         ):
             self.assertEqual(forbidden_lines(source), [], source)
+
+
+    def test_a_call_to_a_function_returning_an_integer_vector_is_refused(self) -> None:
+        # The script's own function, called on its own or on self (#2263).
+        source = "func tile() -> Vector2i:\n\treturn Vector2i.ONE\n"
+        for line in (
+            "var a := tile().length()",
+            "var a := self.tile().distance_to(b)",
+            "var a := tile().abs().length()",
+        ):
+            self.assertEqual(forbidden_lines(source + line), [f"3:{line}"], line)
+
+    def test_a_call_to_another_scripts_integer_vector_function_is_refused(self) -> None:
+        # One some rules script declares, called on any object, its arguments balanced (#2263).
+        for line in (
+            "var a := entity.tile_at(1, f(2)).length()",
+            "var a := get_world().grid.tile_at(x).distance_to(b)",
+            "var a := entities[0].tile_at((1 + 2) * 3).mini(4).length()",
+            "var a := tile_at(x).length()",
+        ):
+            self.assertEqual(forbidden_lines(line, functions={"tile_at"}), [f"1:{line}"], line)
+
+    def test_a_call_to_any_other_function_stays_allowed(self) -> None:
+        source = "func count() -> int:\n\treturn 1\nfunc name() -> String:\n\treturn \"\"\n"
+        for line in (
+            "var a := count().length()",
+            "var a := name().length()",
+            "var a := entity.name().length()",
+        ):
+            self.assertEqual(forbidden_lines(source + line), [], line)
+        for line in (
+            "var a := entity.tile_at_name(x).length()",
+            "var a := entity.tile_at.length()",
+            "var a := tile_at.length()",
+            "var a := entity.tile_at(x).y.length()",
+        ):
+            self.assertEqual(forbidden_lines(line, functions={"tile_at"}), [], line)
+
+    def test_functions_are_those_declared_to_return_an_integer_vector(self) -> None:
+        source = "\n".join(
+            (
+                "func tile() -> Vector2i:",
+                "\treturn Vector2i.ONE",
+                "static func home(a: int, b: String = \"(\") -> Vector3i:",
+                "\treturn Vector3i.ONE",
+                "func spot(",
+                "\ta: Vector2i,",
+                "\tb: int,",
+                ")  ->  Vector4i:",
+                "\treturn Vector4i.ONE",
+                "func count() -> int:",
+                "\treturn 1",
+                "func tiles() -> Array[Vector2i]:",
+                "\treturn []",
+                "func of(at: Vector2i) -> void:",
+                "\tvar f: Callable = func(x: int) -> Vector2i: return Vector2i(x, x)",
+                "class A:",
+                "\tfunc inner() -> Vector2i:",
+                "\t\treturn Vector2i.ZERO",
+            )
+        )
+        self.assertEqual(int_vector_functions(source), {"tile", "home", "spot", "inner"})
 
 
 class OwnTestTest(unittest.TestCase):
