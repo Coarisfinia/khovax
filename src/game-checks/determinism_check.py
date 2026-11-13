@@ -266,7 +266,7 @@ def int_vector_members(source: str) -> set[str]:
     bare = code_only(source).split("\n")
     return {
         hit.group(1)
-        for line, owner in zip(bare, functions_of(bare))
+        for line, owner in zip(bare, functions_of(bare, continued_lines(source, bare)))
         if owner is None and (hit := INT_VECTOR_MEMBER.match(line))
     }
 
