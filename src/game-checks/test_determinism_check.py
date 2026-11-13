@@ -434,6 +434,16 @@ class FormsTest(unittest.TestCase):
         ):
             self.assertEqual(forbidden_lines(line, functions={"tile_at"}), [], line)
 
+    def test_the_scripts_own_function_of_another_type_wins_on_its_own_or_on_self(self) -> None:
+        # Another script's tile() returns a Vector2i, this one's a String.
+        source = "func tile() -> String:\n\treturn \"\"\n"
+        for line, hit in (
+            ("var a := tile().length()", []),
+            ("var a := self.tile().length()", []),
+            ("var a := entity.tile().length()", ["3:var a := entity.tile().length()"]),
+        ):
+            self.assertEqual(forbidden_lines(source + line, functions={"tile"}), hit, line)
+
     def test_functions_are_those_declared_to_return_an_integer_vector(self) -> None:
         source = "\n".join(
             (
