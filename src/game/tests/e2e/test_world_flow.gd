@@ -56,7 +56,6 @@ const CLEARINGS_WAITING: Dictionary[String, int] = {
 	"hrovumel_stolm": 2330,
 	"ivenwhal_wudhen": 2331,
 	"lymwen_hoall": 2332,
-	"morwe_wudhen": 2325,
 }
 ## The dungeon behind the escort guide's seal (#1591), its end piece and the place marked there.
 const DUNGEON: String = "hrovumel_stolm"
