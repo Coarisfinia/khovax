@@ -16,6 +16,7 @@ import os
 import re
 import sys
 import unittest
+from collections import Counter
 from pathlib import Path
 
 from game_shared import log
@@ -87,25 +88,41 @@ INT_VECTOR_METHOD = re.compile(
 )
 FLOAT_METHOD = re.compile(r"\.(?:length|distance_to)\s*\(")
 INT_VECTOR_DECLARED = re.compile(r"\b(\w+)\s*:\s*Vector[234]i\b(?!\s*[.(])")
-# An Array[Vector2i]'s elements are integer vectors too: a subscript of it (brackets inside, one
-# level deep) and a loop variable over it (#2261).
+# An Array[Vector2i]'s elements are integer vectors too: a subscript of it (brackets inside, two
+# levels deep), what its element methods return, and a loop variable over it or over the arrays its
+# own methods return (#2261, #2287). So are a typed dictionary's values, read by subscript or get().
 INT_VECTOR_ARRAY_DECLARED = re.compile(r"\b(\w+)\s*:\s*Array\[\s*Vector[234]i\s*\]")
-SUBSCRIPT = r"\[(?:[^\[\]]|\[[^\[\]]*\])*\]"
-FOR_LOOP = re.compile(r"\bfor\s+(\w+)\s+in\s+(?:self\.)?(\w+)\s*:")
+INT_VECTOR_DICTIONARY_DECLARED = re.compile(
+    r"\b(\w+)\s*:\s*Dictionary\[\s*[\w.]+(?:\[[^\[\]]*\])?\s*,\s*Vector[234]i\s*\]"
+)
+SUBSCRIPT = r"\[(?:[^\[\]]|\[(?:[^\[\]]|\[[^\[\]]*\])*\])*\]"
+# An element method's arguments are matched as balanced parentheses by calls_float_method.
+ARRAY_ELEMENT = (
+    rf"(?:{SUBSCRIPT}|\.(?:front|back|pop_back|pop_front)\s*\(\s*\)|\.(?:get|pop_at)\s*(?=\())"
+)
+DICTIONARY_VALUE = rf"(?:{SUBSCRIPT}|\.get\s*(?=\())"
+FOR_LOOP = re.compile(r"\bfor\s+(\w+)\s+in\s+(?:self\.)?(\w+)")
+ARRAY_METHOD = re.compile(r"\.(?:slice|duplicate|filter)\s*(?=\()")
+LOOP_END = re.compile(r"\s*:")
 # A member a script declares as one, outside any function: another script reaches it as `obj.tile`,
 # so the check gathers them from every rules script first (#2262).
 INT_VECTOR_MEMBER = re.compile(
     r"\s*(?:@\w+(?:\([^)]*\))?\s+)*(?:static\s+)?(?:var|const)\s+(\w+)\s*:\s*Vector[234]i\b"
     r"(?!\s*[.(])"
 )
-# A function declared to return one: a call to it counts as one, in its script or on another object
+# A function declared to return one: a call to it counts as one, in its class or on another object
 # (#2263). Its name opens its parameters, and its return type follows their closing parenthesis.
 NAMED_FUNCTION = re.compile(r"\bfunc\s+(\w+)\s*(?=\()")
 INT_VECTOR_RETURN = re.compile(r"\s*->\s*Vector[234]i\s*:")
-# A function's parameters and locals count in its body only, any other declaration in the whole
-# file (#2264); a function ends at the next statement indented no deeper than its func. A line that
-# starts inside a multi-line string or after a backslash continues its statement (#2271).
+# A function's parameters and locals count in its body only (#2264), any other declaration in the
+# class it is in: the file's own or an inner class, which don't reach each other's members. An inner
+# class reaches the constants of the classes around it, though (Godot 4.7, #2288). A function or
+# class ends at the next statement indented no deeper than its line. A line that starts inside a
+# multi-line string or after a backslash continues its statement (#2271).
 FUNCTION = re.compile(r"\s*(static\s+)?func\b")
+CLASS = re.compile(r"\s*class\s")
+# Annotations may come first, as in INT_VECTOR_MEMBER.
+CONSTANT = re.compile(r"\s*(?:@\w+(?:\([^)]*\))?\s+)*const\s+(\w+)")
 # Reaching a randomness method by name, with call() or a Callable: read on the whole of
 # code_with_random_names, which keeps that string, so a call split over lines is seen too (#2223).
 RANDOM_NAMES = ("shuffle", "pick_random")
@@ -236,31 +253,38 @@ def continued_lines(source: str, bare: list[str]) -> set[int]:
     return continued
 
 
-def functions_of(lines: list[str], continued: set[int]) -> list[int | None]:
-    """The function each code line is in, as the index of its func line, or None outside one. A
-    line inside brackets left open continues the line before it, e.g. a func's parameters, and so
-    does each of `continued`."""
-    owners: list[int | None] = []
-    function: tuple[int, int] | None = None  # Its func line and that line's indentation.
+Scope = tuple[tuple[int, ...], int | None]
+
+
+def scopes_of(lines: list[str], continued: set[int]) -> list[Scope]:
+    """The inner classes and the function each code line is in: the index of each class's line,
+    outermost first, and of its func line, or None outside one. A line inside brackets left open
+    continues the line before it, e.g. a func's parameters, and so does each of `continued`."""
+    scopes: list[Scope] = []
+    blocks: list[tuple[int, int]] = []  # Each open class's or func's line and its indentation.
+    function: int | None = None
     depth = 0
     for index, line in enumerate(lines):
         if depth == 0 and line.strip() and index not in continued:
             indent = len(line) - len(line.lstrip())
-            if function is not None and indent <= function[1]:
-                function = None
-            if function is None and FUNCTION.match(line):
-                function = (index, indent)
-        owners.append(None if function is None else function[0])
+            while blocks and indent <= blocks[-1][1]:
+                if blocks.pop()[0] == function:
+                    function = None
+            if function is None and (FUNCTION.match(line) or CLASS.match(line)):
+                blocks.append((index, indent))
+                if FUNCTION.match(line):
+                    function = index
+        scopes.append((tuple(at for at, _ in blocks if at != function), function))
         opened = sum(line.count(char) for char in "([{")
         depth = max(0, depth + opened - sum(line.count(char) for char in ")]}"))
-    return owners
+    return scopes
 
 
 def declared_int_vectors(
     bare: list[str], owners: list[int | None], declaration: re.Pattern[str] = INT_VECTOR_DECLARED
 ) -> dict[int | None, set[str]]:
     """The names declared as an integer vector (or what `declaration` declares), by the function
-    they count in (None: the file)."""
+    or class they count in (None: the file's own class)."""
     joined = "\n".join(bare)
     declared: dict[int | None, set[str]] = {}
     for hit in declaration.finditer(joined):
@@ -273,32 +297,45 @@ def declared_int_vectors(
     return declared
 
 
+def over_array(line: str, at: int) -> bool:
+    """Whether a loop's source, from `at` in `line` after an array's name, is that array or what a
+    chain of its own array-returning methods makes of it, up to the loop's colon."""
+    while at >= 0 and (method := ARRAY_METHOD.match(line, at)):
+        at = after_parentheses(line, method.end())
+    return at >= 0 and LOOP_END.match(line, at) is not None
+
+
 def int_vector_members(source: str) -> set[str]:
     """The members a script declares as an integer vector: outside its functions, in any class."""
     bare = code_only(source).split("\n")
     return {
         hit.group(1)
-        for line, owner in zip(bare, functions_of(bare, continued_lines(source, bare)))
-        if owner is None and (hit := INT_VECTOR_MEMBER.match(line))
+        for line, (_, function) in zip(bare, scopes_of(bare, continued_lines(source, bare)))
+        if function is None and (hit := INT_VECTOR_MEMBER.match(line))
     }
 
 
-def function_returns(source: str) -> dict[str, bool]:
-    """The functions a script declares, in any class, and whether each returns an integer vector.
-    A name two of its classes declare counts as one if either returns one: the check can't tell
-    which class a call reaches, so such a collision stays refused, as for members (#2262)."""
-    joined = code_only(source)
-    returns: dict[str, bool] = {}
+def function_returns(bare: list[str], scopes: list[Scope]) -> dict[int | None, dict[str, bool]]:
+    """The functions each class declares (None: the file's own class, else its class line's index),
+    and whether each returns an integer vector."""
+    joined = "\n".join(bare)
+    returns: dict[int | None, dict[str, bool]] = {}
     for hit in NAMED_FUNCTION.finditer(joined):
+        line = joined.count("\n", 0, hit.start())
+        classes, function = scopes[line]
+        if function != line:  # A lambda's name, inside a function or a member's value.
+            continue
         end = after_parentheses(joined, hit.end())
         vector = end >= 0 and INT_VECTOR_RETURN.match(joined, end) is not None
-        returns[hit.group(1)] = returns.get(hit.group(1), False) or vector
+        returns.setdefault((classes or (None,))[-1], {})[hit.group(1)] = vector
     return returns
 
 
 def int_vector_functions(source: str) -> set[str]:
     """The functions a script declares to return an integer vector, in any class."""
-    return {name for name, vector in function_returns(source).items() if vector}
+    bare = code_only(source).split("\n")
+    returns = function_returns(bare, scopes_of(bare, continued_lines(source, bare)))
+    return {name for of in returns.values() for name, vector in of.items() if vector}
 
 
 def receiver_in(
@@ -322,29 +359,71 @@ def forbidden_lines(
 ) -> list[str]:
     """The numbered lines of a script that use something the rules never use. `members` are the
     integer vector members the rules declare, in any script (int_vector_members), and `functions`
-    their functions returning one (int_vector_functions). The script's own count in any case, and
-    on its own or on self, a function it declares returning something else stays allowed."""
+    the functions returning one that the other rules scripts declare (int_vector_functions)."""
     code = without_comments(source).rstrip("\n").split("\n")
     bare = code_only(source).split("\n")
-    owners = functions_of(bare, continued_lines(source, bare))
+    scopes = scopes_of(bare, continued_lines(source, bare))
+    # The function or class each line's declarations count in.
+    owners = [
+        function if function is not None else (classes or (None,))[-1]
+        for classes, function in scopes
+    ]
     declared = declared_int_vectors(bare, owners)
     arrays = declared_int_vectors(bare, owners, INT_VECTOR_ARRAY_DECLARED)
-    for index, line in enumerate(bare):
+    dictionaries = declared_int_vectors(bare, owners, INT_VECTOR_DICTIONARY_DECLARED)
+    # Each class's constants, which its inner classes reach: integer vectors, arrays and
+    # dictionaries of them.
+    constants: dict[int | None, set[str]] = {}
+    array_constants: dict[int | None, set[str]] = {}
+    for line, (_, function), owner in zip(bare, scopes, owners):
+        constant = CONSTANT.match(line)
+        if function is None and constant:
+            name = constant.group(1)
+            if name in declared.get(owner, ()):
+                constants.setdefault(owner, set()).add(name)
+            if name in arrays.get(owner, ()):
+                array_constants.setdefault(owner, set()).add(name)
+            if name in dictionaries.get(owner, ()):
+                constants.setdefault(owner, set()).add(rf"{name}{DICTIONARY_VALUE}")
+    for line, (classes, _), owner in zip(bare, scopes, owners):
+        *outers, own = None, *classes
+        visible = arrays.get(own, set()) | arrays.get(owner, set())
+        visible = visible.union(*(array_constants.get(outer, set()) for outer in outers))
         for loop in FOR_LOOP.finditer(line):
-            if loop.group(2) in arrays.get(None, set()) | arrays.get(owners[index], set()):
-                declared.setdefault(owners[index], set()).add(loop.group(1))
+            if loop.group(2) in visible and over_array(line, loop.end()):
+                declared.setdefault(owner, set()).add(loop.group(1))
+    for owner, names in array_constants.items():
+        constants.setdefault(owner, set()).update(rf"{name}{ARRAY_ELEMENT}" for name in names)
     for owner, names in arrays.items():
-        declared.setdefault(owner, set()).update(rf"{name}{SUBSCRIPT}" for name in names)
-    in_file = declared.get(None, set())
-    returns = function_returns(source)
-    in_script = {name for name, vector in returns.items() if vector}
-    other_calls = in_script | (functions or set())
-    own_calls = in_script | (other_calls - returns.keys())
+        declared.setdefault(owner, set()).update(rf"{name}{ARRAY_ELEMENT}" for name in names)
+    for owner, names in dictionaries.items():
+        declared.setdefault(owner, set()).update(rf"{name}{DICTIONARY_VALUE}" for name in names)
+
+    def names_in(scope: Scope) -> set[str]:
+        """Its function's names, its class's and the constants of the classes around that."""
+        classes, function = scope
+        *outers, own = None, *classes
+        names = set(declared.get(own, set()))
+        if function is not None:
+            names |= declared.get(function, set())
+        for outer in outers:
+            names |= constants.get(outer, set())
+        return names
+
+    returns = function_returns(bare, scopes)
+    # A call on another object reaches any class's function, and a bare or self. call its own
+    # class's, or what the class inherits from another script (`functions`, #2263).
+    other_calls = (functions or set()).union(
+        *({name for name, vector in of.items() if vector} for of in returns.values())
+    )
+
+    def own_calls(scope: Scope) -> set[str]:
+        of = returns.get((scope[0] or (None,))[-1], {})
+        return {name for name, vector in of.items() if vector} | (functions or set()) - of.keys()
+
     receiver = {
-        owner: receiver_in(
-            in_file | declared.get(owner, set()), members or set(), own_calls, other_calls
-        )
-        for owner in set(owners)
+        scope: receiver_in(names_in(scope), members or set(), own_calls(scope), other_calls)
+        for scope in set(scopes)
     }
     named = code_with_random_names(source)
     # The line of each randomness method's name.
@@ -358,7 +437,7 @@ def forbidden_lines(
         [
             FORBIDDEN.search(line) is not None
             or FORBIDDEN_IN_CODE.search(bare_line) is not None
-            or calls_float_method(bare_line, receiver[owners[index]])
+            or calls_float_method(bare_line, receiver[scopes[index]])
             or index in by_name
             for index, (line, bare_line) in enumerate(zip(code, bare))
         ],
@@ -391,11 +470,12 @@ def main() -> int:
     extends = {f"extends {name}" for name in rule_classes | {"RefCounted"}}
     sources = [Path(file).read_text(encoding="utf-8") for file in scripts]
     members = set().union(*(int_vector_members(source) for source in sources))
-    functions = set().union(*(int_vector_functions(source) for source in sources))
+    functions = [int_vector_functions(source) for source in sources]
+    # How many scripts declare each: a script's own count only in their classes (#2263).
+    declaring = Counter(name for names in functions for name in names)
     failed = False
 
-    for file in scripts:
-        source = Path(file).read_text(encoding="utf-8")
+    for file, source, own in zip(scripts, sources, functions):
         lines = source.rstrip("\n").split("\n")
         # Exempt while its header carries the marker with a reason, and no other marker sits
         # anywhere in it. A marker without a reason, or one below the header, fails the file.
@@ -417,7 +497,8 @@ def main() -> int:
         if not extends.intersection(code):
             log.error("rules scripts extend RefCounted or a class of the rules", file)
             failed = True
-        hits = forbidden_lines(source, members, functions)
+        others = {name for name, count in declaring.items() if count > (name in own)}
+        hits = forbidden_lines(source, members, others)
         if hits:
             print("\n".join(hits))
             log.error("the rules must stay deterministic: see the lines above", file)

@@ -24,7 +24,8 @@ func starting_flags() -> Array[String]:
 
 
 ## The variant of the named instance that the world's `flags` (sorted) choose (#529), or "" for
-## its plain one.
+## its plain one. The same name and flags always choose the same: the world keeps its answers until
+## its flags change (#2296).
 func variant(_instance_name: String, _flags: Array[String]) -> String:
 	return ""
 

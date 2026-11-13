@@ -43,6 +43,11 @@ var flags: Array[String] = []
 ## The variant each loaded instance was loaded from, by name ("" for a blueprint's plain one): it
 ## keeps it until it's purged, even after a flag chose another.
 var variants: Dictionary[String, String] = {}
+## The variant the flags choose for each blueprint asked, by name, and the flags it was worked out
+## for (WorldFlags.chosen_variant, #2296): asked again for the same flags, the source isn't asked.
+## Derived, so neither hashed nor saved.
+var chosen: Dictionary[String, String] = {}
+var chosen_for: Array[String] = []
 ## What the world loads its instances from (#396), handed in, so the core names no blueprint.
 var source: InstanceSource = null
 ## Where each instance lies in the world, worked out as it's asked (#187, #282, #1011).
@@ -196,11 +201,16 @@ func offset(instance_name: String) -> Vector2i:
 
 ## The names of the instances a player is in, in name order: the ones that step.
 func active() -> Array[String]:
-	var names: Array[String] = []
-	for instance_name: String in sorted_names():
+	return _with_player(sorted_names())
+
+
+## The names of `names` (sorted) whose instance a player is in, in their order.
+func _with_player(names: Array[String]) -> Array[String]:
+	var occupied: Array[String] = []
+	for instance_name: String in names:
 		if has_player(instances[instance_name]):
-			names.append(instance_name)
-	return names
+			occupied.append(instance_name)
+	return occupied
 
 
 ## Advances every instance a player is in by one tick, with the tick's commands by slot, then moves
@@ -214,11 +224,13 @@ func step(commands: Array[Command]) -> void:
 		for instance_name: String in active():
 			WorldTravel.raise_entered(self, instance_name, instances[instance_name].entities)
 	tick += 1
-	var stepping: Array[String] = active()
+	# Sorted once for the steps (#2296): no instance is loaded or purged until the flags are taken.
+	var loaded: Array[String] = sorted_names()
+	var stepping: Array[String] = _with_player(loaded)
 	# An instance nobody is in doesn't step, so it raises nothing this tick: its last tick's events
 	# would otherwise reach whoever walks into it as new (#386). Its time of day goes on all the
 	# same (#1215); the ones that step take theirs a tick on themselves (Simulation.step).
-	for instance_name: String in sorted_names():
+	for instance_name: String in loaded:
 		if not stepping.has(instance_name):
 			instances[instance_name].events.clear()
 			instances[instance_name].world_tick = tick
@@ -235,25 +247,28 @@ func step(commands: Array[Command]) -> void:
 				emitted.append(event as EventEmitted)
 			elif event is FlagReplaced:
 				replaced.append(event as FlagReplaced)
-	_hand_changed_ground(stepping)
+	_hand_changed_ground(stepping, loaded)
 	WorldFlags.take(self, emitted, replaced)
 	WorldTravel.move(self, leaving)
 	_purge_left_behind()
 
 
 ## Hands the instances next door to any of `stepped` that changed a tile in place this tick (#538)
-## their new ground, so sight across the seam sees it at once.
-func _hand_changed_ground(stepped: Array[String]) -> void:
+## their new ground, so sight across the seam sees it at once. `loaded` holds every loaded
+## instance's name, sorted.
+func _hand_changed_ground(stepped: Array[String], loaded: Array[String]) -> void:
 	var changed: Array[String] = []
 	for instance_name: String in stepped:
 		for event: RefCounted in instances[instance_name].events:
 			if event is TileChanged and not changed.has(instance_name):
 				changed.append(instance_name)
-	for loaded: String in sorted_names():
-		var state: GameState = instances[loaded]
+	if changed.is_empty():
+		return
+	for instance_name: String in loaded:
+		var state: GameState = instances[instance_name]
 		for target: String in changed:
 			if state.region.exit_blueprints.has(target):
-				_hand_next_door(loaded, state)
+				_hand_next_door(instance_name, state)
 				break
 
 
@@ -261,16 +276,24 @@ func _hand_changed_ground(stepped: Array[String]) -> void:
 ## outdated (#529; the starting instance too, #727), and every one but the starting instance that
 ## nobody has been in for `purge_ticks` (#212).
 ## Anyone entering it before then resets the count. Each instance is purged at most once a tick.
+## The host's reset delay is read once, and again only after a purge, which loads the starting
+## instance again (#2296).
 func _purge_left_behind() -> void:
+	var delay: int = -1
 	for instance_name: String in sorted_names():
 		if has_player(instances[instance_name]):
 			var _entered: bool = left_at.erase(instance_name)
 		elif WorldFlags.outdated(self, instance_name):
 			_purge(instance_name)
+			delay = -1
 		elif not left_at.has(instance_name):
 			left_at[instance_name] = tick
-		elif instance_name != start_name and tick - left_at[instance_name] >= purge_ticks():
-			_purge(instance_name)
+		elif instance_name != start_name:
+			if delay < 0:
+				delay = purge_ticks()
+			if tick - left_at[instance_name] >= delay:
+				_purge(instance_name)
+				delay = -1
 
 
 ## Purges the instance `instance_name` (#212): it is dropped, and its next visit loads it fresh at
@@ -375,9 +398,10 @@ func sorted_names() -> Array[String]:
 	return StateHash.sorted(instances.keys())
 
 
-## Whether any player is in the instance `state`.
+## Whether any player is in the instance `state`: whether any of its entities has a player's slot,
+## in one pass over them (#2296).
 static func has_player(state: GameState) -> bool:
-	for slot: int in GameState.MAX_PLAYERS:
-		if state.player(slot) != null:
+	for candidate: Entity in state.entities:
+		if candidate.slot >= 0 and candidate.slot < GameState.MAX_PLAYERS:
 			return true
 	return false

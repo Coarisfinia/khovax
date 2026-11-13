@@ -1,2 +1,2 @@
 // A hide (#687), which felled monsters drop.
-{ "id": "hide", "name": "Hide" }
+{ "id": "hide", "name": "Hide", "category": "animal" }
