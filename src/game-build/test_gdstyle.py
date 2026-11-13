@@ -151,6 +151,11 @@ class GdstyleDownloadTest(unittest.TestCase):
         whole = archive({"gdstyle": os.urandom(65536)})
         self.assert_fails_cleanly(*self.run_install(whole[: len(whole) // 2]))
 
+    def test_corrupt_archive(self) -> None:
+        # A gzip header, then a deflate block of the reserved type, which zlib refuses to decode.
+        whole = archive({"gdstyle": b"x"})
+        self.assert_fails_cleanly(*self.run_install(whole[:10] + b"\xff" * 64))
+
     def test_not_an_archive(self) -> None:
         self.assert_fails_cleanly(*self.run_install(b"not a tar file"))
 
