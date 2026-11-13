@@ -177,7 +177,7 @@ def forbidden_lines(source: str) -> list[str]:
     code = without_comments(source).rstrip("\n").split("\n")
     bare = code_only(source).split("\n")
     declared = INT_VECTOR_DECLARED.findall("\n".join(bare))
-    receivers = [INT_VECTOR_RECEIVER, *(rf"\b{name}" for name in declared)]
+    receivers = [INT_VECTOR_RECEIVER, *(rf"\b{name}\b" for name in declared)]
     receiver = re.compile("|".join(receivers))
     named = code_with_random_names(source)
     # The line of each randomness method's name.
