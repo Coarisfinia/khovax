@@ -151,7 +151,7 @@ func _ripple(at: Vector2, time: float, extra: Array) -> float:
 	values.append_array(extra)
 	var result: float = 0.0
 	for line: Expression in _lines:
-		result = line.execute(values)
+		result = float(line.execute(values))
 		values.append(result)
 	return result
 
