@@ -413,12 +413,22 @@ class FormsTest(unittest.TestCase):
             "\n\tvar g := func(tile: Variant) -> int: return tile.length()",
             "var tile: Vector2i\n\n\nfunc f() -> void:\n\tvar tile: String"
             "\n\tvar g := func(tile) -> int:\n\t\treturn tile.length()",
+            # Any other binding of the name in the function: a local inside a lambda, one after
+            # another statement, a loop variable.
+            "var tile: Vector2i\n\n\nfunc f(tile: String) -> void:\n\tvar g := func() -> int:"
+            "\n\t\tvar tile: Variant = get_tile()\n\t\treturn tile.length()",
+            "var tile: Vector2i\n\n\nfunc f(tile: String) -> void:"
+            "\n\tvar g := func() -> int: var tile := get_tile(); return tile.length()",
+            "var tile: Vector2i\n\n\nfunc f(tile: String, tiles: Array) -> void:"
+            "\n\tvar g := func() -> void:\n\t\tfor tile in tiles:\n\t\t\tprint(tile.length())",
             # A type that may hold an integer vector, none, or one inferred.
             "var tile: Vector2i\n\n\nfunc f(tile: Variant) -> void:\n\tprint(tile.length())",
             "var tile: Vector2i\n\n\nfunc f(tile) -> void:\n\tprint(tile.length())",
             "var tile: Vector2i\n\n\nfunc f(tile := get_tile()) -> void:\n\tprint(tile.length())",
             "var tile: Vector2i\n\n\nfunc f() -> void:\n\tvar tile := get_tile()"
             "\n\tprint(tile.length())",
+            "var tiles: Array[Vector2i]\n\n\nfunc f(tiles: Array[Array]) -> void:"
+            "\n\tprint(tiles[0].length())",
             "var tiles: Array[Vector2i]\n\n\nfunc f(tiles: Array) -> void:"
             "\n\tprint(tiles[0].length())",
             # A match pattern's binding takes the matched value's type.
