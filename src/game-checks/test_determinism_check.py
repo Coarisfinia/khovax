@@ -70,6 +70,27 @@ REFUSED = (
     "var a := PackedFloat64Array()",
     "var a := type_convert(x, TYPE_FLOAT)",
     "var a := str_to_var(x)",
+    # Float sources and calls by name (#2223).
+    "var a := PackedVector2Array()",
+    "var a := PackedVector3Array()",
+    "var a := PackedVector4Array()",
+    "var a := PackedColorArray()",
+    'var c := Callable(items, "shuffle")',
+    "var c := Callable(get_items(), &'pick_random')",
+    'var c := Callable.create(items, "shuffle")',
+    'var c := Callable(get_items(filter_items(source)), "shuffle")',
+    'items.call ("shuffle", [1, (2)])',
+    'items.call(StringName("shuffle"))',
+    'var c := Callable(items, StringName("pick_random"))',
+    "var a := bytes_to_var(x)",
+    "var a := bytes_to_var_with_objects(x)",
+    "var a := bytes.decode_half(0)",
+    "var a := bytes.decode_float(0)",
+    "var a := bytes.decode_double(0)",
+    "var a := bytes.decode_var(0)",
+    "var a := bytes.to_float32_array()",
+    "var a := bytes.to_float64_array()",
+    'var a := text.similarity("b")',
 )
 
 ALLOWED = (
@@ -106,6 +127,17 @@ ALLOWED = (
     "var a := type_convert(x, TYPE_INT)",
     "var a := text.length()",
     "var a := other.distance_to(x)",
+    # Named like a float source or a call by name, but none (#2223).
+    'var c := Callable(items, "shuffled")',
+    'var c := Callable(items, "sort")\nvar d := "shuffle"',
+    "var a := my_bytes_to_var(x)",
+    "var a := bytes.decode_u32(0)",
+    "var a := bytes.decode_var_size(0)",
+    'items.call("sort", "shuffle")',
+    'var c := Callable(items, foo("shuffle"))',
+    'var a := ["shuffle"]',
+    'var a := StringName("shuffle")',
+    "var a := bytes.to_int32_array()",
 )
 
 
@@ -146,6 +178,16 @@ class FormsTest(unittest.TestCase):
         self.assertEqual(
             forbidden_lines("var a := type_convert(\n\tx, TYPE_FLOAT)"),
             ["2:\tx, TYPE_FLOAT)"],
+        )
+
+    def test_a_call_by_name_over_several_lines_is_refused(self) -> None:
+        self.assertEqual(
+            forbidden_lines('items.call(\n\t"shuffle"\n)'),
+            ['2:\t"shuffle"'],
+        )
+        self.assertEqual(
+            forbidden_lines("var c := Callable(\n\titems,\n\t&'pick_random')"),
+            ["3:\t&'pick_random')"],
         )
 
     def test_the_length_of_anything_else_is_allowed(self) -> None:
