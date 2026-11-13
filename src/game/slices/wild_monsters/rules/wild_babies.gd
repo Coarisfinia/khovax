@@ -6,9 +6,9 @@ extends RefCounted
 ## bundle yet leads one and gathers the nearest such spots within BUNDLE_REACH of it, the earlier of
 ## the equally near first, up to BUNDLE_SIZE with itself. Only a monster whose species has an
 ## earlier form, a baby species of its own (owner, on #1722), can be a baby. Which bundles that have
-## one hold babies is counted, not rolled (#2239): each adds CHANCE to a count that starts a
-## thousandth short of a whole, and one whose CHANCE makes a whole holds babies, so the first holds
-## them unless CHANCE is 0, and at 600 thousandths three in every five do. In such a bundle the last
+## one hold babies is counted, not rolled (#2239): each adds CHANCE to a count from 0, and one whose
+## CHANCE makes the count a whole holds babies, so at 600 thousandths the second, fourth and fifth
+## of every five do, and an instance with a single such bundle has none. In such a bundle the last
 ## half of those that can be, at least one, are babies, each of the first form of its own species'
 ## line. A bundle without one doesn't count. A spot whose region names its species keeps its grown
 ## monster, so a boss or a quest's monster never starts as a baby.
@@ -24,7 +24,7 @@ const BUNDLE_REACH: int = Tuning.PACK_REACH
 ## spots whose species has an earlier form.
 static func chosen(rolled: Array[Vector2i], young: Dictionary[Vector2i, bool]) -> Array[Vector2i]:
 	var babies: Array[Vector2i] = []
-	var count: int = Fixed.ONE - 1
+	var count: int = 0
 	for bundle: Array in bundles(rolled):
 		var can: Array[Vector2i] = []
 		for spot: Vector2i in bundle:

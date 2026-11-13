@@ -44,10 +44,10 @@ extends RefCounted
 ##
 ## Babies live beside the grown ones (#1697): of the bundles of rolled wild monsters whose species
 ## has an earlier form, a count, not a roll, picks the ones with babies (#2239), the same on every
-## seed: three in every five, at WildBabies.CHANCE, the first among them; a baby is of the first
+## seed: the second, fourth and fifth of every five, at WildBabies.CHANCE; a baby is of the first
 ## form of its line (level 1 and unevolved), a grown one keeps its species, a monster the region
-## names never starts as a baby, a species with no earlier form has no babies (owner, on #1722),
-## and a save gives the babies back, in the state hash. In Hrovumel Stolm, a Vynakiir's baby is a
+## names never starts as a baby, a species with no earlier form has no babies (owner, on #1722), and
+## a save gives the babies back, in the state hash. In Hrovumel Stolm, a Vynakiir's baby is a
 ## Vynnimu, and every baby there is a first form with a later one.
 ##
 ## In its grazing hours a grazer walks to the nearest grass and eats there, and in its drinking
@@ -122,9 +122,9 @@ const PACK_SPOTS: Dictionary[Vector2i, String] = {
 	Vector2i(4, -2): "lon",
 }
 ## The baby flow's bundles (#1697), each of rolled monsters, too far apart to gather into one, and
-## which of them hold babies (#2239): three in every five, the first among them; a spot the region
-## names beside the first; the species they roll, and its line's first form; and how many seeds it
-## plays, each holding babies in the same bundles.
+## which of them hold babies (#2239): the second, fourth and fifth of five; a spot the region names
+## beside the first; the species they roll, and its line's first form; and how many seeds it plays,
+## each holding babies in the same bundles.
 const BABY_BUNDLES: Array[Array] = [
 	[Vector2i(-7, 0), Vector2i(-7, 1), Vector2i(-6, 0)],
 	[Vector2i(6, 0), Vector2i(6, 1), Vector2i(7, 0)],
@@ -132,7 +132,7 @@ const BABY_BUNDLES: Array[Array] = [
 	[Vector2i(0, 9)],
 	[Vector2i(9, -9)],
 ]
-const BABY_HELD: Array[bool] = [true, true, false, true, false]
+const BABY_HELD: Array[bool] = [false, true, false, true, true]
 const BABY_NAMED: Vector2i = Vector2i(-6, 1)
 const BABY_ADULT: String = "big"
 const BABY_FIRST_FORM: String = "pup"
