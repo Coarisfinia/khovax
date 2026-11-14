@@ -20,7 +20,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib import attachments, body, clips, eyes, metrics, muzzle, parts, quadruped, scene, surface, symmetry, tuning, weights, wisps  # noqa: E402
+from lib import attachments, body, clips, eyes, marked_eyes, metrics, muzzle, parts, quadruped, scene, surface, symmetry, tuning, weights, wisps  # noqa: E402
 from lib.materials import palette  # noqa: E402
 
 FPS = 30
@@ -207,6 +207,10 @@ def pup_body():
     return blob.mesh(BODY_TRIANGLES)
 
 
+# The eyes' radius.
+EYE_SIZE = 0.09
+
+
 def head_parts(skin, mats):
     """The snout's jaw, nose, mouth and small fangs, big ears with pale insides, and big round
     eyes."""
@@ -222,12 +226,18 @@ def head_parts(skin, mats):
         inner = (center[0], center[1] - 0.025, center[2] - 0.01)
         made.append(parts.part("cone", "InnerEar." + side, inner, (0.10, 0.02, 0.19), rotation,
                                mats["light"], "ear." + side, vertices=10, radius1=1.0, radius2=0.0, depth=1.0))
-        made += eyes.eye(skin, "Eye." + side, (0.10 * sign, -0.82, 1.24), (0.03 * sign, -1.0, 0.05), 0.09,
-                         {"dark": mats["dark"], "glow": mats["glow"], "light": mats["light"], "skin": mats["fur"]},
-                         "head", lid=eyes.LID + side, almond=1.0, tilt=0.0, brow=math.radians(-20),
-                         # A pup's soft, small brow, not a predator's heavy ridge (the owner, on #1249).
-                         brow_size=0.5)
-    return made
+    # A little higher on the brow and nearer the middle than it was, so that `clear` sets it only a
+    # few steps out: lower down, the full cheeks covered the eye's lower half, and moving it out
+    # far enough to clear them pushed it ahead along the muzzle, against REFERENCE (#1818).
+    left = eyes.eye(skin, "Eye.L", (0.09, -0.80, 1.28), (0.03, -1.0, 0.05), EYE_SIZE,
+                    {"dark": mats["dark"], "glow": mats["glow"], "light": mats["light"], "skin": mats["fur"]},
+                    "head", lid=eyes.LID + "L", almond=1.0, tilt=0.0, brow=math.radians(-20),
+                    # A pup's soft, small brow, not a predator's heavy ridge (the owner, on #1249).
+                    brow_size=0.5)
+    # Set out of the skin where it would cover the eye, rim included (check_eyes_covered.py,
+    # #1818); the right eye mirrors it.
+    marked_eyes.clear(skin, left, EYE_SIZE, rim=True)
+    return made + left + eyes.mirrored(left)
 
 
 def points(rig, pieces):
