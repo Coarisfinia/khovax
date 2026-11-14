@@ -165,7 +165,7 @@ func _initialize() -> void:
 ## stopped (QuietQuit), since quitting while it plays could leak it (#1906).
 func _finish(code: int) -> void:
 	_driver = null
-	QuietQuit.quit(self, code)
+	QuietQuit.quit(self, code, _errors)
 
 
 ## Starts and closes the windows: a progress report every WINDOW frames, the start's windows while
