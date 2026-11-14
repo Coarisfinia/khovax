@@ -305,8 +305,8 @@ func _check_invincible_requested() -> String:
 
 ## The Debug submenu's teleport (#2274, OutboxEntry.TELEPORT): a player in the world's start
 ## asking to go to the debug zone lands on their start in the playground, and is acknowledged;
-## asking to go back lands them on their start in the world's starting instance. The same
-## request sent again changes nothing.
+## asking to go back lands them on their start in the world's starting instance, even with a
+## respawn point in the debug zone. The same request sent again changes nothing.
 func _check_teleport_requested() -> String:
 	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.GLADE)
 	var outbox: Outbox = Outbox.new()
@@ -325,6 +325,8 @@ func _check_teleport_requested() -> String:
 	var zone: GameState = world.instances[FlowSteps.BASIC]
 	if world.player(0).tile != zone.region.starts[0]:
 		return "a player sent to the debug zone isn't on its start: %s" % world.player(0).tile
+	# A respawn point in the debug zone (#1890) mustn't keep them there: back is the world's spawn.
+	_respawn_at_start(world, FlowSteps.BASIC)
 	var back: Command = Command.new()
 	outbox.post(OutboxEntry.TELEPORT, TeleportChoice.BACK).fill(back)
 	var leaving: Array[Command] = [back]
@@ -336,6 +338,19 @@ func _check_teleport_requested() -> String:
 	if world.instance_of(0) != FlowSteps.GLADE:
 		return "a request to go to the debug zone, sent again, was applied twice"
 	return ""
+
+
+## Makes player 0's start in the instance `instance_name` of `world` their respawn point (#1890).
+static func _respawn_at_start(world: World, instance_name: String) -> void:
+	var region: Region = world.instances[instance_name].region
+	var start: Vector2i = region.starts[0]
+	var point: Dictionary = {
+		"instance": instance_name,
+		"q": start.x,
+		"r": start.y,
+		"kind": region.terrain[start],
+	}
+	world.set_entry(0, RespawnPoint.ENTRY, point)
 
 
 ## Player 0 of `world`, placed beside the wild monster of its basic instance.
