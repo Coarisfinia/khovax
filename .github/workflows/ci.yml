@@ -401,8 +401,9 @@ jobs:
         uses: ./.github/actions/setup-blender
 
       - name: "🐺 Check every scripted model's .glb is what its script builds"
-        # Builds each model listed above twice and compares the bytes with each other and the
-        # committed .glb (#1085, #1161), several models at once (#2031); a difference is an error
+        # Builds each model listed above twice, on 1 and 4 of Blender's threads (#2317), and
+        # compares the bytes with each other and the committed .glb (#1085, #1161), several models
+        # at once (#2031); a difference is an error
         # annotation naming the model and what differs. A model script without a .glb always fails.
         if: steps.models.outputs.changed == 'true'
         timeout-minutes: 8

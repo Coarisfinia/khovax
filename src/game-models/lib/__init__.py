@@ -6,7 +6,8 @@ rigid parts such as crystals and fur tufts (parts), patterns laid on a body's su
 veins (surface), detailed eyes (eyes), the quadruped armature (quadruped), skin weights (weights),
 clips (clips), the motion between their keys (motion), wisps floating beside a body (wisps), a
 generated model's own rig adopted (rigged) and its many-bone legs and stalks for the clips
-(adopted), a built model read back for the checks (imported), the checks' summary mode (summary)
-and a model script's gait values from its arguments (tuning). Import it from a model script with
+(adopted), a built model read back for the checks (imported), the checks' summary mode (summary),
+a model script's gait values from its arguments (tuning) and mesh steps that come out alike on
+any count of Blender's threads (fixed_order). Import it from a model script with
 `sys.path.insert(0, <src/game-models>)`.
 """

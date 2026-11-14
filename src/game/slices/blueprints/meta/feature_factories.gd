@@ -106,6 +106,9 @@ static func _region_and_party_rules() -> Dictionary[String, Callable]:
 		CompanionSwapFeature.ID: _plain(CompanionSwapFeature),
 		# After the companions too, whose fainted ones a revive item brings back (#656).
 		ReviveItemFeature.ID: _plain(ReviveItemFeature),
+		# Drinking tonics and draughts (#2310), after the companions, whose out companion a tonic
+		# helps, and after the knockdowns, whose downed players drink nothing.
+		DrinkingFeature.ID: DrinkingFactory.build,
 		# Waystones (#1890), after the knockdowns, whose downed players activate none, and after the
 		# companions, whose fainted ones they bring back while the host has it so (#1891).
 		WaystoneFeature.ID: _waystones,
