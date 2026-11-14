@@ -1,8 +1,11 @@
-"""Tests that the headless e2e runner (src/game/tests/e2e/run_e2e.gd) fails when an error is logged
-during its own setup, before the first flow runs (#2367): the setup reads all the content ahead, and
-an error there is logged once and cached, so no flow would see it again. The runner runs on a copy of
-the project made of links to its files, with one species file broken and a single flow that always
-passes, so the checkout itself is never touched.
+"""Tests that the headless e2e runner (src/game/tests/e2e/run_e2e.gd) fails on an error logged
+outside every flow:
+- during its own setup, before the first flow runs (#2367): the setup reads all the content ahead,
+  and an error there is logged once and cached, so no flow would see it again;
+- after its verdict, while the tree runs on for the audio server before it quits (QuietQuit,
+  #2371): the exit code was fixed before that wait.
+The runner runs on a copy of the project made of links to its files, with a single flow that always
+passes (and, for the setup, one species file broken), so the checkout itself is never touched.
 
     [GODOT=<binary>] uv run --locked --package khovax-game-checks \\
         src/game-checks/test_e2e_setup_errors.py
@@ -24,6 +27,21 @@ PACK = Path("resourcepacks") / "default"
 BROKEN_KIND = "species"
 # The only flow in the copy: it passes, so only the setup can fail the run.
 PASSING_FLOW = 'extends RefCounted\n\n\nfunc run(_tree: SceneTree) -> String:\n\treturn ""\n'
+# The only flow in the copy for the quit: it passes, and leaves a timer behind that logs an error a
+# quarter of a second later, after the runner's verdict, during QuietQuit's half-second wait. The
+# error's object is kept by the tree, since the flow itself is freed once it returns.
+LATE_ERROR_FLOW = (
+    "extends RefCounted\n\n\n"
+    "func run(tree: SceneTree) -> String:\n"
+    "\tvar late: LateError = LateError.new()\n"
+    "\ttree.set_meta(&\"late_error\", late)\n"
+    "\tvar _connected: int = tree.create_timer(0.25).timeout.connect(late.report)\n"
+    "\treturn \"\"\n\n\n"
+    "class LateError:\n"
+    "\textends RefCounted\n\n"
+    "\tfunc report() -> void:\n"
+    "\t\tpush_error(\"logged after the verdict\")\n"
+)
 TIMEOUT_SECONDS = 120
 
 
@@ -35,11 +53,11 @@ def link_all(source: Path, target: Path, *keep_out: str) -> None:
             (target / entry.name).symlink_to(entry, target_is_directory=entry.is_dir())
 
 
-def run_with_broken_content() -> tuple[int | None, str]:
+def run_runner(flow: str, break_content: bool) -> tuple[int | None, str]:
     """The runner's exit code (None when it timed out) and output, on a copy of the project whose
-    only flow passes and whose first species file is broken."""
+    only flow is `flow` and, with `break_content`, whose first species file is broken."""
     godot = os.environ.get("GODOT", "godot")
-    broken = sorted((ROOT / PACK / BROKEN_KIND).glob("*.jsonc"))[0].name
+    broken = sorted((ROOT / PACK / BROKEN_KIND).glob("*.jsonc"))[0].name if break_content else ""
     with tempfile.TemporaryDirectory() as folder:
         project = Path(folder)
         link_all(GAME, project, "tests", "resourcepacks")
@@ -48,10 +66,13 @@ def run_with_broken_content() -> tuple[int | None, str]:
         link_all(GAME / FLOWS, flows)
         for flow in flows.glob("test_*"):
             flow.unlink()
-        (flows / "test_passing.gd").write_text(PASSING_FLOW, encoding="utf-8")
-        link_all(ROOT / PACK, project / PACK, BROKEN_KIND)
-        link_all(ROOT / PACK / BROKEN_KIND, project / PACK / BROKEN_KIND, broken)
-        (project / PACK / BROKEN_KIND / broken).write_text('{ "id": ', encoding="utf-8")
+        (flows / "test_passing.gd").write_text(flow, encoding="utf-8")
+        if break_content:
+            link_all(ROOT / PACK, project / PACK, BROKEN_KIND)
+            link_all(ROOT / PACK / BROKEN_KIND, project / PACK / BROKEN_KIND, broken)
+            (project / PACK / BROKEN_KIND / broken).write_text('{ "id": ', encoding="utf-8")
+        else:
+            link_all(ROOT / PACK, project / PACK)
         try:
             done = subprocess.run(
                 [godot, "--headless", "--path", str(project),
@@ -68,11 +89,19 @@ def run_with_broken_content() -> tuple[int | None, str]:
 
 class E2eSetupErrorsTest(unittest.TestCase):
     def test_setup_error_fails_the_run(self) -> None:
-        code, output = run_with_broken_content()
+        code, output = run_runner(PASSING_FLOW, break_content=True)
         tail = output[-4000:]
         self.assertIsNotNone(code, f"still running after {TIMEOUT_SECONDS} s:\n{tail}")
         self.assertIn("PASS  test_passing.gd", output, f"the passing flow didn't run:\n{tail}")
         self.assertIn("FAIL  setup", output, f"the setup's error isn't reported:\n{tail}")
+        self.assertNotEqual(code, 0, f"exited with 0:\n{tail}")
+
+    def test_error_during_quit_wait_fails_the_run(self) -> None:
+        code, output = run_runner(LATE_ERROR_FLOW, break_content=False)
+        tail = output[-4000:]
+        self.assertIsNotNone(code, f"still running after {TIMEOUT_SECONDS} s:\n{tail}")
+        self.assertIn("PASS  test_passing.gd", output, f"the flow didn't pass:\n{tail}")
+        self.assertIn("logged after the verdict", output, f"the late error never came:\n{tail}")
         self.assertNotEqual(code, 0, f"exited with 0:\n{tail}")
 
 

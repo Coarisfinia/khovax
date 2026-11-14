@@ -288,10 +288,12 @@ jobs:
           GODOT=~/godot/godot uv run --locked --package khovax-game-checks \
             ../game-checks/test_missing_pack_link.py
 
-      - name: "🧯 Check the e2e runner fails on an error logged during its setup"
+      - name: "🧯 Check the e2e runner fails on an error logged during its setup or its quit"
         # The runner reads all the content ahead, before the first flow, and an error there is
-        # logged once and cached, so no flow sees it (#2367). The test runs it on a copy of the
-        # project with one content file broken and a single flow that passes.
+        # logged once and cached, so no flow sees it (#2367); after its verdict, the tree runs on
+        # for the audio server before it quits (QuietQuit), and an error there came after the exit
+        # code was fixed (#2371). The test runs it on a copy of the project with a single flow that
+        # passes: once with one content file broken, once with an error logged during the quit.
         run: GODOT=~/godot/godot uv run --locked --package khovax-game-checks ../game-checks/test_e2e_setup_errors.py
 
       - name: "🧪 Run the headless e2e tests"
