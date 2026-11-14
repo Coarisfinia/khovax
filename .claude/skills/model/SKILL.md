@@ -951,7 +951,8 @@ clips. Ask the owner only when it's unclear what should move how.
    in front of it within its rim, in any frame of any clip, its shut lid included (the owner, on
    #1747: the Wobulumu's skin crossed the bottom of its eyes). A model without eye points passes.
    `marked_eyes.replace`'s `rim=True` keeps the rim clear of the skin too when it sets the eyes
-   (`clear`), and a generated model's loose pieces of skin over the eyes go with
+   (`clear`), its `out` lets them go further out than `OUT` where a lopsided head still covers them
+   there (the Kavrikka's, #1818), and a generated model's loose pieces of skin over the eyes go with
    `marked_eyes.modelled`. A model the check still fails waits in its `KNOWN` list with the issue
    that fixes it. Its lines go into the PR. CI runs it on every `.glb`, with its test
    (`test_eyes_covered.py`).

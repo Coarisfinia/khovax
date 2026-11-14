@@ -94,7 +94,7 @@ CHUNK = 1024
 # The eye's front, which the head's skin must not cover (`buried`): at most BURIED of its
 # vertices may lie under it (a vertex or two at the iris's very edge, where it meets the skin), and
 # `clear` tries the eye further out and across the head in STEPs of its size, at most OUT out and
-# SHIFT across.
+# SHIFT across (`out` further for a head whose skin still covers them there, opt-in).
 FRONT = (".iris", ".pupil")
 # With `rim`, the glowing rim round them is kept clear too (check_eyes_covered.py, #1758).
 RIM = (".rim",)
@@ -861,7 +861,7 @@ def _spread(mask):
 
 
 def fit(skin, marks, mats, bone, forward=FORWARD, ridge=True, middle=0.0, upright=False,
-        grow=1.0, rim=False, **shape):
+        grow=1.0, rim=False, out=OUT, **shape):
     """Our eyes (eyes.eye, with lids) on `skin` where `marks` (left, right) are: the left one's
     position and size the mean of the left mark's and the right one's mirrored across the plane
     x = `middle` (the `Marked`'s that `find` paired them across, #1735), so the two mirror each
@@ -872,7 +872,8 @@ def fit(skin, marks, mats, bone, forward=FORWARD, ridge=True, middle=0.0, uprigh
     width and height, since ours is never taller than it is wide: as wide as the mark, it would be
     half the eye the generator drew (and as tall, its top would show above its brow,
     check_brows.py). With `rim`, `clear` keeps the glowing rim clear of the skin too, not only
-    the iris and pupil (#1758, opt-in so other models don't change). `ridge=False` leaves out the brow; `shape` goes on to eyes.eye (`tilt`,
+    the iris and pupil (#1758, opt-in so other models don't change), and `out` lets it try them
+    further out than OUT (#1818, opt-in too). `ridge=False` leaves out the brow; `shape` goes on to eyes.eye (`tilt`,
     `pupil`, `brow_size`, ...). Returns the pieces, weighted to `bone` and the lids' bones."""
     left, right = marks
     spot = (left.middle + right.middle * (-1.0, 1.0, 1.0) + (2.0 * middle, 0.0, 0.0)) / 2.0
@@ -887,7 +888,7 @@ def fit(skin, marks, mats, bone, forward=FORWARD, ridge=True, middle=0.0, uprigh
             bpy.data.objects.remove(piece, do_unlink=True)
         else:
             pieces.append(piece)
-    clear(skin, pieces, size, middle, rim)
+    clear(skin, pieces, size, middle, rim, out)
     return pieces + eyes.mirrored(pieces, middle)
 
 
@@ -921,9 +922,9 @@ def _under(skin, spots):
     return under / len(spots)
 
 
-def clear(skin, pieces, size, middle=0.0, rim=False):
+def clear(skin, pieces, size, middle=0.0, rim=False, out=OUT):
     """Sets a left eye (`pieces`, its lid's hinge with it) where the head's skin covers the least
-    of its front and its mirror image's (buried): first up to OUT of its size further out along
+    of its front and its mirror image's (buried): first up to `out` of its size further out along
     the way it looks, in STEPs, the nearest such spot of the least. When that still leaves more
     than BURIED covered (a head that isn't symmetric can bury the right eye), it tries up to SHIFT
     of its size across the head too (sideways and up or down), the nearest spot within BURIED.
@@ -946,11 +947,11 @@ def clear(skin, pieces, size, middle=0.0, rim=False):
         bpy.context.view_layer.update()
         return buried(skin, pieces, middle, FRONT + RIM if rim else FRONT)
 
-    out = range(round(OUT / STEP) + 1)
-    best = min((place((step, 0, 0)), (step, 0, 0)) for step in out)
+    steps = range(round(out / STEP) + 1)
+    best = min((place((step, 0, 0)), (step, 0, 0)) for step in steps)
     if best[0] > BURIED:
         reach = range(-round(SHIFT / STEP), round(SHIFT / STEP) + 1)
-        for move in sorted(((step, across, upward) for step in out for across in reach for upward in reach),
+        for move in sorted(((step, across, upward) for step in steps for across in reach for upward in reach),
                            key=lambda move: (sum(axis * axis for axis in move), move)):
             covered = place(move)
             if covered < best[0]:
