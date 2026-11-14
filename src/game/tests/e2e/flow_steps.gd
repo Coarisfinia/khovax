@@ -18,7 +18,7 @@ const FOREST: String = "morwe_wudhen"
 const OUTPOST: String = "edhra_tewk"
 ## The corrupted glade, Lymwen Hoall (#541): the flag that corrupts the glade, and the variant it
 ## chooses (lumwen_hoal.jsonc). Its corrupting monster emits GLADE_PURIFIED when it faints
-## (resourcepacks/default/regions/lymwen_hoall.md), whose flag purifies it.
+## (resourcepacks/default/regions/lymwen_hoall/start.md), whose flag purifies it.
 const CORRUPTED_GLADE_FLAG: String = "lumwen_hoal_corrupted"
 const CORRUPTED_GLADE: String = "lymwen_hoall"
 const GLADE_PURIFIED: String = "lumwen_hoal_purified"
