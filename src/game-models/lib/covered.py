@@ -150,34 +150,43 @@ class Eye:
         if look.length < 1e-9:
             return None
         look.normalize()
-        side = look.orthogonal().normalized()
-        up = look.cross(side)
-        # The rim's outline round the way it looks, as its reach in each of SECTORS directions
-        # (the furthest of its corners there), whatever its shape and tilt (eyes.eye's `almond`
-        # and `tilt`); a sector no corner falls in takes the nearer of the reaches on either side.
-        reach = [0.0] * SECTORS
-        for corner in rim:
-            offset = corner - centre
-            across = Vector((offset.dot(side), offset.dot(up)))
-            sector = int((math.atan2(across.y, across.x) / math.tau) % 1.0 * SECTORS) % SECTORS
-            reach[sector] = max(reach[sector], across.length)
-        if max(reach) <= 0.0:
+        within = outline(rim, centre, look)
+        if within is None:
             return None
-        filled = list(reach)
-        for sector in range(SECTORS):
-            if reach[sector] <= 0.0:
-                sides = [next(reach[(sector + way * step) % SECTORS] for step in range(1, SECTORS)
-                              if reach[(sector + way * step) % SECTORS] > 0.0) for way in (-1, 1)]
-                filled[sector] = min(sides)
-        reach = filled
-
-        def within(point):
-            offset = point - centre
-            across = Vector((offset.dot(side), offset.dot(up)))
-            sector = int((math.atan2(across.y, across.x) / math.tau) % 1.0 * SECTORS) % SECTORS
-            return across.length <= reach[sector]
-
         return centre, look, within
+
+
+def outline(rim, centre, look):
+    """A function telling whether a point lies within the outline of `rim` (its corners) seen
+    along `look` from `centre`, or None when it has none (squashed flat)."""
+    side = look.orthogonal().normalized()
+    up = look.cross(side)
+    # The rim's outline round the way it looks, as its reach in each of SECTORS directions
+    # (the furthest of its corners there), whatever its shape and tilt (eyes.eye's `almond`
+    # and `tilt`); a sector no corner falls in takes the nearer of the reaches on either side.
+    reach = [0.0] * SECTORS
+    for corner in rim:
+        offset = corner - centre
+        across = Vector((offset.dot(side), offset.dot(up)))
+        sector = int((math.atan2(across.y, across.x) / math.tau) % 1.0 * SECTORS) % SECTORS
+        reach[sector] = max(reach[sector], across.length)
+    if max(reach) <= 0.0:
+        return None
+    filled = list(reach)
+    for sector in range(SECTORS):
+        if reach[sector] <= 0.0:
+            sides = [next(reach[(sector + way * step) % SECTORS] for step in range(1, SECTORS)
+                          if reach[(sector + way * step) % SECTORS] > 0.0) for way in (-1, 1)]
+            filled[sector] = min(sides)
+    reach = filled
+
+    def within(point):
+        offset = point - centre
+        across = Vector((offset.dot(side), offset.dot(up)))
+        sector = int((math.atan2(across.y, across.x) / math.tau) % 1.0 * SECTORS) % SECTORS
+        return across.length <= reach[sector]
+
+    return within
 
 
 def covered(tree, eye_tree, own, centre, radius, within, direction):

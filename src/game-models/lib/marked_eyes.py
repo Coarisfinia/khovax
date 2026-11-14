@@ -35,8 +35,9 @@ build on another machine paints the same bytes (as lib/starfield.py)."""
 import bpy
 import numpy
 from mathutils import Vector
+from mathutils.bvhtree import BVHTree
 
-from . import eyes, materials, scene
+from . import covered, eyes, materials, scene
 from . import repaint as _repaint
 
 # A marked eye's flat black: every channel at or below this (sRGB, 0..1).
@@ -861,7 +862,7 @@ def _spread(mask):
 
 
 def fit(skin, marks, mats, bone, forward=FORWARD, ridge=True, middle=0.0, upright=False,
-        grow=1.0, rim=False, **shape):
+        grow=1.0, rim=False, seen=False, **shape):
     """Our eyes (eyes.eye, with lids) on `skin` where `marks` (left, right) are: the left one's
     position and size the mean of the left mark's and the right one's mirrored across the plane
     x = `middle` (the `Marked`'s that `find` paired them across, #1735), so the two mirror each
@@ -872,7 +873,8 @@ def fit(skin, marks, mats, bone, forward=FORWARD, ridge=True, middle=0.0, uprigh
     width and height, since ours is never taller than it is wide: as wide as the mark, it would be
     half the eye the generator drew (and as tall, its top would show above its brow,
     check_brows.py). With `rim`, `clear` keeps the glowing rim clear of the skin too, not only
-    the iris and pupil (#1758, opt-in so other models don't change). `ridge=False` leaves out the brow; `shape` goes on to eyes.eye (`tilt`,
+    the iris and pupil (#1758, opt-in so other models don't change), and with `seen` it measures
+    the skin over the eye as check_eyes_covered.py does (`hidden`, #1818, opt-in too). `ridge=False` leaves out the brow; `shape` goes on to eyes.eye (`tilt`,
     `pupil`, `brow_size`, ...). Returns the pieces, weighted to `bone` and the lids' bones."""
     left, right = marks
     spot = (left.middle + right.middle * (-1.0, 1.0, 1.0) + (2.0 * middle, 0.0, 0.0)) / 2.0
@@ -887,7 +889,7 @@ def fit(skin, marks, mats, bone, forward=FORWARD, ridge=True, middle=0.0, uprigh
             bpy.data.objects.remove(piece, do_unlink=True)
         else:
             pieces.append(piece)
-    clear(skin, pieces, size, middle, rim)
+    clear(skin, pieces, size, middle, rim, seen)
     return pieces + eyes.mirrored(pieces, middle)
 
 
@@ -912,6 +914,40 @@ def buried(skin, pieces, middle=0.0, front=FRONT):
                _under(skin, [Vector((2.0 * middle - spot.x, spot.y, spot.z)) for spot in spots]))
 
 
+def hidden(skin, pieces, middle=0.0):
+    """The share of an eye's face (the left one's among `pieces`, within its rim) that `skin` lies
+    in front of, seen straight on along the way it looks, as check_eyes_covered.py measures it
+    (lib/covered.py): the worse of it and its mirror image across the plane x = `middle`. Unlike
+    `buried`, it sees skin that lies in front of the eye without touching it, such as a cheek
+    bulging out below it (#1818)."""
+    body = [skin.matrix_world @ vertex.co for vertex in skin.data.vertices]
+    body_faces = [tuple(polygon.vertices) for polygon in skin.data.polygons]
+    look = eyes.look(pieces)
+    # The right eye is the left one mirrored across the plane x = `middle` (eyes.mirrored).
+    plane = Vector((middle, 0.0, 0.0))
+    worst = 0.0
+    for flip in (Vector((1.0, 1.0, 1.0)), Vector((-1.0, 1.0, 1.0))):
+        points, faces, own, itself, rim = list(body), list(body_faces), set(), [], []
+        for piece in pieces:
+            start = len(points)
+            points += [(piece.matrix_world @ vertex.co - plane) * flip + plane for vertex in piece.data.vertices]
+            for polygon in piece.data.polygons:
+                own.add(len(faces))
+                faces.append(tuple(start + vertex for vertex in polygon.vertices))
+                if not piece.name.endswith((".brow", ".lid")):
+                    itself.append(faces[-1])
+            if piece.name.endswith(RIM):
+                rim = points[start:]
+        centre = sum(rim, Vector()) / len(rim)
+        direction = look * flip
+        within = covered.outline(rim, centre, direction)
+        radius = max((corner - centre).length for corner in rim)
+        share, _rows = covered.covered(BVHTree.FromPolygons(points, faces), BVHTree.FromPolygons(points, itself),
+                                       own, centre, radius, within, -direction)
+        worst = max(worst, share)
+    return worst
+
+
 def _under(skin, spots):
     """The share of `spots` under `skin`'s surface."""
     under = 0
@@ -921,7 +957,7 @@ def _under(skin, spots):
     return under / len(spots)
 
 
-def clear(skin, pieces, size, middle=0.0, rim=False):
+def clear(skin, pieces, size, middle=0.0, rim=False, seen=False):
     """Sets a left eye (`pieces`, its lid's hinge with it) where the head's skin covers the least
     of its front and its mirror image's (buried): first up to OUT of its size further out along
     the way it looks, in STEPs, the nearest such spot of the least. When that still leaves more
@@ -929,7 +965,8 @@ def clear(skin, pieces, size, middle=0.0, rim=False):
     of its size across the head too (sideways and up or down), the nearest spot within BURIED.
     So on a curved head or a sculpted socket the skin doesn't cut across either eye. The right
     eye is the left one's mirror image across the plane x = `middle`. With `rim`, the rim's front
-    counts with the iris's and pupil's (#1758). Raises when more than BURIED stays covered."""
+    counts with the iris's and pupil's (#1758); with `seen`, the share of its face the skin lies in
+    front of (`hidden`, #1818). Raises when more than BURIED stays covered."""
     look = eyes.look(pieces)
     side = look.cross(Vector((0.0, 0.0, 1.0))).normalized()
     up = side.cross(look).normalized()
@@ -944,6 +981,8 @@ def clear(skin, pieces, size, middle=0.0, rim=False):
             if "hinge" in piece:
                 piece["hinge"] = tuple(Vector(piece["hinge"]) + shift)
         bpy.context.view_layer.update()
+        if seen:
+            return hidden(skin, pieces, middle)
         return buried(skin, pieces, middle, FRONT + RIM if rim else FRONT)
 
     out = range(round(OUT / STEP) + 1)
