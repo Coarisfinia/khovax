@@ -518,7 +518,8 @@ func _check_ward() -> String:
 	var why: String = _drunk(profile, state, "draught_pondweed")
 	var guarded: int = maxi(1, Fixed.scale(hit[0], 800))
 	var warded: Array[int] = _fought(state, 2 * Simulation.TICKS_PER_SECOND + 1)["wild"]
-	var _rest: Dictionary = _fought(state, 27 * Simulation.TICKS_PER_SECOND)
+	# Past the Ward's 30 s, counted from the tick after the drink.
+	var _rest: Dictionary = _fought(state, 29 * Simulation.TICKS_PER_SECOND)
 	var after: Array[int] = _fought(state, 2 * Simulation.TICKS_PER_SECOND + 1)["wild"]
 	if why.is_empty() and not (_all(warded, guarded) and _all(after, hit[0])):
 		why = "a Ward of 200 left hits of %s on the player, then %s, not %d then %d" % [
@@ -546,10 +547,11 @@ func _check_fortify_and_quicken() -> String:
 	var fortified: Dictionary = _fought(state, 11 * Simulation.TICKS_PER_SECOND, true)
 	var strong: Array[int] = [Fixed.scale(hit[0], 1200), Fixed.scale(special[0], 1200)]
 	var strikes: Array[int] = fortified["companion"]
-	if why.is_empty() and not (_all(strikes, strong[0]) and _all(fortified["special"], strong[1])):
+	var specials: Array[int] = fortified["special"]
+	if why.is_empty() and not (_all(strikes, strong[0]) and _all(specials, strong[1])):
 		why = "a Fortify of 200 left strikes of %s and specials of %s, not %d and %d" % [
 			strikes,
-			fortified["special"],
+			specials,
 			strong[0],
 			strong[1],
 		]
