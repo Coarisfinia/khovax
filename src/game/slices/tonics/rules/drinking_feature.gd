@@ -88,14 +88,13 @@ func _drink(state: GameState, slot: int, code: int) -> void:
 	state.store(slot, ID)[UNTIL] = state.world_tick + WAIT_TICKS
 	var target_id: int = target_of(state, slot, dose.for_player)
 	var effects: TonicEffectsFeature = state.feature(TonicEffectsFeature.ID) as TonicEffectsFeature
-	effects.end(state, target_id)
+	effects.end(target_id)
 	if dose.mend > 0:
 		var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
 		var full_hp: int = health.max_hp_of(state, target_id)
 		health.heal(state, target_id, maxi(1, Fixed.scale(full_hp, dose.mend)))
 	elif not dose.effect.is_empty():
-		var effect: TonicEffect = TonicEffect.new(dose.effect, dose.strength, dose.ticks, 1)
-		effects.give(state, target_id, effect)
+		effects.give(target_id, dose.effect, dose.strength, dose.ticks)
 
 
 ## Why the player in `slot` can't drink the brew `dose` does now, or "": they're here, not waiting,
