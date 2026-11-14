@@ -32,6 +32,10 @@ const INVINCIBLE: int = 8
 ## Drink a tonic or a draught (#2310, DrinkingFeature): its data is the brew's code
 ## (DrinkingFeature.code_of).
 const DRINK: int = 9
+## Send the player to the debug zone, or back (#2274, the Settings tab's Debug submenu): its data is
+## 1 for the debug zone (SentToDebugZone), 0 for back to the world's spawn (SentToWorldSpawn)
+## (HealthFeature).
+const TELEPORT: int = 10
 ## Every kind there is.
 const KINDS: Array[int] = [
 	TERRITORY,
@@ -43,6 +47,7 @@ const KINDS: Array[int] = [
 	PASSIVES_KEPT,
 	INVINCIBLE,
 	DRINK,
+	TELEPORT,
 ]
 
 ## The profile's id for it, a short id (ShortId, #791) no other request in the outbox has: the

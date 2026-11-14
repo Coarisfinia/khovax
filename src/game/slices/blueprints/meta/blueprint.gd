@@ -20,6 +20,8 @@ var rules: String = ""
 var features: Array[String] = []
 ## Whether the seed turns its region pieces (#57, #127).
 var turned: bool = false
+## Whether it's the debug zone (#2274), where the Settings tab's Debug submenu sends a player.
+var debug_zone: bool = false
 ## Its instance loot table's id, what a blank and the loot on its ground give, or "".
 var loot_table: String = ""
 ## Its chest loot table's id, what its chests hold (#694), or "" for no chests.
@@ -90,6 +92,10 @@ func _check(file_id: String, data: Dictionary) -> String:
 	if not raw_turned is bool:
 		return "turned must be true or false"
 	turned = raw_turned
+	var raw_debug_zone: Variant = data.get("debug_zone", false)
+	if not raw_debug_zone is bool:
+		return "debug_zone must be true or false"
+	debug_zone = raw_debug_zone
 	for table: String in ["loot_table", "chest_table"]:
 		if data.has(table) and not Content.is_id(Content.text_of(data[table])):
 			return "its %s must be a loot table's id" % table
