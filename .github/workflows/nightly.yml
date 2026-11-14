@@ -75,9 +75,11 @@ jobs:
       prerelease: ${{ needs.check.outputs.prerelease }}
     # What ci.yml's jobs ask for, which a called workflow can't get beyond its caller's: the release's
     # tag (dev-release), the pull request's labels (rules-compare, which reads none here) and the
-    # Pages deploy (pages, which never runs for a nightly).
+    # Pages deploy (pages, which never runs for a nightly, but GitHub refuses the whole run before
+    # it starts when one is missing, #2352; CI checks it, called_workflow_permissions.py).
     permissions:
       contents: write
+      deployments: read
       pull-requests: read
       pages: write
       id-token: write
