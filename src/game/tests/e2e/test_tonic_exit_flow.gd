@@ -148,6 +148,7 @@ static func _still_warded(state: GameState, ends: int) -> String:
 static func _refused(profile: Profile, state: GameState, what: String) -> String:
 	return TonicDrinks.refused(profile, state, DRAUGHT, what)
 
+
 ## Walks the player in slot 0 of `world` one whole step in `direction`, through an exit there.
 static func _walk_in(world: World, direction: int) -> void:
 	world.step(FlowSteps.command(direction))
