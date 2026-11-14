@@ -2,7 +2,8 @@ class_name WaystoneGlow
 extends Node3D
 ## The glow of the waystones this machine's player activated (#1890): the standing stone's hole
 ## (its model's `glow` part, the hole's inner wall) shines, and a soft light in it lights the stone
-## around it. A waystone not yet activated shows that part as plain stone. It changes how bright the
+## around it. A waystone not yet activated shows that part as plain stone, with a blue aura on the
+## ground around it (WaystoneAura, #2385). It changes how bright the
 ## stone is, not only its colour (#68), and a notice says so when one is activated
 ## (WaystoneNoticeTie). It lights the stones TileDecorations stands, and only reads the state.
 
@@ -46,7 +47,14 @@ func show_state() -> void:
 	var region: Region = driver.state.region
 	for tile: Vector2i in decorations.figures:
 		if region.terrain.get(tile, "") == WaystoneFeature.KIND:
-			light(decorations.figures[tile], lit.has(tile))
+			show_stone(decorations.figures[tile], lit.has(tile))
+
+
+## Shows the waystone `figure` as activated (`lit`), its hole glowing, or not yet, with its aura
+## around it (WaystoneAura).
+func show_stone(figure: Node3D, lit: bool) -> void:
+	light(figure, lit)
+	WaystoneAura.show_on(figure, not lit)
 
 
 ## Whether the waystone `figure` shows lit.
