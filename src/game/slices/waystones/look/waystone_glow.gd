@@ -46,7 +46,12 @@ func show_state() -> void:
 	var region: Region = driver.state.region
 	for tile: Vector2i in decorations.figures:
 		if region.terrain.get(tile, "") == WaystoneFeature.KIND:
-			light(decorations.figures[tile], lit.has(tile))
+			show_stone(decorations.figures[tile], lit.has(tile))
+
+
+## Shows the waystone `figure` as activated (`lit`) or not yet.
+func show_stone(figure: Node3D, lit: bool) -> void:
+	light(figure, lit)
 
 
 ## Whether the waystone `figure` shows lit.
