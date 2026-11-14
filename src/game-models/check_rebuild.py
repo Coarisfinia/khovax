@@ -57,9 +57,7 @@ REPORT = threading.Lock()
 THREADS = (1, 4)
 # The model scripts whose build still follows the thread count, each with the issue that fixes it:
 # both their builds run on Blender's own count, as before #2317. The list only shrinks.
-THREAD_SENSITIVE = {
-    "ombulumo.py": "#2335",
-}
+THREAD_SENSITIVE: dict[str, str] = {}
 
 
 def build(script: Path, out: Path, output: Path, threads: int | None) -> subprocess.Popen:
