@@ -6,7 +6,9 @@ A new ending needs the owner's sign-off on its issue first (owner's rule, #1095)
 adds one to ENDINGS on its own.
 
 The shell scripts still tracked wait in SH_EXEMPT, each with the issue that ports it, and an
-exemption no longer used fails too, so the list only shrinks.
+exemption no longer used fails too, so the list only shrinks. So does an ending no tracked file
+uses (#2358), unless it waits in AWAITED for a first file the owner signed it off for; it leaves
+AWAITED once that file comes.
 
     uv run --locked --package khovax-game-checks src/game-checks/file_endings.py
 """
@@ -53,6 +55,9 @@ ENDINGS: dict[str, str] = {
     # The owner's sign-off: option 1 on #1984 (issuecomment-6546026603).
     ".po": "each language's translation catalogue, listed in the default pack (#1902)",
 }
+# Endings signed off before their first file (ending: the issue of the sign-off), which may stay
+# unused until it comes.
+AWAITED: dict[str, int] = {".po": 1984}
 # The shell scripts still waiting for their port (path: the issue that ports it).
 SH_EXEMPT: dict[str, int] = {}
 
@@ -78,6 +83,15 @@ def main() -> int:
             path,
         )
         failed = True
+    used = {ending(path) for path in tracked}
+    for name in ENDINGS:
+        if name not in used and name not in AWAITED:
+            log.error(f"no tracked file ends in {name} any more: drop it from ENDINGS (#2358)", THIS)
+            failed = True
+    for name, issue in AWAITED.items():
+        if name in used or name not in ENDINGS:
+            log.error(f"{name} no longer waits for its first file: drop it from AWAITED (#{issue})", THIS)
+            failed = True
     for path, issue in SH_EXEMPT.items():
         if path not in tracked:
             log.error(
