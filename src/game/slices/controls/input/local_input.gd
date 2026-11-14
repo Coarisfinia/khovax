@@ -109,10 +109,11 @@ func _hear() -> void:
 	for place: int in SWAP_ACTIONS.size():
 		if Input.is_action_just_pressed(SWAP_ACTIONS[place]):
 			_swap_to = place + 1
-	# One pick at a time: the arrows and ui_accept move and end only the one open.
-	if drink_pick.picked.is_empty():
+	# One pick at a time: the arrows and ui_accept move and end only the one open, and of two
+	# presses before a command only the first pick's counts.
+	if drink_pick.picked.is_empty() and not drink_pick.was_pressed():
 		revive_pick.hear()
-	if revive_pick.picked.is_empty():
+	if revive_pick.picked.is_empty() and not revive_pick.was_pressed():
 		drink_pick.hear()
 
 
@@ -135,6 +136,16 @@ func _drop_presses() -> void:
 	_drop_picks()
 	tap_walk.stop()
 	held_walk.let_go()
+
+
+## Uses what the revive item's and the drink's picks chose for the command for `state`; returns
+## whether the player stands for a pick: one is open, or was until now, since the A that ends it
+## is interact as well.
+func _settle_picks(state: GameState) -> bool:
+	var picking: bool = not revive_pick.picked.is_empty() or not drink_pick.picked.is_empty()
+	_revive(state)
+	_drink(state)
+	return picking or not revive_pick.picked.is_empty() or not drink_pick.picked.is_empty()
 
 
 ## Ends both picks, the revive item's and the drink's, forgetting their presses.
@@ -206,11 +217,9 @@ func command(state: GameState) -> Command:
 		_drop_picks()
 		tap_walk.stop()
 		return _standing(answering)
-	_revive(state)
-	_drink(state)
 	# While picking a fainted monster to revive (#780) or a brew to drink (#2313), the arrows move
 	# the pick, not the player, and other presses are dropped.
-	if not revive_pick.picked.is_empty() or not drink_pick.picked.is_empty():
+	if _settle_picks(state):
 		_focus_steps = 0
 		tap_walk.stop()
 		return _standing(answering)
