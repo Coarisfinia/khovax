@@ -345,10 +345,21 @@ func state_hash() -> int:
 ## doesn't step, costs nothing to hash again.
 func own_hash() -> int:
 	if _own_hash == NOT_HASHED:
-		var values: Array[int] = [tick, rng_seed]
-		_append_own_values(values)
-		_own_hash = StateHash.of_values(values)
+		_own_hash = _fresh_own_hash()
 	return _own_hash
+
+
+## The instance's own hash (`own_hash`) taken afresh, whatever is kept.
+func _fresh_own_hash() -> int:
+	var values: Array[int] = [tick, rng_seed]
+	_append_own_values(values)
+	return StateHash.of_values(values)
+
+
+## Whether the own hash kept (`own_hash`) isn't the one taken afresh (#2135): a change that skipped
+## `touch` left it stale. A debug check; it reads every value, so it's never run every tick.
+func own_hash_stale() -> bool:
+	return _own_hash != NOT_HASHED and _own_hash != _fresh_own_hash()
 
 
 ## Notes that the state changed, so `own_hash` is taken again. Whatever changes the state's fields

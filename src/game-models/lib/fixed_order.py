@@ -11,7 +11,7 @@ a paint's cut), so a build on a machine with another count of cores would differ
 - `canonical` rebuilds a bmesh in a fixed order, its vertices by position and its faces by their
   vertices, each starting at its lowest one.
 - `cut` is `bisect_plane` with its cut closed, from and to that fixed order.
-- `vertex_normals` sums each vertex's normal from its faces' in their order.
+- `vertex_normals` sums each vertex's normal from its faces' in their order, by area or by angle.
 - `snap` puts a mesh's vertices on a fine grid, where another machine's float maths lands alike.
 """
 
@@ -68,14 +68,26 @@ def cut(work, point, normal):
     canonical(work)
 
 
-def vertex_normals(mesh, decimals=None):
-    """Each vertex's normal of `mesh` (n, 3), summed from its faces' normals weighted by their area,
-    in the faces' order, and rounded to `decimals` when given."""
+def vertex_normals(mesh, decimals=None, angle=False):
+    """Each vertex's normal of `mesh` (n, 3), summed from its faces' normals in the faces' order,
+    and rounded to `decimals` when given. Each face counts by its area, or with `angle` by its
+    corner's angle at the vertex, as Blender weighs its own (so they match it but for float noise)."""
+    points = numpy.array([vertex.co[:] for vertex in mesh.vertices])
     normals = numpy.zeros((len(mesh.vertices), 3))
     for polygon in mesh.polygons:
-        weighted = numpy.array(polygon.normal[:]) * polygon.area
-        for index in polygon.vertices:
-            normals[index] += weighted
+        ring = list(polygon.vertices)
+        normal = numpy.array(polygon.normal[:])
+        for step, index in enumerate(ring):
+            if angle:
+                before = points[ring[step - 1]] - points[index]
+                after = points[ring[(step + 1) % len(ring)]] - points[index]
+                lengths = numpy.linalg.norm(before) * numpy.linalg.norm(after)
+                if lengths == 0.0:
+                    continue  # a corner on a collapsed edge has no angle to weigh
+                cosine = numpy.dot(before, after) / lengths
+                normals[index] += normal * numpy.arccos(numpy.clip(cosine, -1.0, 1.0))
+            else:
+                normals[index] += normal * polygon.area
     lengths = numpy.linalg.norm(normals, axis=1, keepdims=True)
     normals = normals / numpy.maximum(lengths, 1e-12)
     return normals if decimals is None else numpy.round(normals, decimals)
