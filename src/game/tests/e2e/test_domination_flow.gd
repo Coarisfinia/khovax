@@ -802,7 +802,8 @@ func _check_spikes() -> String:
 			refused.size(),
 			trap,
 		]
-	if not stored.get(OutboxReceipts.APPLIED, []).has(ShortId.of_code(1)):
+	var applied: Array = stored.get(OutboxReceipts.APPLIED, [])
+	if not applied.has(ShortId.of_code(1)):
 		return "the world didn't acknowledge the request for spikes in the fight"
 	return _check_spikes_armed()
 
