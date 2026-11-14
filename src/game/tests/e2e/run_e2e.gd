@@ -58,10 +58,17 @@ func _initialize() -> void:
 	# `_initialize` runs before the root enters the tree, so nodes the first flow added before its
 	# first await would never get `_ready` (#750). Wait until the tree runs.
 	await process_frame
+	# The setup read all the content ahead, and caches what it read: an error logged there (a
+	# broken content file) comes once, before any flow counts errors, so it fails the run here
+	# (#2367).
+	var setup_errors: int = _errors.count
+	if setup_errors > 0:
+		printerr("FAIL  setup: %d error(s) logged before the first flow" % setup_errors)
 	var failed: int = await _run_from(tests, 0)
-	print("%d passed, %d failed" % [tests.size() - failed, failed])
+	var setup_note: String = ", and the setup failed" if setup_errors > 0 else ""
+	print("%d passed, %d failed%s" % [tests.size() - failed, failed, setup_note])
 	# The last flow's music may still be stopping; quitting at once could leak it (#1906).
-	QuietQuit.quit(self, 1 if failed > 0 else 0)
+	QuietQuit.quit(self, 1 if failed > 0 or setup_errors > 0 else 0)
 
 
 ## Runs the tests from `index` on, one after another, and returns how many failed.
