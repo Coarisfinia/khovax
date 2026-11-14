@@ -17,6 +17,7 @@ const ROWS: Dictionary[String, Array] = {
 	"Place a totem": [&"place_totem"],
 	"Swap to monster 1, 2 or 3": [&"swap_1", &"swap_2", &"swap_3"],
 	"Revive a fainted monster": [&"revive_monster"],
+	"Drink a tonic or a draught": [&"drink_tonic"],
 	"Respawn when knocked down": [&"respawn"],
 	"Harvest a tile by hand": [&"interact"],
 	"Move the Survey": [&"survey"],
@@ -145,6 +146,8 @@ func words_of(words: String) -> String:
 			return tr("Swap to monster 1, 2 or 3")
 		"Revive a fainted monster":
 			return tr("Revive a fainted monster")
+		"Drink a tonic or a draught":
+			return tr("Drink a tonic or a draught")
 		"Respawn when knocked down":
 			return tr("Respawn when knocked down")
 		"Harvest a tile by hand":

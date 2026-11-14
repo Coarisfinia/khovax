@@ -58,7 +58,7 @@ edit it by hand.
 - **Files:** `resourcepacks/default/textures/game-icons/`
 - **Author:** Lorc (http://lorcblog.blogspot.com): `cog.svg`, `evil-moon.svg`, `fist.svg`,
   `grab.svg`, `magic-shield.svg`, `magic-swirl.svg`, `magnifying-glass.svg`, `spiky-explosion.svg`,
-  `sprout.svg`, `swap-bag.svg`, `tornado.svg`, `wolf-trap.svg`; Delapouite (http://delapouite.com):
+  `round-bottom-flask.svg`, `sprout.svg`, `swap-bag.svg`, `tornado.svg`, `wolf-trap.svg`; Delapouite (http://delapouite.com):
   `berries-bowl.svg`, `exit-door.svg`, `hamburger-menu.svg`, `herbs-bundle.svg`, `knot.svg`,
   `resize.svg`, `totem.svg`, `plain-arrow-up.svg`, `plain-arrow-down.svg`, `plain-arrow-left.svg`,
   `plain-arrow-right.svg`; Sbed (http://opengameart.org/content/95-game-icons): `cancel.svg`
@@ -125,6 +125,7 @@ edit it by hand.
   `keyboard_3.svg`, `keyboard_equals.svg`, `keyboard_minus.svg`, `keyboard_e.svg`, `keyboard_q.svg`,
   `keyboard_r.svg`, `keyboard_t.svg`, `keyboard_v.svg`, `keyboard_w.svg`, `keyboard_a.svg`,
   `keyboard_s.svg`, `keyboard_d.svg`, `keyboard_x.svg`, `keyboard_f.svg` and `mouse_left.svg`,
+  `keyboard_g.svg` drawn after them (below),
   `Touch/Vector/touch_tap.svg`, `touch_zoom_in.svg` and `touch_zoom_out.svg`, and
   `touch_swipe_move.svg` renamed `touch_drag.svg`, and from the `Vector/` folder of the pack's
   controller set whose face buttons read A, B, X and Y its A, B, X and Y buttons, its view and menu

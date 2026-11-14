@@ -16,7 +16,8 @@ extends RefCounted
 ## its guard off every wild monster's hit on the player for its 30 s, and ends when they fall
 ## (#2343); a bone tonic scales the companion's strikes, its auto attack and its special, after the
 ## type chart, and a feather tonic drunk after it ends that and shortens the companion's wait
-## between strikes.
+## between strikes. The drink button (#2313) in the main scene's HUD drinks a tonic through the
+## profile's outbox, and the simulation applies it.
 
 ## The tonic's id in the resource packs.
 const TONIC: String = "tonic"
@@ -56,9 +57,13 @@ const FIGHT_RULES: Array[String] = [
 ]
 ## The species of the wild monster and of the companion in the fights.
 const FIGHTER: String = "ombulumo"
+## The InputMap action that drinks a tonic or a draught (#2313), and where the drink button's
+## check saves its profile, apart from the player's own: it spends a brew.
+const DRINK_ACTION: StringName = &"drink_tonic"
+const DRINK_PROFILE: String = "user://test_tonic_profile.json"
 
 
-func run(_tree: SceneTree) -> String:
+func run(tree: SceneTree) -> String:
 	var result: String = _check_matrix()
 	if result.is_empty():
 		result = _check_refused()
@@ -68,6 +73,8 @@ func run(_tree: SceneTree) -> String:
 		result = _check_drinking()
 	if result.is_empty():
 		result = _check_effects()
+	if result.is_empty():
+		result = await _check_drink_button(tree)
 	return result
 
 
@@ -664,3 +671,120 @@ func _fought(state: GameState, ticks: int, fire: bool = false) -> Dictionary:
 			elif event is WildMonsterStruck:
 				wild.append((event as WildMonsterStruck).damage)
 	return { "companion": companion, "special": special, "wild": wild, "at": at }
+
+
+## The drink button (#2313) in the main scene, with the player's Ombulumo out and hurt down to 1 HP
+## and one berry tonic held: the button shows 1, usable, and its key sends the drink in the next
+## command, a request from the profile's outbox posted as the profile spends the tonic; the
+## simulation mends the companion by the tonic's share of its full HP, and the button then shows
+## the wait's seconds and its circle, faded. With two brews held, the key picks one
+## (_check_drink_pick), and a refused drink is said in a notice, never silently.
+func _check_drink_button(tree: SceneTree) -> String:
+	if not InputMap.has_action(DRINK_ACTION):
+		return "there is no %s action to drink a tonic or a draught with" % DRINK_ACTION
+	var main: Node = await FlowGame.start_held(tree, DRINK_PROFILE)
+	var result: String = await _drink_button_drinks(main)
+	main.queue_free()
+	await tree.process_frame
+	SaveStore.remove(DRINK_PROFILE)
+	return result
+
+
+## The berry tonic drunk from the drink button's key in `main`; returns why not, or "".
+func _drink_button_drinks(main: Node) -> String:
+	var driver: GameDriver = FlowGame.held_driver(main)
+	var companion_id: int = _hurt_companion(driver)
+	var button: ActionButton = main.get_node_or_null("Hud/DrinkButton") as ActionButton
+	if companion_id == 0 or button == null:
+		return "the Ombulumo isn't out, or the HUD has no drink button"
+	FlowGame.holder(main).keeper.profile.materials["tonic_berry"] = 1
+	if button.corner_text() != "1" or not button.usable():
+		return "the drink button doesn't show 1, usable, with one berry tonic held"
+	var drink: Command = await FlowInput.pressed(driver, DRINK_ACTION)
+	if (drink.request_kind != OutboxEntry.DRINK
+			or drink.request_data != DrinkingFeature.code_of("tonic_berry")):
+		return "the drink key didn't send the berry tonic in the next command"
+	var commands: Array[Command] = [drink]
+	driver.world.step(commands)
+	var health: HealthFeature = driver.state.feature(HealthFeature.ID) as HealthFeature
+	var expected: int = 1 + Fixed.scale(health.max_hp_of(driver.state, companion_id), 300)
+	if health.hp_of(driver.state, companion_id) != expected:
+		return "the berry tonic left the Ombulumo %d HP, not %d" % [
+			health.hp_of(driver.state, companion_id),
+			expected,
+		]
+	driver.ticked.emit(driver.state.tick, driver.state.events)
+	(main.get_node("EventBus") as EventBus).flush()
+	var wait: String = str(Fixed.div_floor(DrinkingFeature.WAIT_TICKS, Simulation.TICKS_PER_SECOND))
+	if button.corner_text() != wait or button.cooldown_share() <= 0.0 or button.usable():
+		return "the drink button shows %s, not the wait's %s s, faded with its circle" % [
+			button.corner_text(),
+			wait,
+		]
+	return await _check_drink_pick(main, driver)
+
+
+## With a moss tonic and a berry draught held, the drink key picks the first the tonic lists, the
+## player standing, and the list beside the button shows both, the picked one marked; the arrows
+## move the mark on. Enter drinks it, refused while the player waits: a notice says why, and nothing
+## is spent. Once the wait is over, a tap on the moss tonic's row drinks it. With none held, the key
+## says there's nothing to drink.
+func _check_drink_pick(main: Node, driver: GameDriver) -> String:
+	var holder: ProfileHolder = FlowGame.holder(main)
+	holder.keeper.profile.materials["tonic_moss"] = 1
+	holder.keeper.profile.materials["draught_berry"] = 1
+	var held: PackedStringArray = DrinkTie.held(holder)
+	var input: LocalInput = driver.input as LocalInput
+	var list: BrewPickList = main.get_node("Hud/BrewPickList") as BrewPickList
+	var picking: Command = await FlowInput.pressed(driver, DRINK_ACTION)
+	list.refresh()
+	if (held.size() != 2 or picking.move != Command.NO_MOVE
+			or input.drink_pick.picked != held[0] or list.shown != held
+			or not list.lines[0].begins_with(BrewPickList.MARK)):
+		return "the drink key didn't pick the first of %s, shown marked in the list" % [held]
+	var _on: Command = await FlowInput.pressed(driver, &"ui_right")
+	var refused: Command = await FlowInput.pressed(driver, &"ui_accept")
+	var notice: NoticeScreen = main.get_node("Hud/NoticeScreen") as NoticeScreen
+	if (refused.request_kind == OutboxEntry.DRINK or not input.drink_pick.picked.is_empty()
+			or holder.keeper.profile.materials[held[1]] != 1
+			or not notice.shown_text().begins_with("Wait ")):
+		return "a drink while waiting wasn't refused with a notice: %s" % notice.shown_text()
+	return await _drink_tapped(main, driver)
+
+
+## Once the wait is over, a tap on the moss tonic's row in the pick drinks it; with none held, the
+## drink key says there's nothing to drink.
+func _drink_tapped(main: Node, driver: GameDriver) -> String:
+	var idle: Array[Command] = [Command.new()]
+	for _tick: int in DrinkingFeature.WAIT_TICKS:
+		driver.world.step(idle)
+	var holder: ProfileHolder = FlowGame.holder(main)
+	var input: LocalInput = driver.input as LocalInput
+	var list: BrewPickList = main.get_node("Hud/BrewPickList") as BrewPickList
+	var _again: Command = await FlowInput.pressed(driver, DRINK_ACTION)
+	list.refresh()
+	list.row_of("tonic_moss").pressed.emit()
+	var tapped: Command = input.command(driver.state)
+	if tapped.request_data != DrinkingFeature.code_of("tonic_moss"):
+		return "a tap on the moss tonic's row didn't drink it"
+	holder.keeper.profile.materials.clear()
+	var _nothing: Command = await FlowInput.pressed(driver, DRINK_ACTION)
+	var notice: NoticeScreen = main.get_node("Hud/NoticeScreen") as NoticeScreen
+	if notice.shown_title() != "Nothing to drink":
+		return "the drink key with nothing held didn't say so"
+	return ""
+
+
+## Brings player 0's Ombulumo out in the world `driver` runs and hurts it down to 1 HP; returns
+## its entity's id, 0 when it isn't out.
+static func _hurt_companion(driver: GameDriver) -> int:
+	CompanionParty.bring(driver.world, FlowSteps.parties([[FIGHTER]]))
+	var idle: Array[Command] = [Command.new()]
+	driver.world.step(idle)
+	var companions: CompanionFeature = driver.state.feature(CompanionFeature.ID) as CompanionFeature
+	var companion_id: int = companions.companion_of(0)
+	if companion_id != 0:
+		var health: HealthFeature = driver.state.feature(HealthFeature.ID) as HealthFeature
+		var full_hp: int = health.max_hp_of(driver.state, companion_id)
+		var _hurt: bool = health.hurt(driver.state, companion_id, full_hp - 1)
+	return companion_id
