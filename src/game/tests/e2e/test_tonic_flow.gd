@@ -454,10 +454,8 @@ func _check_full_mend() -> String:
 ## second for 20 s, and no more after.
 func _check_regrowth() -> String:
 	var state: GameState = FlowSteps.rules_on(FlowSteps.BASIC, Region.disc(3), 42)
-	var player: Entity = _hurt_player(state)
-	var profile: Profile = Profile.new()
-	profile.materials.assign({ "draught_moss": 1 })
-	var why: String = _drunk(profile, state, "draught_moss")
+	var why: String = _drank_moss(state)
+	var player: Entity = state.player(0)
 	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
 	var each: int = maxi(1, Fixed.scale(HealthFeature.PLAYER_HP, 25))
 	var seen: Array[int] = []
@@ -479,10 +477,8 @@ func _check_regrowth() -> String:
 ## A moss draught's Regrowth ends once its player is knocked down: they heal no more.
 func _check_regrowth_knocked_down() -> String:
 	var state: GameState = FlowSteps.rules_on(FlowSteps.BASIC, Region.disc(3), 42)
-	var player: Entity = _hurt_player(state)
-	var profile: Profile = Profile.new()
-	profile.materials.assign({ "draught_moss": 1 })
-	var why: String = _drunk(profile, state, "draught_moss")
+	var why: String = _drank_moss(state)
+	var player: Entity = state.player(0)
 	for _tick: int in Simulation.TICKS_PER_SECOND:
 		_idle(state)
 	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
@@ -499,12 +495,15 @@ func _check_regrowth_knocked_down() -> String:
 	return why
 
 
-## Adds player 0 to `state` and hurts them down to 1 HP.
-static func _hurt_player(state: GameState) -> Entity:
+## Adds player 0 to `state`, hurts them down to 1 HP and has them drink a moss draught; returns
+## why that went wrong, or "".
+func _drank_moss(state: GameState) -> String:
 	var player: Entity = state.add_entity(0, Vector2i.ZERO)
 	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
 	var _hurt: bool = health.hurt(state, player.id, HealthFeature.PLAYER_HP - 1)
-	return player
+	var profile: Profile = Profile.new()
+	profile.materials.assign({ "draught_moss": 1 })
+	return _drunk(profile, state, "draught_moss")
 
 
 ## A pondweed draught (200 thousandths for 30 s) takes its guard off every hit a wild monster lands
