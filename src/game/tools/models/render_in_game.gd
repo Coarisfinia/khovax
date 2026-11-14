@@ -510,13 +510,17 @@ static func _box_of(points: PackedVector3Array) -> AABB:
 ## stands lower than it idles, so framing its rest pose cut off its head (#2366). A model without
 ## an Idle (a prop, #1635) is framed as it stands.
 static func framed_points(model: Node3D) -> PackedVector3Array:
+	var animations: AnimationPlayer = model.find_child("AnimationPlayer") as AnimationPlayer
+	if animations != null and animations.has_animation(&"Idle"):
+		animations.play(&"Idle")
+		animations.seek(0.0, true)
 	return points_of(model)
 
 
 ## The bounds the still shots frame `model` by: those of its framed `points` (framed_points), or
 ## its meshes' own when it has none. Those hold the meshes' rest pose, not the pose the shots show.
-static func framed_bounds(model: Node3D, _points: PackedVector3Array) -> AABB:
-	return _bounds_of(model)
+static func framed_bounds(model: Node3D, points: PackedVector3Array) -> AABB:
+	return _bounds_of(model) if points.is_empty() else _box_of(points)
 
 
 ## Every vertex of every mesh under `model`, in the world, in the pose its skeleton holds now.
