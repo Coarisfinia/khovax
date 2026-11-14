@@ -4,7 +4,8 @@ extends Feature
 ## (`Command.special`), once per press. It strikes the wild monster the companion's auto attack
 ## would (CompanionAttackFeature.target_next_to: next to it, not hiding, not sealing in a ring) for
 ## the special's power times its species' strength, after the type chart where the instance has it
-## (TypeEffectivenessFeature, #626), and it's lethal: it can take the monster to 0 HP, and then it
+## (TypeEffectivenessFeature, #626) and its Fortify (#2311), and it's lethal: it can take the
+## monster to 0 HP, and then it
 ## faints for good (WildMonsterFeature.wound). Each special is its species' own (#228): its power,
 ## cooldown and strike type come from its ability data. Once it fires, that player's special
 ## cools down for its cooldown; a press while it cools down, or with nothing to strike, does
@@ -71,6 +72,7 @@ func after() -> Array[String]:
 		HidingFeature.ID,
 		DominationFeature.ID,
 		TypeEffectivenessFeature.ID,
+		TonicEffectsFeature.ID,
 	]
 	return earlier
 
@@ -139,7 +141,8 @@ func _fire(state: GameState, slot: int, focus: int) -> void:
 
 
 ## The companion `companion_id` strikes the wild monster `target` for its special's power times its
-## species' strength, both as it leans (#1358, #1453), after the type chart; `lethal` (#410) or not
+## species' strength, both as it leans (#1358, #1453), after the type chart and its Fortify (#2311);
+## `lethal` (#410) or not
 ## (a bind
 ## letting go, #1167).
 ## Returns the strike's event.
@@ -159,6 +162,7 @@ func _strike(
 	var damage: int = Fixed.scale(strength, power)
 	var struck: String = wild.species_of(target)
 	damage = TypeEffectivenessFeature.scaled(state, damage, species, true, struck)
+	damage = TonicEffectsFeature.fortified(state, companion_id, damage)
 	wild.wound(state, target, damage, lethal)
 	var strong: Array[bool] = TypeEffectivenessFeature.strong_against(state, species, true, struck)
 	var event: SpecialStruck = SpecialStruck.new(

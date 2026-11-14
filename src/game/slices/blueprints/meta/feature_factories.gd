@@ -48,6 +48,9 @@ static func _world_rules() -> Dictionary[String, Callable]:
 		TrailFeature.ID: _plain(TrailFeature),
 		# Before the wild monsters and every feature that hurts or heals (#835).
 		HealthFeature.ID: HealthFactory.build,
+		# Right after the HP a Regrowth heals, and before every strike a Ward, a Quicken or a
+		# Fortify changes (#2311).
+		TonicEffectsFeature.ID: _plain(TonicEffectsFeature),
 		WildMonsterFeature.ID: WildMonsterFactory.build,
 		ScheduleFeature.ID: ScheduleFactory.build,
 		# Right after the schedules, so a pack member is on its leader's day before sleep puts it

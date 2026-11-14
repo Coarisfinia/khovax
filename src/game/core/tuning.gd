@@ -35,6 +35,9 @@ const ALLY_RANGE: int = 200
 # Companions.
 ## The ticks between two strikes of one companion (#221).
 const COMPANION_STRIKE_TICKS: int = Simulation.TICKS_PER_SECOND
+## The most a Quicken and a passive's haste when hurt take off a companion's wait between strikes
+## together, in thousandths (#2049, #2311), so the wait never drops below half.
+const MOST_QUICKENED: int = 500
 ## How much of a species' stats (its HP plus twice its strength and its speed) widens a companion's
 ## reach by a tile (#338).
 const COMPANION_STATS_PER_TILE: int = 120

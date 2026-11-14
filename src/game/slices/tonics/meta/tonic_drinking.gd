@@ -4,7 +4,7 @@ extends RefCounted
 ## posts the request that drinks it to the profile's outbox (#818, OutboxEntry.DRINK) in one change,
 ## which the simulation carries out (DrinkingFeature). Like a revive item (ReviveTie.offered), a
 ## drink is refused before anything is spent when it would do nothing: none left, a drink already on
-## its way, the player still waiting, or no target that can use it.
+## its way, the player still waiting, no target that can use it, or a Mend for a target at full HP.
 
 
 ## Drinks one of the brew `brew_id` from `profile` for the player in `slot` of `state`; returns why
@@ -34,4 +34,7 @@ static func problem(profile: Profile, state: GameState, slot: int, brew_id: Stri
 	var drinking: DrinkingFeature = state.feature(DrinkingFeature.ID) as DrinkingFeature
 	if drinking == null or not drinking.enabled:
 		return "nothing is drunk here"
-	return drinking.problem(state, slot, brew.target == "player")
+	var dose: TonicDose = drinking.doses.get(DrinkingFeature.code_of(brew_id))
+	if dose == null:
+		return "%s does nothing here" % brew_id
+	return drinking.problem(state, slot, dose)
