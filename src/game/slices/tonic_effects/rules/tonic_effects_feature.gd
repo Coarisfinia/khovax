@@ -13,6 +13,9 @@ extends Feature
 ## companion keeps its effect when it follows its player through an exit (`carry_out`). An effect
 ## starts on the tick after it was drunk and works for its whole time from then, so every rule it
 ## changes sees it for the same ticks, whether that rule steps before the drinks or after them.
+## A Slow-release brew's effect (#2312) waits its time before it starts instead, and its Mend waits
+## as a MEND, which heals its share of its target's full HP once its wait has passed, at least 1 HP,
+## and ends: until then, a replacement or an ending rule cancels either.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "tonic_effects"
@@ -22,6 +25,8 @@ const WARD: String = "ward"
 const QUICKEN: String = "quicken"
 const FORTIFY: String = "fortify"
 const KINDS: Array[String] = [REGROWTH, WARD, QUICKEN, FORTIFY]
+## A Slow-release Mend still waiting to land (#2312): not an effect over time, so not in KINDS.
+const MEND: String = "mend"
 ## The longest an effect lasts: an hour, the longest the tonics' content data allows.
 const MOST_TICKS: int = 3600 * Simulation.TICKS_PER_SECOND
 
@@ -52,6 +57,11 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 			continue
 		if effect.waits > 0:
 			effect.waits -= 1
+			if effect.waits == 0 and effect.kind == MEND:
+				var mended_hp: int = health.max_hp_of(state, target_id)
+				health.heal(state, target_id, maxi(1, Fixed.scale(mended_hp, effect.strength)))
+				var _landed: bool = _effects.erase(target_id)
+				continue
 		else:
 			effect.ticks -= 1
 		if effect.ticks <= 0:
@@ -64,8 +74,9 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 				health.heal(state, target_id, maxi(1, Fixed.scale(full_hp, effect.strength)))
 
 
-## Gives `target_id` the effect `kind` (KINDS) at `strength` thousandths for `ticks`, starting once
-## `waits` ticks have passed (the next tick by default), in place of the one it had.
+## Gives `target_id` the effect `kind` (KINDS, or a waiting MEND) at `strength` thousandths for
+## `ticks`, starting once `waits` ticks have passed (the next tick by default), in place of the one
+## it had.
 func give(target_id: int, kind: String, strength: int, ticks: int, waits: int = 1) -> void:
 	_effects[target_id] = TonicEffect.new(
 		kind,
@@ -154,8 +165,9 @@ func save_values() -> Dictionary:
 	return { "effects": saved }
 
 
-## Each effect must be on an entity in the restored instance, at most one each, of a known kind,
-## with a strength below a whole, from 1 to MOST_TICKS left and at most MOST_TICKS still to wait.
+## Each effect must be on an entity in the restored instance, at most one each, of a known kind
+## (KINDS, or a MEND still waiting), with a strength below a whole, from 1 to MOST_TICKS left and at
+## most MOST_TICKS still to wait.
 func load_values(state: GameState, values: DataReader) -> void:
 	_effects.clear()
 	for entry: DataReader in values.entries("effects"):
@@ -166,7 +178,8 @@ func load_values(state: GameState, values: DataReader) -> void:
 		var waits: int = entry.whole("waits", 0, MOST_TICKS)
 		if values.failed():
 			return
-		if state.entity(target_id) == null or _effects.has(target_id) or not KINDS.has(kind):
+		var known: bool = KINDS.has(kind) or (kind == MEND and waits > 0)
+		if state.entity(target_id) == null or _effects.has(target_id) or not known:
 			values.fail("tonic effect on %d isn't one known effect on an entity here" % target_id)
 			return
 		give(target_id, kind, strength, ticks, waits)

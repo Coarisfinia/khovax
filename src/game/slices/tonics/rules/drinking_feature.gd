@@ -7,12 +7,17 @@ extends Feature
 ## (TonicDose.mend) heals its target at once by its share of their full HP, at least 1 HP
 ## (HealthFeature.heal); a Regrowth, Ward, Quicken or Fortify (#2311) gives its target that effect
 ## for its time (TonicEffectsFeature). A target has one effect at a time: whatever it drinks ends
-## the one it had. Shared's reach and Slow-release's wait are #2312: a Slow-release brew is drunk
-## all the same but does nothing yet. After a drink the player waits WAIT_TICKS before the next,
-## kept in their world store (#724) as the world tick it ends on (UNTIL), so the wait goes with them
-## through an exit into another instance (#2334). A request this can't carry out (an unknown brew,
-## no target that can use it, a Mend for a target at full HP, or while waiting) is acknowledged and
-## changes nothing; the profile refuses those before spending (`problem`).
+## the one it had. A Slow-release brew (#2312) gives its target its Mend or its effect once its wait
+## has passed, all of it as it would be without the wait, only that much later (TonicEffectsFeature:
+## a replacement or an ending rule meanwhile cancels it). A Shared brew also helps the same target
+## of every other player here within its reach of the drinker's own (Hex.distance), in entity id
+## order, each that can use it then: a Shared Mend only the hurt ones, so it's refused only when
+## nobody in reach is hurt. After a drink the player waits WAIT_TICKS before the next, kept in their
+## world store (#724) as the world tick it ends on (UNTIL), so the wait goes with them through an
+## exit into another instance (#2334). A request this can't carry out (an unknown brew, no target
+## that can use it, a Mend for a target at full HP, or while waiting) is acknowledged and changes
+## nothing; the profile refuses those before spending (`problem`). A Slow-release Mend for a target
+## at full HP is refused too, as it would be without its wait.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "drinking"
@@ -79,26 +84,57 @@ static func wait_of(state: GameState, slot: int) -> int:
 	return left if left > 0 and left <= WAIT_TICKS else 0
 
 
-## The player in `slot` drinks the brew `code`, if they can: its target is helped, in place of the
-## effect it had, and they wait.
+## The player in `slot` drinks the brew `code`, if they can: each target it reaches is helped, in
+## place of the effect it had, and they wait.
 func _drink(state: GameState, slot: int, code: int) -> void:
 	var dose: TonicDose = doses.get(code)
 	if dose == null or not problem(state, slot, dose).is_empty():
 		return
 	state.store(slot, ID)[UNTIL] = state.world_tick + WAIT_TICKS
-	var target_id: int = target_of(state, slot, dose.for_player)
 	var effects: TonicEffectsFeature = state.feature(TonicEffectsFeature.ID) as TonicEffectsFeature
-	effects.end(target_id)
-	if dose.mend > 0:
-		var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
-		var full_hp: int = health.max_hp_of(state, target_id)
-		health.heal(state, target_id, maxi(1, Fixed.scale(full_hp, dose.mend)))
-	elif not dose.effect.is_empty():
-		effects.give(target_id, dose.effect, dose.strength, dose.ticks)
+	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
+	for target_id: int in reached(state, slot, dose):
+		effects.end(target_id)
+		if dose.mend > 0 and dose.waits > 0:
+			effects.give(target_id, TonicEffectsFeature.MEND, dose.mend, 1, dose.waits)
+		elif dose.mend > 0:
+			var full_hp: int = health.max_hp_of(state, target_id)
+			health.heal(state, target_id, maxi(1, Fixed.scale(full_hp, dose.mend)))
+		elif not dose.effect.is_empty():
+			# Its wait counts from the tick it would start on without one, the next.
+			effects.give(target_id, dose.effect, dose.strength, dose.ticks, 1 + dose.waits)
+
+
+## The targets the brew `dose` the player in `slot` drinks reaches in `state`, in entity id order:
+## their own target, then, for a Shared brew, the same target of every other player here within its
+## reach of their own. A Mend reaches only the targets it mends: those not at full HP. None when the
+## player has no target that can use it.
+func reached(state: GameState, slot: int, dose: TonicDose) -> Array[int]:
+	var targets: Array[int] = []
+	var own_id: int = target_of(state, slot, dose.for_player)
+	if own_id == 0:
+		return targets
+	targets.append(own_id)
+	if dose.reach > 0:
+		var from: Vector2i = state.entity(own_id).tile
+		for other: int in GameState.MAX_PLAYERS:
+			var other_id: int = 0 if other == slot else target_of(state, other, dose.for_player)
+			if other_id != 0 and Hex.distance(state.entity(other_id).tile, from) <= dose.reach:
+				targets.append(other_id)
+		targets.sort()
+	if dose.mend == 0:
+		return targets
+	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
+	var hurt: Array[int] = []
+	for target_id: int in targets:
+		if health.hp_of(state, target_id) < health.max_hp_of(state, target_id):
+			hurt.append(target_id)
+	return hurt
 
 
 ## Why the player in `slot` can't drink the brew `dose` does now, or "": they're here, not waiting,
-## and its target can use it (a Mend, one that isn't at full HP).
+## and its target can use it (a Mend, one that isn't at full HP, or for a Shared Mend, one of the
+## targets it reaches).
 func problem(state: GameState, slot: int, dose: TonicDose) -> String:
 	var for_player: bool = dose.for_player
 	var player: Entity = state.player(slot)
@@ -113,8 +149,7 @@ func problem(state: GameState, slot: int, dose: TonicDose) -> String:
 	var target_id: int = target_of(state, slot, for_player)
 	if target_id == 0:
 		return "a knocked-down player can't drink" if for_player else "no companion is out"
-	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
-	if dose.mend > 0 and health.hp_of(state, target_id) >= health.max_hp_of(state, target_id):
+	if dose.mend > 0 and reached(state, slot, dose).is_empty():
 		return "nothing to mend: already at full HP"
 	return ""
 

@@ -22,11 +22,12 @@ static func build(_setup: FeatureSetup) -> DrinkingFeature:
 
 
 ## What drinking `brew` does: who it helps, and what it mends or which effect over time it gives,
-## at its potency for its seconds. A Slow-release brew does nothing yet: its wait is #2312.
+## at its potency for its seconds, how long a Slow-release brew waits and how far a Shared one
+## reaches (#2312).
 static func _dose_of(brew: TonicBrew) -> TonicDose:
 	var dose: TonicDose = TonicDose.new(brew.target == "player")
-	if brew.delay_seconds > 0:
-		return dose
+	dose.waits = brew.delay_seconds * Simulation.TICKS_PER_SECOND
+	dose.reach = brew.reach_tiles
 	if brew.effect == TonicBrew.INSTANT:
 		dose.mend = brew.potency
 	elif TonicEffectsFeature.KINDS.has(brew.effect):

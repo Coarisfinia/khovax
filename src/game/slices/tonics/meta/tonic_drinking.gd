@@ -4,7 +4,8 @@ extends RefCounted
 ## posts the request that drinks it to the profile's outbox (#818, OutboxEntry.DRINK) in one change,
 ## which the simulation carries out (DrinkingFeature). Like a revive item (ReviveTie.offered), a
 ## drink is refused before anything is spent when it would do nothing: none left, a drink already on
-## its way, the player still waiting, no target that can use it, or a Mend for a target at full HP.
+## its way, the player still waiting, no target that can use it, or a Mend for a target at full HP
+## (a Shared Mend, when every target it reaches is: #2312).
 
 
 ## Drinks one of the brew `brew_id` from `profile` for the player in `slot` of `state`; returns why
