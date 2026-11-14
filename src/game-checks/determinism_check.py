@@ -16,6 +16,7 @@ import os
 import re
 import sys
 import unittest
+from collections import Counter
 from pathlib import Path
 
 from game_shared import log
@@ -115,6 +116,10 @@ INT_VECTOR_COLLECTION_MEMBERS = (
         DICTIONARY_VALUE,
     ),
 )
+# A function declared to return one: a call to it counts as one, in its class or on another object
+# (#2263). Its name opens its parameters, and its return type follows their closing parenthesis.
+NAMED_FUNCTION = re.compile(r"\bfunc\s+(\w+)\s*(?=\()")
+INT_VECTOR_RETURN = re.compile(r"\s*->\s*Vector[234]i\s*:")
 # A function's parameters and locals count in its body only (#2264), any other declaration in the
 # class it is in: the file's own or an inner class, which don't reach each other's members. An inner
 # class reaches the constants of the classes around it, though (Godot 4.7, #2288). A function or
@@ -472,23 +477,57 @@ def int_vector_members(source: str) -> set[str]:
     return members
 
 
+def function_returns(bare: list[str], scopes: list[Scope]) -> dict[int | None, dict[str, bool]]:
+    """The functions each class declares (None: the file's own class, else its class line's index),
+    and whether each returns an integer vector."""
+    joined = "\n".join(bare)
+    returns: dict[int | None, dict[str, bool]] = {}
+    for hit in NAMED_FUNCTION.finditer(joined):
+        line = joined.count("\n", 0, hit.start())
+        classes, function = scopes[line]
+        if function != line:  # A lambda's name, inside a function or a member's value.
+            continue
+        end = after_parentheses(joined, hit.end())
+        vector = end >= 0 and INT_VECTOR_RETURN.match(joined, end) is not None
+        returns.setdefault((classes or (None,))[-1], {})[hit.group(1)] = vector
+    return returns
+
+
+def int_vector_functions(source: str) -> set[str]:
+    """The functions a script declares to return an integer vector, in any class."""
+    bare = code_only(source).split("\n")
+    returns = function_returns(bare, scopes_of(bare, continued_lines(source, bare)))
+    return {name for of in returns.values() for name, vector in of.items() if vector}
+
+
 def receiver_in(
-    names: set[str], members: set[str], through_self: set[str] | frozenset[str] = frozenset()
+    names: set[str],
+    members: set[str],
+    own_calls: set[str],
+    other_calls: set[str],
+    through_self: set[str] | frozenset[str] = frozenset(),
 ) -> re.Pattern[str]:
     """An integer vector written out or one of `names`, as length()'s receiver: the name itself or
     the script's own member, not another object's (`obj.tile`, #2264). A name may end in a
     subscript, which `\b` can't follow (#2261). On another object, one of `members` counts: the
-    rules' integer vector members and their elements (#2262, #2299). One of `through_self` counts
-    only as `self.name`: a local of that name hides the member (#2304)."""
+    rules' integer vector members and their elements (#2262, #2299). A call to one of `own_calls`
+    counts on its own or on self, and one to `other_calls` on another object: functions returning
+    an integer vector (#2263). One of `through_self` counts only as `self.name`: a local of that
+    name hides the member (#2304)."""
     own = [rf"(?<![\w.])(?:self\.)?{name}(?!\w)" for name in sorted(names)]
     own += [rf"(?<![\w.])self\.{name}(?!\w)" for name in sorted(through_self)]
     other = (rf"(?<=[\w)\]])\.{name}(?!\w)" for name in sorted(members))
-    return re.compile("|".join([INT_VECTOR_RECEIVER, *own, *other]))
+    own_call = (rf"(?<![\w.])(?:self\.)?{name}\s*(?=\()" for name in sorted(own_calls))
+    other_call = (rf"(?<=[\w)\]])(?<!\bself)\.{name}\s*(?=\()" for name in sorted(other_calls))
+    return re.compile("|".join([INT_VECTOR_RECEIVER, *own, *other, *own_call, *other_call]))
 
 
-def forbidden_lines(source: str, members: set[str] | None = None) -> list[str]:
+def forbidden_lines(
+    source: str, members: set[str] | None = None, functions: set[str] | None = None
+) -> list[str]:
     """The numbered lines of a script that use something the rules never use. `members` are the
-    integer vector members the rules declare, in any script (int_vector_members)."""
+    integer vector members the rules declare, in any script (int_vector_members), and `functions`
+    the functions returning one that the other rules scripts declare (int_vector_functions)."""
     code = without_comments(source).rstrip("\n").split("\n")
     bare = code_only(source).split("\n")
     continued = continued_lines(source, bare)
@@ -539,6 +578,17 @@ def forbidden_lines(source: str, members: set[str] | None = None) -> list[str]:
     for owner, names in dictionaries.items():
         declared.setdefault(owner, set()).update(rf"{name}{DICTIONARY_VALUE}" for name in names)
 
+    returns = function_returns(bare, scopes)
+    # A call on another object reaches any class's function, and a bare or self. call its own
+    # class's, or what the class inherits from another script (`functions`, #2263).
+    other_calls = (functions or set()).union(
+        *({name for name, vector in of.items() if vector} for of in returns.values())
+    )
+
+    def own_calls(scope: Scope) -> set[str]:
+        of = returns.get((scope[0] or (None,))[-1], {})
+        return {name for name, vector in of.items() if vector} | (functions or set()) - of.keys()
+
     receivers: dict[tuple[Scope, frozenset[str], frozenset[str]], re.Pattern[str]] = {}
 
     def receiver_on(index: int) -> re.Pattern[str]:
@@ -557,7 +607,9 @@ def forbidden_lines(source: str, members: set[str] | None = None) -> list[str]:
             names = outside - through_self | in_loops
             if function is not None:
                 names |= declared.get(function, set())
-            receivers[key] = receiver_in(names, members or set(), through_self)
+            receivers[key] = receiver_in(
+                names, members or set(), own_calls(key[0]), other_calls, through_self
+            )
         return receivers[key]
 
     named = code_with_random_names(source)
@@ -603,13 +655,14 @@ def main() -> int:
         if line.startswith("class_name ") and len(line.split()) > 1
     }
     extends = {f"extends {name}" for name in rule_classes | {"RefCounted"}}
-    members = set().union(
-        *(int_vector_members(Path(file).read_text(encoding="utf-8")) for file in scripts)
-    )
+    sources = [Path(file).read_text(encoding="utf-8") for file in scripts]
+    members = set().union(*(int_vector_members(source) for source in sources))
+    functions = [int_vector_functions(source) for source in sources]
+    # How many scripts declare each: a script's own count only in their classes (#2263).
+    declaring = Counter(name for names in functions for name in names)
     failed = False
 
-    for file in scripts:
-        source = Path(file).read_text(encoding="utf-8")
+    for file, source, own in zip(scripts, sources, functions):
         lines = source.rstrip("\n").split("\n")
         # Exempt while its header carries the marker with a reason, and no other marker sits
         # anywhere in it. A marker without a reason, or one below the header, fails the file.
@@ -631,7 +684,8 @@ def main() -> int:
         if not extends.intersection(code):
             log.error("rules scripts extend RefCounted or a class of the rules", file)
             failed = True
-        hits = forbidden_lines(source, members)
+        others = {name for name, count in declaring.items() if count > (name in own)}
+        hits = forbidden_lines(source, members, others)
         if hits:
             print("\n".join(hits))
             log.error("the rules must stay deterministic: see the lines above", file)
