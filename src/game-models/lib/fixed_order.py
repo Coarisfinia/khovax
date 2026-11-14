@@ -82,7 +82,9 @@ def vertex_normals(mesh, decimals=None, angle=False):
                 before = points[ring[step - 1]] - points[index]
                 after = points[ring[(step + 1) % len(ring)]] - points[index]
                 lengths = numpy.linalg.norm(before) * numpy.linalg.norm(after)
-                cosine = numpy.dot(before, after) / max(lengths, 1e-30)
+                if lengths == 0.0:
+                    continue  # a corner on a collapsed edge has no angle to weigh
+                cosine = numpy.dot(before, after) / lengths
                 normals[index] += normal * numpy.arccos(numpy.clip(cosine, -1.0, 1.0))
             else:
                 normals[index] += normal * polygon.area
