@@ -1829,8 +1829,9 @@ func _check_lookouts(main: Node) -> String:
 
 ## Each decorated kind's model (forest, shrubs, boulder, stump, the beach's crates, the standing
 ## stone in its clearing, #1872) stands on exactly the glade's tiles of that kind, at its
-## blueprint's scale, cel-shaded, each shown once an ally has seen it; each turned as its piece turns it by hand (the glade turns some), and a little
-## off its tile's middle, not all of them the same way (#231).
+## blueprint's scale, cel-shaded, each shown once an ally has seen it; each turned as its piece
+## turns it by hand (the glade turns some), and a little off its tile's middle, not all of them the
+## same way (#231).
 func _check_decorations(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var view: TileDecorations = main.get_node("Instance/TileDecorations") as TileDecorations
