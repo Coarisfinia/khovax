@@ -52,7 +52,7 @@ func _check_ward_and_wait() -> String:
 
 
 ## A Slow-release berry draught drunk on the forest's exit at 1 HP still waits in the glade, and
-## mends the player there by its share 5 s after the drink, not a tick before; then nothing of it
+## mends the player, hurt there too, by its share 5 s after the drink, not a tick before; then nothing of it
 ## is left in their world store.
 func _check_slow_mend() -> String:
 	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.FOREST)
@@ -81,9 +81,11 @@ static func _mended_in_glade(world: World, lands_at: int) -> String:
 	var waiting: TonicEffect = effects.effect_of(glade.player(0).id)
 	if waiting == null or waiting.kind != TonicEffectsFeature.MEND or waiting.strength != MEND:
 		return "a Slow-release berry draught's Mend didn't wait on in the glade"
+	# A player's damage stays behind (only a follower's goes with it, #716), so they're hurt here.
+	var glade_health: HealthFeature = glade.feature(HealthFeature.ID) as HealthFeature
+	var _hurt: bool = glade_health.hurt(glade, glade.player(0).id, HealthFeature.PLAYER_HP - 1)
 	while world.tick < lands_at - 1:
 		world.step(FlowSteps.command(Command.NO_MOVE))
-	var glade_health: HealthFeature = glade.feature(HealthFeature.ID) as HealthFeature
 	var before: int = glade_health.hp_of(glade, glade.player(0).id)
 	world.step(FlowSteps.command(Command.NO_MOVE))
 	var after: int = glade_health.hp_of(glade, glade.player(0).id)
@@ -144,13 +146,7 @@ static func _still_warded(state: GameState, ends: int) -> String:
 ## Why drinking a DRAUGHT from `profile` for player 0 in `state`, which `what` names, wasn't
 ## refused, or spent or posted something; "" when it was refused and changed nothing.
 static func _refused(profile: Profile, state: GameState, what: String) -> String:
-	var held: Dictionary[String, int] = {}
-	held.assign(profile.materials)
-	var refusal: String = TonicDrinking.drink(profile, state, 0, DRAUGHT)
-	if refusal.is_empty() or profile.materials != held or not profile.outbox.entries.is_empty():
-		return "%s wasn't refused before anything was spent: %s" % [what, refusal]
-	return ""
-
+	return TonicDrinks.refused(profile, state, DRAUGHT, what)
 
 ## Walks the player in slot 0 of `world` one whole step in `direction`, through an exit there.
 static func _walk_in(world: World, direction: int) -> void:

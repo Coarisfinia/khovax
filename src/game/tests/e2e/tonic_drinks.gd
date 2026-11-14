@@ -1,6 +1,6 @@
 class_name TonicDrinks
 extends RefCounted
-## What the tonic flows (#2310, #2312) share about drinking a brew from a profile.
+## What the tonic flows (#2310, #2312, #2343) share about drinking a brew from a profile.
 
 
 ## Why drinking `brew` from `profile` for player 0 in `state`, which `what` names, wasn't refused,
