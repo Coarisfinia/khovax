@@ -1170,7 +1170,7 @@ func _outcome_state(
 ## special's power times its strength.
 func _check_boss_specials() -> String:
 	var legend: String = "- `🐸`: a wild monster, always %s%s\n" % [COMPANION, BOSS_CLAUSE]
-	var region: Region = FlowSteps.region("🔴🐸", legend)
+	var region: Region = FlowSteps.region("🔴🐸🟫", legend)
 	if not region.problem.is_empty():
 		return "a legend couldn't mark a wild monster a boss: " + region.problem
 	var special: Ability = SpeciesContent.cached().specials()[COMPANION]
