@@ -4,6 +4,8 @@ starts, whatever the jobs' `if:` says, and only the caller's own trigger shows i
 ci.yml, so a permission added to a ci.yml job stopped every nightly without a push or a pull
 request seeing it.
 
+A calling job names what it grants, in its own `permissions:` or its workflow's.
+
 A job without its own `permissions:` has its workflow's. A called workflow's job that has neither
 gets what its caller grants, so it can't ask for more.
 
@@ -108,7 +110,9 @@ def problems(workflows: dict[str, Workflow]) -> list[tuple[str, str]]:
                 continue
             granted = own if own is not None else workflow.permissions
             if granted is None:
-                found.append((name, f"job {job} calls {called} but grants it no permissions"))
+                # The default token's permissions are the repository's setting, which this can't read.
+                message = f"job {job} calls {called} without naming permissions: name them to check them"
+                found.append((name, message))
                 continue
             for inner, (asked, _called) in target.jobs.items():
                 asked = asked if asked is not None else target.permissions

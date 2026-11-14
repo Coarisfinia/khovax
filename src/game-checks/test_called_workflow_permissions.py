@@ -86,6 +86,16 @@ class CalledWorkflowPermissionsTest(unittest.TestCase):
         self.assertEqual(len(messages), 1)
         self.assertIn("deployments: read (granted none), pages: write (granted none)", messages[0])
 
+    def test_a_caller_naming_no_permissions_is_refused(self) -> None:
+        text = CALLER.format(extra="").replace("    permissions:\n      contents: write\n", "")
+        caller = read(text.replace("permissions:\n  contents: read\n", ""))
+        self.assertEqual(caller.permissions, None)
+        listed = problems({"called.yml": read(CALLED), "caller.yml": caller})
+        self.assertEqual(
+            listed,
+            [("caller.yml", "job ci calls called.yml without naming permissions: name them to check them")],
+        )
+
     def test_a_called_job_without_any_permissions_gets_the_callers(self) -> None:
         called = read(CALLED.replace("permissions:\n  contents: read\n\n", ""))
         self.assertEqual(called.jobs["plain"], (None, None))
