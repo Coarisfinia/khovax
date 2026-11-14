@@ -11,7 +11,7 @@ extends Control
 ## is drawn bold, with a pointer under it, and the reserve's thin and faded, so which is which shows
 ## by a shape too, never by color alone (#68). One that fainted here (#597) is crossed out and
 ## faded further, and can't be swapped to. The fainted one being picked for a revive item (#780,
-## RevivePick) gets a second frame around its square.
+## ItemPick) gets a second frame around its square.
 ## A tap or a click on a square swaps to that monster for the next tick (LocalInput.choose_swap,
 ## #55), and on a fainted one uses a revive item on it (LocalInput.choose_revive, #780): the glyph
 ## of a click with the mouse and keyboard, or of a tap on touch, stands right of the row to say so

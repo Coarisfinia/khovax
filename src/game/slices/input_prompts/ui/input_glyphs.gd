@@ -23,6 +23,7 @@ const KEYS: Dictionary[Key, String] = {
 	KEY_ESCAPE: "prompt_keyboard_escape",
 	KEY_E: "prompt_keyboard_e",
 	KEY_F: "prompt_keyboard_f",
+	KEY_G: "prompt_keyboard_g",
 	KEY_Q: "prompt_keyboard_q",
 	KEY_R: "prompt_keyboard_r",
 	KEY_T: "prompt_keyboard_t",

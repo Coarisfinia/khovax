@@ -4,6 +4,18 @@ extends RefCounted
 ## (AGENTS.md: shared, never copied). Not a flow itself: the runner runs only the `test_*.gd` files.
 
 
+## The local player's next command after a press of the InputMap action `action`, in a frame of its
+## own: a press stays just pressed for the rest of its frame, even once let go. The input hears it
+## only here, not again on its own in that frame.
+static func pressed(driver: GameDriver, action: StringName) -> Command:
+	driver.input.set_process(false)
+	await driver.get_tree().process_frame
+	Input.action_press(action)
+	driver.input._process(0.0)
+	Input.action_release(action)
+	return (driver.input as LocalInput).command(driver.state)
+
+
 ## Presses the controller's `button` and lets go at once, into the viewport of `node`.
 static func press_pad(node: Node, button: JoyButton) -> void:
 	var pad: InputEventJoypadButton = InputEventJoypadButton.new()

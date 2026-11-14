@@ -7,16 +7,26 @@ extends RefCounted
 ## waystone, or its instance is gone, they go to the world's spawn as before. The look lights the
 ## stone's hole and puts it out again, and the notice has its words. Fainted beasts come back at a
 ## waystone only while the host has them revived on waystones (#1891), which the notice says too.
+## Every instance a realm holds, in each of its variants, has a standing stone at least
+## SAFE_DISTANCE tiles from every wild monster's spot for every seed (#1825, #1872), which a player
+## can walk up to from the first start.
 
 const SEED: int = 7
 ## The forest's edge, north of Lumwen Hoal, with a waystone west of the way in.
 const EDGE: String = "morwe_wudhen"
 ## How long the playground's wild monster takes at most to bring a player standing beside it down.
 const FALL_TICKS: int = WildAttackFeature.STRIKE_TICKS * 60
+## How many tiles (hex distance) at least every instance's standing stone keeps from every wild
+## monster's spot when the instance loads (#1872): placement only, roaming ones may come closer.
+const SAFE_DISTANCE: int = 15
+## The seeds every instance is checked with.
+const INSTANCE_SEEDS: int = 6
 
 
 func run(_tree: SceneTree) -> String:
 	var result: String = _check_content()
+	if result.is_empty():
+		result = _check_every_instance()
 	if result.is_empty():
 		result = _check_activated()
 	if result.is_empty():
@@ -43,6 +53,54 @@ func _check_content() -> String:
 	if FlowSteps.basic(SEED).feature(WaystoneFeature.ID) != null:
 		return "the playground, without a waystone, has waystones"
 	return ""
+
+
+## Every instance a realm holds, its variants' regions included, has a standing stone at least
+## SAFE_DISTANCE tiles from every wild monster's spot, with a tile beside it that a player walks to
+## from the first start, for every seed; the failure names each one that hasn't.
+func _check_every_instance() -> String:
+	var missing: Array[String] = []
+	for instance_name: String in InstanceBlueprints.names():
+		if Realms.holding(instance_name) == null:
+			continue
+		var variants: Array[String] = [""]
+		for chosen_by: PackedStringArray in InstanceBlueprints.blueprint(instance_name).variants:
+			if not variants.has(chosen_by[1]):
+				variants.append(chosen_by[1])
+		for variant: String in variants:
+			for seed_value: int in INSTANCE_SEEDS:
+				var region: Region = InstanceBlueprints.region_of(
+					instance_name,
+					seed_value,
+					variant,
+				)
+				if not _has_safe_stone(region):
+					var where: String = variant if not variant.is_empty() else instance_name
+					missing.append("%s (seed %d)" % [where, seed_value])
+	if not missing.is_empty():
+		var wanted: String = "no standing stone %d tiles from every wild monster in %s"
+		return wanted % [SAFE_DISTANCE, ", ".join(missing)]
+	return ""
+
+
+## Whether `region` has a waystone at least SAFE_DISTANCE tiles from every wild monster's spot, next
+## to a tile a player walks to from the first start.
+static func _has_safe_stone(region: Region) -> bool:
+	if region.starts.is_empty():
+		return false
+	var walked: Array[Vector2i] = region.reachable(region.starts[0])
+	for tile: Vector2i in region.sorted_tiles():
+		if region.terrain[tile] != WaystoneFeature.KIND:
+			continue
+		var reached: bool = false
+		for direction: Vector2i in Hex.DIRECTIONS:
+			reached = reached or walked.has(tile + direction)
+		var safe: bool = region.wild_monsters.all(
+			func(spot: Vector2i) -> bool: return Hex.distance(tile, spot) >= SAFE_DISTANCE
+		)
+		if reached and safe:
+			return true
+	return false
 
 
 ## A player put beside Morwe Wudhen's waystone activates it on the next tick: it's their respawn

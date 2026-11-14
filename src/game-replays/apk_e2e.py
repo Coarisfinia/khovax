@@ -3,13 +3,15 @@ its test mode and reads the flow's result from the game's own log: it must pass 
 state hash the headless run of the same commit ended in (#876). Run by CI inside the emulator
 step. A start that never reports is retried once (#957).
 
-    uv run --locked src/game-replays/apk_e2e.py <test APK> <the headless run's final hash>
+    uv run --locked --package khovax-game-replays src/game-replays/apk_e2e.py <test APK> <the headless run's final hash>
 """
 
 import re
 import subprocess
 import sys
 import time
+
+from game_shared import log
 
 PACKAGE = "io.github.coarisfinia.khovax"
 # The result line game/test_mode.gd prints, nothing else.
@@ -92,9 +94,8 @@ def run(apk: str, expected: str) -> int:
         # passes on a second try, and a real crash fails both. Its device log first, folded, since
         # the retry clears it.
         print("no result on the first start: the game never reported; retrying once (#957)")
-        print("::group::the first start's device log", flush=True)
-        adb("logcat", "-d", check=False)
-        print("::endgroup::", flush=True)
+        with log.group("the first start's device log"):
+            adb("logcat", "-d", check=False)
         adb("shell", "am", "force-stop", PACKAGE)
         result = play(activity)
     print(result or f"no result within {WAIT_S} s: the game never reported", flush=True)

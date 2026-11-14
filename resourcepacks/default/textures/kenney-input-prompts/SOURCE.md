@@ -6,6 +6,7 @@
   `keyboard_3.svg`, `keyboard_equals.svg`, `keyboard_minus.svg`, `keyboard_e.svg`, `keyboard_q.svg`,
   `keyboard_r.svg`, `keyboard_t.svg`, `keyboard_v.svg`, `keyboard_w.svg`, `keyboard_a.svg`,
   `keyboard_s.svg`, `keyboard_d.svg`, `keyboard_x.svg`, `keyboard_f.svg` and `mouse_left.svg`,
+  `keyboard_g.svg` drawn after them (below),
   `Touch/Vector/touch_tap.svg`, `touch_zoom_in.svg` and `touch_zoom_out.svg`, and
   `touch_swipe_move.svg` renamed `touch_drag.svg`, and from the `Vector/` folder of the pack's
   controller set whose face buttons read A, B, X and Y its A, B, X and Y buttons, its view and menu
@@ -27,4 +28,6 @@
 - **Only what the game uses is here:** those glyphs, unchanged but for the controller ones' and the
   drag's names and the d-pad's and the mouse's colors: the pack marks the pressed arm or button in
   red, which the ink the glyphs are drawn in hides, so it is solid white and the rest faint (#1192,
-  #1221), a difference of shape rather than color.
+  #1221), a difference of shape rather than color. `keyboard_g.svg` (#2313, the key that drinks a
+  tonic or a draught) isn't the pack's: it is `keyboard_f.svg` with its letter redrawn as a G on
+  the same 4-pixel grid, by hand in the repository, since the pack's own G couldn't be fetched.
