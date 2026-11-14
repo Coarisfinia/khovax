@@ -28,6 +28,8 @@ const MOVE_TICKS: int = 6
 const REVIVE_TICKS: int = 3 * Simulation.TICKS_PER_SECOND
 ## How long a knocked-down player waits before going back to the spawn (#479).
 const DOWN_TICKS: int = 30 * Simulation.TICKS_PER_SECOND
+## How long a player waits between two tonics or draughts (#2049, #2310).
+const DRINK_WAIT_TICKS: int = 10 * Simulation.TICKS_PER_SECOND
 ## How near an ally has to be for a fallen player to be knocked down rather than sent back (#479).
 const ALLY_RANGE: int = 200
 # Companions.
