@@ -26,7 +26,7 @@ from mathutils import Matrix
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-from lib import footprint, prop_paint, repaint, scene  # noqa: E402
+from lib import fixed_order, footprint, prop_paint, repaint, scene  # noqa: E402
 
 SOURCE = os.path.join(HERE, "sources", "standing_stone.glb")
 FPS = 30
@@ -79,8 +79,10 @@ def subdivide(obj, faces):
 
 
 def vertex_data(mesh):
+    """Each vertex's position and normal, the normal summed here in a fixed order (lib/fixed_order.py):
+    Blender's own differs with the thread count, and the paint's cuts would follow it."""
     return (numpy.array([vertex.co[:] for vertex in mesh.vertices]),
-            numpy.array([vertex.normal[:] for vertex in mesh.vertices]))
+            fixed_order.vertex_normals(mesh, angle=True))
 
 
 def slab_vertices(mesh):

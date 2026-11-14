@@ -209,8 +209,8 @@ a second model could use goes into the library or a generic tool, never into one
     faces in a fixed order so a rebuild gives the same bytes).
   - `fixed_order` (#2317): mesh steps that build the same file on any count of Blender's threads:
     `weld` in place of `remove_doubles`, `canonical` (a bmesh rebuilt in a fixed order), `cut`
-    in place of `bisect_plane`, `vertex_normals` summed in the faces' order (area-weighted, so not
-    Blender's own) and `snap` to a grid. A script that cuts or merges uses them.
+    in place of `bisect_plane`, `vertex_normals` summed in the faces' order (area-weighted, or
+    angle-weighted like Blender's own with `angle`) and `snap` to a grid. A script that cuts or merges uses them.
   - `materials`: cel-friendly flat colours and emissive glows (`palette`).
   - `prop_paint` (#1853): the props' shared CC0 texture set and its triplanar mapping, moss and
     shade (below, "Props from a bare shape").
