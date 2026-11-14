@@ -253,6 +253,16 @@ edit it by hand.
   "Public Domain (CC0)", linked to the CC0 1.0 deed, with the author named and no credit asked
   (#1954).
 
+## Sandstone turret
+
+- **Files:** `resourcepacks/default/models/sandstone-turret/`
+- **Author:** the project (generated with Meshy AI, paid plan, Private licence, shape and paint)
+- **Source:** a sandstone turret generated with Meshy AI by the owner (#1824, #1836), turned into
+  `src/game-models/sources/sandstone_turret.glb` by `src/game-models/import_source.py`, then cut
+  above its strip of grass, stacked with copies of two of its own courses to a tower's height, its
+  own paint kept, and exported as `sandstone_turret.glb` by `src/game-models/sandstone_turret.py`
+- **License:** Unlicense, the repository's own license, see `LICENSE.md` next to this file
+
 ## Standing stone
 
 - **Files:** `resourcepacks/default/models/standing-stone/`
