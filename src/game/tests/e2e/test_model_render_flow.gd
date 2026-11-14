@@ -1,31 +1,28 @@
 extends RefCounted
 ## The model render's framing (render_in_game.gd, #2366): what its still shots frame of every
-## model in the default pack holds all of the model as the shots show it, idling on its Idle's
+## model the loaded packs have holds all of the model as the shots show it, idling on its Idle's
 ## first frame. A model whose rest pose stands elsewhere, as the Nuvvoluvvo's does, is otherwise
 ## framed off its body: the face close-up shows its chest and legs.
 
 const RenderInGame: GDScript = preload("res://tools/models/render_in_game.gd")
-const MODELS: String = "res://resourcepacks/default/models"
 ## How far a shown vertex may lie outside the framed box, in metres: float noise only.
 const SLACK: float = 0.001
 
 
 func run(tree: SceneTree) -> String:
 	var checked: int = 0
-	for folder: String in DirAccess.get_directories_at(MODELS):
-		var path: String = MODELS.path_join(folder).path_join(folder + ".glb")
-		if not ResourceLoader.exists(path):
-			continue
-		var model: Node3D = (load(path) as PackedScene).instantiate() as Node3D
-		tree.root.add_child(model)
-		var problem: String = _unframed(model)
-		model.free()
-		if problem == "-":
-			continue
-		if not problem.is_empty():
-			return "%s: %s" % [folder, problem]
-		checked += 1
-	return "" if checked > 0 else "no model with an Idle found in " + MODELS
+	for pack: ResourcePack in ResourcePacks.loaded():
+		for model_id: String in pack.models:
+			var model: Node3D = ResourcePacks.model(model_id).instantiate() as Node3D
+			tree.root.add_child(model)
+			var problem: String = _unframed(model)
+			model.free()
+			if problem == "-":
+				continue
+			if not problem.is_empty():
+				return "%s: %s" % [model_id, problem]
+			checked += 1
+	return "" if checked > 0 else "no model with an Idle found in the loaded packs"
 
 
 ## What of `model`, idling as the shots show it, lies outside what they frame, "" when nothing
