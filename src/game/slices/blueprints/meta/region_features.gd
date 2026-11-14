@@ -3,9 +3,9 @@ extends RefCounted
 ## The features an instance has because of what its region holds (#879), not because its blueprint
 ## lists them: what its region pieces' legends place, over all of its pieces. A slice that places
 ## something on the ground says through its PlacementReader which feature runs it; the core's own
-## meanings (exits, wild monsters, their schedules, packs, sleep, hunts and foraging, hiding), tiles
-## bare hands can harvest (#696) and
-## region pieces to enter are matched here. Only which features; FeatureFactories says when they
+## meanings (exits, wild monsters, their schedules, packs, sleep, hunts and foraging, hiding,
+## bosses' specials, #2410), tiles bare hands can harvest (#696) and region pieces to enter are
+## matched here. Only which features; FeatureFactories says when they
 ## step.
 
 
@@ -54,17 +54,26 @@ static func of(region: Region) -> Array[String]:
 		)
 	if HidingFeature.has_hiding(region):
 		needed.append(HidingFeature.ID)
+	needed.append_array(_marked_wild_rules(region))
 	if TileHarvestFeature.has_harvestable(region):
 		needed.append(TileHarvestFeature.ID)
-	# A wild monster its legend marks escaping escapes at its line (#2411).
-	if EscapeFeature.has_escaper(region):
-		needed.append(EscapeFeature.ID)
 	if WaystoneFeature.has_waystone(region):
 		needed.append(WaystoneFeature.ID)
 	for reader: PlacementReader in readers():
 		for kind: String in reader.kinds():
 			if not region.placed(kind).is_empty() and not needed.has(reader.feature()):
 				needed.append(reader.feature())
+	return needed
+
+
+## The features for what `region`'s legend marks its named wild monsters with: a boss fires its
+## special (#2410), and one marked escaping escapes at its line (#2411).
+static func _marked_wild_rules(region: Region) -> Array[String]:
+	var needed: Array[String] = []
+	if BossSpecialFeature.has_boss(region):
+		needed.append(BossSpecialFeature.ID)
+	if EscapeFeature.has_escaper(region):
+		needed.append(EscapeFeature.ID)
 	return needed
 
 
@@ -80,6 +89,7 @@ static func _built_in() -> Array[String]:
 		HuntFeature.ID,
 		ForagingFeature.ID,
 		HidingFeature.ID,
+		BossSpecialFeature.ID,
 		TileHarvestFeature.ID,
 		WaystoneFeature.ID,
 		EscapeFeature.ID,

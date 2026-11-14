@@ -257,10 +257,7 @@ func _strike(state: GameState, monster: Entity, damage: int, enraged: bool) -> v
 			if _dodges(state, target_id):
 				struck.damage = 0
 				struck.dodged = true
-		struck.damage = _guarded(state, target_id, on_companion, struck.damage)
-		state.events.append(struck)
-		if health.hurt(state, target_id, struck.damage):
-			_end_drunk(state, target_id)
+		land(state, struck, on_companion)
 		return
 	side = _trail_target(state, tile)
 	if side == tile:
@@ -268,6 +265,18 @@ func _strike(state: GameState, monster: Entity, damage: int, enraged: bool) -> v
 	state.events.append(WildMonsterStruck.new(monster.id, 0, side, damage))
 	if _worn_through(side, damage):
 		_clear(state, side)
+
+
+## Lands the hit `struck` on the companion (`on_companion`) or the player it names: less their
+## guards (`_guarded`), raised, and off their HP (HealthFeature.hurt, #455); a hit that fells them
+## ends the effect they drank (#2343). A boss's special lands the same way (BossSpecialFeature,
+## #2410).
+func land(state: GameState, struck: WildMonsterStruck, on_companion: bool) -> void:
+	struck.damage = _guarded(state, struck.target_id, on_companion, struck.damage)
+	state.events.append(struck)
+	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
+	if health.hurt(state, struck.target_id, struck.damage):
+		_end_drunk(state, struck.target_id)
 
 
 ## Ends the effect `target_id`, whom a hit just felled, drank (#2343), where the instance has them.
