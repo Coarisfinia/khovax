@@ -49,7 +49,8 @@ extends RefCounted
 ## With spikes in their trap slot (#692), put there by a request from their outbox (#818) that the
 ## world keeps in their store, the player's ring hurts the wild monster pushing on it once a second
 ## for the spikes' damage, while it waits for a totem and while it seals, never below 1 HP; without,
-## it doesn't, nor after a request in a fight to put them in, which the world refuses (#776).
+## it doesn't, nor after a request in a fight to put them in, which the world holds back until
+## the fight is over (#776, #2350).
 ##
 ## An early wild monster (#1321), one of the starting instance's own species, the first a player
 ## meets, can be dominated by a small ring around it, and defeated by a companion of its kind (the
@@ -776,10 +777,10 @@ func _check_target_dominated() -> String:
 
 ## A weak monster in a small ring (#692): while the ring waits for a totem, it isn't hurt as long as
 ## the player's trap is empty, nor once a request asks to put their spikes into it there, in the
-## fight (#776): the world acknowledges it but keeps the trap as it is. From the tick a request
-## outside a fight puts them in (#818), kept in their world store, it's hurt once in STRIKE_TICKS
-## for their damage. Worn down to 2 HP, it's hurt once more while the ring seals, and then holds at
-## 1 HP.
+## fight (#776): the world acknowledges it but keeps the trap as it is until the fight is over,
+## and puts them in then (#2350). From the tick a request outside a fight puts them in (#818), kept
+## in their world store, it's hurt once in STRIKE_TICKS for their damage. Worn down to 2 HP, it's
+## hurt once more while the ring seals, and then holds at 1 HP.
 func _check_spikes() -> String:
 	var state: GameState = _spikes_state()
 	var ring: Array[Vector2i] = Hex.ring(SMALL_RING)
@@ -805,6 +806,11 @@ func _check_spikes() -> String:
 	var applied: Array = stored.get(OutboxReceipts.APPLIED, [])
 	if not applied.has(ShortId.of_code(1)):
 		return "the world didn't acknowledge the request for spikes in the fight"
+	# Away from the monster the fight is over, and the world catches up with the request (#2350).
+	state.player(0).tile = Vector2i(-OUTCOME_RADIUS, 0)
+	var _after: Array[SpikesStruck] = _spiked_over(state, 1)
+	if SpikesFeature.trap_of(state.stored(0, SpikesFeature.ID)) != SpikesFeature.code_of(SPIKES):
+		return "the spikes asked for in the fight weren't put into the trap once it was over"
 	return _check_spikes_armed()
 
 
