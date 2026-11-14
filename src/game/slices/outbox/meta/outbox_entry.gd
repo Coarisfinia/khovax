@@ -24,7 +24,7 @@ const HOST_SETTING: int = 5
 const QUEST_EVENT: int = 6
 ## Keep the player's carried monsters' passives on while they aren't out, or stop (#617): its data
 ## is 1 while gear that keeps them (GearItem.keeps_passives) is in the ward slot, 0 otherwise
-## (CompanionPassives.keep).
+## (CompanionPassives.ask).
 const PASSIVES_KEPT: int = 7
 ## Make the player invincible, or stop (#2273, the Settings tab's Debug submenu): its data is 1 for
 ## invincible, 0 for not (HealthFeature).

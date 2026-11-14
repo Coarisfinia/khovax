@@ -1733,8 +1733,9 @@ func _check_least_damage() -> String:
 ## one in reserve, a wild monster's hit on the player comes in less the weak species' player guard
 ## alone, and one on the companion less its own guard; the out one's web passive (#1472) takes its
 ## guard off the hit on the player as well; with every carried monster fainted, none is out, and
-## the hit on the player comes in whole. Gear that keeps the passives on (#617), put on outside a
-## fight (#2349), lets the one in reserve guard the player too, until it faints.
+## the hit on the player comes in whole. Gear that keeps the passives on (#617), put on in a fight
+## and kept on once it's over (#2349, #2380), lets the one in reserve guard the player too, until
+## it faints.
 func _check_guards() -> String:
 	var state: GameState = _strike_state([Vector2i.ZERO], [], 0, GUARDS)
 	FlowSteps.carry(state, 0, [WEAK, STRONG])
@@ -1872,12 +1873,12 @@ func _check_undodged_player(state: GameState, player: Entity, hits: int) -> Stri
 ## With the weak species out, its web passive granted, and the strong one in reserve in `state`,
 ## the request (#818) that the player `player`'s ward gear keeps their passives on (#617,
 ## OutboxEntry.PASSIVES_KEPT), sent beside the wild monster, in the fight, is acknowledged but
-## changes nothing (#2349). Sent again away from it, outside a fight, it lets a wild monster's hit
-## on them come in less both species' player guards and the web's; once the strong one has
-## fainted, less the weak one's two alone again.
+## changes nothing while the fight lasts (#2349). Away from it, outside a fight, the world keeps
+## them on all the same (#2380), which lets a wild monster's hit on them come in less both species'
+## player guards and the web's; once the strong one has fainted, less the weak one's two alone
+## again.
 func _check_kept(state: GameState, player: Entity) -> String:
-	# The first id a profile's outbox draws (Outbox, #942).
-	Simulation.step(state, _keep_passives(1))
+	Simulation.step(state, _keep_passives())
 	var stored: Dictionary = state.stored(0, CompanionFeature.ID)
 	if CompanionPassives.kept(stored):
 		return "a request in the fight kept the passives on"
@@ -1889,10 +1890,11 @@ func _check_kept(state: GameState, player: Entity) -> String:
 	player.tile = Vector2i(-OUTCOME_RADIUS, 0)
 	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
 	state.entity(companions.companion_of(0)).tile = Vector2i(1 - OUTCOME_RADIUS, -1)
-	Simulation.step(state, _keep_passives(2))
+	# The first tick out of the fight, with no new request (#2380).
+	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
 	player.tile = beside
 	if not CompanionPassives.kept(state.stored(0, CompanionFeature.ID)):
-		return "the request to keep the passives on wasn't kept in the player's store"
+		return "the passives asked to be kept on in the fight weren't kept on once it was over"
 	var player_id: int = player.id
 	var ticks: int = WildAttackFeature.STRIKE_TICKS
 	var weak: int = GUARDS[PLAYER_GUARD] + GUARDS[WEB_GUARD]
@@ -1913,11 +1915,11 @@ func _check_kept(state: GameState, player: Entity) -> String:
 	)
 
 
-## A still command for the player in slot 0 carrying a request (#818) with the profile's `n`th
-## outbox id, that their ward gear keeps their passives on (#617).
-static func _keep_passives(n: int) -> Array[Command]:
+## A still command for the player in slot 0 carrying a request (#818) with the profile's first
+## outbox id (Outbox, #942), that their ward gear keeps their passives on (#617).
+static func _keep_passives() -> Array[Command]:
 	var keep: Array[Command] = FlowSteps.command(Command.NO_MOVE)
-	keep[0].request = ShortId.code(ShortId.of_code(n))
+	keep[0].request = ShortId.code(ShortId.of_code(1))
 	keep[0].request_kind = OutboxEntry.PASSIVES_KEPT
 	keep[0].request_data = 1
 	return keep
