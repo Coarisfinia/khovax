@@ -283,6 +283,7 @@ func _check_stale_hash() -> String:
 	idle.next_entity_id += 1
 	_tree.call("expect_warning", FlowSteps.GLADE)
 	_run_frames(GameDriver.HASH_CHECK_TICKS - _driver.world.tick % GameDriver.HASH_CHECK_TICKS)
+	idle.next_entity_id -= 1
 	idle.touch()
 	return ""
 
