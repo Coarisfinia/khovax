@@ -49,6 +49,13 @@ func after() -> Array[String]:
 	return earlier
 
 
+## The hiding and the companions, which tell with the wild monsters and the rings whether a player
+## is in a fight (Fight), where their trap doesn't change (#776), as the last tick left them.
+func before() -> Array[String]:
+	var later: Array[String] = [HidingFeature.ID, CompanionFeature.ID]
+	return later
+
+
 ## The code a request carries for the gear `gear_id` in the trap slot (CommandCodes):
 ## CommandCodes.NONE for none, never for a piece of gear (the gear's content files it with
 ## CommandCodes.file).
