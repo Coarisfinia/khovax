@@ -100,6 +100,7 @@ func run(tree: SceneTree) -> String:
 		_check_pieces_connected,
 		_check_dungeon_end,
 		_check_pass_seal,
+		_check_variant_pieces,
 		_check_room,
 		_check_web_connected,
 		_check_world,
@@ -1909,6 +1910,54 @@ func _check_pass_seal() -> String:
 				seed_value,
 			]
 	return ""
+
+
+## A variant's folder without a start piece holds only the pieces it changes (#1590, #2383): every
+## blueprint's variants load, and one is refused, naming its piece, when that piece changes none of
+## its blueprint's pieces (a file name the blueprint lacks) or changes the shape or the connectors
+## of the one it replaces, so for the same seed it would arrange otherwise.
+func _check_variant_pieces() -> String:
+	for instance_name: String in InstanceBlueprints.names():
+		for chosen_by: PackedStringArray in InstanceBlueprints.blueprint(instance_name).variants:
+			var region: Region = InstanceBlueprints.region_of(instance_name, 0, chosen_by[1])
+			if not region.problem.is_empty():
+				return "%s's variant '%s' doesn't load: %s" % [
+					instance_name,
+					chosen_by[1],
+					region.problem,
+				]
+	var opened: RegionFiles = RegionFiles.cached(PASS_OPENED)
+	var path: String = opened.texts.keys()[0]
+	var text: String = opened.texts[path]
+	# One more ground tile at the end of the wild monster's row, and the east connector turned.
+	var row: String = "🟫👾⬛🟫🟫🟫🟫🟫⬛🟫🟫\n"
+	var wider: String = text.replace(row, row.replace("\n", "🟫\n"))
+	var turned: String = text.replace("to the east", "to the northeast")
+	if wider == text or turned == text:
+		return "the pass's opened sealed passage no longer reads as the variant check changes it"
+	var result: String = _variant_refused(path.get_base_dir().path_join("seal.md"), text)
+	for changed: String in [wider, turned]:
+		if result.is_empty():
+			result = _variant_refused(path, changed)
+	ContentCatalog.forget(RegionFiles.key(PASS_OPENED))
+	return result
+
+
+## Why the pass's opened variant, its one piece swapped for `text` at `path`, isn't refused naming
+## that piece, or "".
+func _variant_refused(path: String, text: String) -> String:
+	var files: RegionFiles = RegionFiles.new()
+	files.texts[path] = text
+	ContentCatalog.forget(RegionFiles.key(PASS_OPENED))
+	var swapped: Callable = func() -> Content: return files
+	var _kept: Content = ContentCatalog.kept(RegionFiles.key(PASS_OPENED), swapped)
+	var region: Region = InstanceBlueprints.region_of(PASS, 0, PASS_OPENED)
+	if region.problem.contains("variant") and region.problem.contains(path.get_file()):
+		return ""
+	return "the pass's opened variant with %s changed wasn't refused: '%s'" % [
+		path.get_file(),
+		region.problem,
+	]
 
 
 ## Every blueprint with exits can be reached from the starting instance by walking through exits,
