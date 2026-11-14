@@ -126,7 +126,7 @@ CLASS = re.compile(r"\s*class\s")
 CONSTANT = re.compile(r"\s*(?:@\w+(?:\([^)]*\))?\s+)*const\s+(\w+)")
 # A function's own declaration of a name hides the one outside it (#2304): a parameter in the whole
 # body, a local from the statement after its own to the end of its block. Only one typed as what
-# can't hold an integer vector unseen does: not Variant, a bare Array or Dictionary, or inferred.
+# can't hold an integer vector unseen does (UNTYPED): not inferred or untyped.
 # A name stays hidden only while every binding of it in the function hides: any other one (a
 # match pattern's `var`, a lambda's parameter or local, a loop variable) may hold an integer vector,
 # so the name stays unhidden in the whole function.
@@ -138,6 +138,9 @@ LAMBDA = re.compile(r"\bfunc\b\s*\w*\s*\(")
 LAMBDA_PARAMETER = re.compile(r"\s*(?:\.\.\.)?(\w+)")
 LOCAL_BINDING = re.compile(r"\b(?:var|const)\s+(\w+)")
 LOOP_BINDING = re.compile(r"\bfor\s+(\w+)")
+# A type that may hold an integer vector unseen, also as a type argument: Variant, or an Array or
+# Dictionary without its own.
+UNTYPED = re.compile(r"\bVariant\b|\b(?:Array|Dictionary)\b(?!\s*\[)")
 # Reaching a randomness method by name, with call() or a Callable: read on the whole of
 # code_with_random_names, which keeps that string, so a call split over lines is seen too (#2223).
 RANDOM_NAMES = ("shuffle", "pick_random")
@@ -347,7 +350,7 @@ def top_level_parts(text: str) -> list[str]:
 
 def hides(type_name: str) -> bool:
     """Whether a declaration of this type hides the same name outside its function."""
-    return type_name not in ("Array", "Dictionary") and not re.search(r"\bVariant\b", type_name)
+    return UNTYPED.search(type_name) is None
 
 
 def shadowed_names(
