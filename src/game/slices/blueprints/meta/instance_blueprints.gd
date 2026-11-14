@@ -172,7 +172,7 @@ static func _with_stone(region: Region, instance_name: String) -> Region:
 ## The text of each region piece of the region `region_name`, by its path. A variant's folder
 ## without a start piece holds only the pieces it changes (#1590), so the rest are those of the
 ## blueprint `instance_name`, when its region is pieces too: its pieces then arrange like the
-## blueprint's own for every seed, since each keeps its piece's shape and connectors
+## blueprint's own for every seed, since each keeps its piece's shape, connectors and exits
 ## (_changes_problem refuses one that doesn't). A folder with a start piece is a whole region of its
 ## own.
 static func _piece_texts(instance_name: String, region_name: String) -> Dictionary[String, String]:
@@ -192,15 +192,15 @@ static func _piece_texts(instance_name: String, region_name: String) -> Dictiona
 
 ## Why the variant region `region_name`, a folder without a start piece that holds only the pieces
 ## it changes (_piece_texts), doesn't change the blueprint `instance_name`'s pieces alike (#2383),
-## or "": each of its pieces must replace one of the blueprint's by file name, keeping its tiles and
-## connectors, so the variant arranges like the blueprint for every seed. A variant piece that can't
-## be read is left for its own reading to report; one replacing a blueprint piece that can't is
-## refused.
+## or "": each of its pieces must replace one of the blueprint's by file name, keeping its tiles,
+## connectors and exits, so the variant arranges like the blueprint for every seed. A variant piece
+## that can't be read is left for its own reading to report; one replacing a blueprint piece that
+## can't is refused.
 static func _changes_problem(instance_name: String, region_name: String) -> String:
-	var files: RegionFiles = RegionFiles.cached(region_name)
-	var own: RegionFiles = RegionFiles.cached(instance_name)
 	if region_name == instance_name:
 		return ""
+	var files: RegionFiles = RegionFiles.cached(region_name)
+	var own: RegionFiles = RegionFiles.cached(instance_name)
 	# A blueprint that is one whole region file has no pieces for a variant's to replace.
 	var kept: Dictionary[String, String] = {}
 	if not own.whole:
@@ -230,9 +230,10 @@ static func _changes_problem(instance_name: String, region_name: String) -> Stri
 		var alike: bool = (
 			changed.sorted_tiles() == before.sorted_tiles()
 			and changed.connectors == before.connectors
+			and changed.exits == before.exits
 		)
 		if changed.problem.is_empty() and not alike:
-			return "variant %s's piece %s doesn't keep the tiles and connectors of %s's" % [
+			return "variant %s's piece %s doesn't keep the tiles, connectors and exits of %s's" % [
 				region_name,
 				file_name,
 				instance_name,
