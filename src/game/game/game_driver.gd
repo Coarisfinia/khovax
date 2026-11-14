@@ -13,6 +13,8 @@ extends Session
 const MAX_TICKS_PER_FRAME: int = 5
 ## How many recent ticks' state hashes the driver keeps, to compare with other players' later.
 const HASH_HISTORY: int = 100
+## Ticks between the debug check that each instance's kept own hash is the one taken afresh (#2135).
+const HASH_CHECK_TICKS: int = 100
 ## The value of `fixed_seed` that means "roll a seed".
 const ROLLED_SEED: int = -1
 

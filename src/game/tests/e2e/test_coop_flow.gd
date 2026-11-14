@@ -10,7 +10,9 @@ extends RefCounted
 ## Each player's companion (#338) joins them, in a smaller circle of their color and marks, its eyes
 ## glowing in its type's colour and shaped by its player's leaning (#1063). An open
 ## menu doesn't pause co-op (#362). The hash co-op keeps every tick reads only the instances the
-## players are in, however many more are loaded (#2095).
+## players are in, however many more are loaded (#2095). In debug builds, an instance whose kept
+## hash isn't the one taken afresh, after a change that skipped `touch`, is warned about by name
+## (#2135).
 ## Time is stepped by hand, one tick a frame.
 
 const STEP: float = 1.0 / Simulation.TICKS_PER_SECOND
@@ -270,6 +272,18 @@ func _check_hash_divergence() -> String:
 		_plant(world, plant)
 		if world.sync_hash() == same:
 			return "the per-tick hash missed difference %d planted in one machine's world" % plant
+	return _check_stale_hash()
+
+
+## A change to an instance nobody is in that skips `touch` leaves its kept own hash stale (#2135):
+## the driver's next debug check warns about that instance by name.
+func _check_stale_hash() -> String:
+	var idle: GameState = _driver.world.instances[FlowSteps.GLADE]
+	var _kept: int = idle.own_hash()
+	idle.next_entity_id += 1
+	_tree.call("expect_warning", FlowSteps.GLADE)
+	_run_frames(GameDriver.HASH_CHECK_TICKS - _driver.world.tick % GameDriver.HASH_CHECK_TICKS)
+	idle.touch()
 	return ""
 
 
