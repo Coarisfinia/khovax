@@ -64,8 +64,8 @@ def run_runner(flow: str, break_content: bool) -> tuple[int | None, str]:
         link_all(GAME / "tests", project / "tests", "e2e")
         flows = project / FLOWS
         link_all(GAME / FLOWS, flows)
-        for flow in flows.glob("test_*"):
-            flow.unlink()
+        for existing in flows.glob("test_*"):
+            existing.unlink()
         (flows / "test_passing.gd").write_text(flow, encoding="utf-8")
         if break_content:
             link_all(ROOT / PACK, project / PACK, BROKEN_KIND)
