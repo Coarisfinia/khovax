@@ -124,6 +124,7 @@ func run(tree: SceneTree) -> String:
 		_check_sent_to_spawn,
 		_check_invincible,
 		_check_invincible_requested,
+		_check_teleport_requested,
 		_check_layout,
 		_check_tile_changed,
 	]
@@ -299,6 +300,41 @@ func _check_invincible_requested() -> String:
 	world.step(asking)
 	if health.is_invincible(basic, world.player(0).id):
 		return "a request to be invincible, sent again, was applied twice"
+	return ""
+
+
+## The Debug submenu's teleport (#2274, the outbox kind 9): a player in the world's start asking
+## to go to the debug zone (data 1) lands on their start in the playground, and is acknowledged;
+## asking to go back (data 0) lands them on their start in the world's starting instance. The same
+## request sent again changes nothing.
+func _check_teleport_requested() -> String:
+	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.GLADE)
+	var outbox: Outbox = Outbox.new()
+	var there: Command = Command.new()
+	outbox.post(9, 1).fill(there)
+	var asking: Array[Command] = [there]
+	world.step(asking)
+	var acknowledged: bool = false
+	for event: RefCounted in world.instances[FlowSteps.GLADE].events:
+		acknowledged = acknowledged or event is RequestApplied
+	if not acknowledged or world.instance_of(0) != FlowSteps.BASIC:
+		return "a player asking to go to the debug zone is in %s, acknowledged: %s" % [
+			world.instance_of(0),
+			acknowledged,
+		]
+	var zone: GameState = world.instances[FlowSteps.BASIC]
+	if world.player(0).tile != zone.region.starts[0]:
+		return "a player sent to the debug zone isn't on its start: %s" % world.player(0).tile
+	var back: Command = Command.new()
+	outbox.post(9, 0).fill(back)
+	var leaving: Array[Command] = [back]
+	world.step(leaving)
+	var glade: GameState = world.instances[FlowSteps.GLADE]
+	if world.instance_of(0) != FlowSteps.GLADE or world.player(0).tile != glade.region.starts[0]:
+		return "a player asking to go back from the debug zone is in %s" % world.instance_of(0)
+	world.step(asking)
+	if world.instance_of(0) != FlowSteps.GLADE:
+		return "a request to go to the debug zone, sent again, was applied twice"
 	return ""
 
 

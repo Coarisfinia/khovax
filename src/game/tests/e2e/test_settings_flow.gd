@@ -1170,7 +1170,31 @@ func _menu_debug(menu: GameMenu, tab: SettingsTab) -> String:
 	tab.button(InvincibleChoice.SETTING, "Previous").pressed.emit()
 	if said != "On" or not asked or tab.shown[InvincibleChoice.SETTING] != "Off":
 		return "stepping invincibility on says %s, asking the world: %s" % [said, asked]
+	var teleport: String = _menu_teleport(menu, tab)
+	if not teleport.is_empty():
+		return teleport
 	tab.back_button(SettingsTab.DEBUG).pressed.emit()
+	return ""
+
+
+## The Debug submenu's teleport (#2274): below the Invincible row, a button to the debug zone and
+## one back to the spawn. Each posts its request to the profile's outbox for the world (the outbox
+## kind 9): 1 to go to the debug zone, 0 to go back.
+func _menu_teleport(menu: GameMenu, tab: SettingsTab) -> String:
+	var debug: Node = tab.back_button(SettingsTab.DEBUG).get_parent().get_parent()
+	var there: Button = debug.find_child("TeleportToDebugZone", false, false) as Button
+	var back: Button = debug.find_child("TeleportBack", false, false) as Button
+	if there == null or back == null or not there.is_visible_in_tree():
+		return "the Debug submenu has no buttons to the debug zone and back"
+	var outbox: Outbox = (menu.driver.holder as ProfileHolder).keeper.profile.outbox
+	var asked: Array[int] = []
+	there.pressed.emit()
+	back.pressed.emit()
+	for request: OutboxEntry in outbox.entries:
+		if request.kind == 9:
+			asked.append(request.data)
+	if asked != [1, 0]:
+		return "the teleport buttons ask the world for %s, not the debug zone and back" % [asked]
 	return ""
 
 
