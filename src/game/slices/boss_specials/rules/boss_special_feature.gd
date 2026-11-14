@@ -12,7 +12,9 @@ extends Feature
 ## after the type chart on a companion where the instance has it (TypeEffectivenessFeature, by the
 ## special's strike type), and lands like an auto attack (WildAttackFeature.land): the guards and
 ## the Wards take their share off it, and it raises WildMonsterStruck, so a struck companion's bind
-## breaks (#1167). An invincible player is struck for nothing (#1147).
+## breaks (#1167). An invincible player is struck for nothing (#1147). A dodging companion
+## (#1499) can't dodge it: its dodges count the auto attacks only (#2445 asks whether a special
+## should count too).
 ##
 ## Like its auto attack, it doesn't fire while asleep (#1202), hidden in its tile (#202), held
 ## (WildMonsterFeature.held, #1167) or encircled (#219, #423): a ring's monster attacks only its
@@ -222,9 +224,11 @@ func save_values() -> Dictionary:
 	}
 
 
-## Each boss must be a wild monster here, once, and each cooling one a boss, cooling no longer than
-## its special's cooldown.
+## The bosses must be the ones the legend marks (`start` found them on this fresh instance, whose
+## wild monsters have the same ids as the save's), each still a wild monster here; one dominated
+## since is gone. Each cooling one must be a boss, cooling no longer than its special's cooldown.
 func load_values(state: GameState, values: DataReader) -> void:
+	var marked: Array[int] = bosses.duplicate()
 	bosses.clear()
 	_cooling.clear()
 	var saved: Array[int] = values.wholes("bosses", 1, DataReader.MOST)
@@ -232,11 +236,16 @@ func load_values(state: GameState, values: DataReader) -> void:
 	if values.failed():
 		return
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
-	for boss: int in saved:
-		if wild.species_of(boss).is_empty() or bosses.has(boss):
-			values.fail("boss %d isn't one wild monster here" % boss)
+	for boss: int in marked:
+		var here: bool = not wild.species_of(boss).is_empty()
+		if here != saved.has(boss):
+			values.fail("boss %d is a boss the legend marks only while it's here" % boss)
 			return
-		bosses.append(boss)
+		if here:
+			bosses.append(boss)
+	if bosses.size() != saved.size():
+		values.fail("the save marks a boss the legend doesn't")
+		return
 	bosses.sort()
 	for boss: int in cooling:
 		var special: Ability = specials.get(special_of(wild, boss))

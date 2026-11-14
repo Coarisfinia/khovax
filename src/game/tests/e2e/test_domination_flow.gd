@@ -1199,7 +1199,38 @@ func _check_boss_specials() -> String:
 		return "a boss's special didn't cool down after it fired"
 	if not _reloads(boss, _boss_state(true), BossSpecialFeature.ID):
 		return "a save didn't resume a boss's cooldown"
+	return _check_boss_save_forged(ticks)
+
+
+## A save names only the bosses the legend marks: one that makes the unmarked wild monster beside a
+## boss a boss too is refused, and so is one that leaves the boss out. Then the boss holds fire
+## (`_check_boss_held`, over `ticks`).
+func _check_boss_save_forged(ticks: int) -> String:
+	var region: Region = Region.disc(OUTCOME_RADIUS)
+	var unmarked: Vector2i = Vector2i(3, 0)
+	region.wild_monsters = [Vector2i.ZERO, unmarked]
+	region.add_placement(
+		WildSpotPlacements.KIND,
+		Vector2i.ZERO,
+		WildSpot.NAMED + COMPANION + BOSS_CLAUSE,
+	)
+	region.add_placement(WildSpotPlacements.KIND, unmarked, WildSpot.NAMED + COMPANION)
+	var state: GameState = FlowSteps.rules_on(Realms.start(), region, 42)
+	var bosses: BossSpecialFeature = state.feature(BossSpecialFeature.ID) as BossSpecialFeature
+	if _forged_loads(state, bosses, _wild(state).monsters):
+		return "a save that made the unmarked wild monster a boss loaded"
+	if _forged_loads(state, bosses, []):
+		return "a save that left the marked boss out loaded"
 	return _check_boss_held(ticks)
+
+
+## Whether `bosses`' own save, with `forged` as its bosses, loads into `state`.
+static func _forged_loads(state: GameState, bosses: BossSpecialFeature, forged: Array) -> bool:
+	var saved: Dictionary = bosses.save_values()
+	saved["bosses"] = forged
+	var values: DataReader = DataReader.new(saved)
+	bosses.load_values(state, values)
+	return not values.failed()
 
 
 ## Asleep, held or with its feature switched off, a boss fires no special: it strikes nothing more
