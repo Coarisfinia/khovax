@@ -85,14 +85,6 @@ func end(state: GameState, target_id: int) -> void:
 	_keep_on(state, target_id)
 
 
-## Ends the effect `target_id` in `state` has, where the instance has tonic effects: for a rule
-## whose hit fells them. Inside a tick.
-static func end_in(state: GameState, target_id: int) -> void:
-	var effects: TonicEffectsFeature = state.feature(ID) as TonicEffectsFeature
-	if effects != null:
-		effects.end(state, target_id)
-
-
 func _put(target_id: int, kind: String, strength: int, ticks: int, waits: int) -> void:
 	_effects[target_id] = TonicEffect.new(
 		kind,

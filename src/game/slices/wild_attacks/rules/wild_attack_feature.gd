@@ -260,7 +260,7 @@ func _strike(state: GameState, monster: Entity, damage: int, enraged: bool) -> v
 		struck.damage = _guarded(state, target_id, on_companion, struck.damage)
 		state.events.append(struck)
 		if health.hurt(state, target_id, struck.damage):
-			TonicEffectsFeature.end_in(state, target_id)
+			_end_drunk(state, target_id)
 		return
 	side = _trail_target(state, tile)
 	if side == tile:
@@ -268,6 +268,13 @@ func _strike(state: GameState, monster: Entity, damage: int, enraged: bool) -> v
 	state.events.append(WildMonsterStruck.new(monster.id, 0, side, damage))
 	if _worn_through(side, damage):
 		_clear(state, side)
+
+
+## Ends the effect `target_id`, whom a hit just felled, drank (#2343), where the instance has them.
+static func _end_drunk(state: GameState, target_id: int) -> void:
+	var effects: TonicEffectsFeature = state.feature(TonicEffectsFeature.ID) as TonicEffectsFeature
+	if effects != null:
+		effects.end(state, target_id)
 
 
 ## The wild monster's strike `struck` on a companion, after the type chart where the instance has
