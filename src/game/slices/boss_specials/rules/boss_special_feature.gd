@@ -13,7 +13,7 @@ extends Feature
 ## special's strike type), and lands like an auto attack (WildAttackFeature.land): the guards and
 ## the Wards take their share off it, and it raises WildMonsterStruck, so a struck companion's bind
 ## breaks (#1167). An invincible player is struck for nothing (#1147). A dodging companion
-## (#1499) can't dodge it: its dodges count the auto attacks only (#2445 asks whether a special
+## (#1499) can't dodge it: its dodges count the auto attacks only (#2449 asks whether a special
 ## should count too).
 ##
 ## Like its auto attack, it doesn't fire while asleep (#1202), hidden in its tile (#202), held
