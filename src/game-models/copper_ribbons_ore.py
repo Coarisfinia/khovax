@@ -32,6 +32,8 @@ from lib import fixed_order, prop_paint, repaint, scene  # noqa: E402
 
 SOURCE = os.path.join(HERE, "sources", "copper_ribbons_ore.glb")
 FPS = 30
+# Its kind on the world's scale (lib/world_scale.py): a thing a hand carries.
+WORLD_SCALE = "item"
 # Its longest side once sized, in metres: a lump a hand carries, the pebble's size.
 SIZE = 0.4
 # Edges sharper than this stay sharp in the shading: the chunks' broken facets.

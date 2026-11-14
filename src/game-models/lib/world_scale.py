@@ -55,6 +55,8 @@ class Kind:
 KINDS = {
     "prop": Kind(0.05 * PLAYER_HEIGHT, 1.5 * PLAYER_HEIGHT, False,
                  "a thing standing on one hex: a well, a campfire, a signpost, a stone"),
+    "item": Kind(0.05 * PLAYER_HEIGHT, 0.3 * PLAYER_HEIGHT, False,
+                 "a thing a hand holds or a player carries, shown as an item's picture: a lump of ore"),
     "portal": Kind(1.1 * PLAYER_HEIGHT, 1.3 * WALL_HEIGHT, False,
                    "a gate on the edge between two hexes the player walks through, standing above"
                    " the player", hexes=2),
