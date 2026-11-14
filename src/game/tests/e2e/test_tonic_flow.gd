@@ -6,7 +6,10 @@ extends RefCounted
 ## category (#2281), crystal anywhere but a Shared brew, a
 ## lasting Mend, a draught that strikes, or a brew with two primaries or two traits. Crafting a brew
 ## spends its exact cost from the profile and counts one more of it, and a craft that can't be is
-## refused and changes nothing.
+## refused and changes nothing. Drinking a brew (#2310) is a request from the profile's outbox: a
+## berry tonic mends the out companion and a berry draught the player, at the brew's potency, and
+## each player then waits 10 s before the next. A drink is refused before anything is spent with no
+## out companion for a tonic, a knocked-down player for a draught, none left, or while waiting.
 
 ## The tonic's id in the resource packs.
 const TONIC: String = "tonic"
@@ -36,6 +39,8 @@ func run(_tree: SceneTree) -> String:
 		result = _check_refused()
 	if result.is_empty():
 		result = _check_crafting()
+	if result.is_empty():
+		result = _check_drinking()
 	return result
 
 
@@ -301,3 +306,93 @@ func _check_crafting() -> String:
 	if not crafted.is_empty() or profile.materials != expected:
 		return "crafting a shared bone tonic left %s: %s" % [profile.materials, crafted]
 	return ""
+
+
+## A berry tonic mends the out companion and a berry draught the player, by the brew's share of
+## their full HP, through the profile's outbox; each player waits 10 s between two drinks. A drink
+## refused (no out companion, a knocked-down player, none left, or still waiting) spends nothing
+## and posts nothing.
+func _check_drinking() -> String:
+	var state: GameState = FlowSteps.rules_on(FlowSteps.BASIC, Region.disc(3), 42)
+	if state == null or state.feature(DrinkingFeature.ID) == null:
+		return "the basic blueprint's rules have no drinking"
+	FlowSteps.carry(state, 0, ["ombulumo"])
+	var player: Entity = state.add_entity(0, Vector2i.ZERO)
+	var profile: Profile = Profile.new()
+	profile.materials.assign({ "tonic_berry": 1, "draught_berry": 1, "draught_moss": 1 })
+	var why: String = _refused(profile, state, "tonic_berry", "a tonic with no companion out")
+	if not why.is_empty():
+		return why
+	_idle(state)
+	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
+	why = _mended(profile, state, "tonic_berry", companions.companion_of(0))
+	if why.is_empty():
+		why = _refused(profile, state, "draught_berry", "a draught while waiting")
+	for _tick: int in DrinkingFeature.WAIT_TICKS - 1:
+		_idle(state)
+	if why.is_empty():
+		why = _refused(profile, state, "draught_berry", "a draught a tick before the wait ended")
+	_idle(state)
+	return why if not why.is_empty() else _check_draught(profile, state, player)
+
+
+## Once the wait is over, a berry draught mends `player`; then none is left, and a knocked-down
+## player drinks no draught.
+func _check_draught(profile: Profile, state: GameState, player: Entity) -> String:
+	var why: String = _mended(profile, state, "draught_berry", player.id)
+	if why.is_empty():
+		why = _refused(profile, state, "draught_berry", "a draught none of is left")
+	if not why.is_empty():
+		return why
+	for _tick: int in DrinkingFeature.WAIT_TICKS:
+		_idle(state)
+	var knockdown: KnockdownFeature = state.feature(KnockdownFeature.ID) as KnockdownFeature
+	knockdown.knock_down(player.id)
+	return _refused(profile, state, "draught_moss", "a draught for a knocked-down player")
+
+
+## Hurts `target_id` in `state` down to 1 HP, then drinks the berry `brew` (300 thousandths) from
+## `profile`: the target then has 1 HP plus that share of their full HP. Returns why not, or "".
+func _mended(profile: Profile, state: GameState, brew: String, target_id: int) -> String:
+	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
+	var full_hp: int = health.max_hp_of(state, target_id)
+	var _hurt: bool = health.hurt(state, target_id, full_hp - 1)
+	var why: String = _drunk(profile, state, brew)
+	var expected: int = 1 + Fixed.scale(full_hp, 300)
+	if why.is_empty() and health.hp_of(state, target_id) != expected:
+		why = "%s left its target %d HP, not %d" % [brew, health.hp_of(state, target_id), expected]
+	return why
+
+
+## Drinks one `brew` from `profile` for player 0 in `state` and sends its request in their next
+## command; returns why that went wrong, or "".
+func _drunk(profile: Profile, state: GameState, brew: String) -> String:
+	var held: int = profile.materials.get(brew, 0)
+	var refusal: String = TonicDrinking.drink(profile, state, 0, brew)
+	if not refusal.is_empty() or profile.materials.get(brew, 0) != held - 1:
+		return "drinking %s was refused or spent nothing: %s" % [brew, refusal]
+	if profile.outbox.entries.size() != 1:
+		return "drinking %s posted %d requests, not one" % [brew, profile.outbox.entries.size()]
+	var command: Command = Command.new()
+	profile.outbox.entries[0].fill(command)
+	var _dropped: bool = profile.outbox.drop(profile.outbox.entries[0].id)
+	var commands: Array[Command] = [command]
+	Simulation.step(state, commands)
+	return ""
+
+
+## Why drinking `brew` from `profile` for player 0 in `state`, which `what` names, wasn't refused,
+## or spent or posted something; "" when it was refused and changed nothing.
+func _refused(profile: Profile, state: GameState, brew: String, what: String) -> String:
+	var held: Dictionary[String, int] = {}
+	held.assign(profile.materials)
+	var refusal: String = TonicDrinking.drink(profile, state, 0, brew)
+	if refusal.is_empty() or profile.materials != held or not profile.outbox.entries.is_empty():
+		return "%s wasn't refused before anything was spent: %s" % [what, refusal]
+	return ""
+
+
+## Steps `state` once with player 0 standing.
+static func _idle(state: GameState) -> void:
+	var commands: Array[Command] = [Command.new()]
+	Simulation.step(state, commands)

@@ -1,6 +1,10 @@
 """Checks that a model script builds the same file every time (#1085): it builds the model twice,
 side by side, and compares the two .glb files byte for byte; with the committed .glb, it compares
-that too, which tells whether a pull request's .glb is what its script builds.
+that too, which tells whether a pull request's .glb is what its script builds. The two builds run
+Blender on `THREADS` threads, one on each (#2317): a script whose model follows Blender's thread
+count (its normals, remove_doubles, bisect_plane's order) would otherwise pass here and build
+another file on a machine with another count of cores. A script on `THREAD_SENSITIVE` still builds
+on Blender's own count, until its issue is fixed.
 
     uv run --locked --package khovax-game-models src/game-models/check_rebuild.py \
         src/game-models/<name>.py \
@@ -48,11 +52,21 @@ WIDTHS = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4, "MAT2": 4, "MAT3": 9, "M
 FORMATS = {5120: "b", 5121: "B", 5122: "h", 5123: "H", 5125: "I", 5126: "f"}
 # One model reports at a time, so the lines of models built at once never mix.
 REPORT = threading.Lock()
+# The thread counts of a model's two builds (Blender's --threads), one each: a build that follows
+# the count shows as two builds that differ.
+THREADS = (1, 4)
+# The model scripts whose build still follows the thread count, each with the issue that fixes it:
+# both their builds run on Blender's own count, as before #2317. The list only shrinks.
+THREAD_SENSITIVE = {
+    "ombulumo.py": "#2335",
+}
 
 
-def build(script: Path, out: Path, output: Path) -> subprocess.Popen:
-    command = [sys.executable, str(BLENDER), "--background", "--factory-startup", "--python", str(script),
-               "--", str(out)]
+def build(script: Path, out: Path, output: Path, threads: int | None) -> subprocess.Popen:
+    # --threads before --python, which Blender runs where it reads it; None is Blender's own count.
+    count = [] if threads is None else ["--threads", str(threads)]
+    command = [sys.executable, str(BLENDER), "--background", "--factory-startup", *count,
+               "--python", str(script), "--", str(out)]
     return subprocess.Popen(command, stdout=output.open("w"), stderr=subprocess.STDOUT)
 
 
@@ -122,13 +136,14 @@ def scripted_models() -> list[tuple[str, str | None]]:
 
 
 def check(script_path: str, committed: Path | None, keep: Path | None = None) -> bool:
-    """Builds the script twice and compares the builds, and the committed .glb when there is one;
+    """Builds the script twice, on each of `THREADS`, and compares the builds, and the committed .glb when there is one;
     true when they're all the same bytes. The first build is copied to keep, when given."""
     script = Path(script_path).resolve()
     with tempfile.TemporaryDirectory(prefix="check_rebuild_") as scratch:
         outs = [Path(scratch) / f"build{index}.glb" for index in (1, 2)]
         outputs = [Path(scratch) / f"build{index}.log" for index in (1, 2)]
-        runs = [build(script, out, output) for out, output in zip(outs, outputs)]
+        threads = (None, None) if script.name in THREAD_SENSITIVE else THREADS
+        runs = [build(script, out, output, count) for out, output, count in zip(outs, outputs, threads)]
         try:
             codes = [run.wait() for run in runs]
         finally:
@@ -138,11 +153,11 @@ def check(script_path: str, committed: Path | None, keep: Path | None = None) ->
                     run.kill()
                     run.wait()
         with REPORT:
-            return compare(script, script_path, committed, keep, codes, outputs, outs)
+            return compare(script, script_path, committed, keep, codes, outputs, outs, threads)
 
 
 def compare(script: Path, script_path: str, committed: Path | None, keep: Path | None, codes: list[int],
-            outputs: list[Path], outs: list[Path]) -> bool:
+            outputs: list[Path], outs: list[Path], threads: tuple[int | None, int | None]) -> bool:
     """Reports a model's two builds against each other and the committed .glb; true when they're
     all the same bytes."""
     for code, output, out in zip(codes, outputs, outs):
@@ -157,7 +172,9 @@ def compare(script: Path, script_path: str, committed: Path | None, keep: Path |
         if speeds:
             (keep / (committed.name + ".speeds")).write_text(speeds.group(1) + "\n")
     same = True
-    pairs = [(f"{script.name}: the two builds", outs[0], outs[1], script_path)]
+    builds = (f"the builds on {threads[0]} and {threads[1]} threads" if threads[0] is not None
+              else f"the two builds (on Blender's own count of threads, {THREAD_SENSITIVE[script.name]})")
+    pairs = [(f"{script.name}: {builds}", outs[0], outs[1], script_path)]
     if committed is not None:
         pairs.append((f"{script.name}: the build and {committed}", outs[0], committed, str(committed)))
     for label, a, b, file in pairs:
@@ -189,7 +206,11 @@ def main() -> int:
         for script in unpaired:
             # A renamed or deleted .glb would otherwise leave its model unchecked.
             log.error("no tracked .glb under the default pack's models/ is named like this model script", script)
-        if not models or unpaired:
+        stale = sorted(set(THREAD_SENSITIVE) - {Path(script).name for script, _glb in models})
+        for name in stale:
+            # A fixed or renamed script would otherwise stay listed, unnoticed.
+            log.error(f"THREAD_SENSITIVE names {name}, which is no model script", __file__)
+        if not models or unpaired or stale:
             if not models:
                 log.error("no model script calls scene.export_glb: nothing to check")
             return 1
