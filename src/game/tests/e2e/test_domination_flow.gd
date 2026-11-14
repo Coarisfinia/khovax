@@ -1235,10 +1235,14 @@ func _boss_of(state: GameState) -> int:
 	return _wild(state).monsters[0]
 
 
-## The wild monster's strikes in its first second on the companion (x) and the player (y) next to
-## it, under `_boss_state(boss)` with the player carrying a COMPANION.
+## The wild monster's strikes in its first second awake on the companion (x) and the player (y)
+## next to it, under `_boss_state(boss)` with the player carrying a COMPANION: it sleeps through the
+## first tick, in which the companion joins its player, after the wild monsters struck.
 func _boss_strikes_with_companion(boss: bool) -> Vector2i:
 	var state: GameState = _boss_state(boss, true)
+	_wild(state).sleep(_boss_of(state), true)
+	var _joined: Array[WildMonsterStruck] = _wild_strikes_over(state, 1, Vector2i(-1, 0))
+	_wild(state).sleep(_boss_of(state), false)
 	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
 	var companion: int = companions.companion_of(0)
 	var strikes: Vector2i = Vector2i.ZERO
