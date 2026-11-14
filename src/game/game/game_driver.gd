@@ -206,8 +206,9 @@ func advance(delta: float) -> void:
 ## builds only (the e2e flows among them, never a release build): a change that skipped
 ## GameState.touch, which co-op's per-tick hash would miss.
 func _check_kept_hashes() -> void:
-	for instance_name: String in world.stale_hashes():
-		push_warning("%s's kept hash is stale: a change to it skipped touch()" % instance_name)
+	for instance_name: String in world.sorted_names():
+		if world.instances[instance_name].own_hash_stale():
+			push_warning("%s's kept hash is stale: a change to it skipped touch()" % instance_name)
 
 
 ## The clock's time, in microseconds.
