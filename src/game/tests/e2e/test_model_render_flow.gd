@@ -34,13 +34,9 @@ func _unframed(model: Node3D) -> String:
 	var animations: AnimationPlayer = model.find_child("AnimationPlayer") as AnimationPlayer
 	if animations == null or not animations.has_animation(&"Idle"):
 		return "-"
+	# The side views frame these bounds, and the close-ups these points' outline.
 	var framed: PackedVector3Array = RenderInGame.framed_points(model)
-	if framed.is_empty():
-		return "no vertices framed"
-	var box: AABB = AABB(framed[0], Vector3.ZERO)
-	for point: Vector3 in framed:
-		box = box.expand(point)
-	box = box.grow(SLACK)
+	var box: AABB = RenderInGame.framed_bounds(model, framed).grow(SLACK)
 	animations.play(&"Idle")
 	animations.seek(0.0, true)
 	var shown: PackedVector3Array = RenderInGame.points_of(model)

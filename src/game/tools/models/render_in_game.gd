@@ -8,16 +8,16 @@ extends SceneTree
 ## on a bare background as its codex page shows it full-screen (#995): the whole model
 ## ("portrait") and its head and chest ("face"). Given clips, it writes each clip's frames
 ## for a GIF instead, at the clip's own rate, from the game camera or from any of those views. Any
-## model works: the cameras frame it by its bounds, the close-ups by its outline, and a clip's by
-## where it moves over the clip. With `points`, it marks the model's attachment points (PointMarks,
-## #1007). Its eyes glow as in the game (EyeGlow, #1008), calm, or agitated with `agitated`; an
-## Attack clip's frames flare the glow as the game does when it strikes. With `type=<type>` they
-## glow in that type's colour (TypeGlow), and with `leaning=<path>` in the shape of a player's
-## leaning toward that path (#1063).
+## model works: the cameras frame it by its bounds as it idles (on its Idle's first frame), the
+## close-ups by its outline, and a clip's by where it moves over the clip. With `points`, it marks
+## the model's attachment points (PointMarks, #1007). Its eyes glow as in the game (EyeGlow, #1008),
+## calm, or agitated with `agitated`; an Attack clip's frames flare the glow as the game does when
+## it strikes. With `type=<type>` they glow in that type's colour (TypeGlow), and with
+## `leaning=<path>` in the shape of a player's leaning toward that path (#1063).
 ##
 ## A clip seen from a view writes where its camera stood beside its frames (`<Clip>.camera`), and
 ## `camera=` holds the camera still across builds, so before/after GIFs share one view (#2107):
-## `camera=rest` frames the model standing at rest, as the still sides do, rather than where it
+## `camera=rest` frames the model as the still sides do, idling, rather than where it
 ## moves over the clip; `camera=<file>` puts the camera where that `.camera` file says, and
 ## `camera=<dir>` where that folder's `<Clip>.camera` says for each clip, e.g. a previous run's
 ## out_dir.
@@ -86,11 +86,11 @@ var _current: int = -1
 var _piece: HexPiece
 var _side_camera: Camera3D
 var _game_camera: Camera3D
-## The model's bounds in the world, standing at rest.
+## The model's bounds in the world, posed as the still shots show it (framed_points).
 var _bounds: AABB
-## What each close-up frames: the model's vertices in the world, standing at rest, all of them
-## or its face's. The close-ups frame their outline, which fills far less of the frame than the
-## bounds' corners do from an angle (#1004).
+## What each close-up frames: the model's vertices in the world, posed as the shots show it, all
+## of them or its face's. The close-ups frame their outline, which fills far less of the frame
+## than the bounds' corners do from an angle (#1004).
 var _close_ups: Dictionary[String, PackedVector3Array] = {}
 
 
@@ -205,7 +205,7 @@ func _place() -> void:
 	_main.add_child(_side_camera)
 	_side_camera.fov = FOV
 	var points: PackedVector3Array = framed_points(model)
-	_bounds = _bounds_of(model)
+	_bounds = framed_bounds(model, points)
 	var face: PackedVector3Array = PackedVector3Array(Array(points).filter(_in_face(model)))
 	# A model without vertices is framed by its bounds' corners, and a face without any by all of
 	# it.
@@ -488,7 +488,7 @@ func _hidden_in_close_ups(node: Node) -> bool:
 
 
 ## The bounds of every mesh under `model`, in the world.
-func _bounds_of(model: Node3D) -> AABB:
+static func _bounds_of(model: Node3D) -> AABB:
 	var bounds: AABB = AABB(model.global_position, Vector3.ZERO)
 	for node: Node in model.find_children("*", "MeshInstance3D", true, false):
 		var mesh: MeshInstance3D = node as MeshInstance3D
@@ -497,16 +497,25 @@ func _bounds_of(model: Node3D) -> AABB:
 
 
 ## The box around `points`.
-func _box_of(points: PackedVector3Array) -> AABB:
+static func _box_of(points: PackedVector3Array) -> AABB:
 	var box: AABB = AABB(points[0], Vector3.ZERO)
 	for point: Vector3 in points:
 		box = box.expand(point)
 	return box
 
 
-## What the still shots frame of `model`: its vertices in the world.
+## What the still shots frame of `model`: its vertices in the world, posed on its Idle's first
+## frame, as the shots show it idling. Its rest pose can stand far from that: the Nuvvoluvvo's
+## stands lower than it idles, so framing its rest pose cut off its head (#2366). A model without
+## an Idle (a prop, #1635) is framed as it stands.
 static func framed_points(model: Node3D) -> PackedVector3Array:
 	return points_of(model)
+
+
+## The bounds the still shots frame `model` by: those of its framed `points` (framed_points), or
+## its meshes' own when it has none. Those hold the meshes' rest pose, not the pose the shots show.
+static func framed_bounds(model: Node3D, _points: PackedVector3Array) -> AABB:
+	return _bounds_of(model)
 
 
 ## Every vertex of every mesh under `model`, in the world, in the pose its skeleton holds now.
