@@ -244,7 +244,7 @@ func _check_sent_to_spawn() -> String:
 ## and stay where they stand, the same entity.
 func _check_invincible() -> String:
 	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.BASIC)
-	HealthFeature.make_invincible(world, 0)
+	Invincibility.make(world, 0)
 	var basic: GameState = world.instances[FlowSteps.BASIC]
 	var player: Entity = _beside_wild(world)
 	var knockdown: KnockdownFeature = basic.feature(KnockdownFeature.ID) as KnockdownFeature
