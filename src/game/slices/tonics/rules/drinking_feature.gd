@@ -7,22 +7,23 @@ extends Feature
 ## (TonicDose.mend) heals its target at once by its share of their full HP, at least 1 HP
 ## (HealthFeature.heal); a Regrowth, Ward, Quicken or Fortify (#2311) gives its target that effect
 ## for its time (TonicEffectsFeature). A target has one effect at a time: whatever it drinks ends
-## the
-## one it had. Shared's reach and Slow-release's wait are #2312: a Slow-release brew is drunk all
-## the same but does nothing yet. After a drink the player waits WAIT_TICKS before the next. A
-## request this can't carry out (an unknown brew, no target that can use it, a Mend for a target at
-## full HP, or while waiting) is acknowledged and changes nothing; the profile refuses those before
-## spending (`problem`).
+## the one it had. Shared's reach and Slow-release's wait are #2312: a Slow-release brew is drunk
+## all the same but does nothing yet. After a drink the player waits WAIT_TICKS before the next,
+## kept in their world store (#724) as the world tick it ends on (UNTIL), so the wait goes with them
+## through an exit into another instance (#2334). A request this can't carry out (an unknown brew,
+## no target that can use it, a Mend for a target at full HP, or while waiting) is acknowledged and
+## changes nothing; the profile refuses those before spending (`problem`).
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "drinking"
 ## How long a player waits between two drinks. Its number is in Tuning (#1309).
 const WAIT_TICKS: int = Tuning.DRINK_WAIT_TICKS
+## The key, in a player's store entry of this feature, of the world tick (GameState.world_tick)
+## their wait ends on: they drink again from that tick on.
+const UNTIL: String = "until"
 
 ## What each brew does, by its code (`code_of`), from the tonics' content data.
 var doses: Dictionary[int, TonicDose] = {}
-## The ticks each player still waits before their next drink, by their entity id.
-var _waits: Dictionary[int, int] = {}
 
 
 func _init(brew_doses: Dictionary[int, TonicDose] = {}) -> void:
@@ -51,21 +52,31 @@ static func code_of(brew_id: String) -> int:
 	return CommandCodes.of(brew_id)
 
 
-## Counts every player's wait down, then carries out each drink the players here ask for, in slot
-## order, unless its request was applied before.
+## Forgets the wait of every player here whose wait is over, then carries out each drink the
+## players here ask for, in slot order, unless its request was applied before.
 func step(state: GameState, commands: Array[Command]) -> void:
-	for entity_id: int in _waits.keys():
-		if _waits[entity_id] <= 1:
-			var _done: bool = _waits.erase(entity_id)
-		else:
-			_waits[entity_id] -= 1
 	for slot: int in GameState.MAX_PLAYERS:
+		if state.player(slot) == null:
+			continue
+		if state.stored(slot, ID).has(UNTIL) and wait_of(state, slot) == 0:
+			var _done: bool = state.store(slot, ID).erase(UNTIL)
 		var command: Command = Command.of(commands, slot)
-		var drinking: bool = command != null and command.request_kind == OutboxEntry.DRINK
-		if not drinking or state.player(slot) == null:
+		if command == null or command.request_kind != OutboxEntry.DRINK:
 			continue
 		if OutboxReceipts.take(state, slot, id(), command):
 			_drink(state, slot, command.request_data)
+
+
+## The ticks the player in `slot` still waits before their next drink in `state`, 0 for none. A
+## wait longer than WAIT_TICKS, which no drink starts (a broken save), is none, so it's forgotten
+## rather than holding them for good.
+static func wait_of(state: GameState, slot: int) -> int:
+	var until: Variant = state.stored(slot, ID).get(UNTIL, 0)
+	if not until is int:
+		return 0
+	var ends: int = until
+	var left: int = ends - state.world_tick
+	return left if left > 0 and left <= WAIT_TICKS else 0
 
 
 ## The player in `slot` drinks the brew `code`, if they can: its target is helped, in place of the
@@ -74,7 +85,7 @@ func _drink(state: GameState, slot: int, code: int) -> void:
 	var dose: TonicDose = doses.get(code)
 	if dose == null or not problem(state, slot, dose).is_empty():
 		return
-	_waits[state.player(slot).id] = WAIT_TICKS
+	state.store(slot, ID)[UNTIL] = state.world_tick + WAIT_TICKS
 	var target_id: int = target_of(state, slot, dose.for_player)
 	var effects: TonicEffectsFeature = state.feature(TonicEffectsFeature.ID) as TonicEffectsFeature
 	effects.end(target_id)
@@ -93,9 +104,10 @@ func problem(state: GameState, slot: int, dose: TonicDose) -> String:
 	var player: Entity = state.player(slot)
 	if player == null:
 		return "no player drinks here"
-	if _waits.has(player.id):
+	var wait: int = wait_of(state, slot)
+	if wait > 0:
 		return "wait %d s before the next drink" % Fixed.div_floor(
-			_waits[player.id] + Simulation.TICKS_PER_SECOND - 1,
+			wait + Simulation.TICKS_PER_SECOND - 1,
 			Simulation.TICKS_PER_SECOND,
 		)
 	var target_id: int = target_of(state, slot, for_player)
@@ -118,29 +130,3 @@ static func target_of(state: GameState, slot: int, for_player: bool) -> int:
 		return 0 if knockdown.is_down(player.id) else player.id
 	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
 	return companions.companion_of(slot)
-
-
-func entity_removed(_state: GameState, removed_id: int) -> void:
-	var _dropped: bool = _waits.erase(removed_id)
-
-
-func hash_values() -> Array[int]:
-	return DataReader.flat_pairs(_waits)
-
-
-func save_values() -> Dictionary:
-	return { "waits": DataReader.flat_pairs(_waits) }
-
-
-## Each waiting player must be in the restored instance, a player, waiting from 1 to WAIT_TICKS.
-func load_values(state: GameState, values: DataReader) -> void:
-	_waits.clear()
-	var loaded: Dictionary[int, int] = values.pairs("waits", 1, DataReader.MOST)
-	if values.failed():
-		return
-	for entity_id: int in loaded:
-		var entity: Entity = state.entity(entity_id)
-		if entity == null or entity.slot == Entity.NO_SLOT or loaded[entity_id] > WAIT_TICKS:
-			values.fail("waiting player %d isn't in the instance or waits too long" % entity_id)
-			return
-		_waits[entity_id] = loaded[entity_id]
