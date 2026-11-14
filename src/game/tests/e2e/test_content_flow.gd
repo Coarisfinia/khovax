@@ -34,16 +34,6 @@ extends RefCounted
 ## its files load in the background with progress (#1943). Every faction has a quest for every
 ## territory but the known gaps, and no territory has two samey quests (#639).
 
-## The categories a material may have (#2281), as its schema lists them.
-const MATERIAL_CATEGORIES: Array[String] = [
-	"plant",
-	"animal",
-	"mineral",
-	"metal",
-	"liquid",
-	"catalyst",
-	"essence",
-]
 ## A model a species can wear (#1223), by its id in the resource packs (#1864).
 const MODEL: String = "model_mana_wolf"
 ## The tile blueprints whose pack's model is drawn larger, in hundredths: too small to read
@@ -1675,13 +1665,23 @@ func _check_loot_items() -> String:
 	return _check_material_categories(materials)
 
 
-## Every material has a category its schema allows (#2281), so a reader can tell a rock, an ore or
-## a metal from a plant by its data, not by a list of ids; then the gear's models.
+## The materials schema and MaterialContent list the same categories (#2305), so neither drifts
+## from the other, and every material has one of them (#2281), so a reader can tell a rock, an ore
+## or a metal from a plant by its data, not by a list of ids; then the gear's models.
 func _check_material_categories(materials: MaterialContent) -> String:
+	var in_schema: Array[String] = _schema_categories()
+	in_schema.sort()
+	var in_loader: Array[String] = MaterialContent.CATEGORIES.duplicate()
+	in_loader.sort()
+	if in_schema.is_empty() or in_schema != in_loader:
+		return "the materials schema lists the categories %s, MaterialContent %s" % [
+			in_schema,
+			in_loader,
+		]
 	var categories: Variant = materials.get("categories")
 	var by_id: Dictionary = categories if categories is Dictionary else {}
 	for id: String in materials.ids:
-		if not MATERIAL_CATEGORIES.has(by_id.get(id, "")):
+		if not MaterialContent.CATEGORIES.has(by_id.get(id, "")):
 			return "the material %s has no category" % id
 	var kept: MaterialContent = MaterialContent.new()
 	var text: String = "{\"id\": \"x\", \"name\": \"X\", \"category\": \"metal\"}"
@@ -1691,6 +1691,23 @@ func _check_material_categories(materials: MaterialContent) -> String:
 	if not problem.is_empty() or by_id.get("x") != "metal":
 		return "a metal material file wasn't read with its category: " + problem
 	return _check_gear_models()
+
+
+## The categories the materials schema's category field lists (MaterialContent.SCHEMA), or none
+## when it lists none or anything but text.
+func _schema_categories() -> Array[String]:
+	var node: Variant = Content.json_of(Content.text_in(MaterialContent.SCHEMA))
+	for key: String in ["properties", "category", "enum"]:
+		var object: Dictionary = node if node is Dictionary else {}
+		node = object.get(key)
+	var listed: Array = node if node is Array else []
+	var categories: Array[String] = []
+	for category: Variant in listed:
+		if not category is String:
+			return []
+		var text: String = category
+		categories.append(text)
+	return categories
 
 
 ## Every piece of gear loads with a model a resource pack has (#1581, #1864): every item has one. A

@@ -16,6 +16,7 @@ import os
 import re
 import sys
 import unittest
+from collections import Counter
 from pathlib import Path
 
 from game_shared import log
@@ -115,6 +116,10 @@ INT_VECTOR_COLLECTION_MEMBERS = (
         DICTIONARY_VALUE,
     ),
 )
+# A function declared to return one: a call to it counts as one, in its class or on another object
+# (#2263). Its name opens its parameters, and its return type follows their closing parenthesis.
+NAMED_FUNCTION = re.compile(r"\bfunc\s+(\w+)\s*(?=\()")
+INT_VECTOR_RETURN = re.compile(r"\s*->\s*Vector[234]i\s*:")
 # A function's parameters and locals count in its body only (#2264), any other declaration in the
 # class it is in: the file's own or an inner class, which don't reach each other's members. An inner
 # class reaches the constants of the classes around it, though (Godot 4.7, #2288). A function or
@@ -281,6 +286,27 @@ def scopes_of(lines: list[str], continued: set[int]) -> list[Scope]:
     return scopes
 
 
+def block_of(lines: list[str], start: int, continued: set[int]) -> range:
+    """The lines of the statement at `start` and of the block it opens, e.g. a loop's body: up to
+    the next statement indented no deeper than it. Lines inside brackets left open, and each of
+    `continued`, continue the statement before them."""
+    indent = len(lines[start]) - len(lines[start].lstrip())
+    depth = 0
+    for index in range(start, len(lines)):
+        line = lines[index]
+        if (
+            index > start
+            and depth == 0
+            and line.strip()
+            and index not in continued
+            and len(line) - len(line.lstrip()) <= indent
+        ):
+            return range(start, index)
+        opened = sum(line.count(char) for char in "([{")
+        depth = max(0, depth + opened - sum(line.count(char) for char in ")]}"))
+    return range(start, len(lines))
+
+
 def declared_int_vectors(
     bare: list[str], owners: list[int | None], declaration: re.Pattern[str] = INT_VECTOR_DECLARED
 ) -> dict[int | None, set[str]]:
@@ -323,22 +349,55 @@ def int_vector_members(source: str) -> set[str]:
     return members
 
 
-def receiver_in(names: set[str], members: set[str]) -> re.Pattern[str]:
+def function_returns(bare: list[str], scopes: list[Scope]) -> dict[int | None, dict[str, bool]]:
+    """The functions each class declares (None: the file's own class, else its class line's index),
+    and whether each returns an integer vector."""
+    joined = "\n".join(bare)
+    returns: dict[int | None, dict[str, bool]] = {}
+    for hit in NAMED_FUNCTION.finditer(joined):
+        line = joined.count("\n", 0, hit.start())
+        classes, function = scopes[line]
+        if function != line:  # A lambda's name, inside a function or a member's value.
+            continue
+        end = after_parentheses(joined, hit.end())
+        vector = end >= 0 and INT_VECTOR_RETURN.match(joined, end) is not None
+        returns.setdefault((classes or (None,))[-1], {})[hit.group(1)] = vector
+    return returns
+
+
+def int_vector_functions(source: str) -> set[str]:
+    """The functions a script declares to return an integer vector, in any class."""
+    bare = code_only(source).split("\n")
+    returns = function_returns(bare, scopes_of(bare, continued_lines(source, bare)))
+    return {name for of in returns.values() for name, vector in of.items() if vector}
+
+
+def receiver_in(
+    names: set[str], members: set[str], own_calls: set[str], other_calls: set[str]
+) -> re.Pattern[str]:
     """An integer vector written out or one of `names`, as length()'s receiver: the name itself or
     the script's own member, not another object's (`obj.tile`, #2264). A name may end in a
     subscript, which `\b` can't follow (#2261). On another object, one of `members` counts: the
-    rules' integer vector members and their elements (#2262, #2299)."""
+    rules' integer vector members and their elements (#2262, #2299). A call to one of `own_calls`
+    counts on its own or on self, and one to `other_calls` on another object: functions returning
+    an integer vector (#2263)."""
     own = (rf"(?<![\w.])(?:self\.)?{name}(?!\w)" for name in sorted(names))
     other = (rf"(?<=[\w)\]])\.{name}(?!\w)" for name in sorted(members))
-    return re.compile("|".join([INT_VECTOR_RECEIVER, *own, *other]))
+    own_call = (rf"(?<![\w.])(?:self\.)?{name}\s*(?=\()" for name in sorted(own_calls))
+    other_call = (rf"(?<=[\w)\]])(?<!\bself)\.{name}\s*(?=\()" for name in sorted(other_calls))
+    return re.compile("|".join([INT_VECTOR_RECEIVER, *own, *other, *own_call, *other_call]))
 
 
-def forbidden_lines(source: str, members: set[str] | None = None) -> list[str]:
+def forbidden_lines(
+    source: str, members: set[str] | None = None, functions: set[str] | None = None
+) -> list[str]:
     """The numbered lines of a script that use something the rules never use. `members` are the
-    integer vector members the rules declare, in any script (int_vector_members)."""
+    integer vector members the rules declare, in any script (int_vector_members), and `functions`
+    the functions returning one that the other rules scripts declare (int_vector_functions)."""
     code = without_comments(source).rstrip("\n").split("\n")
     bare = code_only(source).split("\n")
-    scopes = scopes_of(bare, continued_lines(source, bare))
+    continued = continued_lines(source, bare)
+    scopes = scopes_of(bare, continued)
     # The function or class each line's declarations count in.
     owners = [
         function if function is not None else (classes or (None,))[-1]
@@ -361,13 +420,16 @@ def forbidden_lines(source: str, members: set[str] | None = None) -> list[str]:
                 array_constants.setdefault(owner, set()).add(name)
             if name in dictionaries.get(owner, ()):
                 constants.setdefault(owner, set()).add(rf"{name}{DICTIONARY_VALUE}")
-    for line, (classes, _), owner in zip(bare, scopes, owners):
+    # A loop variable counts on its loop's lines only: after the loop, the name is another (#2300).
+    loops: dict[int, set[str]] = {}
+    for index, (line, (classes, _), owner) in enumerate(zip(bare, scopes, owners)):
         *outers, own = None, *classes
         visible = arrays.get(own, set()) | arrays.get(owner, set())
         visible = visible.union(*(array_constants.get(outer, set()) for outer in outers))
         for loop in FOR_LOOP.finditer(line):
             if loop.group(2) in visible and over_array(line, loop.end()):
-                declared.setdefault(owner, set()).add(loop.group(1))
+                for at in block_of(bare, index, continued):
+                    loops.setdefault(at, set()).add(loop.group(1))
     for owner, names in array_constants.items():
         constants.setdefault(owner, set()).update(rf"{name}{ARRAY_ELEMENT}" for name in names)
     for owner, names in arrays.items():
@@ -386,7 +448,28 @@ def forbidden_lines(source: str, members: set[str] | None = None) -> list[str]:
             names |= constants.get(outer, set())
         return names
 
-    receiver = {scope: receiver_in(names_in(scope), members or set()) for scope in set(scopes)}
+    returns = function_returns(bare, scopes)
+    # A call on another object reaches any class's function, and a bare or self. call its own
+    # class's, or what the class inherits from another script (`functions`, #2263).
+    other_calls = (functions or set()).union(
+        *({name for name, vector in of.items() if vector} for of in returns.values())
+    )
+
+    def own_calls(scope: Scope) -> set[str]:
+        of = returns.get((scope[0] or (None,))[-1], {})
+        return {name for name, vector in of.items() if vector} | (functions or set()) - of.keys()
+
+    receivers: dict[tuple[Scope, frozenset[str]], re.Pattern[str]] = {}
+
+    def receiver_on(index: int) -> re.Pattern[str]:
+        """The receivers on a line: its scope's names and the loop variables of its loops."""
+        key = (scopes[index], frozenset(loops.get(index, set())))
+        if key not in receivers:
+            receivers[key] = receiver_in(
+                names_in(key[0]) | key[1], members or set(), own_calls(key[0]), other_calls
+            )
+        return receivers[key]
+
     named = code_with_random_names(source)
     # The line of each randomness method's name.
     by_name = {
@@ -399,7 +482,7 @@ def forbidden_lines(source: str, members: set[str] | None = None) -> list[str]:
         [
             FORBIDDEN.search(line) is not None
             or FORBIDDEN_IN_CODE.search(bare_line) is not None
-            or calls_float_method(bare_line, receiver[scopes[index]])
+            or calls_float_method(bare_line, receiver_on(index))
             or index in by_name
             for index, (line, bare_line) in enumerate(zip(code, bare))
         ],
@@ -430,13 +513,14 @@ def main() -> int:
         if line.startswith("class_name ") and len(line.split()) > 1
     }
     extends = {f"extends {name}" for name in rule_classes | {"RefCounted"}}
-    members = set().union(
-        *(int_vector_members(Path(file).read_text(encoding="utf-8")) for file in scripts)
-    )
+    sources = [Path(file).read_text(encoding="utf-8") for file in scripts]
+    members = set().union(*(int_vector_members(source) for source in sources))
+    functions = [int_vector_functions(source) for source in sources]
+    # How many scripts declare each: a script's own count only in their classes (#2263).
+    declaring = Counter(name for names in functions for name in names)
     failed = False
 
-    for file in scripts:
-        source = Path(file).read_text(encoding="utf-8")
+    for file, source, own in zip(scripts, sources, functions):
         lines = source.rstrip("\n").split("\n")
         # Exempt while its header carries the marker with a reason, and no other marker sits
         # anywhere in it. A marker without a reason, or one below the header, fails the file.
@@ -458,7 +542,8 @@ def main() -> int:
         if not extends.intersection(code):
             log.error("rules scripts extend RefCounted or a class of the rules", file)
             failed = True
-        hits = forbidden_lines(source, members)
+        others = {name for name, count in declaring.items() if count > (name in own)}
+        hits = forbidden_lines(source, members, others)
         if hits:
             print("\n".join(hits))
             log.error("the rules must stay deterministic: see the lines above", file)
