@@ -10,6 +10,7 @@ from unittest import mock
 
 from determinism_check import (
     forbidden_lines,
+    inherited_members,
     int_vector_functions,
     int_vector_members,
     own_test_passes,
@@ -441,6 +442,59 @@ class FormsTest(unittest.TestCase):
         ):
             self.assertEqual(forbidden_lines(source, int_vector_members(source)), [], source)
 
+    def test_an_inherited_member_used_by_bare_name_is_refused(self) -> None:
+        # A class has the members of the class it extends: an inner class of the same file, through
+        # every step, or another rules class (#2306).
+        bases = {"Base": {"tile"}}
+        for source in (
+            "class A:\n\tvar tile: Vector2i\n\n\nclass B extends A:\n\tfunc f() -> void:"
+            "\n\t\tvar a := tile.length()",
+            "class A:\n\tvar tile: Vector2i\n\n\nclass B:\n\textends A\n\n\tvar a := tile.length()",
+            "class A:\n\tvar tile: Vector2i\n\n\nclass B extends A:\n\tpass\n\n\nclass C extends B:"
+            "\n\tvar a := self.tile.length()",
+            "class A:\n\tvar tiles: Array[Vector2i]\n\n\nclass B extends A:"
+            "\n\tvar a := tiles[0].length()",
+            "extends Base\n\n\nfunc f() -> void:\n\tvar a := tile.length()",
+            "class_name Leaf extends Base\n\n\nfunc f() -> void:\n\tvar a := tile.length()",
+            "extends RefCounted\n\n\nclass B extends Base:\n\tvar a := tile.length()",
+            # The nearest class of that name around it, not a later one elsewhere.
+            "class First:\n\tclass A:\n\t\tvar tile: Vector2i\n\n\tclass B extends A:"
+            "\n\t\tvar a := tile.length()\n\n\nclass Second:\n\tclass A:"
+            "\n\t\tvar tile: String",
+        ):
+            hit = [
+                f"{number}:{line}"
+                for number, line in enumerate(source.split("\n"), 1)
+                if "length(" in line
+            ]
+            self.assertEqual(forbidden_lines(source, bases=bases), hit, source)
+
+    def test_a_member_of_a_class_not_extended_stays_allowed(self) -> None:
+        bases = {"Base": {"tile"}}
+        for source in (
+            "class A:\n\tvar tile: Vector2i\n\n\nclass B extends RefCounted:\n\tvar tile: String"
+            "\n\tvar a := tile.length()",
+            "extends Other\n\n\nfunc f() -> void:\n\tvar a := tile.length()",
+            'extends "res://base.gd"\n\n\nfunc f() -> void:\n\tvar a := tile.length()',
+            "extends Base\n\n\nclass B:\n\tvar tile: String\n\tvar a := tile.length()",
+            # Classes extending each other in a circle never compile, but mustn't hang the check.
+            "class A extends B:\n\tpass\n\n\nclass B extends A:\n\tvar a := tile.length()",
+        ):
+            self.assertEqual(forbidden_lines(source, bases=bases), [], source)
+
+    def test_inherited_members_follow_the_rules_classes_extends(self) -> None:
+        sources = [
+            "class_name Base\nextends RefCounted\n\nvar tile: Vector2i\n\n\nclass Inner:"
+            "\n\tvar inner: Vector2i",
+            "class_name Mid\nextends Base\n\nconst SPOT: Vector2i = Vector2i.ONE",
+            "class_name Leaf extends Mid",
+            "extends Base\n\nvar nameless: Vector2i",
+        ]
+        self.assertEqual(
+            inherited_members(sources),
+            {"Base": {"tile"}, "Mid": {"tile", "SPOT"}, "Leaf": {"tile", "SPOT"}},
+        )
+
     def test_an_element_of_an_integer_vector_array_is_refused(self) -> None:
         # A subscript, and a loop variable, over an Array[Vector2i] (#2261).
         for source in (
@@ -551,6 +605,71 @@ class FormsTest(unittest.TestCase):
                 if "length(" in line
             ]
             self.assertEqual(forbidden_lines(source), hit, source)
+
+    def test_an_integer_vector_declared_with_an_inferred_type_is_refused(self) -> None:
+        # `:=` from a constructor or a constant, for locals and members (#2292).
+        for source in (
+            "var tile := Vector2i.ZERO\nvar a := tile.length()",
+            "var step := Vector2i(1, 0)\nvar a := step.length()",
+            "const ORIGIN := Vector3i.ONE\nvar a := ORIGIN.distance_to(b)",
+            "@export var home := Vector2i(abs(x), (y))\nvar a := self.home.length()",
+            "static var spot := Vector2i.ONE * 2\nvar a := spot.abs().length()",
+            "var tile := Vector2i(\n\t1, 0)\nvar a := tile.length()",
+            "var tile := Vector2i.ONE * \\\n\t2\nvar a := tile.length()",
+            "var tile := Vector2i(1, 2) * (\n\t2)\nvar a := tile.length()",
+            "func f() -> void:\n\tvar tile := Vector4i(1, 2, 3, 4)\n\tprint(tile.length())",
+            "func f() -> void:\n\tconst STEP := Vector2i.RIGHT\n\tprint(STEP.length())",
+            # In its own class, and an outer class's constant, which an inner class reaches (#2288).
+            "class Inner:\n\tvar tile := Vector2i.ONE\n\n\tfunc f() -> void:"
+            "\n\t\tprint(tile.length())",
+            "const TILE := Vector2i(1, 2)\n\n\nclass Inner:\n\tfunc f() -> void:"
+            "\n\t\tprint(TILE.length())",
+        ):
+            hit = [
+                f"{number}:{line}"
+                for number, line in enumerate(source.split("\n"), 1)
+                if "length(" in line or "distance_to(" in line
+            ]
+            self.assertEqual(forbidden_lines(source), hit, source)
+
+    def test_a_name_inferred_from_anything_else_is_allowed(self) -> None:
+        for source in (
+            'var tile := "x"\nvar a := tile.length()',
+            "var tile := str(Vector2i.ONE)\nvar a := tile.length()",
+            "var tile := Vector2i(1, 2).x\nvar a := tile.length()",
+            "var tile := Vector2i.ONE.x\nvar a := tile.length()",
+            'var tile := Vector2i.ONE if c else "x"\nvar a := tile.length()',
+            "var tile := Vector2i(1, 2) == other\nvar a := tile.length()",
+            "var tile := Vector2i.ONE in tiles\nvar a := tile.length()",
+            'var tile := Vector2i.ONE \\\n\tif c else "x"\nvar a := tile.length()',
+            "var tile := Vector2i.ONE * (\n\t2) == other\nvar a := tile.length()",
+            'var tile := (Vector2i.ONE\n\tif c else "x")\nvar a := tile.length()',
+            "var tile := Vector2i.ONE\nvar a := obj.tile.length()",
+            "func f() -> void:\n\tvar tile := Vector2i.ONE\n\n\nfunc g(tile: String) -> int:"
+            "\n\treturn tile.length()",
+            # A member of one class doesn't count in another (#2288).
+            "class Inner:\n\tvar tile := Vector2i.ONE\n\n\nvar a := tile.length()",
+            "var tile := Vector2i(1, 2)\n\n\nclass Inner:\n\tvar a := tile.length()",
+        ):
+            self.assertEqual(forbidden_lines(source), [], source)
+
+    def test_members_declared_with_an_inferred_type_count_too(self) -> None:
+        source = "\n".join(
+            (
+                "var tile := Vector2i.ZERO",
+                "@export var home := Vector3i(1, 2, 3)",
+                "static var spot := Vector4i(",
+                "\t1, 2, 3, 4)",
+                "const ORIGIN := Vector2i.ONE",
+                "var x := Vector2i(1, 2).x",
+                "var y := Vector2i.ONE.y",
+                'var z := Vector2i(1, 2) if c else "x"',
+                'var text := "x"',
+                "func f() -> void:",
+                "\tvar local := Vector2i.ONE",
+            )
+        )
+        self.assertEqual(int_vector_members(source), {"tile", "home", "spot", "ORIGIN"})
 
 
     def test_a_call_to_a_function_returning_an_integer_vector_is_refused(self) -> None:

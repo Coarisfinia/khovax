@@ -49,12 +49,9 @@ const CLEARING_DISTANCE: int = 15
 ## The regions that wait for their clearing, each with its issue (#2323): the list only shrinks, and
 ## a region on it that has its clearing fails the check until it's taken off.
 const CLEARINGS_WAITING: Dictionary[String, int] = {
-	"dhorvone_stolm": 2328,
-	"edhra_tewk": 2326,
 	"hrovumel_stolm": 2330,
 	"ivenwhal_wudhen": 2331,
 	"lymwen_hoall": 2332,
-	"morwe_wudhen": 2325,
 }
 ## The dungeon behind the escort guide's seal (#1591), its end piece and the place marked there.
 const DUNGEON: String = "hrovumel_stolm"

@@ -16,7 +16,7 @@ const UNWORN_MODELS: Array[String] = ["model_drakkudor", "model_fohossa"]
 ## Animated props built before the view that places them (#1634), with the clips each plays:
 ## checked like a view's model, until a view names it and it leaves this list.
 const UNPLACED_PROPS: Dictionary[String, Array] = {
-	"model_tentacle_gate": [&"Idle"],
+	"model_tentacle_gate": [&"Idle", &"Sit", &"Sitting"],
 }
 ## Static models built before anything places them in the world (#1635): each must load and show
 ## a mesh, until what places it names it and it leaves this list.
