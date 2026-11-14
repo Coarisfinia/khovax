@@ -1,6 +1,6 @@
 """Runs the gdstyle the repository pins (#2215), for Linux and WSL, without installing anything
 system-wide: the first run downloads CI's release into the user's cache and checks its checksum.
-The version comes from tools/scoop/gdstyle.json and the checksum from CI's GDSTYLE_SHA256, the
+The version comes from tools/gdstyle.json and the checksum from CI's GDSTYLE_SHA256, the
 same two sources CI uses. Arguments go to gdstyle, which runs in the caller's folder:
 
     uv run --locked ../game-build/gdstyle.py fmt .
@@ -89,9 +89,9 @@ def install(version: str, sha256: str, binary: Path) -> None:
 
 def main() -> int:
     if (platform.system(), platform.machine()) != ("Linux", "x86_64"):
-        print("gdstyle.py: only for x86-64 Linux; elsewhere install tools/scoop/gdstyle.json", file=sys.stderr)
+        print("gdstyle.py: only for x86-64 Linux; elsewhere install tools/gdstyle.json", file=sys.stderr)
         return 1
-    version = json.loads((ROOT / "tools/scoop/gdstyle.json").read_text(encoding="utf-8"))["version"]
+    version = json.loads((ROOT / "tools/gdstyle.json").read_text(encoding="utf-8"))["version"]
     found = SHA256.search((ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
     if found is None:
         print("gdstyle.py: no GDSTYLE_SHA256 in .github/workflows/ci.yml", file=sys.stderr)
