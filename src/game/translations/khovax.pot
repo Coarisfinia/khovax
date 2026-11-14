@@ -1174,6 +1174,10 @@ msgid "Revive a fainted monster"
 msgstr ""
 
 #: slices/input_prompts/ui/controls_tab.gd
+msgid "Drink a tonic or a draught"
+msgstr ""
+
+#: slices/input_prompts/ui/controls_tab.gd
 msgid "Respawn when knocked down"
 msgstr ""
 
@@ -2410,6 +2414,42 @@ msgstr ""
 
 #: slices/survey/ui/survey_tab.tscn
 msgid "Zoom in"
+msgstr ""
+
+#: slices/tonics/ui/brew_pick_list.gd
+msgid "{brew} ×{count}"
+msgstr ""
+
+#: slices/tonics/ui/drink_tie.gd
+msgid "Nothing to drink"
+msgstr ""
+
+#: slices/tonics/ui/drink_tie.gd
+msgid "Craft a tonic or a draught first."
+msgstr ""
+
+#: slices/tonics/ui/drink_tie.gd
+msgid "A drink is already on its way."
+msgstr ""
+
+#: slices/tonics/ui/drink_tie.gd
+msgid "Wait {seconds} s before the next drink."
+msgstr ""
+
+#: slices/tonics/ui/drink_tie.gd
+msgid "You can't drink while knocked down."
+msgstr ""
+
+#: slices/tonics/ui/drink_tie.gd
+msgid "No companion is out to drink it."
+msgstr ""
+
+#: slices/tonics/ui/drink_tie.gd
+msgid "Nothing to mend: already at full HP."
+msgstr ""
+
+#: slices/tonics/ui/drink_tie.gd
+msgid "It does nothing here."
 msgstr ""
 
 #: slices/waystones/ui/waystone_notice_tie.gd

@@ -6,12 +6,17 @@ extends RefCounted
 ## monsters a player carries in reserve give none, unless gear in their ward slot keeps the passives
 ## on (#617, GearItem.keeps_passives): then every monster they carry that hasn't fainted helps them,
 ## out or not. The gear is in their profile, so whether it's there comes in as a request
-## (OutboxEntry.PASSIVES_KEPT), which CompanionFeature takes and `keep` notes in the companions'
-## entry of the player's world store, so it lasts between sessions and goes with them from instance
-## to instance. What a passive does is read where it acts (e.g. a guard, WildAttackFeature).
+## (OutboxEntry.PASSIVES_KEPT), which CompanionFeature takes and notes in the companions' entry of
+## the player's world store, so it lasts between sessions and goes with them from instance to
+## instance: it waits there (PENDING, `ask`) until the player is out of a fight, and is applied then
+## (`settle`, #2349, #2380). What a passive does is read where it acts (e.g. a guard,
+## WildAttackFeature).
 
 ## The key in the companions' store entry while the player's passives are kept on: 1, or none.
 const KEPT: String = "kept"
+## The key in the companions' store entry of what a request asked for (1 or 0, as `keep` takes it)
+## until it is applied outside a fight (#2380): none while no request waits.
+const PENDING: String = "kept_pending"
 
 
 ## The passives that help the player in `slot` now, in `state`: their companion's, while it is out
@@ -62,10 +67,31 @@ static func kept(entry: Dictionary) -> bool:
 	return entry.get(KEPT, 0) == 1
 
 
-## Keeps the passives of the player in `slot` on, or stops, as their request says (`data`, 1 or
-## 0), inside a tick.
-static func keep(state: GameState, slot: int, data: int) -> void:
+## 1 when the companions' store entry `entry` of a player is going to keep their passives on, 0
+## when not: what a request waiting for a fight to end asks for (PENDING, #2380), or whether they
+## are kept on now.
+static func wanted(entry: Dictionary) -> int:
+	var data: int = entry.get(PENDING, 1 if kept(entry) else 0)
+	return data
+
+
+## Notes the request of the player in `slot` to keep their passives on or stop (`data`, 1 or 0) as
+## waiting (PENDING), inside a tick; a later one replaces it, so the newest wins.
+static func ask(state: GameState, slot: int, data: int) -> void:
+	state.store(slot, CompanionFeature.ID)[PENDING] = data
+
+
+## Whether a request of the player in `slot` waits to be applied (PENDING).
+static func waits(state: GameState, slot: int) -> bool:
+	return state.stored(slot, CompanionFeature.ID).has(PENDING)
+
+
+## Applies the waiting request of the player in `slot` (`ask`), inside a tick: keeps their passives
+## on, or stops.
+static func settle(state: GameState, slot: int) -> void:
 	var entry: Dictionary = state.store(slot, CompanionFeature.ID)
+	var data: int = entry[PENDING]
+	var _taken: bool = entry.erase(PENDING)
 	if data == 1:
 		entry[KEPT] = 1
 	else:

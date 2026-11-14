@@ -1093,7 +1093,7 @@ func _check_revive_item(main: Node, driver: GameDriver) -> String:
 	var holder: ProfileHolder = FlowGame.holder(main)
 	if button.icon == null or button.corner_text() != "0" or button.usable():
 		return "the revive item's button doesn't show its icon and 0, faded, with none held"
-	var unheld: Command = await _pressed(driver, &"revive_monster")
+	var unheld: Command = await FlowInput.pressed(driver, &"revive_monster")
 	if unheld.request_kind == OutboxEntry.REVIVE:
 		return "the revive key used a revive item the profile doesn't hold"
 	holder.keeper.profile.materials[ReviveItem.ID] = 1
@@ -1102,7 +1102,7 @@ func _check_revive_item(main: Node, driver: GameDriver) -> String:
 	var picked: String = await _check_revive_pick(main, driver)
 	if not picked.is_empty():
 		return picked
-	var single: Command = await _pressed(driver, &"revive_monster")
+	var single: Command = await FlowInput.pressed(driver, &"revive_monster")
 	var commands: Array[Command] = [single]
 	if _revived_by(commands[0]) != _second:
 		return "the revive key didn't use the item on the toad, the only one fainted, at once"
@@ -1130,23 +1130,23 @@ func _check_revive_item(main: Node, driver: GameDriver) -> String:
 func _check_revive_pick(main: Node, driver: GameDriver) -> String:
 	var roster: RosterHud = main.get_node("Hud/RosterHud") as RosterHud
 	CompanionParty.faint(driver.state, 0, _first)
-	var picking: Command = await _pressed(driver, &"revive_monster")
+	var picking: Command = await FlowInput.pressed(driver, &"revive_monster")
 	roster.show_state()
 	var standing: bool = picking.move == Command.NO_MOVE and _revived_by(picking).is_empty()
 	if (not standing
 			or (driver.input as LocalInput).revive_pick.picked != _first
 			or roster.picked_place != 0):
 		return "the revive key didn't pick the finch, shown on the roster, with the player standing"
-	var _right: Command = await _pressed(driver, &"ui_right")
+	var _right: Command = await FlowInput.pressed(driver, &"ui_right")
 	var on: bool = (driver.input as LocalInput).revive_pick.picked == _second
-	var _left: Command = await _pressed(driver, &"ui_left")
+	var _left: Command = await FlowInput.pressed(driver, &"ui_left")
 	var back: bool = (driver.input as LocalInput).revive_pick.picked == _first
-	var _cancel: Command = await _pressed(driver, &"ui_cancel")
+	var _cancel: Command = await FlowInput.pressed(driver, &"ui_cancel")
 	if not on or not back or not (driver.input as LocalInput).revive_pick.picked.is_empty():
 		return "the arrows didn't move the pick between the fainted ones, or Escape kept it"
-	var again: Command = await _pressed(driver, &"revive_monster")
-	var _second_press: Command = await _pressed(driver, &"revive_monster")
-	again = await _pressed(driver, &"ui_accept")
+	var again: Command = await FlowInput.pressed(driver, &"revive_monster")
+	var _second_press: Command = await FlowInput.pressed(driver, &"revive_monster")
+	again = await FlowInput.pressed(driver, &"ui_accept")
 	if _revived_by(again) != _second:
 		return "Enter didn't use the item on the toad the pick moved on to"
 	_undo(main, again)
@@ -1173,18 +1173,6 @@ static func _undo(main: Node, command: Command) -> void:
 	var keeper: ProfileKeeper = FlowGame.holder(main).keeper
 	var _saved: String = keeper.acknowledge(ShortId.of_code(command.request), 0)
 	keeper.profile.materials[ReviveItem.ID] = 1
-
-
-## The local player's next command after a press of the InputMap action `action`, in a frame of its
-## own: a press stays just pressed for the rest of its frame, even once let go. The input hears it
-## only here, not again on its own in that frame.
-static func _pressed(driver: GameDriver, action: StringName) -> Command:
-	driver.input.set_process(false)
-	await driver.get_tree().process_frame
-	Input.action_press(action)
-	driver.input._process(0.0)
-	Input.action_release(action)
-	return (driver.input as LocalInput).command(driver.state)
 
 
 ## Touches the roster at `at` and lifts the finger, or left clicks there with the mouse (`click`).

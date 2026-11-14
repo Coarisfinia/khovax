@@ -700,7 +700,7 @@ No runes or carvings by script: they come from the rune set (#1855) and the engr
   `HEX_SIZE` from centre to corner (one edge is `HEX_EDGE` long, the hex `HEX_WIDTH` across its
   flats), the player `PLAYER_HEIGHT` tall (the players' figure standing, which the check
   measures), and a wall `WALL_HEIGHT`, a quarter above the player. Every model that isn't a
-  monster names its kind in its script, `WORLD_SCALE = "<kind>"`, from `KINDS` there: `prop`
+  monster names its kind in its script, `WORLD_SCALE = "<kind>"`, from `KINDS` there: `item` (a thing a hand carries, shown as an item's picture, #1949), `prop`
   (on one hex: a well, a campfire, a signpost), `portal` (on the edge between two hexes, walked
   through: its origin at the edge's middle, its X along the line between the hexes' centres, so
   its arch spans both and the player walks along the edge; the footprint check measures it

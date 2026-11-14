@@ -37,6 +37,8 @@ MODELS = {
     "tower_below_the_walls": ("tower", EDGE * 0.6, WALL * 0.9, False),
     "prop_fits": ("prop", EDGE * 1.2, PLAYER * 0.5, True),
     "prop_towers_over_the_player": ("prop", EDGE * 1.2, PLAYER * 2.0, False),
+    "item_fits": ("item", EDGE * 0.4, PLAYER * 0.15, True),
+    "item_too_big_to_carry": ("item", EDGE * 0.4, PLAYER * 0.5, False),
     "unknown_kind": ("house", EDGE, WALL, False),
 }
 

@@ -1,2 +1,3 @@
-// Copper (#1929), a crafting supply that harvesting copper ore by hand gives.
-{ "id": "copper", "name": "Copper", "category": "metal" }
+// Copper (#1929), a crafting supply that harvesting copper ore by hand gives; carried as a lump of
+// stone with copper ribbons curling out of it (#1949).
+{ "id": "copper", "name": "Copper", "category": "metal", "model": "model_copper_ribbons_ore" }
