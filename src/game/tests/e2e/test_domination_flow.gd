@@ -49,7 +49,7 @@ extends RefCounted
 ## With spikes in their trap slot (#692), put there by a request from their outbox (#818) that the
 ## world keeps in their store, the player's ring hurts the wild monster pushing on it once a second
 ## for the spikes' damage, while it waits for a totem and while it seals, never below 1 HP; without,
-## it doesn't.
+## it doesn't, nor after a request in a fight to put them in, which the world refuses (#776).
 ##
 ## An early wild monster (#1321), one of the starting instance's own species, the first a player
 ## meets, can be dominated by a small ring around it, and defeated by a companion of its kind (the
@@ -775,32 +775,66 @@ func _check_target_dominated() -> String:
 
 
 ## A weak monster in a small ring (#692): while the ring waits for a totem, it isn't hurt as long as
-## the player's trap is empty, and from the tick a request puts their spikes into it (#818), kept
-## in their world store, it's hurt once in STRIKE_TICKS for their damage. Worn down to 2 HP, it's
-## hurt once more while the ring seals, and then holds at 1 HP.
+## the player's trap is empty, nor once a request asks to put their spikes into it there, in the
+## fight (#776): the world acknowledges it but keeps the trap as it is. From the tick a request
+## outside a fight puts them in (#818), kept in their world store, it's hurt once in STRIKE_TICKS
+## for their damage. Worn down to 2 HP, it's hurt once more while the ring seals, and then holds at
+## 1 HP.
 func _check_spikes() -> String:
-	var spikes: Array[Feature] = [
-		SpikesFeature.new({ SpikesFeature.code_of(SPIKES): SPIKES_DAMAGE }),
-	]
-	var state: GameState = _outcome_state(WEAK, [Vector2i.ZERO], "", spikes)
+	var state: GameState = _spikes_state()
 	var ring: Array[Vector2i] = Hex.ring(SMALL_RING)
 	var _player: Entity = state.add_entity(0, ring[0])
 	var _walked: Array[RefCounted] = FlowSteps.walk(state, ring.slice(1))
-	var monster: int = _wild(state).monsters[0]
 	if _domination(state).encircled.is_empty():
 		return "the spikes check's ring doesn't wait for a totem"
 	var bare: Array[SpikesStruck] = _spiked_over(state, 2 * SpikesFeature.STRIKE_TICKS)
-	var spiked: Array[SpikesStruck] = _spiked_over(
+	var refused: Array[SpikesStruck] = _spiked_over(
 		state,
 		SpikesFeature.STRIKE_TICKS,
 		false,
 		SpikesFeature.code_of(SPIKES),
 	)
+	var stored: Dictionary = state.stored(0, SpikesFeature.ID)
+	var trap: int = SpikesFeature.trap_of(stored)
+	if not bare.is_empty() or not refused.is_empty() or trap != CommandCodes.NONE:
+		return "spikes hurt %d times without, %d after a request in the fight put in %d" % [
+			bare.size(),
+			refused.size(),
+			trap,
+		]
+	var applied: Array = stored.get(OutboxReceipts.APPLIED, [])
+	if not applied.has(ShortId.of_code(1)):
+		return "the world didn't acknowledge the request for spikes in the fight"
+	return _check_spikes_armed()
+
+
+## A weak monster in a small ring, ringed by a player who put their spikes into their trap by a
+## request away from it, outside a fight: hurt once in STRIKE_TICKS, and while the ring seals, never
+## below 1 HP (_check_spikes).
+func _check_spikes_armed() -> String:
+	var state: GameState = _spikes_state()
+	var player: Entity = state.add_entity(0, Vector2i(-OUTCOME_RADIUS, 0))
+	var arming: Array[SpikesStruck] = _spiked_over(state, 1, false, SpikesFeature.code_of(SPIKES))
 	if SpikesFeature.trap_of(state.stored(0, SpikesFeature.ID)) != SpikesFeature.code_of(SPIKES):
 		return "the request didn't put the spikes into the player's trap in their store"
+	var ring: Array[Vector2i] = Hex.ring(SMALL_RING)
+	player.tile = ring[0]
+	var _colored: bool = (state.feature(TrailFeature.ID) as TrailFeature).shared.color(
+		ring[0],
+		player.id,
+	)
+	var _walked: Array[RefCounted] = FlowSteps.walk(state, ring.slice(1))
+	var monster: int = _wild(state).monsters[0]
+	if _domination(state).encircled.is_empty():
+		return "the armed spikes check's ring doesn't wait for a totem"
+	var spiked: Array[SpikesStruck] = _spiked_over(state, SpikesFeature.STRIKE_TICKS)
 	var hp: int = _hp(state, monster)
-	if not bare.is_empty() or spiked.size() != 1 or hp != OUTCOME_HP - SPIKES_DAMAGE:
-		return "spikes hurt %d times without, %d with, to %d HP" % [bare.size(), spiked.size(), hp]
+	if not arming.is_empty() or spiked.size() != 1 or hp != OUTCOME_HP - SPIKES_DAMAGE:
+		return "spikes hurt %d times arming, %d ringed, to %d HP" % [
+			arming.size(),
+			spiked.size(),
+			hp,
+		]
 	if spiked[0].monster_id != monster or spiked[0].damage != SPIKES_DAMAGE:
 		return "the spikes didn't hurt the ringed monster for their damage"
 	_wild(state).wound(state, monster, hp - 2)
@@ -814,6 +848,14 @@ func _check_spikes() -> String:
 			_hp(state, monster),
 		]
 	return ""
+
+
+## A state for the spikes checks: a weak monster in the middle, and the spikes' damage.
+func _spikes_state() -> GameState:
+	var spikes: Array[Feature] = [
+		SpikesFeature.new({ SpikesFeature.code_of(SPIKES): SPIKES_DAMAGE }),
+	]
+	return _outcome_state(WEAK, [Vector2i.ZERO], "", spikes)
 
 
 ## The spikes' hurts over `ticks` ticks of the player in slot 0 standing, placing their totem with
