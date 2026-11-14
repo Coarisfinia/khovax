@@ -17,6 +17,7 @@ static func build(_setup: FeatureSetup) -> CompanionFeature:
 		self_passives[species_id] = stats.self_passive
 	var helps_player: Dictionary[String, bool] = {}
 	for ability: Ability in AbilityContent.cached().abilities.values():
-		if ability.kind != Ability.SPECIAL:
+		# Only the passives: a special or a core ability (#2409) helps no one while it's out.
+		if Ability.PASSIVES.has(ability.kind):
 			helps_player[ability.id] = ability.kind == Ability.PLAYER_PASSIVE
 	return CompanionFeature.new(reaches, player_passives, self_passives, helps_player)

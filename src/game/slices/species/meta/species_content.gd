@@ -6,7 +6,8 @@ extends Content
 ## one; the default pack's lie directly in the slice's data/ (its own kind, so no folder repeats the
 ## slice's name, #442). Everything else reads them through this; their abilities are
 ## AbilityContent's. It also holds what each species ascends into (#1252), a link between two
-## species that only the whole content can check.
+## species that only the whole content can check, and each species' core list (#2409), which
+## SpeciesKit checks against the abilities.
 
 ## The species' key in the content cache (ContentCatalog).
 const KEY: String = "species"
@@ -15,6 +16,9 @@ const KEY: String = "species"
 var species: Dictionary[String, Species] = {}
 ## Every species that ascends (#1252), by id: what into, at what level and with which material.
 var ascensions: Dictionary[String, SpeciesAscension] = {}
+## Every species' core list (#2409), by id: the ids of its abilities of kind core beyond its special
+## and two passives, as written; a species without one is left out. Read through core_skills.
+var cores: Dictionary[String, Array] = {}
 var _specials: Dictionary[String, Ability] = {}
 var _specials_read: bool = false
 
@@ -62,6 +66,16 @@ func specials() -> Dictionary[String, Ability]:
 	return _specials
 
 
+## The core skills of `species_id` (#2409), all active from level 1 and never a development web's
+## node: its special, its two passives and its core list, in that order.
+func core_skills(species_id: String) -> Array[String]:
+	var entry: Species = species[species_id]
+	var skills: Array[String] = [entry.special, entry.player_passive, entry.self_passive]
+	for id: Variant in cores.get(species_id, []):
+		skills.append(str(id))
+	return skills
+
+
 ## The first form of `species_id`'s line (#1697): the species it ascended from, and that one's,
 ## back to one that ascends from none; the lowest id where two ascend into the same. Itself, for a
 ## species nothing ascends into.
@@ -106,6 +120,16 @@ func add(file_id: String, text: String) -> String:
 		if not wrong.is_empty():
 			return wrong
 		ascensions[entry.id] = ascension
+	if data.has("core"):
+		var listed: Array = []
+		if data["core"] is Array:
+			listed = data["core"]
+		if listed.is_empty():
+			return "its core list names its core skills by their ids (#2409)"
+		for id: Variant in listed:
+			if not (id is String and Content.is_id(str(id))):
+				return "its core list names its core skills by their ids (#2409)"
+		cores[entry.id] = listed
 	species[entry.id] = entry
 	return ""
 
