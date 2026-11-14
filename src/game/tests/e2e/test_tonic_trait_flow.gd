@@ -157,7 +157,7 @@ func _check_shared_mend() -> String:
 	var _far_hurt: bool = health.hurt(state, far.id, HealthFeature.PLAYER_HP - 1)
 	var profile: Profile = Profile.new()
 	profile.materials.assign({ "draught_berry_shared": 1 })
-	var why: String = _refused(
+	var why: String = TonicDrinks.refused(
 		profile,
 		state,
 		"draught_berry_shared",
@@ -226,14 +226,3 @@ static func _idle_all(state: GameState, ticks: int) -> void:
 static func _standing() -> Array[Command]:
 	var commands: Array[Command] = [Command.new(), Command.new(), Command.new(), Command.new()]
 	return commands
-
-
-## Why drinking `brew` from `profile` for player 0 in `state`, which `what` names, wasn't refused,
-## or spent or posted something; "" when it was refused and changed nothing.
-func _refused(profile: Profile, state: GameState, brew: String, what: String) -> String:
-	var held: Dictionary[String, int] = {}
-	held.assign(profile.materials)
-	var refusal: String = TonicDrinking.drink(profile, state, 0, brew)
-	if refusal.is_empty() or profile.materials != held or not profile.outbox.entries.is_empty():
-		return "%s wasn't refused before anything was spent: %s" % [what, refusal]
-	return ""
