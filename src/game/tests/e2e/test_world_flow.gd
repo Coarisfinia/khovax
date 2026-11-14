@@ -51,7 +51,6 @@ const CLEARING_DISTANCE: int = 15
 const CLEARINGS_WAITING: Dictionary[String, int] = {
 	"hrovumel_stolm": 2330,
 	"ivenwhal_wudhen": 2331,
-	"lymwen_hoall": 2332,
 }
 ## The dungeon behind the escort guide's seal (#1591), its end piece and the place marked there.
 const DUNGEON: String = "hrovumel_stolm"

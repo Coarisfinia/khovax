@@ -1033,7 +1033,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   endings to be allowed, except for .sh and .bat. A new entry requires signoff."*): CI refuses a
   tracked file whose ending isn't in `ENDINGS` in `src/game-checks/file_endings.py`. **An agent
   never adds an ending without the owner's approval on its issue.** The shell scripts still tracked wait
-  in its exception list, each with the issue that ports it, and that list only shrinks.
+  in its exception list, each with the issue that ports it, and that list only shrinks. So does
+  `ENDINGS`: an ending no tracked file uses any more fails the check, unless it waits in `AWAITED`
+  for the first file the owner signed it off for (#2358).
 - **Install tools with scoop** (owner's rule). The development machine runs Windows, so Homebrew isn't
   available.
 - **`git push` hung on a Windows credential prompt.** In this repository the repo-local credential
