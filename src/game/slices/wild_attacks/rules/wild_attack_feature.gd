@@ -19,7 +19,8 @@ extends Feature
 ## A passive that guards takes its share off every hit on whom it helps (#616), only while its
 ## monster is out (CompanionPassives): a self passive off its
 ## companion, a player passive off its player. A Ward drunk (#2311, TonicEffectsFeature) adds its
-## guard to theirs. A hit that lands still deals at least 1 (#702).
+## guard to theirs, and a hit that fells its target ends the effect they drank (#2343), so a player
+## doesn't keep it on their way to the spawn. A hit that lands still deals at least 1 (#702).
 ## A self passive that dodges (#1499, Zirki-kirki) makes its share of the hits on its companion
 ## miss, by count and never on a roll (#2234, #1602): each hit adds the dodge to the companion's
 ## count, and the hit that makes a whole misses, so a fifth is every fifth hit. A miss deals
@@ -258,7 +259,8 @@ func _strike(state: GameState, monster: Entity, damage: int, enraged: bool) -> v
 				struck.dodged = true
 		struck.damage = _guarded(state, target_id, on_companion, struck.damage)
 		state.events.append(struck)
-		var _fell: bool = health.hurt(state, target_id, struck.damage)
+		if health.hurt(state, target_id, struck.damage):
+			TonicEffectsFeature.end_in(state, target_id)
 		return
 	side = _trail_target(state, tile)
 	if side == tile:
