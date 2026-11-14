@@ -7,8 +7,9 @@ only that tail, and moving in every clip (lib/tails.py).
 
 It prints a line per tail and clip and `TAILS CHECK: PASS` or `FAIL` (and exits 1 on a fail), through
 game_shared.log (#1115): a failing line is an error on the .glb. A model not in TAILS passes, so CI
-runs it on every .glb. A beast of many tails joins TAILS when it's imported. Blender's modules load
-only once a listed beast is checked, so test_model_lists.py runs it outside Blender."""
+runs it on every .glb, and an entry no tracked model matches fails every run (#2373), so a renamed
+beast can't turn the check off. A beast of many tails joins TAILS when it's imported. Blender's
+modules load only once a listed beast is checked, so test_model_lists.py runs it outside Blender."""
 
 import os
 import sys
@@ -19,17 +20,31 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "game-shared"))
 
 from game_shared import log  # noqa: E402
+from game_shared.git_files import pack_models, stale_entries  # noqa: E402
 
-# The models (by .glb name) of many tails, and how many each has.
-TAILS = {"kalvrakkor_magma": 9}
+GAME = os.path.join(os.path.dirname(HERE), "game")
+# The models of many tails, from the game's folder, and how many each has.
+TAILS = {"resourcepacks/default/models/kalvrakkor_magma/kalvrakkor_magma.glb": 9}
+
+
+def stale():
+    """How many TAILS entries name no tracked model, each reported; with no tracked model at all, it
+    stops the run (pack_models)."""
+    start = os.getcwd()
+    os.chdir(GAME)
+    try:
+        return stale_entries(pack_models(), TAILS=TAILS)
+    finally:
+        os.chdir(start)
 
 
 def main():
     glbs = [arg for arg in sys.argv[sys.argv.index("--") + 1:] if arg.endswith(".glb")]
-    passed = True
+    passed = stale() == 0
     for glb in glbs:
         model = os.path.splitext(os.path.basename(glb))[0]
-        if model not in TAILS:
+        path = os.path.relpath(os.path.realpath(glb), os.path.dirname(os.path.dirname(GAME))).replace(os.sep, "/")
+        if path not in TAILS:
             continue
         import bpy
         from lib import tails
@@ -41,7 +56,7 @@ def main():
             log.error("TAILS %s has no rig" % model, glb)
             passed = False
             continue
-        lines, ok = tails.report(rig, bpy.data.objects, TAILS[model])
+        lines, ok = tails.report(rig, bpy.data.objects, TAILS[path])
         passed = passed and ok
         for line in lines:
             if line.startswith("FAIL"):
