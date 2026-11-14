@@ -19,7 +19,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib import attachments, body, clips, eyes, metrics, muzzle, parts, pulse, quadruped, scene, surface, symmetry, tuning, weights, wisps  # noqa: E402
+from lib import attachments, body, clips, eyes, marked_eyes, metrics, muzzle, parts, pulse, quadruped, scene, surface, symmetry, tuning, weights, wisps  # noqa: E402
 from lib.materials import palette  # noqa: E402
 
 FPS = 30
@@ -196,6 +196,10 @@ def wolf_body():
     return blob.mesh(BODY_TRIANGLES)
 
 
+# The eyes' radius, and how far each is lifted off its spot on the skin.
+EYE_SIZE, EYE_LIFT = 0.055, 0.005
+
+
 def head_parts(skin, mats):
     """The snout's jaw, nose, mouth and fangs, the ears with pale insides, and the eyes."""
     made = SNOUT.parts(mats, "head", "jaw")
@@ -210,10 +214,21 @@ def head_parts(skin, mats):
         inner = (center[0], center[1] - 0.02, center[2] - 0.01)
         made.append(parts.part("cone", "InnerEar." + side, inner, (0.065, 0.02, 0.18), rotation,
                                mats["light"], "ear." + side, vertices=10, radius1=1.0, radius2=0.0, depth=1.0))
-        made += eyes.eye(skin, "Eye." + side, (0.07 * sign, -0.94, 1.505), (0.2 * sign, -1.0, 0.05), 0.055,
-                         {"dark": mats["dark"], "glow": mats["glow"], "light": mats["light"], "skin": mats["fur"]},
-                         "head", lid=eyes.LID + side, almond=0.5, tilt=math.radians(14), brow=math.radians(18))
-    return made
+    # High on the brow and lifted a little off its spot there, so that `clear` sets it only a few
+    # steps out: further out would move it ahead along the muzzle and out to the side, against
+    # REFERENCE's eye spacing and snout (#1818).
+    left = eyes.eye(skin, "Eye.L", (0.072, -0.931, 1.535), (0.2, -1.0, 0.05), EYE_SIZE,
+                    {"dark": mats["dark"], "glow": mats["glow"], "light": mats["light"], "skin": mats["fur"]},
+                    "head", lid=eyes.LID + "L", almond=0.5, tilt=math.radians(14), brow=math.radians(18))
+    for piece in left:
+        piece.location.z += EYE_LIFT
+        if "hinge" in piece:
+            x, y, z = piece["hinge"]
+            piece["hinge"] = (x, y, z + EYE_LIFT)
+    # Set out of the skin where it would cover the eye's lower half, rim included
+    # (check_eyes_covered.py, #1818); the right eye mirrors it.
+    marked_eyes.clear(skin, left, EYE_SIZE, rim=True)
+    return made + left + eyes.mirrored(left)
 
 
 def points(rig, pieces):
