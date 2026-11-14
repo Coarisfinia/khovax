@@ -88,6 +88,15 @@ INT_VECTOR_METHOD = re.compile(
 )
 FLOAT_METHOD = re.compile(r"\.(?:length|distance_to)\s*\(")
 INT_VECTOR_DECLARED = re.compile(r"\b(\w+)\s*:\s*Vector[234]i\b(?!\s*[.(])")
+# A var or const declared with `:=` from a constructor or a constant (#2292), on its own or in
+# integer arithmetic. What a member access on either reads (`Vector2i(1, 2).x`), a comparison, a
+# ternary or a boolean is not one, so builds_int_vector() reads the rest of the statement, and
+# `call` marks a constructor whose closing parenthesis it looks past. Other expressions stay
+# untracked (#2294).
+INFERRED = r"(?:var|const)\s+(\w+)\s*:=\s*Vector[234]i(?:(?P<call>\()|\.[A-Z_]+\b)"
+INT_VECTOR_INFERRED = re.compile(rf"\b{INFERRED}")
+MEMBER_ACCESS = re.compile(r"\s*[.\[(]")
+NOT_A_VECTOR = re.compile(r"\b(?:if|else|and|or|not|in|is|as)\b|[=!<>&|]")
 # An Array[Vector2i]'s elements are integer vectors too: a subscript of it (brackets inside, two
 # levels deep), what its element methods return, and a loop variable over it or over the arrays its
 # own methods return (#2261, #2287). So are a typed dictionary's values, read by subscript or get().
@@ -107,7 +116,8 @@ LOOP_END = re.compile(r"\s*:")
 # A member a script declares as one, outside any function: another script reaches it as `obj.tile`,
 # so the check gathers them from every rules script first (#2262). So are its Array[Vector2i] and
 # typed dictionary members, with how another script reads their elements (#2299).
-MEMBER = r"\s*(?:@\w+(?:\([^)]*\))?\s+)*(?:static\s+)?(?:var|const)\s+(\w+)\s*:\s*"
+MEMBER_PREFIX = r"\s*(?:@\w+(?:\([^)]*\))?\s+)*(?:static\s+)?"
+MEMBER = rf"{MEMBER_PREFIX}(?:var|const)\s+(\w+)\s*:\s*"
 INT_VECTOR_MEMBER = re.compile(rf"{MEMBER}Vector[234]i\b(?!\s*[.(])")
 INT_VECTOR_COLLECTION_MEMBERS = (
     (re.compile(rf"{MEMBER}Array\[\s*Vector[234]i\s*\]"), ARRAY_ELEMENT),
@@ -116,6 +126,7 @@ INT_VECTOR_COLLECTION_MEMBERS = (
         DICTIONARY_VALUE,
     ),
 )
+INT_VECTOR_MEMBER_INFERRED = re.compile(rf"{MEMBER_PREFIX}{INFERRED}")
 # A function declared to return one: a call to it counts as one, in its class or on another object
 # (#2263). Its name opens its parameters, and its return type follows their closing parenthesis.
 NAMED_FUNCTION = re.compile(r"\bfunc\s+(\w+)\s*(?=\()")
@@ -291,6 +302,36 @@ def scopes_of(lines: list[str], continued: set[int]) -> list[Scope]:
     return scopes
 
 
+def builds_int_vector(code: str, hit: re.Match[str], offset: int = 0) -> bool:
+    """Whether an inferred declaration `hit` (INFERRED) holds an integer vector: after its constant,
+    or its constructor's closing parenthesis, in `code`, where the match starts at `offset`, no
+    member access follows, and the rest of the statement is no comparison, ternary or boolean."""
+    if "call" not in hit.re.groupindex:
+        return True  # Not an inferred declaration.
+    if hit.group("call") is None:
+        end = offset + hit.end()
+    else:
+        end = after_parentheses(code, offset + hit.start("call"))
+    if end < 0 or MEMBER_ACCESS.match(code, end):
+        return False
+    return not NOT_A_VECTOR.search(code, end, statement_end(code, end))
+
+
+def statement_end(code: str, at: int) -> int:
+    """Where the statement going on at `at` in `code` ends: the first line break outside brackets
+    opened since `at` and not after a backslash, or the end of `code`."""
+    depth = 0
+    for index in range(at, len(code)):
+        char = code[index]
+        if char in "([{":
+            depth += 1
+        elif char in ")]}":
+            depth -= 1
+        elif char == "\n" and depth <= 0 and not code[at:index].rstrip(" \t").endswith("\\"):
+            return index
+    return len(code)
+
+
 def block_of(lines: list[str], start: int, continued: set[int]) -> range:
     """The lines of the statement at `start` and of the block it opens, e.g. a loop's body: up to
     the next statement indented no deeper than it. Lines inside brackets left open, and each of
@@ -313,13 +354,18 @@ def block_of(lines: list[str], start: int, continued: set[int]) -> range:
 
 
 def declared_int_vectors(
-    bare: list[str], owners: list[int | None], declaration: re.Pattern[str] = INT_VECTOR_DECLARED
+    bare: list[str],
+    owners: list[int | None],
+    declarations: tuple[re.Pattern[str], ...] = (INT_VECTOR_DECLARED, INT_VECTOR_INFERRED),
 ) -> dict[int | None, set[str]]:
-    """The names declared as an integer vector (or what `declaration` declares), by the function
+    """The names declared as an integer vector (or what `declarations` declare), by the function
     or class they count in (None: the file's own class)."""
     joined = "\n".join(bare)
     declared: dict[int | None, set[str]] = {}
-    for hit in declaration.finditer(joined):
+    hits = (hit for declaration in declarations for hit in declaration.finditer(joined))
+    for hit in hits:
+        if not builds_int_vector(joined, hit):
+            continue
         before = joined[: hit.start()]
         # A dictionary entry, not a declaration: a key in braces, not a lambda's local in them.
         if innermost_opener(before) == "{" and before.rstrip().endswith(("{", ",")):
@@ -342,11 +388,17 @@ def int_vector_members(source: str, own_class_only: bool = False) -> set[str]:
     its own class only): a vector's name, and an integer vector array's or typed dictionary's with
     how its element is read (#2299), as receivers on another object."""
     bare = code_only(source).split("\n")
+    joined = "\n".join(bare)
     members: set[str] = set()
+    offset = 0
     for line, (classes, function) in zip(bare, scopes_of(bare, continued_lines(source, bare))):
+        at, offset = offset, offset + len(line) + 1
         if function is not None or (own_class_only and classes):
             continue
         if hit := INT_VECTOR_MEMBER.match(line):
+            members.add(hit.group(1))
+        # A constructor's arguments may go on over the next lines.
+        elif (hit := INT_VECTOR_MEMBER_INFERRED.match(line)) and builds_int_vector(joined, hit, at):
             members.add(hit.group(1))
         for declaration, element in INT_VECTOR_COLLECTION_MEMBERS:
             if hit := declaration.match(line):
@@ -436,8 +488,8 @@ def forbidden_lines(
         for classes, function in scopes
     ]
     declared = declared_int_vectors(bare, owners)
-    arrays = declared_int_vectors(bare, owners, INT_VECTOR_ARRAY_DECLARED)
-    dictionaries = declared_int_vectors(bare, owners, INT_VECTOR_DICTIONARY_DECLARED)
+    arrays = declared_int_vectors(bare, owners, (INT_VECTOR_ARRAY_DECLARED,))
+    dictionaries = declared_int_vectors(bare, owners, (INT_VECTOR_DICTIONARY_DECLARED,))
     # Each class's constants, which its inner classes reach: integer vectors, arrays and
     # dictionaries of them.
     constants: dict[int | None, set[str]] = {}

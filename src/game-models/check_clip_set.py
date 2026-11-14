@@ -22,7 +22,7 @@ NOT_CREATURES = {
     "resourcepacks/default/models/kaykit-adventurers/Rogue.glb": "the people's humanoid figure, with clips of its own",
     "resourcepacks/default/models/player/player_body.glb": "the player's body, which plays the player's clip library (#1827)",
     "resourcepacks/default/models/player/player_clips.glb": "the player's clip library, its clips on a stand-in rig without a body (#1935)",
-    "resourcepacks/default/models/tentacle_gate/tentacle_gate.glb": "a gate, a prop of the world that only idles (#1634)",
+    "resourcepacks/default/models/tentacle_gate/tentacle_gate.glb": "a gate, a prop of the world that stands, sits down and sits (#1634, #2157)",
 }
 
 
