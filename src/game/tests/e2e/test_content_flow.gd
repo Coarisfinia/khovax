@@ -192,7 +192,7 @@ func _check_kits(content: SpeciesContent) -> String:
 	var loaded: AbilityContent = AbilityContent.load_abilities()
 	if not loaded.problem.is_empty():
 		return "the abilities didn't load: " + loaded.problem
-	var problem: String = SpeciesKit.problem(content.species, loaded.abilities)
+	var problem: String = SpeciesKit.problem(content.species, loaded.abilities, content.cores)
 	if not problem.is_empty():
 		return "the species' abilities don't hold together: " + problem
 	var finch: Species = content.species["tikazzir"]
@@ -239,8 +239,8 @@ func _check_core_skills(abilities: Dictionary[String, Ability]) -> String:
 	var finch: Species = content.species["tikazzir"]
 	var wanted: Array[String] = [finch.special, finch.player_passive, finch.self_passive]
 	wanted.append_array(["xo_absorb", "xo_grow"])
-	if content.call("core_skills", "tikazzir") != wanted:
-		return "the core skills read %s, not %s" % [content.call("core_skills", "tikazzir"), wanted]
+	if content.core_skills("tikazzir") != wanted or content.core_skills("ombulumo").size() != 3:
+		return "the core skills read %s, not %s" % [content.core_skills("tikazzir"), wanted]
 	return _check_core_lists_refused(content, with_core)
 
 
@@ -250,11 +250,11 @@ func _check_core_lists_refused(
 	content: SpeciesContent,
 	abilities: Dictionary[String, Ability],
 ) -> String:
-	var kit: Object = SpeciesKit
-	var problem: String = str(kit.call("problem", content.species, abilities, content.get("cores")))
+	var problem: String = SpeciesKit.problem(content.species, abilities, content.cores)
 	if not problem.is_empty():
 		return "a species' core list was refused: " + problem
-	var passive: String = content.species["ombulumo"].self_passive
+	var toad: Species = content.species["ombulumo"]
+	var passive: String = toad.self_passive
 	var cases: Dictionary[String, Array] = {
 		"isn't an ability of kind core": [[passive], []],
 		"twice": [["xo_absorb", "xo_absorb"], []],
@@ -265,11 +265,12 @@ func _check_core_lists_refused(
 			"tikazzir": cases[wanted][0],
 			"ombulumo": cases[wanted][1],
 		}
-		problem = str(kit.call("problem", content.species, abilities, cores))
+		problem = SpeciesKit.problem(content.species, abilities, cores)
 		if not problem.contains(wanted):
 			return "a core list %s was refused with \"%s\"" % [cores, problem]
 	var webs: Dictionary[String, DevelopmentWeb] = DevelopmentContent.load_webs().webs
-	webs["ombulumo"].passives["deep_4"] = "xo_absorb"
+	var toad_web: DevelopmentWeb = webs["ombulumo"]
+	toad_web.passives["deep_4"] = "xo_absorb"
 	problem = DevelopmentPassives.problem(webs, content.species, abilities)
 	if not problem.contains("isn't a passive"):
 		return "a web granting a core ability was refused with \"%s\"" % problem

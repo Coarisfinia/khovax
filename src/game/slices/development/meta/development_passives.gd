@@ -1,11 +1,11 @@
 class_name DevelopmentPassives
 extends RefCounted
 ## Whether the passives the development webs grant hold together with the abilities (#1404): each
-## is a passive in the ability data, none is a passive a species already has (#222) or a special,
-## and no two nodes grant the same one, so each is one web's own. A web grants one passive at most
-## (#1472): a carried monster brings one web passive to the world, in one value of its run of
-## carry requests. Checked by the content flow, like
-## SpeciesKit.
+## is a passive in the ability data, none is a passive a species already has (#222), a special or a
+## core ability (#2409), which only a species' core list names, and no two nodes grant the same
+## one, so each is one web's own. A web grants one passive at most (#1472): a carried monster brings
+## one web passive to the world, in one value of its run of carry requests. Checked by the content
+## flow, like SpeciesKit.
 
 
 ## Why the passives `webs` grant don't hold together against `all_species` and `all_abilities`
@@ -26,7 +26,7 @@ static func problem(
 			var passive: String = web.passives[node]
 			var where: String = "%s's %s" % [web.species, node]
 			var ability: Ability = all_abilities.get(passive)
-			if ability == null or ability.kind == Ability.SPECIAL:
+			if ability == null or not Ability.PASSIVES.has(ability.kind):
 				return "%s grants %s, which isn't a passive" % [where, passive]
 			if kits.has(passive):
 				return "%s grants %s, a passive a species already has" % [where, passive]

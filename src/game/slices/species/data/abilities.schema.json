@@ -2,7 +2,7 @@
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://github.com/Coarisfinia/khovax/slices/species/data/abilities.schema.json",
 	"title": "Ability",
-	"description": "Something a species brings (#222): a special attack the player triggers (#221), a passive that helps the player while the companion is active, or one that helps the companion itself. A special attack is one species' own (#228) and has its own type (#626). One file per ability, named after its id.",
+	"description": "Something a species brings (#222): a special attack the player triggers (#221), a passive that helps the player while the companion is active, one that helps the companion itself, or a core ability (#2409), a core skill beyond those three whose effect a feature of its own runs by its id. A special attack is one species' own (#228) and has its own type (#626). One file per ability, named after its id.",
 	"type": "object",
 	"additionalProperties": false,
 	"required": ["id", "kind", "name", "description", "codex"],
@@ -12,7 +12,7 @@
 			"type": "string",
 			"pattern": "^[a-z][a-z0-9_]*$"
 		},
-		"kind": { "enum": ["special", "player_passive", "self_passive"] },
+		"kind": { "enum": ["special", "player_passive", "self_passive", "core"] },
 		"name": { "description": "What the player reads.", "type": "string", "x-translate": true, "minLength": 1 },
 		"description": { "description": "What it does, for the player; it may name content with text tags, like ${MONSTER:ombulumo} (#733, TextTags).", "type": "string", "x-translate": true, "minLength": 1 },
 		"codex": {
@@ -48,7 +48,11 @@
 	"else": {
 		"not": { "anyOf": [{ "required": ["power"] }, { "required": ["cooldown_seconds"] }, { "required": ["strike_type"] }, { "required": ["channel_seconds"] }] },
 		"if": { "properties": { "kind": { "const": "player_passive" } } },
-		"then": { "not": { "anyOf": [{ "required": ["hurt_haste"] }, { "required": ["rest_heal"] }, { "required": ["dodge"] }] } }
+		"then": { "not": { "anyOf": [{ "required": ["hurt_haste"] }, { "required": ["rest_heal"] }, { "required": ["dodge"] }] } },
+		"else": {
+			"if": { "properties": { "kind": { "const": "core" } } },
+			"then": { "not": { "anyOf": [{ "required": ["guard"] }, { "required": ["hurt_haste"] }, { "required": ["rest_heal"] }, { "required": ["dodge"] }] } }
+		}
 	},
 	"dependentSchemas": { "hush": { "properties": { "kind": { "const": "player_passive" } } } }
 }
