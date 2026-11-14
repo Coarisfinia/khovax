@@ -31,7 +31,10 @@ extends Feature
 ## CompanionPassives): its species' own, and the one its web grants it (#1472, from its party),
 ## unless gear keeps them on (#617), which its player's requests say. Gear changes only outside a
 ## fight (owner, #223, #2349), here too, not only in the gear panel: a request taken while the
-## player is in one (Fight.involves) is acknowledged, but their passives stay as they were.
+## player is in one (Fight.involves) is acknowledged, but their passives stay as they were until the
+## fight is over. The request waits in their store meanwhile (CompanionPassives.PENDING, #2380), so
+## the world catches up with their profile's gear on the first tick out of the fight, not at the
+## next session; a later request replaces it.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "companions"
@@ -158,28 +161,38 @@ func step(state: GameState, commands: Array[Command]) -> void:
 
 
 ## Takes the request each player here sends to bring monsters into their party (CarryRequest), or
-## to keep their passives on or stop (#617, CompanionPassives.keep), unless it was applied before
-## (OutboxReceipts). One to keep them on or stop taken in a fight changes nothing (#2349).
+## to keep their passives on or stop (#617, CompanionPassives.ask), unless it was applied before
+## (OutboxReceipts). One to keep them on or stop is applied once they're out of a fight (#2349,
+## #2380, CompanionPassives.settle).
 func _take_parties(state: GameState, commands: Array[Command]) -> void:
 	for slot: int in GameState.MAX_PLAYERS:
+		if state.player(slot) == null:
+			continue
 		var command: Command = Command.of(commands, slot)
-		if command == null or state.player(slot) == null:
-			continue
-		var kind: int = command.request_kind
-		if kind != OutboxEntry.CARRY and kind != OutboxEntry.PASSIVES_KEPT:
-			continue
-		if not OutboxReceipts.take(state, slot, ID, command):
-			continue
-		if kind == OutboxEntry.CARRY:
-			CompanionParty.take_request(
-				state,
-				slot,
-				command.request_data,
-				_species_by_code,
-				_passives_by_code,
-			)
-		elif not Fight.involves(state, slot):
-			CompanionPassives.keep(state, slot, command.request_data)
+		if command != null:
+			_take_request(state, slot, command)
+		if CompanionPassives.waits(state, slot) and not Fight.involves(state, slot):
+			CompanionPassives.settle(state, slot)
+
+
+## Takes the request `command` of the player in `slot` (_take_parties), unless it was applied
+## before (OutboxReceipts).
+func _take_request(state: GameState, slot: int, command: Command) -> void:
+	var kind: int = command.request_kind
+	if kind != OutboxEntry.CARRY and kind != OutboxEntry.PASSIVES_KEPT:
+		return
+	if not OutboxReceipts.take(state, slot, ID, command):
+		return
+	if kind == OutboxEntry.CARRY:
+		CompanionParty.take_request(
+			state,
+			slot,
+			command.request_data,
+			_species_by_code,
+			_passives_by_code,
+		)
+	else:
+		CompanionPassives.ask(state, slot, command.request_data)
 
 
 ## Sends the fainted companion `companion_id` back to its player (#456): it leaves the instance
