@@ -16,7 +16,8 @@ extends RefCounted
 ## its guard off every wild monster's hit on the player for its 30 s, and ends when they fall
 ## (#2343); a bone tonic scales the companion's strikes, its auto attack and its special, after the
 ## type chart, and a feather tonic drunk after it ends that and shortens the companion's wait
-## between strikes.
+## between strikes. The drink button (#2313) in the main scene's HUD drinks a tonic through the
+## profile's outbox, and the simulation applies it.
 
 ## The tonic's id in the resource packs.
 const TONIC: String = "tonic"
@@ -56,9 +57,13 @@ const FIGHT_RULES: Array[String] = [
 ]
 ## The species of the wild monster and of the companion in the fights.
 const FIGHTER: String = "ombulumo"
+## The InputMap action that drinks a tonic or a draught (#2313), and where the drink button's
+## check saves its profile, apart from the player's own: it spends a brew.
+const DRINK_ACTION: StringName = &"drink_tonic"
+const DRINK_PROFILE: String = "user://test_tonic_profile.json"
 
 
-func run(_tree: SceneTree) -> String:
+func run(tree: SceneTree) -> String:
 	var result: String = _check_matrix()
 	if result.is_empty():
 		result = _check_refused()
@@ -68,6 +73,8 @@ func run(_tree: SceneTree) -> String:
 		result = _check_drinking()
 	if result.is_empty():
 		result = _check_effects()
+	if result.is_empty():
+		result = await _check_drink_button(tree)
 	return result
 
 
@@ -664,3 +671,59 @@ func _fought(state: GameState, ticks: int, fire: bool = false) -> Dictionary:
 			elif event is WildMonsterStruck:
 				wild.append((event as WildMonsterStruck).damage)
 	return { "companion": companion, "special": special, "wild": wild, "at": at }
+
+
+## The drink button (#2313) in the main scene, with the player's Ombulumo out and hurt down to 1 HP
+## and one berry tonic held: the button shows 1, usable, and its key sends the drink in the next
+## command, a request from the profile's outbox posted as the profile spends the tonic; the
+## simulation mends the companion by the tonic's share of its full HP.
+func _check_drink_button(tree: SceneTree) -> String:
+	if not InputMap.has_action(DRINK_ACTION):
+		return "there is no %s action to drink a tonic or a draught with" % DRINK_ACTION
+	var main: Node = await FlowGame.start_held(tree, DRINK_PROFILE)
+	var result: String = await _drink_button_drinks(main)
+	main.queue_free()
+	await tree.process_frame
+	SaveStore.remove(DRINK_PROFILE)
+	return result
+
+
+## The berry tonic drunk from the drink button's key in `main`; returns why not, or "".
+func _drink_button_drinks(main: Node) -> String:
+	var driver: GameDriver = FlowGame.held_driver(main)
+	var companion_id: int = _hurt_companion(driver)
+	var button: ActionButton = main.get_node_or_null("Hud/DrinkButton") as ActionButton
+	if companion_id == 0 or button == null:
+		return "the Ombulumo isn't out, or the HUD has no drink button"
+	FlowGame.holder(main).keeper.profile.materials["tonic_berry"] = 1
+	if button.corner_text() != "1" or not button.usable():
+		return "the drink button doesn't show 1, usable, with one berry tonic held"
+	var drink: Command = await FlowInput.pressed(driver, DRINK_ACTION)
+	if (drink.request_kind != OutboxEntry.DRINK
+			or drink.request_data != DrinkingFeature.code_of("tonic_berry")):
+		return "the drink key didn't send the berry tonic in the next command"
+	var commands: Array[Command] = [drink]
+	driver.world.step(commands)
+	var health: HealthFeature = driver.state.feature(HealthFeature.ID) as HealthFeature
+	var expected: int = 1 + Fixed.scale(health.max_hp_of(driver.state, companion_id), 300)
+	if health.hp_of(driver.state, companion_id) != expected:
+		return "the berry tonic left the Ombulumo %d HP, not %d" % [
+			health.hp_of(driver.state, companion_id),
+			expected,
+		]
+	return ""
+
+
+## Brings player 0's Ombulumo out in the world `driver` runs and hurts it down to 1 HP; returns
+## its entity's id, 0 when it isn't out.
+static func _hurt_companion(driver: GameDriver) -> int:
+	CompanionParty.bring(driver.world, FlowSteps.parties([[FIGHTER]]))
+	var idle: Array[Command] = [Command.new()]
+	driver.world.step(idle)
+	var companions: CompanionFeature = driver.state.feature(CompanionFeature.ID) as CompanionFeature
+	var companion_id: int = companions.companion_of(0)
+	if companion_id != 0:
+		var health: HealthFeature = driver.state.feature(HealthFeature.ID) as HealthFeature
+		var full_hp: int = health.max_hp_of(driver.state, companion_id)
+		var _hurt: bool = health.hurt(driver.state, companion_id, full_hp - 1)
+	return companion_id
