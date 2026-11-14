@@ -8,16 +8,16 @@ extends Feature
 ## (HealthFeature.heal); a Regrowth, Ward, Quicken or Fortify (#2311) gives its target that effect
 ## for its time (TonicEffectsFeature). A target has one effect at a time: whatever it drinks ends
 ## the one it had. A Slow-release brew (#2312) gives its target its Mend or its effect once its wait
-## has passed, all of it as it would be without the wait, only that much later (TonicEffectsFeature:
-## a replacement or an ending rule meanwhile cancels it). A Shared brew also helps the same target
-## of every other player here within its reach of the drinker's own (Hex.distance), in entity id
-## order, each that can use it then: a Shared Mend only the hurt ones, so it's refused only when
-## nobody in reach is hurt. After a drink the player waits WAIT_TICKS before the next, kept in their
-## world store (#724) as the world tick it ends on (UNTIL), so the wait goes with them through an
-## exit into another instance (#2334). A request this can't carry out (an unknown brew, no target
-## that can use it, a Mend for a target at full HP, or while waiting) is acknowledged and changes
-## nothing; the profile refuses those before spending (`problem`). A Slow-release Mend for a target
-## at full HP is refused too, as it would be without its wait.
+## has passed, as it would without the wait (TonicEffectsFeature: a replacement or an ending rule
+## meanwhile cancels it). A Shared brew also helps the same target of every other player here within
+## its reach of the drinker's own (Hex.distance), in entity id order, each that can use it then: a
+## Shared Mend only the hurt ones, so it's refused only when nobody in reach is hurt. After a drink
+## the player waits WAIT_TICKS before the next, kept in their world store (#724) as the world tick
+## it ends on (UNTIL), so the wait goes with them through an exit into another instance (#2334). A
+## request this can't carry out (an unknown brew, no target that can use it, a Mend for a target at
+## full HP, or while waiting) is acknowledged and changes nothing; the profile refuses those before
+## spending (`problem`). A Slow-release Mend for a target at full HP is refused too, as it would be
+## without its wait.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "drinking"
@@ -101,8 +101,8 @@ func _drink(state: GameState, slot: int, code: int) -> void:
 			var full_hp: int = health.max_hp_of(state, target_id)
 			health.heal(state, target_id, maxi(1, Fixed.scale(full_hp, dose.mend)))
 		elif not dose.effect.is_empty():
-			# Its wait counts from the tick it would start on without one, the next.
-			effects.give(target_id, dose.effect, dose.strength, dose.ticks, 1 + dose.waits)
+			# Without a wait it starts on the next tick, with one once the wait has passed.
+			effects.give(target_id, dose.effect, dose.strength, dose.ticks, maxi(1, dose.waits))
 
 
 ## The targets the brew `dose` the player in `slot` drinks reaches in `state`, in entity id order:

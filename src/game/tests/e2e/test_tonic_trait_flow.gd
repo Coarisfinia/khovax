@@ -1,7 +1,7 @@
 extends RefCounted
 ## Tonic trait flow (#2312, the potion design on #2049, sections 3 and 6): the two traits that
-## change when and whom a brew helps. A Slow-release moss draught heals as a moss draught would,
-## only 5 s later, and a Slow-release berry draught lands its Mend 5 s after the drink; a knockdown
+## change when and whom a brew helps. A Slow-release moss draught starts healing 5 s after the
+## drink, and a Slow-release berry draught lands its Mend 5 s after the drink; a knockdown
 ## or a replacement during the wait cancels it. A Shared brew reaches every other player within 3
 ## tiles of the drinker and nobody farther: a Shared Ward wards each in reach, and a Shared Mend
 ## mends each hurt one in reach even when the drinker isn't hurt, and is refused when nobody in
@@ -38,8 +38,8 @@ func run(_tree: SceneTree) -> String:
 	return "; ".join(wrong)
 
 
-## A Slow-release moss draught (37 thousandths for 20 s) drunk at 1 HP heals the player as a moss
-## draught would, only 5 s later: nothing in its first 6 s, then at the end of every second for
+## A Slow-release moss draught (37 thousandths for 20 s) drunk at 1 HP starts 5 s after the drink,
+## where a moss draught starts on the next tick: it heals at the end of every second from then for
 ## 20 s, and no more after.
 func _check_slow_regrowth() -> String:
 	var state: GameState = _players_at([Vector2i.ZERO])
@@ -54,7 +54,7 @@ func _check_slow_regrowth() -> String:
 	var seen: Array[int] = []
 	var expected: Array[int] = [1, 1 + each, 1 + 20 * each, 1 + 20 * each]
 	for ticks: int in [
-		delay + Simulation.TICKS_PER_SECOND - 1,
+		delay + Simulation.TICKS_PER_SECOND - 2,
 		1,
 		19 * Simulation.TICKS_PER_SECOND,
 		Simulation.TICKS_PER_SECOND,
