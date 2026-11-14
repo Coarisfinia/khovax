@@ -69,6 +69,10 @@ EYE_SHAPE = {"pupil": (0.35, 0.45), "brow_size": 0.6, "socket": True}
 # Ours are this share of the generator's eye balls across (marked_eyes.modelled gives each mark
 # its ball's size): as large, they stood out of their sockets like buttons.
 EYE_SHARE = 0.85
+# How far out its eyes may go (marked_eyes.clear, in their size): the head isn't symmetric, and
+# within marked_eyes.OUT its skin still covered the bottom of the right eye and its rim
+# (check_eyes_covered.py, #1818).
+EYE_OUT = 1.0
 # Faint's frames over which the lids shut (eyes.Lids): as it sinks.
 FAINT_LIDS = (14, 34)
 
@@ -193,7 +197,8 @@ def rename(rig, skin):
 def eyes(rig, skin, marks):
     """Ours where the generator's were (`marks`), their glow and lids each side's colour: the
     right eye's glow and its lid and brow take the magma side's (RIGHT), once joined into the skin."""
-    lids, spots = marked_eyes.replace(rig, skin, palette(COLORS), FAINT_LIDS, marks=marks, **EYE_SHAPE)
+    lids, spots = marked_eyes.replace(rig, skin, palette(COLORS), FAINT_LIDS, marks=marks, rim=True, out=EYE_OUT,
+                                      **EYE_SHAPE)
     slots = {mat.name: index for index, mat in enumerate(skin.data.materials)}
     for key, (name, colour, glow) in RIGHT.items():
         skin.data.materials.append(material(name, colour, glow))

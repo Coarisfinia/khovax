@@ -209,8 +209,8 @@ a second model could use goes into the library or a generic tool, never into one
     faces in a fixed order so a rebuild gives the same bytes).
   - `fixed_order` (#2317): mesh steps that build the same file on any count of Blender's threads:
     `weld` in place of `remove_doubles`, `canonical` (a bmesh rebuilt in a fixed order), `cut`
-    in place of `bisect_plane`, `vertex_normals` summed in the faces' order (area-weighted, so not
-    Blender's own) and `snap` to a grid. A script that cuts or merges uses them.
+    in place of `bisect_plane`, `vertex_normals` summed in the faces' order (area-weighted, or
+    angle-weighted like Blender's own with `angle`) and `snap` to a grid. A script that cuts or merges uses them.
   - `materials`: cel-friendly flat colours and emissive glows (`palette`).
   - `prop_paint` (#1853): the props' shared CC0 texture set and its triplanar mapping, moss and
     shade (below, "Props from a bare shape").
@@ -951,7 +951,8 @@ clips. Ask the owner only when it's unclear what should move how.
    in front of it within its rim, in any frame of any clip, its shut lid included (the owner, on
    #1747: the Wobulumu's skin crossed the bottom of its eyes). A model without eye points passes.
    `marked_eyes.replace`'s `rim=True` keeps the rim clear of the skin too when it sets the eyes
-   (`clear`), and a generated model's loose pieces of skin over the eyes go with
+   (`clear`), its `out` lets them go further out than `OUT` where a lopsided head still covers them
+   there (the Kavrikka's, #1818), and a generated model's loose pieces of skin over the eyes go with
    `marked_eyes.modelled`. A model the check still fails waits in its `KNOWN` list with the issue
    that fixes it. Its lines go into the PR. CI runs it on every `.glb`, with its test
    (`test_eyes_covered.py`).
