@@ -556,8 +556,14 @@ func _check_fortify_and_quicken() -> String:
 			strong[1],
 		]
 	# Checked even after a wrong Fortify, so a wrong Quicken is named too.
-	var quicken: String = _check_quicken(profile, state, hit[0])
-	return quicken if why.is_empty() else "; ".join([why, quicken]).trim_suffix("; ")
+	return _joined(why, _check_quicken(profile, state, hit[0]))
+
+
+## The problems `first` and `second`, either of them "", as one.
+static func _joined(first: String, second: String) -> String:
+	if first.is_empty() or second.is_empty():
+		return first + second
+	return first + "; " + second
 
 
 ## A feather tonic (200 thousandths for 20 s) drunk by the companion of player 0 in `state`, which
