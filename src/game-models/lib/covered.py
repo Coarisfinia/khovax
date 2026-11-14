@@ -51,7 +51,7 @@ def lid_faces(model, meshes, prefix=LID):
         on_lid = [bool(vertex.groups) and max(vertex.groups, key=lambda g: g.weight).group in lids
                   for vertex in obj.data.vertices]
         for polygon in obj.data.polygons:
-            if any(on_lid[vertex] for vertex in polygon.vertices):  # PLANTED (#2378): must fail CI
+            if 2 * sum(on_lid[vertex] for vertex in polygon.vertices) > len(polygon.vertices):
                 faces.add(offset + polygon.index)
         offset += len(obj.data.polygons)
     return faces
