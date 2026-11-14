@@ -20,6 +20,7 @@ import check_clip_set
 import check_eyes
 import check_mouth
 import check_rebuild
+import check_tails
 
 # One creature with nothing wrong and on no list, so the only fault left is the lists' other entries.
 ONE_MODEL = ["resourcepacks/default/models/mana-pup/mana_pup.glb"]
@@ -55,9 +56,15 @@ def selection(out):
     return changed_models.main()
 
 
+def tails():
+    """check_tails.py's main, on one model it doesn't list, so only its list is left to fail it."""
+    sys.argv = ["check_tails.py", "--", *ONE_MODEL]
+    return check_tails.main()
+
+
 def main() -> int:
     checks = {"the clip set check": check_clip_set.main, "the eye check": check_eyes.main,
-              "the mouth check": check_mouth.main}
+              "the mouth check": check_mouth.main, "the tails check": tails}
     failures = []
     with tempfile.TemporaryDirectory(prefix="test_model_lists_") as scratch:
         out = Path(scratch) / "listed"
