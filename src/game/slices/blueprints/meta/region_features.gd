@@ -56,6 +56,9 @@ static func of(region: Region) -> Array[String]:
 		needed.append(HidingFeature.ID)
 	if TileHarvestFeature.has_harvestable(region):
 		needed.append(TileHarvestFeature.ID)
+	# A wild monster its legend marks escaping escapes at its line (#2411).
+	if EscapeFeature.has_escaper(region):
+		needed.append(EscapeFeature.ID)
 	if WaystoneFeature.has_waystone(region):
 		needed.append(WaystoneFeature.ID)
 	for reader: PlacementReader in readers():
@@ -79,4 +82,5 @@ static func _built_in() -> Array[String]:
 		HidingFeature.ID,
 		TileHarvestFeature.ID,
 		WaystoneFeature.ID,
+		EscapeFeature.ID,
 	]

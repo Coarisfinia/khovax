@@ -205,22 +205,21 @@ func _push(state: GameState, dominator_id: int) -> void:
 	RingSealing.push(state, seal)
 	var failed: int = seal.failed_segment()
 	if failed >= 0:
-		var slot: int = state.entity(dominator_id).slot
-		var walls: Array[Vector2i] = seal.walls
-		var broken: RingBroken = RingBroken.new(
-			dominator_id,
-			slot,
-			walls[failed],
-			walls,
-			seal.monsters,
-		)
-		state.events.append(broken)
-		_end(state, dominator_id)
+		_break_seal(state, dominator_id, seal.walls[failed])
 	elif seal.ticks >= seal.seal_ticks:
 		var takers: Dictionary[int, int] = _takers(state, dominator_id, seal)
 		for monster_id: int in seal.monsters.duplicate():
 			_dominate(state, monster_id, takers[monster_id], seal)
 		_end(state, dominator_id)
+
+
+## Breaks the seal of `dominator_id` at its segment `wall`: a RingBroken event, and the ring comes
+## off the trail.
+func _break_seal(state: GameState, dominator_id: int, wall: Vector2i) -> void:
+	var seal: RingSeal = seals[dominator_id]
+	var slot: int = state.entity(dominator_id).slot
+	state.events.append(RingBroken.new(dominator_id, slot, wall, seal.walls, seal.monsters))
+	_end(state, dominator_id)
 
 
 ## Who gets each wild monster of a held ring, by monster id: its dominator when it holds one; split
@@ -322,11 +321,15 @@ func wall_pushed_by(state: GameState, monster_id: int, dominator_id: int) -> Vec
 	return monster.tile
 
 
-## Breaks the ring of `dominator_id` waiting for a totem, its segment `wall` worn through by the
-## wild monsters inside (#422, WildAttackFeature): a RingBroken event, as when a seal breaks (so
-## EnrageFeature enrages them), and the ring comes off the trail. A waiting ring breaks no other
-## way.
-func break_waiting(state: GameState, dominator_id: int, wall: Vector2i) -> void:
+## Breaks the ring of `dominator_id` at its segment `wall`, a ring waiting for a totem worn through
+## by the wild monsters inside (#422, WildAttackFeature), or one waiting or sealing that a wild
+## monster inside escapes (#2411, EscapeFeature): a RingBroken event, as when a seal gives way (so
+## EnrageFeature enrages them), and the ring comes off the trail. Besides a seal giving way, a ring
+## breaks no other way.
+func break_ring(state: GameState, dominator_id: int, wall: Vector2i) -> void:
+	if seals.has(dominator_id):
+		_break_seal(state, dominator_id, wall)
+		return
 	var walls: Array[Vector2i] = ring_waiting(state, dominator_id)
 	var inside: Array[int] = []
 	inside.assign(encircled[dominator_id])

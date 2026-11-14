@@ -15,6 +15,11 @@ const WOUNDED: String = "wounded"
 const EMITTING: String = "emitting "
 const TARGETED: String = "the quest target "
 const ON: String = "on "
+## `, escaping at <percent>%` (#2411, EscapeFeature): once its HP, or a seal around it, is down to
+## that share, from 1% to 99%, it escapes instead of fainting or being dominated.
+const ESCAPING: String = "escaping at "
+const PERCENT: String = "%"
+const WHOLE: int = 100
 
 var species: String = ""
 var wounded: bool = false
@@ -22,6 +27,9 @@ var emits: String = ""
 var target: String = ""
 ## The meaning of the tile kind it stands on (`sand`), or "" for ground.
 var stands_on: String = ""
+## The share of the way left where it escapes (`, escaping at`), in thousandths (Fixed), or 0 when
+## it never does.
+var escapes_at: int = 0
 
 
 ## The named wild monster a legend `meaning` places, or null when it places none.
@@ -48,6 +56,22 @@ static func read(meaning: String) -> WildSpot:
 				and spot.target.is_empty()
 				and Ids.is_id(targeted)):
 			spot.target = targeted
+		elif clause.begins_with(ESCAPING) and spot.escapes_at == 0:
+			spot.escapes_at = _share_of(clause.trim_prefix(ESCAPING))
+			if spot.escapes_at == 0:
+				return null
 		else:
 			return null
 	return spot if Ids.is_id(spot.species) else null
+
+
+## The share a `percent` like `25%` gives, in thousandths, or 0 when it isn't a whole percent from 1
+## to 99.
+static func _share_of(percent: String) -> int:
+	var number: String = percent.trim_suffix(PERCENT)
+	if (not percent.ends_with(PERCENT)
+			or not number.is_valid_int()
+			or number != str(number.to_int())):
+		return 0
+	var share: int = number.to_int()
+	return Fixed.ratio(share, WHOLE) if share > 0 and share < WHOLE else 0

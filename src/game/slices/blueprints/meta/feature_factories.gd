@@ -61,6 +61,9 @@ static func _world_rules() -> Dictionary[String, Callable]:
 		# nothing in that tick (#1202).
 		SleepFeature.ID: _plain(SleepFeature),
 		DominationFeature.ID: _plain(DominationFeature),
+		# Right after domination, so a seal that reached an escaper's line breaks in the same tick,
+		# before it could hold (#2411).
+		EscapeFeature.ID: _plain(EscapeFeature),
 		# After domination, whose waiting rings it breaks, and before enrage, which enrages the
 		# wild monsters of a ring that broke.
 		WildAttackFeature.ID: WildAttackFactory.build,

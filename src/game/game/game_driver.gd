@@ -25,7 +25,7 @@ static var fixed_seed: int = ROLLED_SEED
 ## The instance blueprint a fresh world starts in instead of `instance`, or "": the `--instance`
 ## launch option (#237).
 static var start_instance: String = ""
-## Whether this machine's player is invincible in a fresh world (HealthFeature.make_invincible):
+## Whether this machine's player is invincible in a fresh world (Invincibility.make):
 ## the `--invincible` launch option (#1142).
 static var invincible: bool = false
 
@@ -99,7 +99,7 @@ func start(seed_value: int) -> void:
 	if world != null:
 		recording = Replay.new(instance, seed_value)
 		if invincible:
-			HealthFeature.make_invincible(world, input.slot if input != null else 0)
+			Invincibility.make(world, input.slot if input != null else 0)
 			# The seed alone doesn't make the player invincible, so the recording starts from the
 			# world that does, like a resumed one's.
 			recording.start_world = WorldData.of(world)
