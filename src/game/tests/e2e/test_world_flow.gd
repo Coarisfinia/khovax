@@ -1929,9 +1929,10 @@ func _check_variant_pieces() -> String:
 	var opened: RegionFiles = RegionFiles.cached(PASS_OPENED)
 	var path: String = opened.texts.keys()[0]
 	var text: String = opened.texts[path]
-	# One more ground tile at the end of the wild monster's row, and the east connector turned.
-	var row: String = "🟫👾⬛🟫🟫🟫🟫🟫⬛🟫🟫\n"
-	var wider: String = text.replace(row, row.replace("\n", "🟫\n"))
+	# One more ground tile at the end of the row above the wild monster's, and the east connector
+	# turned.
+	var row: String = "\n 🟫⬛⬛🟫🟫🟫🟫🟫🟫🟫\n"
+	var wider: String = text.replace(row, row.trim_suffix("\n") + "🟫\n")
 	var turned: String = text.replace("to the east", "to the northeast")
 	if wider == text or turned == text:
 		return "the pass's opened sealed passage no longer reads as the variant check changes it"
