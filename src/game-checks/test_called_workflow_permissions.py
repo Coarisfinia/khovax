@@ -75,19 +75,28 @@ class CalledWorkflowPermissionsTest(unittest.TestCase):
         )
 
     def test_a_lower_level_is_named(self) -> None:
-        self.assertIn("pages: write (granted read)", found("      deployments: read\n      pages: read")[0][1])
+        listed = found("      deployments: read\n      pages: read")
+        self.assertIn("pages: write (granted read)", listed[0][1])
 
     def test_a_caller_job_without_permissions_grants_its_workflows(self) -> None:
         caller = read(CALLER.format(extra="").replace("    permissions:\n      contents: write\n", ""))
         self.assertEqual(caller.jobs["ci"], (None, "called.yml"))
-        messages = [message for _name, message in problems({"called.yml": read(CALLED), "caller.yml": caller})]
+        listed = problems({"called.yml": read(CALLED), "caller.yml": caller})
+        messages = [message for _name, message in listed]
         self.assertEqual(len(messages), 1)
         self.assertIn("deployments: read (granted none), pages: write (granted none)", messages[0])
 
-    def test_a_called_job_without_any_permissions_is_refused(self) -> None:
+    def test_a_called_job_without_any_permissions_gets_the_callers(self) -> None:
         called = read(CALLED.replace("permissions:\n  contents: read\n\n", ""))
+        self.assertEqual(called.jobs["plain"], (None, None))
         listed = problems({"called.yml": called, "caller.yml": read(CALLER.format(extra=""))})
-        self.assertIn(("called.yml", "job plain asks for the default token's permissions"), listed)
+        self.assertEqual([message for _name, message in listed if "job plain" in message], [])
+        self.assertEqual(len(listed), 1)
+
+    def test_a_quoted_call_is_read(self) -> None:
+        path = "./.github/workflows/called.yml"
+        caller = read(CALLER.format(extra="").replace(f"uses: {path}", f'uses: "{path}"'))
+        self.assertEqual(caller.jobs["ci"], ({"contents": "write"}, "called.yml"))
 
     def test_an_unknown_called_workflow_is_refused(self) -> None:
         listed = problems({"caller.yml": read(CALLER.format(extra=""))})

@@ -5,7 +5,7 @@ ci.yml, so a permission added to a ci.yml job stopped every nightly without a pu
 request seeing it.
 
 A job without its own `permissions:` has its workflow's. A called workflow's job that has neither
-asks for the repository's default token, which this can't read, so it is refused too.
+gets what its caller grants, so it can't ask for more.
 
     uv run --locked --package khovax-game-checks src/game-checks/called_workflow_permissions.py
 """
@@ -73,7 +73,7 @@ def read(text: str) -> Workflow:
             if key == "permissions":
                 permissions = start(value)
                 block, block_indent = permissions, 4
-            elif key == "uses" and (call := CALL.fullmatch(value)):
+            elif key == "uses" and (call := CALL.fullmatch(value.strip("\"'"))):
                 called = call[1]
             workflow.jobs[job] = (permissions, called)
     return workflow
@@ -112,9 +112,8 @@ def problems(workflows: dict[str, Workflow]) -> list[tuple[str, str]]:
                 continue
             for inner, (asked, _called) in target.jobs.items():
                 asked = asked if asked is not None else target.permissions
-                if asked is None:
-                    found.append((called, f"job {inner} asks for the default token's permissions"))
-                elif missing := short(granted, asked):
+                # Neither the job nor its workflow names any: it gets what the caller grants.
+                if asked is not None and (missing := short(granted, asked)):
                     found.append(
                         (
                             name,
