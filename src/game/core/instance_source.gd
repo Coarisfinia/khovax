@@ -43,6 +43,12 @@ func create(
 	return null
 
 
+## The instance a player asking for the debug zone is sent to (#2274, SentToDebugZone), or "" for
+## none. This one knows none.
+func debug_zone() -> String:
+	return ""
+
+
 ## How many ticks an instance nobody is in stays loaded before it's purged (#212), by the world's
 ## player `stores` (#1316: the host chooses it): Tuning's here.
 func reset_ticks(_stores: Array[PlayerStore]) -> int:

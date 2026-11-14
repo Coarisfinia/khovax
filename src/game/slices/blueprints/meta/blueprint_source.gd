@@ -44,6 +44,11 @@ func create(
 	return InstanceBlueprints.create(instance_name, seed_value, players, variant_name, world_tick)
 
 
+## The blueprint marked as the debug zone (InstanceBlueprints.debug_zone, #2274).
+func debug_zone() -> String:
+	return InstanceBlueprints.debug_zone()
+
+
 ## The host's instance reset delay (#1316, HostSettings), from their world store in `stores`.
 func reset_ticks(stores: Array[PlayerStore]) -> int:
 	return HostSettings.reset_ticks(stores[HostSettings.HOST])

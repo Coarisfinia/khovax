@@ -33,6 +33,15 @@ static func exists(instance_name: String) -> bool:
 	return BlueprintContent.cached().blueprints.has(instance_name)
 
 
+## The first blueprint, in file name order, marked as the debug zone (Blueprint.debug_zone, #2274),
+## or "" for none.
+static func debug_zone() -> String:
+	for instance_name: String in names():
+		if blueprint(instance_name).debug_zone:
+			return instance_name
+	return ""
+
+
 ## The variant of the named blueprint that the world's `flags` choose (Blueprint.variants), or "".
 static func variant(instance_name: String, flags: Array[String]) -> String:
 	var named: Blueprint = blueprint(instance_name)

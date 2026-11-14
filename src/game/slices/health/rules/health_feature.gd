@@ -17,7 +17,8 @@ extends Feature
 ## request of the kind OutboxEntry.INVINCIBLE (the Settings tab's Debug submenu, #2273) makes them
 ## invincible, or vulnerable again, from the tick it's applied; like every request, it's applied
 ## once (OutboxReceipts), and one with data that's neither 0 nor 1 is acknowledged and changes
-## nothing.
+## nothing. So is the submenu's teleport (OutboxEntry.TELEPORT, #2274): 1 sends the player to the
+## debug zone (SentToDebugZone), 0 back to the spawn (SentToSpawn), as a new entity at full HP.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "health"
@@ -29,6 +30,10 @@ const UNKNOWN_HP: int = 100
 const REVIVED_HP: int = Tuning.REVIVED_HP
 ## What an invincible player's entry in their world store (#724) holds (`make_invincible`).
 const INVINCIBLE: String = "invincible"
+## The key in a player's world store of the teleports applied (OutboxReceipts, #2274): an entry of
+## its own, since a request's acknowledged mark covers only the requests of its kind. Saved and
+## hashed, so never changed once it shipped.
+const TELEPORTS: String = "teleports"
 
 ## Each species' HP, by species id, from the content data (the species slice reads them).
 var max_hps: Dictionary[String, int] = {}
@@ -63,9 +68,11 @@ func requires() -> Array[String]:
 
 
 ## A player revived this tick gets REVIVED_HP of their HP back (#479); a player asking to be
-## invincible, or to stop, is so from now on (#2273).
+## invincible, or to stop, is so from now on (#2273); one asking to go to the debug zone, or back,
+## is sent there (#2274).
 func step(state: GameState, commands: Array[Command]) -> void:
 	_apply_invincible_requests(state, commands)
+	_apply_teleport_requests(state, commands)
 	for event: RefCounted in state.events:
 		var revived: PlayerRevived = event as PlayerRevived
 		if revived != null and state.entity(revived.entity_id) != null:
@@ -88,6 +95,27 @@ func _apply_invincible_requests(state: GameState, commands: Array[Command]) -> v
 			entry[INVINCIBLE] = 1
 		elif command.request_data == 0:
 			var _dropped: bool = entry.erase(INVINCIBLE)
+
+
+## Carries out the players' requests to go to the debug zone or back (OutboxEntry.TELEPORT), in
+## slot order, acknowledging every one: the world moves them after every instance has stepped.
+func _apply_teleport_requests(state: GameState, commands: Array[Command]) -> void:
+	for slot: int in GameState.MAX_PLAYERS:
+		var command: Command = Command.of(commands, slot)
+		var asking: bool = command != null and command.request_kind == OutboxEntry.TELEPORT
+		var player: Entity = state.player(slot) if asking else null
+		if player == null or not OutboxReceipts.take(state, slot, TELEPORTS, command):
+			continue
+		_teleport(state, player, slot, command.request_data)
+
+
+## Sends `player`, in `slot`, to the debug zone for `data` 1, back to the spawn for 0, or nowhere
+## for any other data.
+static func _teleport(state: GameState, player: Entity, slot: int, data: int) -> void:
+	if data == 1:
+		state.events.append(SentToDebugZone.new(player.id, slot))
+	elif data == 0:
+		state.events.append(SentToSpawn.new(player.id, slot))
 
 
 ## Gives `entity_id` its species' HP: its feature calls this when it adds or restores it. A wild

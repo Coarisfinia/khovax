@@ -1337,6 +1337,14 @@ msgid "Invincible"
 msgstr ""
 
 #: slices/menu/ui/game_menu.gd
+msgid "Teleport to the debug zone"
+msgstr ""
+
+#: slices/menu/ui/game_menu.gd
+msgid "Back to the spawn"
+msgstr ""
+
+#: slices/menu/ui/game_menu.gd
 msgid "Menu"
 msgstr ""
 

@@ -1178,8 +1178,8 @@ func _menu_debug(menu: GameMenu, tab: SettingsTab) -> String:
 
 
 ## The Debug submenu's teleport (#2274): below the Invincible row, a button to the debug zone and
-## one back to the spawn. Each posts its request to the profile's outbox for the world (the outbox
-## kind 10): 1 to go to the debug zone, 0 to go back.
+## one back to the spawn. Each posts its request to the profile's outbox for the world
+## (OutboxEntry.TELEPORT).
 func _menu_teleport(menu: GameMenu, tab: SettingsTab) -> String:
 	var debug: Node = tab.back_button(SettingsTab.DEBUG).get_parent().get_parent()
 	var there: Button = debug.find_child("TeleportToDebugZone", false, false) as Button
@@ -1191,9 +1191,9 @@ func _menu_teleport(menu: GameMenu, tab: SettingsTab) -> String:
 	there.pressed.emit()
 	back.pressed.emit()
 	for request: OutboxEntry in outbox.entries:
-		if request.kind == 10:
+		if request.kind == OutboxEntry.TELEPORT:
 			asked.append(request.data)
-	if asked != [1, 0]:
+	if asked != [TeleportChoice.TO_DEBUG_ZONE, TeleportChoice.BACK]:
 		return "the teleport buttons ask the world for %s, not the debug zone and back" % [asked]
 	return ""
 
