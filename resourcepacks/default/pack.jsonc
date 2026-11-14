@@ -103,6 +103,7 @@
 		"model_rock_single_a": "models/kaykit-hexagon/rock_single_A.gltf",
 		"model_rock_single_e": "models/kaykit-hexagon/rock_single_E.gltf",
 		"model_rogue": "models/kaykit-adventurers/Rogue.glb",
+		"model_sandstone_turret": "models/sandstone-turret/sandstone_turret.glb",
 		"model_spikes": "models/quaternius-items/spikes.glb",
 		"model_standing_stone": "models/standing-stone/standing_stone.glb",
 		"model_starry_egg": "models/starry-egg/starry_egg.glb",
