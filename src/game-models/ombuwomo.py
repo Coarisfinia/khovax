@@ -158,7 +158,7 @@ def build(out):
     # The face on its back, under the copied leaf: its painted eyes go, so none shows past the leaf.
     back = marked_eyes.Head(skin, limbless.BODY)
     marked_eyes.repaint(back, marked_eyes.find(back))
-    lids, eyes = marked_eyes.replace(rig, skin, palette(COLORS), FAINT_LIDS, **EYE_SHAPE)
+    lids, eyes = marked_eyes.replace(rig, skin, palette(COLORS), FAINT_LIDS, rim=True, **EYE_SHAPE)
     attachments.add(rig, eyes, [(tuple(SCALE * value for value in SNOUT), limbless.HEAD)])
     clips.animate(rig, {
         "Idle": limbless.idle(0),
