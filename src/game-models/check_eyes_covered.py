@@ -33,7 +33,6 @@ from lib import covered, ground, imported  # noqa: E402
 KNOWN = {
     "mana_pup": 1818,
     "mana_wolf": 1818,
-    "ombuwomo": 1818,
 }
 
 
