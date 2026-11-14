@@ -424,6 +424,9 @@ class FormsTest(unittest.TestCase):
             "\n\t\tvar tile: Variant = get_tile()\n\t\treturn tile.length()",
             "var tile: Vector2i\n\n\nfunc f(tile: String) -> void:"
             "\n\tvar g := func() -> int: var tile := get_tile(); return tile.length()",
+            "var tile: Vector2i\n\n\nfunc f(tile: String) -> void:"
+            '\n\tvar tile: String = "x"; var g := func() -> int: var tile: Variant = get_tile();'
+            " return tile.length()",
             "var tile: Vector2i\n\n\nfunc f(tile: String, tiles: Array) -> void:"
             "\n\tvar g := func() -> void:\n\t\tfor tile in tiles:\n\t\t\tprint(tile.length())",
             # A type that may hold an integer vector, none, or one inferred.
