@@ -140,6 +140,9 @@ static func region_of(instance_name: String, seed_value: int, variant_name: Stri
 	if files.whole:
 		var whole: String = files.texts.values()[0]
 		return _lead_exits(read_region(whole), instance_name)
+	var changes: String = _changes_problem(instance_name, region_name)
+	if not changes.is_empty():
+		return _refused(changes)
 	var texts: Dictionary[String, String] = _piece_texts(instance_name, region_name)
 	var pieces: Array[Region] = []
 	for path: String in _piece_order(texts):
@@ -160,8 +163,9 @@ static func region_of(instance_name: String, seed_value: int, variant_name: Stri
 ## The text of each region piece of the region `region_name`, by its path. A variant's folder
 ## without a start piece holds only the pieces it changes (#1590), so the rest are those of the
 ## blueprint `instance_name`, when its region is pieces too: its pieces then arrange like the
-## blueprint's own for every seed, as long as each keeps its piece's shape and connectors. A folder
-## with a start piece is a whole region of its own.
+## blueprint's own for every seed, since each keeps its piece's shape and connectors
+## (_changes_problem refuses one that doesn't). A folder with a start piece is a whole region of its
+## own.
 static func _piece_texts(instance_name: String, region_name: String) -> Dictionary[String, String]:
 	var files: RegionFiles = RegionFiles.cached(region_name)
 	var texts: Dictionary[String, String] = files.texts.duplicate()
@@ -175,6 +179,53 @@ static func _piece_texts(instance_name: String, region_name: String) -> Dictiona
 		if not changed.has(path.get_file()):
 			texts[path] = own.texts[path]
 	return texts
+
+
+## Why the variant region `region_name`, a folder without a start piece that holds only the pieces
+## it changes (_piece_texts), doesn't change the blueprint `instance_name`'s pieces alike (#2383),
+## or "": each of its pieces must replace one of the blueprint's by file name, keeping its tiles and
+## connectors, so the variant arranges like the blueprint for every seed. A piece that can't be read
+## is left for its own reading to report.
+static func _changes_problem(instance_name: String, region_name: String) -> String:
+	var files: RegionFiles = RegionFiles.cached(region_name)
+	var own: RegionFiles = RegionFiles.cached(instance_name)
+	if region_name == instance_name or own.whole:
+		return ""
+	var kept: Dictionary[String, String] = {}
+	for path: String in own.texts:
+		kept[path.get_file()] = own.texts[path]
+	for path: String in files.texts:
+		if path.get_file() == START_PIECE:
+			return ""
+	for path: String in files.texts:
+		var file_name: String = path.get_file()
+		if not kept.has(file_name):
+			return "variant %s's piece %s changes none of %s's pieces" % [
+				region_name,
+				file_name,
+				instance_name,
+			]
+		var changed: Region = read_region(files.texts[path])
+		var before: Region = read_region(kept[file_name])
+		var readable: bool = changed.problem.is_empty() and before.problem.is_empty()
+		var alike: bool = (
+			changed.sorted_tiles() == before.sorted_tiles()
+			and changed.connectors == before.connectors
+		)
+		if readable and not alike:
+			return "variant %s's piece %s doesn't keep the tiles and connectors of %s's" % [
+				region_name,
+				file_name,
+				instance_name,
+			]
+	return ""
+
+
+## An empty region whose `problem` is `problem`.
+static func _refused(problem: String) -> Region:
+	var region: Region = Region.new()
+	region.problem = problem
+	return region
 
 
 ## The paths of the region pieces in `texts`, the start piece first and the others by file name.
