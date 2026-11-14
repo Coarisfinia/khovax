@@ -133,6 +133,9 @@ const TYPE_FACTORS: Dictionary[String, int] = {
 	"growth mixed": 1125,
 	"titan none": 1000,
 }
+## The escapers' line (#2411), a quarter of the way, in thousandths, and the event they emit.
+const ESCAPE_LINE: int = 250
+const ESCAPED_EVENT: String = "test_escaped"
 ## A small ring and a big one around the disc's middle, by their radius.
 const SMALL_RING: int = 1
 const BIG_RING: int = 3
@@ -772,7 +775,126 @@ func _check_target_dominated() -> String:
 	var dominated: Array[WildMonsterDominated] = _dominated(events)
 	if dominated.size() != 1 or dominated[0].target != "old_toad":
 		return "dominating the quest target old_toad didn't name it in its domination"
+	return _check_escape_legend()
+
+
+## A legend marks a wild monster escaping at a whole percent from 1% to 99% (#2411), beside its
+## other clauses, and a region with one brings the escapes; any other share is refused.
+func _check_escape_legend() -> String:
+	var marked: WildSpot = WildSpot.read(
+		WildSpot.NAMED + WEAK + ", escaping at 25%, emitting " + ESCAPED_EVENT + ", on sand",
+	)
+	if marked == null or marked.escapes_at != ESCAPE_LINE or marked.emits != ESCAPED_EVENT:
+		return "a legend didn't mark its wild monster escaping at 25%"
+	for refused: String in ["0%", "100%", "25", "025%", "-5%", "x%"]:
+		if WildSpot.read(WildSpot.NAMED + WEAK + ", escaping at " + refused) != null:
+			return "a legend marked a wild monster escaping at " + refused
+	var region: Region = _escape_state(false).region
+	if not RegionFeatures.of(region).has(EscapeFeature.ID):
+		return "a region with a wild monster marked escaping doesn't bring the escapes"
+	if RegionFeatures.of(_outcome_state(WEAK, [Vector2i.ZERO]).region).has(EscapeFeature.ID):
+		return "a region without an escaper brings the escapes"
+	return _check_escape_hit()
+
+
+## A hit that would fell an escaper stops at its line (#2411), a quarter of its HP; on the next
+## tick it escapes: it leaves the instance, nobody dominates it, and it emits its legend's event,
+## as fainting does. A save taken before resumes its line. Switched off, the escapes hold nobody,
+## and the same hit fells it.
+func _check_escape_hit() -> String:
+	var state: GameState = _escape_state(false)
+	var reloaded: GameState = _escape_state(false)
+	if not _reloads(state, reloaded, EscapeFeature.ID):
+		return "a save didn't resume the escapers' lines"
+	var held: String = _escape_held(reloaded)
+	if not held.is_empty():
+		return held
+	var monster: int = _wild(state).monsters[0]
+	_wild(state).wound(state, monster, OUTCOME_HP * 10, true)
+	var line_hp: int = Fixed.scale(OUTCOME_HP, ESCAPE_LINE)
+	if _hp(state, monster) != line_hp or _wild(state).is_fainted(monster):
+		return "a lethal hit took an escaper to %d HP, past its line" % _hp(state, monster)
+	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	var escaped: String = _escaped_once(state, state.events, monster)
+	if not escaped.is_empty():
+		return escaped
+	var off: GameState = _escape_state(false)
+	var off_monster: int = _wild(off).monsters[0]
+	Simulation.step(off, FlowSteps.command(Command.NO_MOVE))
+	off.set_enabled(EscapeFeature.ID, false)
+	_wild(off).wound(off, off_monster, OUTCOME_HP * 10, true)
+	if not _wild(off).is_fainted(off_monster):
+		return "with the escapes switched off, a lethal hit didn't fell an escaper"
+	return _check_escape_seal()
+
+
+## The escaper in `state`, reloaded, is still held at its line by a lethal hit.
+func _escape_held(state: GameState) -> String:
+	var monster: int = _wild(state).monsters[0]
+	_wild(state).wound(state, monster, OUTCOME_HP * 10, true)
+	if _hp(state, monster) != Fixed.scale(OUTCOME_HP, ESCAPE_LINE):
+		return "a reloaded escaper wasn't held at its line"
 	return ""
+
+
+## A ring sealing around an escaper (#2411) breaks once only its line's share of the seal is left,
+## before it holds: a RingBroken event, the ring off the trail, and the escaper gone without a
+## domination.
+func _check_escape_seal() -> String:
+	var state: GameState = _escape_state(true)
+	var monster: int = _wild(state).monsters[0]
+	var ring: Array[Vector2i] = Hex.ring(SMALL_RING)
+	var _player: Entity = state.add_entity(0, ring[0])
+	_close(state, ring.slice(1))
+	var events: Array[RefCounted] = _settle(state)
+	var broken: bool = false
+	for event: RefCounted in events:
+		broken = broken or event is RingBroken
+	if not broken or not _domination(state).seals.is_empty():
+		return "a ring sealing around an escaper didn't break at its line"
+	for wall: Vector2i in ring:
+		if _trails(state).shared.tiles.has(wall) and state.player(0).tile != wall:
+			return "the ring an escaper broke stayed on the trail at %s" % wall
+	return _escaped_once(state, events, monster)
+
+
+## Whether `events` show the escaper `monster` of `state` escaping once: out of the instance, its
+## event emitted, and no domination.
+func _escaped_once(state: GameState, events: Array[RefCounted], monster: int) -> String:
+	var escaped: Array[WildMonsterEscaped] = []
+	var emitted: Array[String] = []
+	for event: RefCounted in events:
+		if event is WildMonsterEscaped:
+			escaped.append(event as WildMonsterEscaped)
+		elif event is EventEmitted:
+			emitted.append((event as EventEmitted).event_name)
+	if escaped.size() != 1 or escaped[0].monster_id != monster or escaped[0].species != WEAK:
+		return "an escaper at its line didn't escape once: %d escapes" % escaped.size()
+	if state.entity(monster) != null or not _dominated(events).is_empty():
+		return "an escaper stayed in the instance, or was dominated"
+	if emitted.size() != 1 or emitted[0] != ESCAPED_EVENT:
+		return "an escaper emitted %s, not its legend's event" % [emitted]
+	return ""
+
+
+## A disc with one weak monster in its middle that escapes at ESCAPE_LINE and emits ESCAPED_EVENT
+## (#2411), and the escapes after domination; `ringed` gives it the outcome checks' features, so a
+## player can ring it.
+func _escape_state(ringed: bool) -> GameState:
+	var region: Region = Region.disc(OUTCOME_RADIUS)
+	var spots: Array[Vector2i] = [Vector2i.ZERO]
+	region.wild_monsters = spots
+	var meaning: String = WildSpot.NAMED + WEAK + ", escaping at 25%, emitting " + ESCAPED_EVENT
+	region.add_placement(WildSpotPlacements.KIND, Vector2i.ZERO, meaning)
+	var hp: Dictionary[String, int] = { WEAK: OUTCOME_HP }
+	var strength: Dictionary[String, int] = { WEAK: WEAK_STRENGTH }
+	var features: Array[Feature] = [MovementFeature.new(), KnockdownFeature.new()]
+	features.append_array([TrailFeature.new(), HealthFeature.new(hp)])
+	features.append(WildMonsterFeature.new([], [], strength))
+	if ringed:
+		features.append(DominationFeature.new())
+	features.append(EscapeFeature.new())
+	return GameState.new(region, 1, features)
 
 
 ## A weak monster in a small ring (#692): while the ring waits for a totem, it isn't hurt as long as
