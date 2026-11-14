@@ -202,6 +202,14 @@ func advance(delta: float) -> void:
 	_accumulated = minf(_accumulated, tick_seconds)
 
 
+## Warns about every instance whose kept own hash isn't the one taken afresh (#2135), in debug
+## builds only (the e2e flows among them, never a release build): a change that skipped
+## GameState.touch, which co-op's per-tick hash would miss.
+func _check_kept_hashes() -> void:
+	for instance_name: String in world.stale_hashes():
+		push_warning("%s's kept hash is stale: a change to it skipped touch()" % instance_name)
+
+
 ## The clock's time, in microseconds.
 func _now_usec() -> int:
 	var now: int = clock.call()
@@ -225,6 +233,8 @@ func _step() -> bool:
 	if players > 1:
 		hashes[tick] = world.sync_hash()
 		var _forgot: bool = hashes.erase(tick - HASH_HISTORY)
+		if OS.is_debug_build() and tick % HASH_CHECK_TICKS == 0:
+			_check_kept_hashes()
 	# A copy of the local player's instance's events (the simulation clears its list when the next
 	# tick starts): the instance they were in, and the one they walked into if they left it.
 	var events: Array[RefCounted] = []

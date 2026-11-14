@@ -361,6 +361,16 @@ func sync_hash() -> int:
 	return _fingerprint(StateHash.of_values(shared), true)
 
 
+## The loaded instances, in name order, whose kept own hash is stale (GameState.own_hash_stale,
+## #2135): each was changed without `touch`, so `sync_hash` misses the change.
+func stale_hashes() -> Array[String]:
+	var stale: Array[String] = []
+	for instance_name: String in sorted_names():
+		if instances[instance_name].own_hash_stale():
+			stale.append(instance_name)
+	return stale
+
+
 ## `state_hash`, or with `synced` `sync_hash`, from `start`, the world's own values.
 func _fingerprint(start: int, synced: bool) -> int:
 	var result: int = start
