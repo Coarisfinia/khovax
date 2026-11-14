@@ -8,8 +8,9 @@ extends RefCounted
 ## spends its exact cost from the profile and counts one more of it, and a craft that can't be is
 ## refused and changes nothing. Drinking a brew (#2310) is a request from the profile's outbox: a
 ## berry tonic mends the out companion and a berry draught the player, at the brew's potency, and
-## each player then waits 10 s before the next. A drink is refused before anything is spent with no
-## out companion for a tonic, a knocked-down player for a draught, none left, or while waiting.
+## each player then waits 10 s before the next, a wait that goes with them through an exit (#2334).
+## A drink is refused before anything is spent with no out companion for a tonic, a knocked-down
+## player for a draught, none left, or while waiting.
 
 ## The tonic's id in the resource packs.
 const TONIC: String = "tonic"
@@ -41,6 +42,8 @@ func run(_tree: SceneTree) -> String:
 		result = _check_crafting()
 	if result.is_empty():
 		result = _check_drinking()
+	if result.is_empty():
+		result = _check_through_exit()
 	return result
 
 
@@ -390,6 +393,47 @@ func _refused(profile: Profile, state: GameState, brew: String, what: String) ->
 	if refusal.is_empty() or profile.materials != held or not profile.outbox.entries.is_empty():
 		return "%s wasn't refused before anything was spent: %s" % [what, refusal]
 	return ""
+
+
+## A player's wait goes with them through an exit (#2334): a berry draught drunk on the forest's
+## exit keeps them waiting in the glade they walk into, until 10 s after the drink and no longer.
+func _check_through_exit() -> String:
+	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.FOREST)
+	for direction: int in FlowSteps.INTO_GLADE.slice(0, -1):
+		_walk_in(world, direction)
+	var profile: Profile = Profile.new()
+	profile.materials.assign({ "draught_berry": 2 })
+	var forest: GameState = world.instances[FlowSteps.FOREST]
+	var refusal: String = TonicDrinking.drink(profile, forest, 0, "draught_berry")
+	if not refusal.is_empty() or profile.outbox.entries.size() != 1:
+		return "a draught on the forest's exit was refused or posted nothing: " + refusal
+	var command: Command = Command.new()
+	profile.outbox.entries[0].fill(command)
+	var _dropped: bool = profile.outbox.drop(profile.outbox.entries[0].id)
+	var commands: Array[Command] = [command]
+	world.step(commands)
+	var drunk_at: int = world.tick
+	_walk_in(world, FlowSteps.INTO_GLADE[-1])
+	if world.instance_of(0) != FlowSteps.GLADE:
+		return "walking southeast off the forest's exit didn't lead into the glade"
+	var glade: GameState = world.instances[FlowSteps.GLADE]
+	var why: String = _refused(profile, glade, "draught_berry", "a draught just through an exit")
+	while why.is_empty() and world.tick < drunk_at + DrinkingFeature.WAIT_TICKS - 1:
+		world.step(FlowSteps.command(Command.NO_MOVE))
+	if why.is_empty():
+		why = _refused(profile, glade, "draught_berry", "a draught through an exit a tick early")
+	world.step(FlowSteps.command(Command.NO_MOVE))
+	refusal = TonicDrinking.problem(profile, glade, 0, "draught_berry")
+	if why.is_empty() and not refusal.is_empty():
+		why = "a draught through an exit was refused once the wait was over: " + refusal
+	return why
+
+
+## Walks the player in slot 0 of `world` one whole step in `direction`, through an exit there.
+static func _walk_in(world: World, direction: int) -> void:
+	world.step(FlowSteps.command(direction))
+	for _tick: int in MovementFeature.MOVE_TICKS + 1:
+		world.step(FlowSteps.command(Command.NO_MOVE))
 
 
 ## Steps `state` once with player 0 standing.
