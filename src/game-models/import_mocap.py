@@ -4,7 +4,7 @@ library's skeleton (lib/mocap.py) and written like import_clip.py's clip sources
 
     uv run --locked src/game-models/blender.py --background --factory-startup \
         --python src/game-models/import_mocap.py -- <take.asf> <take.amc> <first> <last> <Clip> \
-        src/game-models/sources/player/clips/<Clip>.glb
+        resourcepacks/default/models/player/build/clips/<Clip>.glb
 
 `first` and `last` are the take's own frame numbers (it's captured at `CAPTURED` frames a second,
 sampled down to the clip rate). The raw take stays out of the repository, beside the owner's Meshy
@@ -21,7 +21,9 @@ from lib import clip_sources, mocap, scene  # noqa: E402
 
 # The CMU database captures at 120 frames a second.
 CAPTURED = 120
-SKELETON = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sources", "player", "skeleton.glb")
+# The clip library's skeleton, in the player's build folder (#2438).
+SKELETON = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                        *"resourcepacks/default/models/player/build/skeleton.glb".split("/"))
 # The library's bones (Meshy's Mixamo names), each with the capture bone it follows.
 BONES = {
     "mixamorig:Hips": "root",

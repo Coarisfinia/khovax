@@ -11,11 +11,13 @@ check into `list`, separated by NUL bytes for `xargs -0`, named from the working
 .glb is left to list, such as a model script whose .glb was deleted, which the rebuild check
 fails. `--every` lists every .glb whenever anything is to check, as CI does on `main`.
 
-A model is named by its stem (mana_wolf for mana_wolf.py and resourcepacks/default/models/mana-wolf/mana_wolf.glb, as
-check_rebuild.py pairs them). One model's own files are its model script, its source in sources/
-and its .glb and .glb.import in the game; every other change in EVERY (the model library and
-checks, Blender's setup, the workflow, the game's scripts, views and scenes and the pack's
-manifest and tile blueprints the checks read) checks every model, and so does a diff that fails. Anything else checks nothing."""
+A model is named by its stem (mana_wolf for resourcepacks/default/models/mana-wolf/build/mana_wolf.py
+and resourcepacks/default/models/mana-wolf/mana_wolf.glb, as check_rebuild.py pairs them). One
+model's own files are its model script and its source, build/source.glb, in its build folder
+(#2438), and its .glb and .glb.import in the pack; every other change in EVERY (the model library
+and checks, Blender's setup, the workflow, the game's scripts, views and scenes, the pack's manifest
+and tile blueprints the checks read, and a build folder's other files, such as the player's clip
+sources) checks every model, and so does a diff that fails. Anything else checks nothing."""
 
 import fnmatch
 import os
@@ -25,8 +27,7 @@ from pathlib import Path
 
 from game_shared import log
 from game_shared.git_files import pack_models
-
-from check_rebuild import EXPORT
+from game_shared.model_builds import is_build_file, is_model_script as is_script
 
 ROOT = Path(__file__).resolve().parents[2]
 MODELS = "src/game-models/"
@@ -48,18 +49,25 @@ EVERY = (
     "src/game/*.tscn",
     "resourcepacks/default/pack.jsonc",
     "resourcepacks/default/tiles/*",
+    "resourcepacks/default/models/*/build/*",
 )
+# A model's imported source, in its build folder (#2438).
+SOURCE = "source.glb"
 
 
 def model_of(path: str, is_model_script) -> str | None:
     """The one model a changed path (from the root) belongs to, or None when it belongs to none."""
     name = os.path.basename(path)
+    if is_build_file(path):
+        if name.endswith(".py") and is_model_script(path):
+            return name[:-3]
+        if name != SOURCE:
+            return None
+        # A source belongs to the one model scripted beside it; none or several check every model.
+        scripted = [script.stem for script in sorted((ROOT / os.path.dirname(path)).glob("*.py"))
+                    if is_model_script(script.relative_to(ROOT).as_posix())]
+        return scripted[0] if len(scripted) == 1 else None
     if path.startswith(MODELS):
-        rest = path[len(MODELS):]
-        if "/" not in rest and rest.endswith(".py") and is_model_script(path):
-            return rest[:-3]
-        if rest.startswith("sources/") and rest.count("/") == 1 and rest.endswith(".glb"):
-            return name[:-4]
         return None
     for ending in (".glb", ".glb.import"):
         if name.endswith(ending):
@@ -81,10 +89,9 @@ def select(changed: list[str], is_model_script) -> set[str] | None:
 
 
 def is_model_script(path: str) -> bool:
-    """Whether the path (from the root) is a model script: one that exports through
-    scene.export_glb. A deleted one isn't, so its change checks every model."""
-    script = ROOT / path
-    return script.is_file() and bool(EXPORT.search(script.read_text()))
+    """Whether the path (from the root) is a model script: one in a build folder that exports
+    through scene.export_glb. A deleted one isn't, so its change checks every model."""
+    return is_script(str(ROOT / path))
 
 
 def changed_paths(base: str) -> list[str] | None:

@@ -46,6 +46,7 @@ ENDINGS: dict[str, str] = {
     ".yml": "the GitHub Actions workflows",
     ".gitignore": "what git leaves untracked",
     ".gitattributes": "how git treats files",
+    ".gdignore": "keeps Godot out of a model's build folder (the owner's sign-off on #2438)",
     # The owner's sign-off: option 1 on #1559 (issuecomment-6475119084).
     ".env": "the project watcher's settings (.claude/watcher.env, #1551)",
     # The owner's sign-off: option 1 on #1608 (issuecomment-6480115066), gettext catalogs.

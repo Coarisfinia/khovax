@@ -5,7 +5,7 @@ in the way.
     uv run --locked src/game-models/blender.py --background --factory-startup \
         --python src/game-models/check_passage.py -- <model.glb> [<model.glb> ...]
 
-A model built by a script here whose kind (lib/world_scale.py) is `portal` stands on the edge
+A model built by a model script whose kind (lib/world_scale.py) is `portal` stands on the edge
 between two hexes, and the player walks through it along Blender's Y, through its opening at the
 origin. The check casts rays along the walking line, front to back, through the player's outline
 (`OUTLINE`: as wide as the player is at each height, from the ground to the top of their head),
@@ -34,7 +34,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "game-shared"))
 
-from game_shared import log  # noqa: E402
+from game_shared import log, model_builds  # noqa: E402
 from lib import ground, imported, world_scale  # noqa: E402
 
 # The kind of model the player walks through.
@@ -145,7 +145,7 @@ def look(skin, rig):
 def check(glb):
     """The report lines for one model and whether it passed."""
     model = os.path.splitext(os.path.basename(glb))[0]
-    script = os.path.join(HERE, model + ".py")
+    script = model_builds.build_script(glb)
     if not os.path.exists(script) or world_scale.script_kind(script) != PORTAL:
         return ["PASSAGE %s not a portal: nothing to walk through" % model], True
     fps, _loops = imported.settings(glb)

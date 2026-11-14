@@ -4,7 +4,7 @@ against the player's height, from lib/world_scale.py, where the numbers and the 
     uv run --locked src/game-models/blender.py --background --factory-startup \
         --python src/game-models/check_world_scale.py -- <model.glb> [<model.glb> ...]
 
-- **A model built by a script here that isn't a monster** (a prop in lib/footprint.py's sense)
+- **A model built by a model script that isn't a monster** (a prop in lib/footprint.py's sense)
   names its kind in its script (`WORLD_SCALE = "wall"`), and its rest pose is measured against
   that kind: its height, and an edge piece's length along X. A script that names no kind fails.
   A monster is sized against its hex instead (check_footprint.py).
@@ -32,7 +32,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "game-shared"))
 
-from game_shared import log  # noqa: E402
+from game_shared import log, model_builds  # noqa: E402
 from lib import footprint, imported, known, views, world_scale  # noqa: E402
 
 # The Godot project, whose views show the packs' models.
@@ -112,7 +112,7 @@ def main():
             log.info("WORLD SCALE %s a tile's decoration: the tile's own look" % model)
             continue
         fps, _loops = imported.settings(glb)
-        script = os.path.join(HERE, model + ".py")
+        script = model_builds.build_script(glb)
         if world_scale.clip_library(script):
             log.info("WORLD SCALE %s a clip library: no body to measure" % model)
             continue
