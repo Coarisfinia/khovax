@@ -16,14 +16,15 @@ const OPEN_RINGS: int = 3
 
 
 ## Makes one tile of `region` a waystone, unless it already has one SAFE_DISTANCE tiles from every
-## wild monster, beside a tile players walk to from the first start, or has no tile that far.
+## wild monster, beside a tile players walk to from the first start and on no tile kept free, or
+## has no tile that far.
 static func place(region: Region) -> void:
 	if not region.problem.is_empty() or region.starts.is_empty():
 		return
 	var walked: Array[Vector2i] = region.reachable(region.starts[0])
-	if _has_safe_stone(region, walked):
-		return
 	var kept: Dictionary[Vector2i, bool] = _kept_free(region)
+	if _has_safe_stone(region, walked, kept):
+		return
 	var candidates: Array[Vector2i] = []
 	var reach: Dictionary[Vector2i, int] = {}
 	var open: Dictionary[Vector2i, int] = {}
@@ -62,10 +63,14 @@ static func _better(
 
 
 ## Whether `region` has a waystone SAFE_DISTANCE tiles from every wild monster, beside one of the
-## `walked` tiles.
-static func _has_safe_stone(region: Region, walked: Array[Vector2i]) -> bool:
+## `walked` tiles, and on none of the `kept` ones.
+static func _has_safe_stone(
+	region: Region,
+	walked: Array[Vector2i],
+	kept: Dictionary[Vector2i, bool],
+) -> bool:
 	for tile: Vector2i in region.sorted_tiles():
-		if region.terrain[tile] != WaystoneFeature.KIND:
+		if region.terrain[tile] != WaystoneFeature.KIND or kept.has(tile):
 			continue
 		if _nearest_monster(region, tile) < SAFE_DISTANCE:
 			continue
