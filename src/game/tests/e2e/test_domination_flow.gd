@@ -848,7 +848,8 @@ func _escape_off_resumed() -> String:
 	var fainted: GameState = _escape_state(false)
 	var data: DataReader = DataReader.new(off.to_data())
 	fainted.load_data(data)
-	if data.failed() or fainted.state_hash() != off.state_hash():
+	# Its own hash: the world's tick is the World's to restore, not the instance's.
+	if data.failed() or fainted.own_hash() != off.own_hash():
 		return "a world saved with the escapes off and its escaper fainted didn't resume"
 	return ""
 
