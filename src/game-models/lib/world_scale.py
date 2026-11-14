@@ -12,7 +12,7 @@ The numbers are in metres, the game's world units:
 - **a wall** is `WALL_HEIGHT` tall, a quarter above the player, so a room's walls hide what's
   inside from the camera until the walls fade (#1835).
 
-A model built by a script here that isn't a monster (a prop in lib/footprint.py's sense: no rig,
+A model built by a model script that isn't a monster (a prop in lib/footprint.py's sense: no rig,
 or no Walk clip) names its kind in its script, `WORLD_SCALE = "<kind>"`, one of `KINDS`. Each
 kind gives the range its height must be in, and an **edge piece** (a wall, a gate) runs along
 one hex edge: Blender's X, centred on the origin at the edge's middle, `HEX_EDGE` long, so pieces
@@ -55,6 +55,8 @@ class Kind:
 KINDS = {
     "prop": Kind(0.05 * PLAYER_HEIGHT, 1.5 * PLAYER_HEIGHT, False,
                  "a thing standing on one hex: a well, a campfire, a signpost, a stone"),
+    "item": Kind(0.05 * PLAYER_HEIGHT, 0.3 * PLAYER_HEIGHT, False,
+                 "a thing a hand holds or a player carries, shown as an item's picture: a lump of ore"),
     "portal": Kind(1.1 * PLAYER_HEIGHT, 1.3 * WALL_HEIGHT, False,
                    "a gate on the edge between two hexes the player walks through, standing above"
                    " the player", hexes=2),

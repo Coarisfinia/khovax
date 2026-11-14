@@ -276,8 +276,8 @@ background; only wait in the foreground for a result the very next step needs.
   #1569's draft until approved): a pull request is a draft only while it lacks its core logic (only
   its fail-first check pushed, or the fix still missing), and a draft gets neither the `question`
   label nor a ping to the owner. One that waits for the owner is ready for review: a pull request
-  that changes models (a `.glb`, its rig, clips or textures, `src/game-models/`, the model
-  skill) or UI (anything the player sees or touches on screen) and shows the owner something in its
+  that changes models (a `.glb`, its rig, clips or textures, its build script or sources in its
+  `build/` folder, `src/game-models/`, the model skill) or UI (anything the player sees or touches on screen) and shows the owner something in its
   description (renders, screenshots, a before and after) is marked ready once its core change is
   in, and only then is the owner pinged with what there is to see. If the owner approves a draft's
   head anyway, the watcher marks it ready itself and reports `DRAFT_READIED`
@@ -554,7 +554,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   user flow however long it grows. A suppression is a `# gdstyle:ignore=<rule>` or
   `# gdstyle:ignore-file=<rule>` comment directly below a line giving the reason.
 - **Before pushing, run `gdstyle fmt .`**: it fixes the formatting rather than only checking it.
-  gdstyle is installed with scoop from `tools/scoop/gdstyle.json`; its version is pinned only there
+  gdstyle is installed with scoop from `tools/gdstyle.json`; its version is pinned only there
   (CI reads it from the manifest), so a bump also updates CI's `GDSTYLE_SHA256`, the checksum of
   that version's Linux archive.
 - **On WSL, run gdstyle as `uv run --locked ../game-build/gdstyle.py`** from `src/game/` (#2215),
@@ -717,7 +717,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   kind names its symbol in its data (#334; the schema requires it), which the Survey draws.
 - **Models follow the model skill** (owner): every 3D model is placed, rigged, textured and
   checked from all sides and in game by the playbook in `.claude/skills/model/SKILL.md` (Blender
-  5.2.2 headless from a committed script in `src/game-models/`, then Godot).
+  5.2.2 headless from a committed script in the model's own folder,
+  `resourcepacks/default/models/<folder>/build/`, on the library in `src/game-models/`, then Godot;
+  #2438).
 - **New models come only from the owner** (owner's base rule, #1568): agents never make a new model
   from scratch. Its source (the mesh, and the rig if it has one) comes from the owner, or for a
   prop or scenery from a free source (B below); agents import, rig, animate, check and fix it, and
@@ -1016,7 +1018,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   project (open it in the editor; its `.godot/` cache is per worktree); the others are the Python
   tooling, one workspace member per job: `game-checks/` (CI's checks of the game), `game-replays/`
   (comparing replays, load tests and the APK flow), `game-build/` (export helpers), `game-models/`
-  (the Blender model scripts), `game-offscreen/` (Godot on a private display), `game-visuals/`
+  (the Blender model library, checks and import tools; each model's own script lies in its pack
+  folder, #2438), `game-offscreen/` (Godot on a private display), `game-visuals/`
   (publishing a pull request's pictures on the `assets` branch, #1428), `game-web-e2e/`
   (the web build's e2e in headless Chrome, #1041) and `game-shared/` (what the others share, #1115:
   the one member that is built, as `game_shared`, so the ones depending on it can import it). **The
@@ -1026,7 +1029,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   names like `web` or `site` stay free for other parts of the project, such as a website; the game
   itself is `src/game/`, and a member's uv name is `khovax-<its folder>`. A member with dependencies runs with `--package <its name>`, which installs them. The GDScript tools Godot runs stay in the
   game, in `src/game/tools/` (`godot/`, and `models/` for the model checks and renders),
-  since Godot only runs scripts under `res://`. `tools/scoop/` holds the pinned scoop manifests.
+  since Godot only runs scripts under `res://`. `tools/` holds gdstyle's pinned manifest.
   New tooling is Python, run with uv from the repository's root (`uv run --locked
   src/<package>/<script>.py`). Godot commands name the project: `--path src/game`.
 - **Only the file endings on the list** (owner, #1095: *"I would like all currently used file

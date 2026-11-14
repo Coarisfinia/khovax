@@ -12,12 +12,14 @@ extends Feature
 ## hit is at full HP without an entry. It steps before the wild monsters and the companions, so
 ## every feature that hurts or heals can require it, and it names neither (#821). A later rule can
 ## shield an entity (`shield`, a player a dialog holds, #981): no hit hurts it, and a wild monster
-## doesn't pick it as a target. A player can be invincible (`make_invincible`, the `--invincible`
+## doesn't pick it as a target. A player can be invincible (`Invincibility.make`, the `--invincible`
 ## launch option, #1142): no hit hurts them either, but wild monsters still fight them. A player's
 ## request of the kind OutboxEntry.INVINCIBLE (the Settings tab's Debug submenu, #2273) makes them
 ## invincible, or vulnerable again, from the tick it's applied; like every request, it's applied
 ## once (OutboxReceipts), and one with data that's neither 0 nor 1 is acknowledged and changes
-## nothing.
+## nothing. So is the submenu's teleport (OutboxEntry.TELEPORT, #2274): 1 sends the player to the
+## debug zone (SentToDebugZone), 0 back to the world's spawn (SentToWorldSpawn), as a new entity at
+## full HP.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "health"
@@ -27,8 +29,12 @@ const PLAYER_HP: int = Tuning.PLAYER_HP
 const UNKNOWN_HP: int = 100
 ## How much of their HP a revived player gets back, in thousandths (Fixed): half (#479).
 const REVIVED_HP: int = Tuning.REVIVED_HP
-## What an invincible player's entry in their world store (#724) holds (`make_invincible`).
+## What an invincible player's entry in their world store (#724) holds (`Invincibility.make`).
 const INVINCIBLE: String = "invincible"
+## The key in a player's world store of the teleports applied (OutboxReceipts, #2274): an entry of
+## its own, since a request's acknowledged mark covers only the requests of its kind. Saved and
+## hashed, so never changed once it shipped.
+const TELEPORTS: String = "teleports"
 
 ## Each species' HP, by species id, from the content data (the species slice reads them).
 var max_hps: Dictionary[String, int] = {}
@@ -47,6 +53,10 @@ var _wild: Dictionary[int, bool] = {}
 ## The share of its species' HP each grown entity has, in thousandths (Fixed), by entity id
 ## (`grow`). Its feature grows it again whenever it tracks it, so it's neither hashed nor saved.
 var _shares: Dictionary[int, int] = {}
+## The least HP a later rule keeps each held entity at against every hit, by entity id (`hold_at`,
+## a wild monster that escapes at a health line, #2411). The rule holds it again every tick from its
+## own state, so it's neither hashed nor saved here.
+var _least: Dictionary[int, int] = {}
 
 
 func _init(species_max_hps: Dictionary[String, int] = {}) -> void:
@@ -63,9 +73,11 @@ func requires() -> Array[String]:
 
 
 ## A player revived this tick gets REVIVED_HP of their HP back (#479); a player asking to be
-## invincible, or to stop, is so from now on (#2273).
+## invincible, or to stop, is so from now on (#2273); one asking to go to the debug zone, or back,
+## is sent there (#2274).
 func step(state: GameState, commands: Array[Command]) -> void:
 	_apply_invincible_requests(state, commands)
+	_apply_teleport_requests(state, commands)
 	for event: RefCounted in state.events:
 		var revived: PlayerRevived = event as PlayerRevived
 		if revived != null and state.entity(revived.entity_id) != null:
@@ -74,7 +86,7 @@ func step(state: GameState, commands: Array[Command]) -> void:
 
 
 ## Carries out the players' requests to be invincible or not (OutboxEntry.INVINCIBLE), in slot
-## order, acknowledging every one, kept in their world store like `make_invincible`.
+## order, acknowledging every one, kept in their world store like `Invincibility.make`.
 func _apply_invincible_requests(state: GameState, commands: Array[Command]) -> void:
 	for slot: int in GameState.MAX_PLAYERS:
 		var command: Command = Command.of(commands, slot)
@@ -88,6 +100,27 @@ func _apply_invincible_requests(state: GameState, commands: Array[Command]) -> v
 			entry[INVINCIBLE] = 1
 		elif command.request_data == 0:
 			var _dropped: bool = entry.erase(INVINCIBLE)
+
+
+## Carries out the players' requests to go to the debug zone or back (OutboxEntry.TELEPORT), in
+## slot order, acknowledging every one: the world moves them after every instance has stepped.
+func _apply_teleport_requests(state: GameState, commands: Array[Command]) -> void:
+	for slot: int in GameState.MAX_PLAYERS:
+		var command: Command = Command.of(commands, slot)
+		var asking: bool = command != null and command.request_kind == OutboxEntry.TELEPORT
+		var player: Entity = state.player(slot) if asking else null
+		if player == null or not OutboxReceipts.take(state, slot, TELEPORTS, command):
+			continue
+		_teleport(state, player, slot, command.request_data)
+
+
+## Sends `player`, in `slot`, to the debug zone for `data` 1, back to the spawn for 0, or nowhere
+## for any other data.
+static func _teleport(state: GameState, player: Entity, slot: int, data: int) -> void:
+	if data == 1:
+		state.events.append(SentToDebugZone.new(player.id, slot))
+	elif data == 0:
+		state.events.append(SentToWorldSpawn.new(player.id, slot))
 
 
 ## Gives `entity_id` its species' HP: its feature calls this when it adds or restores it. A wild
@@ -121,21 +154,23 @@ func shield(entity_id: int, on: bool) -> void:
 		var _dropped: bool = _shielded.erase(entity_id)
 
 
+## Keeps `entity_id` at `least` HP or more against every hit, lethal ones too, or lets hits take it
+## lower again for 0: a later rule's (a wild monster that escapes at a health line, #2411), which
+## holds it again each tick while it should be.
+func hold_at(entity_id: int, least: int) -> void:
+	if least > 0:
+		_least[entity_id] = least
+	else:
+		var _dropped: bool = _least.erase(entity_id)
+
+
 ## Whether `entity_id` is shielded from hits now (`shield`).
 func is_shielded(entity_id: int) -> bool:
 	return _shielded.has(entity_id)
 
 
-## Makes the player in `slot` of `world` invincible (#1142): no hit hurts them, so they're never
-## knocked down or sent to the spawn, while wild monsters still pick them as a target, unlike a
-## shielded one. A session's start decides it (the `--invincible` launch option), and their world
-## store keeps it, so it holds in every instance.
-static func make_invincible(world: World, slot: int) -> void:
-	world.set_entry(slot, ID, { INVINCIBLE: 1 })
-
-
-## Whether `entity_id` is an invincible player (`make_invincible`). A tracked one is a wild monster
-## or a companion, never a player: a ring hurts them every tick, so they skip the lookup.
+## Whether `entity_id` is an invincible player (`Invincibility.make`). A tracked one is a wild
+## monster or a companion, never a player: a ring hurts them every tick, so they skip the lookup.
 func is_invincible(state: GameState, entity_id: int) -> bool:
 	if _species.has(entity_id):
 		return false
@@ -146,8 +181,8 @@ func is_invincible(state: GameState, entity_id: int) -> bool:
 
 
 ## Takes `damage` off the HP of `entity_id`, one still standing, not shielded and not invincible:
-## never below 0, or 1 unless the hit is `lethal`. A wild monster takes it at the host's difficulty.
-## Whether this hit made it fall.
+## never below 0, or 1 unless the hit is `lethal`, nor below what a rule holds it at (`hold_at`).
+## A wild monster takes it at the host's difficulty. Whether this hit made it fall.
 func hurt(state: GameState, entity_id: int, damage: int, lethal: bool = true) -> bool:
 	if _shielded.has(entity_id) or is_invincible(state, entity_id):
 		return false
@@ -155,7 +190,8 @@ func hurt(state: GameState, entity_id: int, damage: int, lethal: bool = true) ->
 		damage = HostSettings.enemy_damage(state, damage)
 	var full: int = max_hp_of(state, entity_id)
 	var taken: int = _damage.get(entity_id, 0)
-	var most: int = full if lethal else full - 1
+	var least: int = _least.get(entity_id, 0)
+	var most: int = mini(full if lethal else full - 1, full - least)
 	var now: int = maxi(taken, mini(taken + damage, most))
 	if taken >= full or now == taken:
 		return false
@@ -197,6 +233,7 @@ func entity_removed(_state: GameState, removed_id: int) -> void:
 	_dropped = _shielded.erase(removed_id)
 	_dropped = _wild.erase(removed_id)
 	_dropped = _shares.erase(removed_id)
+	_dropped = _least.erase(removed_id)
 
 
 ## The damage a follower has taken (#716), so it arrives next door as hurt as it left.

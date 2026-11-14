@@ -4,7 +4,9 @@ extends RefCounted
 ## A player who walks out through an exit (ExitFeature raises ExitTaken) is moved into the instance
 ## it leads to, onto its way back, and the world raises that they entered it (InstanceEntered,
 ## #370). A player sent to the spawn (SentToSpawn, #457) is moved beside their respawn point
-## (RespawnPoint, #1890), or else onto their start in the starting instance. Whoever follows a
+## (RespawnPoint, #1890), or else onto their start in the starting instance; one sent to the debug
+## zone (SentToDebugZone, #2274) onto their start there, and one sent to the world's spawn
+## (SentToWorldSpawn, #2274) onto their start in the starting instance. Whoever follows a
 ## player (Feature.followers_of, #716), like their companion, moves with
 ## them, carrying its data along. It keeps nothing: the world is handed in, as to WorldLayout.
 ## Deterministic, like everything in core/.
@@ -66,11 +68,17 @@ static func _arrival(world: World, from: String, taken: ExitTaken, region: Regio
 
 ## Moves the player `sent` names from `from` back, as a new entity, so at full HP: beside their
 ## respawn point (#1890, RespawnPoint) while it's still there, else onto their start in the
-## starting instance (#457), the world's spawn.
+## starting instance (#457), the world's spawn. One sent to the debug zone (SentToDebugZone,
+## #2274) lands on their start there instead, and stays while there's none; one sent to the world's
+## spawn (SentToWorldSpawn, #2274) goes there whatever their respawn point.
 static func _send_to_spawn(world: World, from: String, sent: SentToSpawn) -> void:
-	var landing: Array = _respawn_landing(world, sent.slot)
-	if landing.is_empty():
-		landing = _spawn_landing(world, sent.slot)
+	var landing: Array = []
+	if sent is SentToDebugZone:
+		landing = _start_landing(world, world.source.debug_zone(), sent.slot)
+	elif not sent is SentToWorldSpawn:
+		landing = _respawn_landing(world, sent.slot)
+	if landing.is_empty() and not sent is SentToDebugZone:
+		landing = _start_landing(world, world.start_name, sent.slot)
 	if landing.is_empty():
 		return
 	var target_name: String = landing[0]
@@ -85,14 +93,17 @@ static func _send_to_spawn(world: World, from: String, sent: SentToSpawn) -> voi
 		raise_entered(world, target_name, arrived)
 
 
-## Where the player in `slot` lands at the world's spawn: `[instance, tile]`, their start in the
-## starting instance, or empty when it can't load.
-static func _spawn_landing(world: World, slot: int) -> Array:
-	var spawn: GameState = world.entering(world.start_name)
+## Where the player in `slot` lands on their start in the instance `instance_name` (the world's
+## spawn in the starting instance): `[instance, tile]`, or empty for none ("") or one that can't
+## load.
+static func _start_landing(world: World, instance_name: String, slot: int) -> Array:
+	if instance_name.is_empty():
+		return []
+	var spawn: GameState = world.entering(instance_name)
 	if spawn == null or spawn.region.starts.is_empty():
 		return []
 	var starts: Array[Vector2i] = spawn.region.starts
-	return [world.start_name, starts[mini(slot, starts.size() - 1)]]
+	return [instance_name, starts[mini(slot, starts.size() - 1)]]
 
 
 ## Where the player in `slot` lands at their respawn point (#1890): `[instance, tile]`, the first

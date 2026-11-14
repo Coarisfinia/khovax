@@ -24,6 +24,10 @@ will have (#1858), and looked up only through ResourcePacks. It fails when
   resourcepacks/default/loot_tables/<id>.jsonc, resourcepacks/default/harvest_tables/<id>.jsonc,
   resourcepacks/default/materials/<id>.jsonc, resourcepacks/default/tonics/<id>.jsonc), so it's named
   after its file (#72);
+- a model's build folder (resourcepacks/default/models/<folder>/build/, its model script and the
+  sources it builds from, game_shared.model_builds, #2438) lacks its .gdignore, so Godot would
+  import its sources and the export would carry them; what lies in a build folder is never a
+  file of its kind the manifest must list;
 - a file is listed outside its kind's folder in the default pack's own folder at the repository's
   root (PACK_ROOT, #1978; MOVED);
 - a tile blueprint lies outside the pack (in the core's old core/data/tiles/), or its entry isn't
@@ -59,6 +63,7 @@ from catalogue_gaps import report
 from game_shared import log
 from game_shared.gdscript_code import without_comments
 from game_shared.git_files import git_files
+from game_shared.model_builds import BUILD_FOLDER, GDIGNORE, is_build_file
 from game_shared.resource_packs import MANIFEST, file_lists, read_manifest, section, strip_jsonc
 from quest_reachability import problems as unreachable_quests
 from translations_pot import TEMPLATE
@@ -372,6 +377,17 @@ def around_resolver(file: str, code: str) -> Problems:
     return problems
 
 
+def unignored_builds(files: list[str]) -> Problems:
+    """The models' build folders among the tracked `files` without their .gdignore (#2438)."""
+    folders = {found.group(0) for found in map(BUILD_FOLDER.match, files) if found}
+    return [
+        (f"{folder} is a model's build folder without its {GDIGNORE}: Godot would import its sources "
+         "and the export would carry them", folder)
+        for folder in sorted(folders)
+        if f"{folder}{GDIGNORE}" not in files
+    ]  # fmt: skip
+
+
 def main() -> int:
     # The game's project folder (#1101): every path below is relative to it.
     os.chdir(Path(__file__).resolve().parents[1] / "game")
@@ -440,6 +456,7 @@ def main() -> int:
     tracked = set(
         git_files(MODEL_FILES, TEXTURES, SOUNDS, REGIONS, REALMS, f"{PACK_ROOT}translations", QUESTS, SPECIES, TILES, LOOT_TABLES, MATERIALS, HARVEST_TABLES, TONICS)
     )
+    problems += unignored_builds(sorted(tracked))
     models = {path for paths in entries["models"].values() for path in paths}
     used_by_models = model_images(sorted(models & tracked))
     named = {
@@ -453,7 +470,7 @@ def main() -> int:
         files = sorted(
             path
             for path in git_files(kind.files)
-            if path.endswith(kind.endings) and path not in used_by_models
+            if path.endswith(kind.endings) and path not in used_by_models and not is_build_file(path)
             and (name != "regions" or path.count("/") == REGIONS.count("/") + 1)
         )
         problems += unresolved(kind, entries[name], tracked)

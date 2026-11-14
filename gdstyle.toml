@@ -1,4 +1,4 @@
-# gdstyle configuration (https://github.com/atelico/gdstyle), pinned by tools/scoop/gdstyle.json
+# gdstyle configuration (https://github.com/atelico/gdstyle), pinned by tools/gdstyle.json
 # and in CI. Owner's rule: every rule is enabled at error severity, the opt-in ones included. A rule
 # only gets relaxed when it truly conflicts with another enabled rule or a Godot setting, and then
 # the comment next to it names the conflict. Inconvenience is not a reason.

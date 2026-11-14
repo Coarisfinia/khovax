@@ -66,6 +66,13 @@
 		"special": { "description": "Its special attack, an ability of kind special that no other species has (#222, #228).", "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
 		"player_passive": { "description": "Its passive that helps the player while it's out, an ability of kind player_passive (#222).", "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
 		"self_passive": { "description": "Its passive that helps itself, an ability of kind self_passive (#222).", "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+		"core": {
+			"description": "Its core skills beyond its special and two passives (#2409), optional: abilities of kind core, active from level 1, never a development web's node and never costing a pick. Each is this species' own (#228).",
+			"type": "array",
+			"minItems": 1,
+			"uniqueItems": true,
+			"items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
+		},
 		"behaviour": {
 			"description": "Its behaviour traits (#1200), which its monsters' daily schedule is made from (owner's ground rule, #1199): exactly one sleep rhythm (diurnal, nocturnal, cathemeral: awake and asleep in bouts through day and night, or sleepless: never asleep), at least one need (grazer: eats grass now and then, drinker: walks to the nearest water now and then, predator: roams in search of weaker or grazer monsters), optionally its instincts to band together (pack_species: with its own species, pack_type: with monsters of the same or similar typing), and optionally light_sleeper (#1230): asleep, it wakes when a player comes next to it, where others sleep on until struck or enraged; never with sleepless.",
 			"type": "array",

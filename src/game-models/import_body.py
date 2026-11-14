@@ -12,7 +12,7 @@ far off, when a triangle has no twin there: then the two meshes differ and the t
 moved over.
 
 The body keeps Meshy's rig as it is, bones and rest pose (no clips: the player's clip library,
-player_clips.glb, holds them, on the same skeleton, sources/player/skeleton.glb, which this
+player_clips.glb, holds them, on the same skeleton, resourcepacks/default/models/player/build/skeleton.glb, which this
 checks), and only the base colour of the texture, shrunk to `size`, opaque, single-sided and
 matte (lib/source_material.py). Its corners split by the rig's export are welded by position, so
 the toon look shades it smooth."""
@@ -37,7 +37,8 @@ TWIN = 1e-4
 WELD = 1e-5
 # The colour's JPEG quality, as import_source.py's.
 QUALITY = 90
-SKELETON = os.path.join(HERE, "sources", "player", "skeleton.glb")
+# The clip library's skeleton, in the player's build folder (#2438).
+SKELETON = os.path.join(os.path.dirname(os.path.dirname(HERE)), *"resourcepacks/default/models/player/build/skeleton.glb".split("/"))
 
 
 def load(path):

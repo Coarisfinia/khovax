@@ -100,6 +100,7 @@ func run(tree: SceneTree) -> String:
 		_check_pieces_connected,
 		_check_dungeon_end,
 		_check_pass_seal,
+		_check_variant_pieces,
 		_check_room,
 		_check_web_connected,
 		_check_world,
@@ -124,6 +125,7 @@ func run(tree: SceneTree) -> String:
 		_check_sent_to_spawn,
 		_check_invincible,
 		_check_invincible_requested,
+		_check_teleport_requested,
 		_check_layout,
 		_check_tile_changed,
 	]
@@ -244,7 +246,7 @@ func _check_sent_to_spawn() -> String:
 ## and stay where they stand, the same entity.
 func _check_invincible() -> String:
 	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.BASIC)
-	HealthFeature.make_invincible(world, 0)
+	Invincibility.make(world, 0)
 	var basic: GameState = world.instances[FlowSteps.BASIC]
 	var player: Entity = _beside_wild(world)
 	var knockdown: KnockdownFeature = basic.feature(KnockdownFeature.ID) as KnockdownFeature
@@ -300,6 +302,56 @@ func _check_invincible_requested() -> String:
 	if health.is_invincible(basic, world.player(0).id):
 		return "a request to be invincible, sent again, was applied twice"
 	return ""
+
+
+## The Debug submenu's teleport (#2274, OutboxEntry.TELEPORT): a player in the world's start
+## asking to go to the debug zone lands on their start in the playground, and is acknowledged;
+## asking to go back lands them on their start in the world's starting instance, even with a
+## respawn point in the debug zone. The same request sent again changes nothing.
+func _check_teleport_requested() -> String:
+	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.GLADE)
+	var outbox: Outbox = Outbox.new()
+	var there: Command = Command.new()
+	outbox.post(OutboxEntry.TELEPORT, TeleportChoice.TO_DEBUG_ZONE).fill(there)
+	var asking: Array[Command] = [there]
+	world.step(asking)
+	var acknowledged: bool = false
+	for event: RefCounted in world.instances[FlowSteps.GLADE].events:
+		acknowledged = acknowledged or event is RequestApplied
+	if not acknowledged or world.instance_of(0) != FlowSteps.BASIC:
+		return "a player asking to go to the debug zone is in %s, acknowledged: %s" % [
+			world.instance_of(0),
+			acknowledged,
+		]
+	var zone: GameState = world.instances[FlowSteps.BASIC]
+	if world.player(0).tile != zone.region.starts[0]:
+		return "a player sent to the debug zone isn't on its start: %s" % world.player(0).tile
+	# A respawn point in the debug zone (#1890) mustn't keep them there: back is the world's spawn.
+	_respawn_at_start(world, FlowSteps.BASIC)
+	var back: Command = Command.new()
+	outbox.post(OutboxEntry.TELEPORT, TeleportChoice.BACK).fill(back)
+	var leaving: Array[Command] = [back]
+	world.step(leaving)
+	var glade: GameState = world.instances[FlowSteps.GLADE]
+	if world.instance_of(0) != FlowSteps.GLADE or world.player(0).tile != glade.region.starts[0]:
+		return "a player asking to go back from the debug zone is in %s" % world.instance_of(0)
+	world.step(asking)
+	if world.instance_of(0) != FlowSteps.GLADE:
+		return "a request to go to the debug zone, sent again, was applied twice"
+	return ""
+
+
+## Makes player 0's start in the instance `instance_name` of `world` their respawn point (#1890).
+static func _respawn_at_start(world: World, instance_name: String) -> void:
+	var region: Region = world.instances[instance_name].region
+	var start: Vector2i = region.starts[0]
+	var point: Dictionary = {
+		"instance": instance_name,
+		"q": start.x,
+		"r": start.y,
+		"kind": region.terrain[start],
+	}
+	world.set_entry(0, RespawnPoint.ENTRY, point)
 
 
 ## Player 0 of `world`, placed beside the wild monster of its basic instance.
@@ -1093,7 +1145,7 @@ func _check_revive_item(main: Node, driver: GameDriver) -> String:
 	var holder: ProfileHolder = FlowGame.holder(main)
 	if button.icon == null or button.corner_text() != "0" or button.usable():
 		return "the revive item's button doesn't show its icon and 0, faded, with none held"
-	var unheld: Command = await _pressed(driver, &"revive_monster")
+	var unheld: Command = await FlowInput.pressed(driver, &"revive_monster")
 	if unheld.request_kind == OutboxEntry.REVIVE:
 		return "the revive key used a revive item the profile doesn't hold"
 	holder.keeper.profile.materials[ReviveItem.ID] = 1
@@ -1102,7 +1154,7 @@ func _check_revive_item(main: Node, driver: GameDriver) -> String:
 	var picked: String = await _check_revive_pick(main, driver)
 	if not picked.is_empty():
 		return picked
-	var single: Command = await _pressed(driver, &"revive_monster")
+	var single: Command = await FlowInput.pressed(driver, &"revive_monster")
 	var commands: Array[Command] = [single]
 	if _revived_by(commands[0]) != _second:
 		return "the revive key didn't use the item on the toad, the only one fainted, at once"
@@ -1130,23 +1182,23 @@ func _check_revive_item(main: Node, driver: GameDriver) -> String:
 func _check_revive_pick(main: Node, driver: GameDriver) -> String:
 	var roster: RosterHud = main.get_node("Hud/RosterHud") as RosterHud
 	CompanionParty.faint(driver.state, 0, _first)
-	var picking: Command = await _pressed(driver, &"revive_monster")
+	var picking: Command = await FlowInput.pressed(driver, &"revive_monster")
 	roster.show_state()
 	var standing: bool = picking.move == Command.NO_MOVE and _revived_by(picking).is_empty()
 	if (not standing
 			or (driver.input as LocalInput).revive_pick.picked != _first
 			or roster.picked_place != 0):
 		return "the revive key didn't pick the finch, shown on the roster, with the player standing"
-	var _right: Command = await _pressed(driver, &"ui_right")
+	var _right: Command = await FlowInput.pressed(driver, &"ui_right")
 	var on: bool = (driver.input as LocalInput).revive_pick.picked == _second
-	var _left: Command = await _pressed(driver, &"ui_left")
+	var _left: Command = await FlowInput.pressed(driver, &"ui_left")
 	var back: bool = (driver.input as LocalInput).revive_pick.picked == _first
-	var _cancel: Command = await _pressed(driver, &"ui_cancel")
+	var _cancel: Command = await FlowInput.pressed(driver, &"ui_cancel")
 	if not on or not back or not (driver.input as LocalInput).revive_pick.picked.is_empty():
 		return "the arrows didn't move the pick between the fainted ones, or Escape kept it"
-	var again: Command = await _pressed(driver, &"revive_monster")
-	var _second_press: Command = await _pressed(driver, &"revive_monster")
-	again = await _pressed(driver, &"ui_accept")
+	var again: Command = await FlowInput.pressed(driver, &"revive_monster")
+	var _second_press: Command = await FlowInput.pressed(driver, &"revive_monster")
+	again = await FlowInput.pressed(driver, &"ui_accept")
 	if _revived_by(again) != _second:
 		return "Enter didn't use the item on the toad the pick moved on to"
 	_undo(main, again)
@@ -1173,18 +1225,6 @@ static func _undo(main: Node, command: Command) -> void:
 	var keeper: ProfileKeeper = FlowGame.holder(main).keeper
 	var _saved: String = keeper.acknowledge(ShortId.of_code(command.request), 0)
 	keeper.profile.materials[ReviveItem.ID] = 1
-
-
-## The local player's next command after a press of the InputMap action `action`, in a frame of its
-## own: a press stays just pressed for the rest of its frame, even once let go. The input hears it
-## only here, not again on its own in that frame.
-static func _pressed(driver: GameDriver, action: StringName) -> Command:
-	driver.input.set_process(false)
-	await driver.get_tree().process_frame
-	Input.action_press(action)
-	driver.input._process(0.0)
-	Input.action_release(action)
-	return (driver.input as LocalInput).command(driver.state)
 
 
 ## Touches the roster at `at` and lifts the finger, or left clicks there with the mouse (`click`).
@@ -1909,6 +1949,58 @@ func _check_pass_seal() -> String:
 				seed_value,
 			]
 	return ""
+
+
+## A variant's folder without a start piece holds only the pieces it changes (#1590, #2383): every
+## blueprint's variants load, and one is refused, naming its piece, when that piece changes none of
+## its blueprint's pieces (a file name the blueprint lacks) or changes the shape, the connectors or
+## the exits of the one it replaces, so for the same seed it would arrange otherwise.
+func _check_variant_pieces() -> String:
+	for instance_name: String in InstanceBlueprints.names():
+		for chosen_by: PackedStringArray in InstanceBlueprints.blueprint(instance_name).variants:
+			var region: Region = InstanceBlueprints.region_of(instance_name, 0, chosen_by[1])
+			if not region.problem.is_empty():
+				return "%s's variant '%s' doesn't load: %s" % [
+					instance_name,
+					chosen_by[1],
+					region.problem,
+				]
+	var opened: RegionFiles = RegionFiles.cached(PASS_OPENED)
+	var path: String = opened.texts.keys()[0]
+	var text: String = opened.texts[path]
+	# One more ground tile at the end of the row above the wild monster's, the east connector
+	# turned, and the exits turned.
+	var row: String = "\n 🟫⬛⬛🟫🟫🟫🟫🟫🟫🟫\n"
+	var wider: String = text.replace(row, row.trim_suffix("\n") + "🟫\n")
+	var turned: String = text.replace("to the east", "to the northeast")
+	var exits_turned: String = text.replace("exit to the southwest", "exit to the southeast")
+	if wider == text or turned == text or exits_turned == text:
+		return "the pass's opened sealed passage no longer reads as the variant check changes it"
+	var misnamed: String = path.get_base_dir().path_join("seal.md")
+	var result: String = _variant_refused(misnamed, text, "changes none of")
+	for changed: String in [exits_turned, wider, turned]:
+		if result.is_empty():
+			result = _variant_refused(path, changed, "doesn't keep the tiles, connectors and exits")
+	ContentCatalog.forget(RegionFiles.key(PASS_OPENED))
+	return result
+
+
+## Why the pass's opened variant, its one piece swapped for `text` at `path`, isn't refused naming
+## that piece for the reason `reason`, or "".
+func _variant_refused(path: String, text: String, reason: String) -> String:
+	var files: RegionFiles = RegionFiles.new()
+	files.texts[path] = text
+	ContentCatalog.forget(RegionFiles.key(PASS_OPENED))
+	var swapped: Callable = func() -> Content: return files
+	var _kept: Content = ContentCatalog.kept(RegionFiles.key(PASS_OPENED), swapped)
+	var region: Region = InstanceBlueprints.region_of(PASS, 0, PASS_OPENED)
+	if region.problem.contains(reason) and region.problem.contains(path.get_file()):
+		return ""
+	return "the pass's opened variant with %s changed wasn't refused as it %s: '%s'" % [
+		path.get_file(),
+		reason,
+		region.problem,
+	]
 
 
 ## Every blueprint with exits can be reached from the starting instance by walking through exits,

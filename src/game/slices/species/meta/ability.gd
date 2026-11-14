@@ -10,11 +10,15 @@ extends RefCounted
 ## its monster is out (#616, CompanionFeature): a passive may guard (`guard`), one that helps its
 ## monster itself may hasten it when hurt (`hurt_haste`), heal it at rest (`rest_heal`, #1500) or
 ## make it dodge (`dodge`, #1499), and a player passive may hush its player's steps (`hush`, #1563).
+## A core ability (#2409) is a core skill a species lists beyond its kit: a feature of its own runs
+## its effect by its id, so it has none of a special's or a passive's fields.
 
 const SPECIAL: String = "special"
 const PLAYER_PASSIVE: String = "player_passive"
 const SELF_PASSIVE: String = "self_passive"
-const KINDS: Array[String] = [SPECIAL, PLAYER_PASSIVE, SELF_PASSIVE]
+const CORE: String = "core"
+const KINDS: Array[String] = [SPECIAL, PLAYER_PASSIVE, SELF_PASSIVE, CORE]
+const PASSIVES: Array[String] = [PLAYER_PASSIVE, SELF_PASSIVE]
 ## Its schema, which says the fields an ability file may have (SchemaFields, #825).
 const SCHEMA: String = "res://slices/species/data/abilities.schema.json"
 
@@ -96,7 +100,8 @@ static func parse(file_id: String, text: String) -> Ability:
 ## Why its power, cooldown, strike type, hold, guard, haste, heal, dodge and hush don't fit its
 ## kind, or "": a special has the first three and may be held, a passive has none and may guard,
 ## taking off less than a whole hit, a self passive may hasten or heal its monster, or make it
-## dodge, by less than a whole, and a player passive may hush, on every second step or rarer.
+## dodge, by less than a whole, and a player passive may hush, on every second step or rarer. A
+## core ability has none of them.
 func _strike_problem(data: Dictionary) -> String:
 	if kind == SPECIAL and (power < 1 or cooldown_seconds < 1):
 		return "a special has a power and a cooldown, whole numbers from 1"
@@ -106,9 +111,9 @@ func _strike_problem(data: Dictionary) -> String:
 		return "a special's hold is a whole number of seconds from 1"
 	for field: String in ["power", "cooldown_seconds", "strike_type", "channel_seconds"]:
 		if kind != SPECIAL and data.has(field):
-			return "a special has a power, a cooldown and a strike type, a passive none"
-	if data.has("guard") and (kind == SPECIAL or guard < 1 or guard >= Fixed.ONE):
-		return "a passive's guard is whole thousandths from 1 to 999, a special has none"
+			return "a special has a power, a cooldown and a strike type, no other ability"
+	if data.has("guard") and (not PASSIVES.has(kind) or guard < 1 or guard >= Fixed.ONE):
+		return "a passive's guard is whole thousandths from 1 to 999, no other ability's"
 	for field: String in ["hurt_haste", "rest_heal", "dodge"]:
 		var share: int = Content.amount(data.get(field))
 		if data.has(field) and (kind != SELF_PASSIVE or share < 1 or share >= Fixed.ONE):

@@ -28,9 +28,9 @@ extends Feature
 ##
 ## Encircled, it attacks only its ring: in a ring waiting for a totem (#423), it strikes the wall
 ## segment nearest to it, wherever that is, and once a segment is worn through, the ring breaks
-## (DominationFeature.break_waiting); sealing, its seal's pushes are its attacks (#219), so it
-## isn't attacking here. Those are the only ways a ring breaks: nobody else's attack lands on a
-## ring's wall.
+## (DominationFeature.break_ring); sealing, its seal's pushes are its attacks (#219), so it
+## isn't attacking here. No other attack breaks a ring: nobody else's attack lands on a ring's
+## wall.
 ##
 ## It runs right after domination, which it breaks waiting rings through, and before enrage, which
 ## enrages the wild monsters of a ring that broke this tick. So it strikes companions where they
@@ -233,7 +233,7 @@ func _strike_ring(state: GameState, monster: Entity, dominator_id: int, damage: 
 	if _worn_through(wall, damage):
 		# The ring comes off the trail, but a wall another ring needs stays, so it's left to it.
 		var _dropped: bool = _wear.erase(wall)
-		domination.break_waiting(state, dominator_id, wall)
+		domination.break_ring(state, dominator_id, wall)
 
 
 ## The free wild monster strikes the first target next to it, if there is one: the companion with

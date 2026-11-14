@@ -138,6 +138,9 @@ const TYPE_FACTORS: Dictionary[String, int] = {
 	"growth mixed": 1125,
 	"titan none": 1000,
 }
+## The escapers' line (#2411), a quarter of the way, in thousandths, and the event they emit.
+const ESCAPE_LINE: int = 250
+const ESCAPED_EVENT: String = "test_escaped"
 ## A small ring and a big one around the disc's middle, by their radius.
 const SMALL_RING: int = 1
 const BIG_RING: int = 3
@@ -782,7 +785,152 @@ func _check_target_dominated() -> String:
 	var dominated: Array[WildMonsterDominated] = _dominated(events)
 	if dominated.size() != 1 or dominated[0].target != "old_toad":
 		return "dominating the quest target old_toad didn't name it in its domination"
+	return _check_escape_legend()
+
+
+## A legend marks a wild monster escaping at a whole percent from 1% to 99% (#2411), beside its
+## other clauses, and a region with one brings the escapes; any other share is refused.
+func _check_escape_legend() -> String:
+	var marked: WildSpot = WildSpot.read(
+		WildSpot.NAMED + WEAK + ", escaping at 25%, emitting " + ESCAPED_EVENT + ", on sand",
+	)
+	if marked == null or marked.escapes_at != ESCAPE_LINE or marked.emits != ESCAPED_EVENT:
+		return "a legend didn't mark its wild monster escaping at 25%"
+	for refused: String in ["0%", "100%", "25", "025%", "-5%", "x%"]:
+		if WildSpot.read(WildSpot.NAMED + WEAK + ", escaping at " + refused) != null:
+			return "a legend marked a wild monster escaping at " + refused
+	var region: Region = _escape_state(false).region
+	if not RegionFeatures.of(region).has(EscapeFeature.ID):
+		return "a region with a wild monster marked escaping doesn't bring the escapes"
+	if RegionFeatures.of(_outcome_state(WEAK, [Vector2i.ZERO]).region).has(EscapeFeature.ID):
+		return "a region without an escaper brings the escapes"
+	return _check_escape_hit()
+
+
+## A hit that would fell an escaper stops at its line (#2411), a quarter of its HP; on the next
+## tick it escapes: it leaves the instance, nobody dominates it, and it emits its legend's event,
+## as fainting does. A save taken before resumes its line. Switched off, the escapes hold nobody,
+## and the same hit fells it.
+func _check_escape_hit() -> String:
+	var state: GameState = _escape_state(false)
+	var reloaded: GameState = _escape_state(false)
+	if not _reloads(state, reloaded, EscapeFeature.ID):
+		return "a save didn't resume the escapers' lines"
+	var held: String = _escape_held(reloaded)
+	if not held.is_empty():
+		return held
+	var monster: int = _wild(state).monsters[0]
+	_wild(state).wound(state, monster, OUTCOME_HP * 10, true)
+	var line_hp: int = Fixed.scale(OUTCOME_HP, ESCAPE_LINE)
+	if _hp(state, monster) != line_hp or _wild(state).is_fainted(monster):
+		return "a lethal hit took an escaper to %d HP, past its line" % _hp(state, monster)
+	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	var escaped: String = _escaped_once(state, state.events, monster)
+	if not escaped.is_empty():
+		return escaped
+	var off: GameState = _escape_state(false)
+	var off_monster: int = _wild(off).monsters[0]
+	Simulation.step(off, FlowSteps.command(Command.NO_MOVE))
+	off.set_enabled(EscapeFeature.ID, false)
+	_wild(off).wound(off, off_monster, OUTCOME_HP * 10, true)
+	if not _wild(off).is_fainted(off_monster):
+		return "with the escapes switched off, a lethal hit didn't fell an escaper"
+	var resumed: String = _escape_off_resumed()
+	if not resumed.is_empty():
+		return resumed
+	return _check_escape_seal()
+
+
+## A world saved with the escapes switched off (#2411) resumes with them off: holding nobody, so
+## a lethal hit fells the escaper, and with an escaper that fainted meanwhile it loads and hashes
+## the same.
+func _escape_off_resumed() -> String:
+	var off: GameState = _escape_state(false)
+	Simulation.step(off, FlowSteps.command(Command.NO_MOVE))
+	off.set_enabled(EscapeFeature.ID, false)
+	var monster: int = _wild(off).monsters[0]
+	var resumed: GameState = _escape_state(false)
+	resumed.load_data(DataReader.new(off.to_data()))
+	_wild(resumed).wound(resumed, monster, OUTCOME_HP * 10, true)
+	if not _wild(resumed).is_fainted(monster):
+		return "a world saved with the escapes off resumed holding its escaper at its line"
+	_wild(off).wound(off, monster, OUTCOME_HP * 10, true)
+	var fainted: GameState = _escape_state(false)
+	var data: DataReader = DataReader.new(off.to_data())
+	fainted.load_data(data)
+	# Its own hash: the world's tick is the World's to restore, not the instance's.
+	if data.failed() or fainted.own_hash() != off.own_hash():
+		return "a world saved with the escapes off and its escaper fainted didn't resume"
 	return ""
+
+
+## The escaper in `state`, reloaded, is still held at its line by a lethal hit.
+func _escape_held(state: GameState) -> String:
+	var monster: int = _wild(state).monsters[0]
+	_wild(state).wound(state, monster, OUTCOME_HP * 10, true)
+	if _hp(state, monster) != Fixed.scale(OUTCOME_HP, ESCAPE_LINE):
+		return "a reloaded escaper wasn't held at its line"
+	return ""
+
+
+## A ring sealing around an escaper (#2411) breaks once only its line's share of the seal is left,
+## before it holds: a RingBroken event, the ring off the trail, and the escaper gone without a
+## domination.
+func _check_escape_seal() -> String:
+	var state: GameState = _escape_state(true)
+	var monster: int = _wild(state).monsters[0]
+	var ring: Array[Vector2i] = Hex.ring(SMALL_RING)
+	var _player: Entity = state.add_entity(0, ring[0])
+	_close(state, ring.slice(1))
+	var events: Array[RefCounted] = _settle(state)
+	var broken: bool = false
+	for event: RefCounted in events:
+		broken = broken or event is RingBroken
+	if not broken or not _domination(state).seals.is_empty():
+		return "a ring sealing around an escaper didn't break at its line"
+	for wall: Vector2i in ring:
+		if _trails(state).shared.tiles.has(wall) and state.player(0).tile != wall:
+			return "the ring an escaper broke stayed on the trail at %s" % wall
+	return _escaped_once(state, events, monster)
+
+
+## Whether `events` show the escaper `monster` of `state` escaping once: out of the instance, its
+## event emitted, and no domination.
+func _escaped_once(state: GameState, events: Array[RefCounted], monster: int) -> String:
+	var escaped: Array[WildMonsterEscaped] = []
+	var emitted: Array[String] = []
+	for event: RefCounted in events:
+		if event is WildMonsterEscaped:
+			escaped.append(event as WildMonsterEscaped)
+		elif event is EventEmitted:
+			emitted.append((event as EventEmitted).event_name)
+	if escaped.size() != 1 or escaped[0].monster_id != monster or escaped[0].species != WEAK:
+		return "an escaper at its line didn't escape once: %d escapes" % escaped.size()
+	if state.entity(monster) != null or not _dominated(events).is_empty():
+		return "an escaper stayed in the instance, or was dominated"
+	if emitted.size() != 1 or emitted[0] != ESCAPED_EVENT:
+		return "an escaper emitted %s, not its legend's event" % [emitted]
+	return ""
+
+
+## A disc with one weak monster in its middle that escapes at ESCAPE_LINE and emits ESCAPED_EVENT
+## (#2411), and the escapes after domination; `ringed` gives it the outcome checks' features, so a
+## player can ring it.
+func _escape_state(ringed: bool) -> GameState:
+	var region: Region = Region.disc(OUTCOME_RADIUS)
+	var spots: Array[Vector2i] = [Vector2i.ZERO]
+	region.wild_monsters = spots
+	var meaning: String = WildSpot.NAMED + WEAK + ", escaping at 25%, emitting " + ESCAPED_EVENT
+	region.add_placement(WildSpotPlacements.KIND, Vector2i.ZERO, meaning)
+	var hp: Dictionary[String, int] = { WEAK: OUTCOME_HP }
+	var strength: Dictionary[String, int] = { WEAK: WEAK_STRENGTH }
+	var features: Array[Feature] = [MovementFeature.new(), KnockdownFeature.new()]
+	features.append_array([TrailFeature.new(), HealthFeature.new(hp)])
+	features.append(WildMonsterFeature.new([], [], strength))
+	if ringed:
+		features.append(DominationFeature.new())
+	features.append(EscapeFeature.new())
+	return GameState.new(region, 1, features)
 
 
 ## A weak monster in a small ring (#692): while the ring waits for a totem, it isn't hurt as long as
@@ -1895,8 +2043,9 @@ func _check_least_damage() -> String:
 ## one in reserve, a wild monster's hit on the player comes in less the weak species' player guard
 ## alone, and one on the companion less its own guard; the out one's web passive (#1472) takes its
 ## guard off the hit on the player as well; with every carried monster fainted, none is out, and
-## the hit on the player comes in whole. Gear that keeps the passives on (#617), put on outside a
-## fight (#2349), lets the one in reserve guard the player too, until it faints.
+## the hit on the player comes in whole. Gear that keeps the passives on (#617), put on in a fight
+## and kept on once it's over (#2349, #2380), lets the one in reserve guard the player too, until
+## it faints.
 func _check_guards() -> String:
 	var state: GameState = _strike_state([Vector2i.ZERO], [], 0, GUARDS)
 	FlowSteps.carry(state, 0, [WEAK, STRONG])
@@ -2034,12 +2183,12 @@ func _check_undodged_player(state: GameState, player: Entity, hits: int) -> Stri
 ## With the weak species out, its web passive granted, and the strong one in reserve in `state`,
 ## the request (#818) that the player `player`'s ward gear keeps their passives on (#617,
 ## OutboxEntry.PASSIVES_KEPT), sent beside the wild monster, in the fight, is acknowledged but
-## changes nothing (#2349). Sent again away from it, outside a fight, it lets a wild monster's hit
-## on them come in less both species' player guards and the web's; once the strong one has
-## fainted, less the weak one's two alone again.
+## changes nothing while the fight lasts (#2349). Away from it, outside a fight, the world keeps
+## them on all the same (#2380), which lets a wild monster's hit on them come in less both species'
+## player guards and the web's; once the strong one has fainted, less the weak one's two alone
+## again.
 func _check_kept(state: GameState, player: Entity) -> String:
-	# The first id a profile's outbox draws (Outbox, #942).
-	Simulation.step(state, _keep_passives(1))
+	Simulation.step(state, _keep_passives())
 	var stored: Dictionary = state.stored(0, CompanionFeature.ID)
 	if CompanionPassives.kept(stored):
 		return "a request in the fight kept the passives on"
@@ -2051,10 +2200,11 @@ func _check_kept(state: GameState, player: Entity) -> String:
 	player.tile = Vector2i(-OUTCOME_RADIUS, 0)
 	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
 	state.entity(companions.companion_of(0)).tile = Vector2i(1 - OUTCOME_RADIUS, -1)
-	Simulation.step(state, _keep_passives(2))
+	# The first tick out of the fight, with no new request (#2380).
+	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
 	player.tile = beside
 	if not CompanionPassives.kept(state.stored(0, CompanionFeature.ID)):
-		return "the request to keep the passives on wasn't kept in the player's store"
+		return "the passives asked to be kept on in the fight weren't kept on once it was over"
 	var player_id: int = player.id
 	var ticks: int = WildAttackFeature.STRIKE_TICKS
 	var weak: int = GUARDS[PLAYER_GUARD] + GUARDS[WEB_GUARD]
@@ -2075,11 +2225,11 @@ func _check_kept(state: GameState, player: Entity) -> String:
 	)
 
 
-## A still command for the player in slot 0 carrying a request (#818) with the profile's `n`th
-## outbox id, that their ward gear keeps their passives on (#617).
-static func _keep_passives(n: int) -> Array[Command]:
+## A still command for the player in slot 0 carrying a request (#818) with the profile's first
+## outbox id (Outbox, #942), that their ward gear keeps their passives on (#617).
+static func _keep_passives() -> Array[Command]:
 	var keep: Array[Command] = FlowSteps.command(Command.NO_MOVE)
-	keep[0].request = ShortId.code(ShortId.of_code(n))
+	keep[0].request = ShortId.code(ShortId.of_code(1))
 	keep[0].request_kind = OutboxEntry.PASSIVES_KEPT
 	keep[0].request_data = 1
 	return keep

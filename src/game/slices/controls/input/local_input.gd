@@ -9,9 +9,11 @@ extends SessionInput
 ## swap_3 (keys 1 to 3, the d-pad's left, up and right, or a tap on the roster, RosterHud) make the
 ## monster at that place in the carried order the companion (#540): one press swaps once.
 ## revive_monster (V, or the d-pad's down) uses a revive item (#656) on the fainted monster the
-## player picks (#780, RevivePick), only while this player's profile holds one: the items are in the
+## player picks (#780, ItemPick), only while this player's profile holds one: the items are in the
 ## profile, outside the simulation, which posts the use as a request to its outbox (#818,
-## revive_chosen) that goes in the next command. While picking, the player stands. interact (F, or
+## revive_chosen) that goes in the next command. drink_tonic (G, or a controller's left trigger)
+## drinks a tonic or a draught (#2313) the same way, picked among those the profile holds
+## (drink_chosen). While picking either, the player stands. interact (F, or
 ## a controller's A) harvests the tile the player stands on or next to by hand (#696): one press
 ## starts it once. A tap or click on a tile (FocusPicker) walks there on the player's own, and
 ## harvests it on arrival when bare hands can (#1508, TapWalk); the stick or a key stops that walk.
@@ -21,6 +23,9 @@ extends SessionInput
 ## A revive item is used on the fainted monster `short_id` (#818): the profile spends it and posts
 ## the request, sent back here (`send`) for the next command.
 signal revive_chosen(short_id: String)
+## The tonic or draught `brew_id` is drunk (#2313): the profile spends it and posts the request, or
+## says why it can't. "" when drink_tonic was pressed with nothing to drink, so that's said too.
+signal drink_chosen(brew_id: String)
 
 ## What place_totem did since the last command (_totem).
 enum TotemPress {
@@ -42,6 +47,9 @@ const MOVE_ACTIONS: Array[StringName] = [&"move_left", &"move_right", &"move_up"
 ## Which fainted monsters a revive item may go to (#656): those this machine's player's profile
 ## holds one for, through the revive items' tie (ReviveTie); none without one.
 @export var revive: ReviveOffer
+## Which tonics and draughts may be drunk (#2313): those this machine's player's profile holds,
+## through the drink's tie (DrinkTie); none without one.
+@export var drink: DrinkOffer
 
 ## The last frame whose presses are dropped (#1509): the frame after the game last heard no input
 ## too, since the key or button that closed the menu or a dialog (a controller's A is interact as
@@ -65,7 +73,9 @@ var _requests: Array[OutboxEntry] = []
 ## The walk to a tapped or clicked tile (#1508), and the tap the next command walks to.
 var tap_walk: TapWalk = TapWalk.new()
 ## Which fainted monster the next revive item brings back (#780); views read its `picked`.
-var revive_pick: RevivePick = RevivePick.new()
+var revive_pick: ItemPick = ItemPick.new(&"revive_monster")
+## Which tonic or draught the next drink is (#2313); views read its `picked`.
+var drink_pick: ItemPick = ItemPick.new(&"drink_tonic")
 ## The walk toward the cursor while the left mouse button is held on the world (#1567).
 var held_walk: HeldWalk = HeldWalk.new()
 
@@ -99,7 +109,12 @@ func _hear() -> void:
 	for place: int in SWAP_ACTIONS.size():
 		if Input.is_action_just_pressed(SWAP_ACTIONS[place]):
 			_swap_to = place + 1
-	revive_pick.hear()
+	# One pick at a time: the arrows and ui_accept move and end only the one open, and of two
+	# presses before a command only the first pick's counts.
+	if drink_pick.picked.is_empty() and not drink_pick.was_pressed():
+		revive_pick.hear()
+	if revive_pick.picked.is_empty() and not revive_pick.was_pressed():
+		drink_pick.hear()
 
 
 ## Keeps a tap of place_totem for the next command, and ends a hold kept over from while the game
@@ -118,9 +133,25 @@ func _drop_presses() -> void:
 	_totem = TotemPress.HELD_OVER
 	_focus_steps = 0
 	_swap_to = Command.NO_SWAP
-	revive_pick.drop()
+	_drop_picks()
 	tap_walk.stop()
 	held_walk.let_go()
+
+
+## Uses what the revive item's and the drink's picks chose for the command for `state`; returns
+## whether the player stands for a pick: one is open, or was until now, since the A that ends it
+## is interact as well.
+func _settle_picks(state: GameState) -> bool:
+	var picking: bool = not revive_pick.picked.is_empty() or not drink_pick.picked.is_empty()
+	_revive(state)
+	_drink(state)
+	return picking or not revive_pick.picked.is_empty() or not drink_pick.picked.is_empty()
+
+
+## Ends both picks, the revive item's and the drink's, forgetting their presses.
+func _drop_picks() -> void:
+	revive_pick.drop()
+	drink_pick.drop()
 
 
 ## Walks to `tile` on the player's own from the next command, as a tap or click on it does (#1508).
@@ -146,6 +177,12 @@ func choose_swap(place: int) -> void:
 ## square does (#780).
 func choose_revive(short_id: String) -> void:
 	revive_pick.tap(short_id)
+
+
+## Drinks the tonic or draught `brew_id` in the next command, as a tap on it in the pick's list
+## does (#2313).
+func choose_drink(brew_id: String) -> void:
+	drink_pick.tap(brew_id)
 
 
 ## Sends the answer with the code `code` (DialogFeature.code) in the next command, as choosing it on
@@ -177,13 +214,12 @@ func command(state: GameState) -> Command:
 	if blocked or in_dialog:
 		# Presses while the game hears no input don't move the focus or use an item afterwards.
 		_focus_steps = 0
-		revive_pick.drop()
+		_drop_picks()
 		tap_walk.stop()
 		return _standing(answering)
-	_revive(state)
-	# While picking a fainted monster to revive (#780), the arrows move the pick, not the player,
-	# and other presses are dropped.
-	if not revive_pick.picked.is_empty():
+	# While picking a fainted monster to revive (#780) or a brew to drink (#2313), the arrows move
+	# the pick, not the player, and other presses are dropped.
+	if _settle_picks(state):
 		_focus_steps = 0
 		tap_walk.stop()
 		return _standing(answering)
@@ -267,3 +303,18 @@ func _revive(state: GameState) -> void:
 	var reviving: String = revive_pick.chosen(offered, not offered.is_empty())
 	if not reviving.is_empty():
 		revive_chosen.emit(reviving)
+
+
+## Drinks the tonic or draught the player picked (#2313), from those this player's profile holds:
+## the drink's tie (DrinkTie) spends it and posts it to the profile's outbox, or says why it can't.
+## A press with none held is told to it as "".
+func _drink(state: GameState) -> void:
+	var offered: PackedStringArray = PackedStringArray()
+	if drink != null and state.player(slot) != null:
+		offered = drink.offered(state, slot)
+	var pressed: bool = drink_pick.was_pressed()
+	var drinking: String = drink_pick.chosen(offered, not offered.is_empty())
+	if not drinking.is_empty():
+		drink_chosen.emit(drinking)
+	elif pressed and offered.is_empty() and drink != null:
+		drink_chosen.emit("")

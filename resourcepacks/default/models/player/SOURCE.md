@@ -5,8 +5,8 @@
   `src/game-models/import_body.py` moves the textured export's UVs and colour onto the rigged
   export, the same triangles, into `player_body.glb`. Its clips: the baseline body rigged and
   animated with Meshy AI by the owner, one clip per export (#1934); each export's rig and clip taken by `src/game-models/import_clip.py` into
-  `src/game-models/sources/player/`, then merged into `player_clips.glb` by
-  `src/game-models/player_clips.py` (#1935). The Throw clip is motion capture instead: subject
+  `resourcepacks/default/models/player/build/`, then merged into `player_clips.glb` by
+  `resourcepacks/default/models/player/build/player_clips.py` (#1935). The Throw clip is motion capture instead: subject
   141, trial 11 (frames 221 to 341) of the CMU Graphics Lab Motion Capture Database
   (http://mocap.cs.cmu.edu/, funded by NSF EIA-0196217), retargeted onto the same rig by
   `src/game-models/import_mocap.py` (#1951)

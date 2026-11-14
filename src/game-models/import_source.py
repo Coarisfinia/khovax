@@ -3,7 +3,8 @@
 `size`, opaque, single-sided and matte. A generator's export carries far more than the game's
 cel look shows (a normal map, a metal and roughness map, each as large as the colour), and the
 game's other models are a small share of its size; the model script then places, rigs and
-animates the source.
+animates the source. It goes into the model's build folder, beside the script:
+resourcepacks/default/models/<folder>/build/source.glb (#2438).
 
     uv run --locked src/game-models/blender.py --background --factory-startup \
         --python src/game-models/import_source.py -- <download.glb> <source.glb> [size=1024]

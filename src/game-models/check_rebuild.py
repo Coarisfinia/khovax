@@ -7,15 +7,15 @@ another file on a machine with another count of cores. A script on `THREAD_SENSI
 on Blender's own count, until its issue is fixed.
 
     uv run --locked --package khovax-game-models src/game-models/check_rebuild.py \
-        src/game-models/<name>.py \
-        [resourcepacks/default/models/<name>/<name>.glb]
+        resourcepacks/default/models/<folder>/build/<name>.py \
+        [resourcepacks/default/models/<folder>/<name>.glb]
     uv run --locked --package khovax-game-models src/game-models/check_rebuild.py --all \
         [--keep <folder>] [--only <list>]
 
 `--all` checks every scripted model against its committed .glb, as CI does (#1161): a model
-script is one here that exports through scene.export_glb, and its .glb is the tracked one under
-the default pack's models/ named like it (mana_wolf.py builds resourcepacks/default/models/mana-wolf/mana_wolf.glb); a model
-script without one fails. `--keep` copies each model's build into the folder, named like its .glb,
+script is one in a model's build folder that exports through scene.export_glb, and its .glb is the
+tracked one beside that folder named like it (resourcepacks/default/models/mana-wolf/build/mana_wolf.py
+builds resourcepacks/default/models/mana-wolf/mana_wolf.glb, #2438); a model script without one fails. `--keep` copies each model's build into the folder, named like its .glb,
 so CI can offer the build it compared, and the speeds its build prints (its `SPEEDS` line) beside
 it as `<name>.glb.speeds`, which the motion check takes (#2117). `--only` builds only the models whose .glb is in the list
 (NUL-separated, as changed_models.py writes it, #2031), while a model script without a .glb still
@@ -41,11 +41,12 @@ from pathlib import Path
 
 from game_shared import log
 from game_shared.git_files import pack_models
+from game_shared.model_builds import BUILD, built_glb, is_model_script
 
 MODELS = Path(__file__).resolve().parent
 BLENDER = MODELS / "blender.py"
-# A model script's export call, as a statement of its own.
-EXPORT = re.compile(r"^\s*scene\.export_glb\(", re.MULTILINE)
+# The default pack's models, each scripted one with its build folder (#2438).
+PACK_MODELS = MODELS.parents[1] / "resourcepacks" / "default" / "models"
 # The speeds a model script prints for the motion check (`SPEEDS Walk=... Run=...`).
 SPEEDS = re.compile(r"^SPEEDS (.*)$", re.MULTILINE)
 WIDTHS = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4, "MAT2": 4, "MAT3": 9, "MAT4": 16}
@@ -126,11 +127,13 @@ def differences(a: Path, b: Path) -> list[str]:
 
 def scripted_models() -> list[tuple[str, str | None]]:
     """Every model script with the .glb it builds, both from the working directory: a model script
-    is a script here that exports through scene.export_glb, and its .glb is the tracked one under
-    the default pack's models/ named like it (None when there is none)."""
-    glbs = {Path(path).stem: path for path in pack_models()}
-    return [(os.path.relpath(script), glbs.get(script.stem)) for script in sorted(MODELS.glob("*.py"))
-            if EXPORT.search(script.read_text())]
+    is a script in a model's build folder in the default pack that exports through
+    scene.export_glb (game_shared.model_builds, #2438), and its .glb is the tracked one beside that
+    folder named like it (None when there is none)."""
+    glbs = {Path(path).resolve(): path for path in pack_models()}
+    scripts = sorted(PACK_MODELS.glob(f"*/{BUILD}/*.py"))
+    return [(os.path.relpath(script), glbs.get(Path(built_glb(str(script))).resolve())) for script in scripts
+            if is_model_script(str(script))]
 
 
 def check(script_path: str, committed: Path | None, keep: Path | None = None) -> bool:
@@ -203,7 +206,7 @@ def main() -> int:
         unpaired = [script for script, glb in models if glb is None]
         for script in unpaired:
             # A renamed or deleted .glb would otherwise leave its model unchecked.
-            log.error("no tracked .glb under the default pack's models/ is named like this model script", script)
+            log.error("no tracked .glb beside its build folder is named like this model script", script)
         stale = sorted(set(THREAD_SENSITIVE) - {Path(script).name for script, _glb in models})
         for name in stale:
             # A fixed or renamed script would otherwise stay listed, unnoticed.

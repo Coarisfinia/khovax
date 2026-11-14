@@ -5,7 +5,8 @@ extends RefCounted
 ## playground, without one, has no waystones. A player who falls in another instance with nobody to
 ## revive them comes back beside their respawn point, at full HP; once its tile no longer holds a
 ## waystone, or its instance is gone, they go to the world's spawn as before. The look lights the
-## stone's hole and puts it out again, and the notice has its words. Fainted beasts come back at a
+## stone's hole and puts it out again, and a stone not yet activated has a blue aura around it
+## (#2385); the notice has its words. Fainted beasts come back at a
 ## waystone only while the host has them revived on waystones (#1891), which the notice says too.
 ## Every instance a realm holds, in each of its variants, has a standing stone at least
 ## SAFE_DISTANCE tiles from every wild monster's spot for every seed (#1825, #1872), which a player
@@ -220,12 +221,29 @@ func _check_lit() -> String:
 			result = "an activated waystone's hole didn't light up with a light in it"
 		elif meshes.get_surface_override_material(surface) != stone:
 			result = "a waystone's hole put out didn't show its stone again"
+	if result.is_empty():
+		result = _check_aura(glow, figure)
 	figure.free()
 	glow.free()
 	if (result.is_empty()
 			and (WaystoneNoticeTie.title().is_empty() or WaystoneNoticeTie.line().is_empty())):
 		result = "the waystone's notice has no words"
 	return result
+
+
+## A waystone `glow` shows as not yet activated has its aura around `figure`, and one it shows as
+## activated hasn't (#2385).
+static func _check_aura(glow: WaystoneGlow, figure: Node3D) -> String:
+	glow.show_stone(figure, false)
+	if not WaystoneAura.shows(figure):
+		return "a waystone not yet activated shows no aura around it"
+	glow.show_stone(figure, true)
+	if WaystoneAura.shows(figure):
+		return "an activated waystone still shows its aura"
+	glow.show_stone(figure, false)
+	if not WaystoneAura.shows(figure):
+		return "a waystone shown as not activated again shows no aura"
+	return ""
 
 
 ## The waystone of `state`'s region with ground beside it, or Vector2i.MAX.

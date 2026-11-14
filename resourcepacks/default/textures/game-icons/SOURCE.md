@@ -2,7 +2,7 @@
 
 - **Author:** Lorc (http://lorcblog.blogspot.com): `cog.svg`, `evil-moon.svg`, `fist.svg`,
   `grab.svg`, `magic-shield.svg`, `magic-swirl.svg`, `magnifying-glass.svg`, `spiky-explosion.svg`,
-  `sprout.svg`, `swap-bag.svg`, `tornado.svg`, `wolf-trap.svg`; Delapouite (http://delapouite.com):
+  `round-bottom-flask.svg`, `sprout.svg`, `swap-bag.svg`, `tornado.svg`, `wolf-trap.svg`; Delapouite (http://delapouite.com):
   `berries-bowl.svg`, `exit-door.svg`, `hamburger-menu.svg`, `herbs-bundle.svg`, `knot.svg`,
   `resize.svg`, `totem.svg`, `plain-arrow-up.svg`, `plain-arrow-down.svg`, `plain-arrow-left.svg`,
   `plain-arrow-right.svg`; Sbed (http://opengameart.org/content/95-game-icons): `cancel.svg`
@@ -24,4 +24,7 @@
   monsters' order (`plain-arrow-up.svg`, `plain-arrow-down.svg`), and the mark of a monster with a
   development knot to take (#1443): `knot.svg`, and the button that harvests a tile by hand
   (#1488): `grab.svg`, and the item an evolution needs in a monster's details (#1796):
-  `swap-bag.svg`
+  `swap-bag.svg`, and the button that drinks a tonic or a draught (#2313):
+  `round-bottom-flask.svg` (Lorc's `lorc/round-bottom-flask.svg`, checked 2026-11-14 against the
+  icons repository's license notice, CC BY 3.0 for Lorc's folder; SHA-256 as downloaded
+  `dae89b103de819ad1a3cf6588fc59882952db5055c29183de86b93b00e5bdb33`)

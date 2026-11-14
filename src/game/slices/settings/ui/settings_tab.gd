@@ -280,6 +280,14 @@ func add_row(
 	return row
 
 
+## A button in `submenu`, named `button_name`, saying `text`, that calls `pressed`: an action
+## rather than a setting, like the Debug submenu's teleport (#2274); returns it.
+func add_button(submenu: String, button_name: String, text: String, pressed: Callable) -> Button:
+	var added: Button = MenuWidgets.button(text, pressed)
+	_submenus[submenu].add_child(_named(added, button_name))
+	return added
+
+
 func _named(node: Node, node_name: String) -> Node:
 	node.name = node_name
 	return node
