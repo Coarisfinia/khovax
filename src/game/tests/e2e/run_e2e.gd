@@ -65,7 +65,8 @@ func _initialize() -> void:
 	if setup_errors > 0:
 		printerr("FAIL  setup: %d error(s) logged before the first flow" % setup_errors)
 	var failed: int = await _run_from(tests, 0)
-	print("%d passed, %d failed" % [tests.size() - failed, failed])
+	var setup_note: String = ", and the setup failed" if setup_errors > 0 else ""
+	print("%d passed, %d failed%s" % [tests.size() - failed, failed, setup_note])
 	# The last flow's music may still be stopping; quitting at once could leak it (#1906).
 	QuietQuit.quit(self, 1 if failed > 0 or setup_errors > 0 else 0)
 
