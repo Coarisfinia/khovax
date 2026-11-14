@@ -3,9 +3,9 @@ extends RefCounted
 ## The features an instance has because of what its region holds (#879), not because its blueprint
 ## lists them: what its region pieces' legends place, over all of its pieces. A slice that places
 ## something on the ground says through its PlacementReader which feature runs it; the core's own
-## meanings (exits, wild monsters, their schedules, packs, sleep, hunts and foraging, hiding), tiles
-## bare hands can harvest (#696) and
-## region pieces to enter are matched here. Only which features; FeatureFactories says when they
+## meanings (exits, wild monsters, their schedules, packs, sleep, hunts and foraging, hiding,
+## bosses' specials, #2410), tiles bare hands can harvest (#696) and region pieces to enter are
+## matched here. Only which features; FeatureFactories says when they
 ## step.
 
 
@@ -54,6 +54,8 @@ static func of(region: Region) -> Array[String]:
 		)
 	if HidingFeature.has_hiding(region):
 		needed.append(HidingFeature.ID)
+	if BossSpecialFeature.has_boss(region):
+		needed.append(BossSpecialFeature.ID)
 	if TileHarvestFeature.has_harvestable(region):
 		needed.append(TileHarvestFeature.ID)
 	if WaystoneFeature.has_waystone(region):
@@ -77,6 +79,7 @@ static func _built_in() -> Array[String]:
 		HuntFeature.ID,
 		ForagingFeature.ID,
 		HidingFeature.ID,
+		BossSpecialFeature.ID,
 		TileHarvestFeature.ID,
 		WaystoneFeature.ID,
 	]

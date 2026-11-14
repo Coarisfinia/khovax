@@ -64,6 +64,8 @@ static func _world_rules() -> Dictionary[String, Callable]:
 		# After domination, whose waiting rings it breaks, and before enrage, which enrages the
 		# wild monsters of a ring that broke.
 		WildAttackFeature.ID: WildAttackFactory.build,
+		# Right after the auto attacks, which its bosses' specials land through (#2410).
+		BossSpecialFeature.ID: BossSpecialFactory.build,
 		# After domination, whose rings' wild monsters it hurts (#692).
 		SpikesFeature.ID: SpikesFactory.build,
 		DominationLootFeature.ID: DominationLootFactory.build,

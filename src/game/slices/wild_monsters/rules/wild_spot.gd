@@ -4,9 +4,10 @@ extends RefCounted
 ## the species it names, whether its monster starts wounded (#389), the event its monster emits when
 ## it faints (#541, EventEmitted; "" for none), the quest target it is (#625): a content id a
 ## quest's step names to ask for this one monster, "" for none, and the tile kind it stands on
-## (#452). The legend says `a wild monster, always <species id>`, with clauses after it, each once:
-## `, wounded`, `, emitting <event name>`, `, the quest target <id>` and, last, `, on <tile kind's
-## meaning>`, e.g. `a wild monster, always ombulumo, wounded, on sand` or `a wild monster,
+## (#452), and whether it's a boss (#2410, BossSpecialFeature). The legend says `a wild monster,
+## always <species id>`, with clauses after it, each once: `, wounded`, `, emitting <event name>`,
+## `, the quest target <id>`, `, a boss` and, last, `, on <tile kind's meaning>`, e.g. `a wild
+## monster, always ombulumo, wounded, on sand` or `a wild monster,
 ## always ombulumo, the quest target old_toad` (WildSpotPlacements).
 
 ## How a named wild monster's legend meaning begins, and the clauses that may follow its species.
@@ -14,12 +15,14 @@ const NAMED: String = "a wild monster, always "
 const WOUNDED: String = "wounded"
 const EMITTING: String = "emitting "
 const TARGETED: String = "the quest target "
+const BOSS: String = "a boss"
 const ON: String = "on "
 
 var species: String = ""
 var wounded: bool = false
 var emits: String = ""
 var target: String = ""
+var boss: bool = false
 ## The meaning of the tile kind it stands on (`sand`), or "" for ground.
 var stands_on: String = ""
 
@@ -40,6 +43,8 @@ static func read(meaning: String) -> WildSpot:
 			break
 		if clause == WOUNDED and not spot.wounded:
 			spot.wounded = true
+		elif clause == BOSS and not spot.boss:
+			spot.boss = true
 		elif (clause.begins_with(EMITTING)
 				and spot.emits.is_empty()
 				and Ids.is_id(emitted)):

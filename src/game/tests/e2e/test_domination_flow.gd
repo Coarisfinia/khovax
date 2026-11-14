@@ -65,7 +65,8 @@ extends RefCounted
 ##
 ## A legend marks a named wild monster a boss (#2410): beside its auto attacks, it fires its
 ## species' special at the player next to it as soon as it's ready, then again once it has cooled
-## down, never on a roll.
+## down, never on a roll, at the companion beside it before the player; a save resumes its
+## cooldown. Asleep, held or switched off, it fires nothing.
 
 ## Where the flow's profile is saved, apart from the player's own.
 const SAVE_PATH: String = "user://test_domination_profile.json"
@@ -1173,6 +1174,11 @@ func _check_boss_specials() -> String:
 	var region: Region = FlowSteps.region("🔴🐸🟫", legend)
 	if not region.problem.is_empty():
 		return "a legend couldn't mark a wild monster a boss: " + region.problem
+	var marked: bool = false
+	for meaning: String in region.placed(WildSpotPlacements.KIND).values():
+		marked = WildSpot.read(meaning).boss
+	if not marked or WildSpot.read(WildSpot.NAMED + COMPANION + BOSS_CLAUSE.repeat(2)) != null:
+		return "a legend's boss clause didn't mark its wild monster a boss, once"
 	var special: Ability = SpeciesContent.cached().specials()[COMPANION]
 	var ticks: int = special.cooldown_seconds * Simulation.TICKS_PER_SECOND * BOSS_COOLDOWNS
 	var boss: GameState = _boss_state(true)
@@ -1188,18 +1194,72 @@ func _check_boss_specials() -> String:
 			extra.y,
 			expected,
 		]
+	var bosses: BossSpecialFeature = boss.feature(BossSpecialFeature.ID) as BossSpecialFeature
+	if bosses.cooldown_left(bosses.bosses[0]) < 1:
+		return "a boss's special didn't cool down after it fired"
+	if not _reloads(boss, _boss_state(true), BossSpecialFeature.ID):
+		return "a save didn't resume a boss's cooldown"
+	return _check_boss_held(ticks)
+
+
+## Asleep, held or with its feature switched off, a boss fires no special: it strikes nothing more
+## than the same monster unmarked. Next to the player and their companion, it fires at the
+## companion.
+func _check_boss_held(ticks: int) -> String:
+	var holds: Dictionary[String, Callable] = {
+		"asleep": func(state: GameState) -> void: _wild(state).sleep(_boss_of(state), true),
+		"held": func(state: GameState) -> void: _wild(state).hold(_boss_of(state), true),
+		"off": func(state: GameState) -> void: state.set_enabled(BossSpecialFeature.ID, false),
+	}
+	for what: String in holds:
+		var boss: GameState = _boss_state(true)
+		var plain: GameState = _boss_state(false)
+		holds[what].call(boss)
+		holds[what].call(plain)
+		var extra: Vector2i = _strikes_on_player(boss, ticks) - _strikes_on_player(plain, ticks)
+		if extra != Vector2i.ZERO:
+			return "a boss %s struck the player (%d, %d) more (strikes, damage)" % [
+				what,
+				extra.x,
+				extra.y,
+			]
+	var on_boss: Vector2i = _boss_strikes_with_companion(true)
+	var on_plain: Vector2i = _boss_strikes_with_companion(false)
+	if on_boss - on_plain != Vector2i(1, 0):
+		return "a boss next to a companion and a player didn't fire at the companion first"
 	return ""
 
 
+## The boss check's wild monster in `state`.
+func _boss_of(state: GameState) -> int:
+	return _wild(state).monsters[0]
+
+
+## The wild monster's strikes in its first second on the companion (x) and the player (y) next to
+## it, under `_boss_state(boss)` with the player carrying a COMPANION.
+func _boss_strikes_with_companion(boss: bool) -> Vector2i:
+	var state: GameState = _boss_state(boss, true)
+	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
+	var companion: int = companions.companion_of(0)
+	var strikes: Vector2i = Vector2i.ZERO
+	var ticks: int = WildAttackFeature.STRIKE_TICKS
+	for struck: WildMonsterStruck in _wild_strikes_over(state, ticks, Vector2i(-1, 0)):
+		strikes += Vector2i(1, 0) if struck.target_id == companion else Vector2i(0, 1)
+	return strikes
+
+
 ## A disc under the starting instance's rules with one awake wild monster of COMPANION's species
-## in the middle, marked a boss when `boss`, and the player in slot 0 next to it.
-func _boss_state(boss: bool) -> GameState:
+## in the middle, marked a boss when `boss`, and the player in slot 0 next to it, carrying a
+## COMPANION when `carrying`.
+func _boss_state(boss: bool, carrying: bool = false) -> GameState:
 	var region: Region = Region.disc(OUTCOME_RADIUS)
 	region.wild_monsters = [Vector2i.ZERO]
 	var meaning: String = WildSpot.NAMED + COMPANION + (BOSS_CLAUSE if boss else "")
 	region.add_placement(WildSpotPlacements.KIND, Vector2i.ZERO, meaning)
 	var state: GameState = FlowSteps.rules_on(Realms.start(), region, 42)
 	_wild(state).sleep(_wild(state).monsters[0], false)
+	if carrying:
+		FlowSteps.carry(state, 0, [COMPANION])
 	var _player: Entity = state.add_entity(0, Vector2i(1, 0))
 	return state
 
