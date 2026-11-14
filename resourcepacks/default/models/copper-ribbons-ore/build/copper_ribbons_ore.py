@@ -1,6 +1,6 @@
 """Copper ore (#1949), the copper material's carried model: a few chunks of stone with flat ribbons
 of copper curling out of the cracks between them. Its shape is the owner's generated model, made
-without a texture (`sources/copper_ribbons_ore.glb`, from the download by import_source.py: see the
+without a texture (`source.glb` beside this script, from the download by import_source.py: see the
 asset's SOURCE.md), and the source stays as the owner made it: this script makes the owner's fix.
 One of its ribbons leaves the stone as two strands that merge into one curl; the owner asked for
 that ribbon to go, both strands and the curl, since enough ribbons come out of the stone without
@@ -10,7 +10,7 @@ Every ore has a model of its own (#1949, #1950), so this is not the outcrop scal
 model: no rig and no clips.
 
     uv run --locked src/game-models/blender.py --background --factory-startup \
-        --python src/game-models/copper_ribbons_ore.py -- \
+        --python resourcepacks/default/models/copper-ribbons-ore/build/copper_ribbons_ore.py -- \
         resourcepacks/default/models/copper-ribbons-ore/copper_ribbons_ore.glb
 
 Blender is Z-up; the origin is at the stone's foot, in its middle, and it is sized to be carried in
@@ -26,11 +26,12 @@ import numpy
 from mathutils import Matrix, Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
+# The model library, src/game-models/lib/, from this model's build folder (#2438).
+sys.path.insert(0, os.path.normpath(os.path.join(HERE, *[os.pardir] * 5, "src", "game-models")))
 
 from lib import fixed_order, prop_paint, repaint, scene  # noqa: E402
 
-SOURCE = os.path.join(HERE, "sources", "copper_ribbons_ore.glb")
+SOURCE = os.path.join(HERE, "source.glb")
 FPS = 30
 # Its kind on the world's scale (lib/world_scale.py): a thing a hand carries.
 WORLD_SCALE = "item"

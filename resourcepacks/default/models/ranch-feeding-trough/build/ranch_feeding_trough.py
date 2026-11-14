@@ -1,5 +1,5 @@
 """The ranch feeding trough (#2387): a long wooden box on four short legs, a world prop at the ranch.
-Its shape is the owner's generated model, made without a texture (`sources/ranch_feeding_trough.glb`,
+Its shape is the owner's generated model, made without a texture (`source.glb` beside this script,
 from the download by import_source.py: see the asset's SOURCE.md); its colours are the props'
 shared wood (lib/prop_paint.py, CC0 textures), mapped by this script: the planks, a darker shaded
 step in the joints and at the legs' foot, and the trough's inside (its floor and inner walls) as a
@@ -7,7 +7,7 @@ part of its own, `basin`, so what it holds (feed, water) can be painted there la
 touching the planks. No runes or writing. A static model: no rig and no clips.
 
     uv run --locked src/game-models/blender.py --background --factory-startup \
-        --python src/game-models/ranch_feeding_trough.py -- \
+        --python resourcepacks/default/models/ranch-feeding-trough/build/ranch_feeding_trough.py -- \
         resourcepacks/default/models/ranch-feeding-trough/ranch_feeding_trough.glb
 
 Blender is Z-up; the trough runs along X, its long side facing -Y (the game's +Z); the origin is
@@ -24,11 +24,12 @@ import numpy
 from mathutils import Matrix
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
+# The model library, src/game-models/lib/, from this model's build folder (#2438).
+sys.path.insert(0, os.path.normpath(os.path.join(HERE, *[os.pardir] * 5, "src", "game-models")))
 
 from lib import fixed_order, footprint, prop_paint, scene  # noqa: E402
 
-SOURCE = os.path.join(HERE, "sources", "ranch_feeding_trough.glb")
+SOURCE = os.path.join(HERE, "source.glb")
 FPS = 30
 # Its kind on the world's scale (lib/world_scale.py): a thing standing on one hex.
 WORLD_SCALE = "prop"
