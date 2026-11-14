@@ -117,7 +117,6 @@
 	},
 	// Each region drawn whole in one file (#1861), in the pack's own folder (#1978).
 	"regions": {
-		"lymwen_hoall": "regions/lymwen_hoall.md",
 		"senwel_sael": "regions/senwel_sael.md",
 		"thudren_orl": "regions/thudren_orl.md"
 	},
@@ -172,6 +171,10 @@
 			"regions/lumwen_hoal/pond.md",
 			"regions/lumwen_hoal/start.md",
 			"regions/lumwen_hoal/thicket.md"
+		],
+		"lymwen_hoall": [
+			"regions/lymwen_hoall/clearing.md",
+			"regions/lymwen_hoall/start.md"
 		],
 		"morwe_wudhen": [
 			"regions/morwe_wudhen/boulders.md",
