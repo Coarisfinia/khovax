@@ -131,7 +131,11 @@ func carry_out(_state: GameState, entity_id: int) -> Dictionary:
 
 
 func carry_in(_state: GameState, arrived: Entity, carried: Dictionary) -> void:
-	give(arrived.id, carried["kind"], carried["strength"], carried["ticks"], carried["waits"])
+	var kind: String = carried["kind"]
+	var strength: int = carried["strength"]
+	var ticks: int = carried["ticks"]
+	var waits: int = carried["waits"]
+	give(arrived.id, kind, strength, ticks, waits)
 
 
 ## How many effects there are, then each target's id, kind (its name's code), strength, ticks left
