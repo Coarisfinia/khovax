@@ -2,10 +2,10 @@
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://github.com/Coarisfinia/khovax/slices/resource_packs/data/resource_packs.schema.json",
 	"title": "Resource pack",
-	"description": "A resource pack's manifest (#1860): its id, its name, its own version, the game version it targets, and the resources it provides (textures, models, sounds, regions, region pieces, realms, quests, species, translation catalogues, tile blueprints, loot tables and materials), each by its id. The game's own resources are the default pack; a player's pack (#1858) shares this format. One file per pack, named after its id.",
+	"description": "A resource pack's manifest (#1860): its id, its name, its own version, the game version it targets, and the resources it provides (textures, models, sounds, regions, region pieces, realms, quests, species, translation catalogues, tile blueprints, loot tables, materials, harvest tables and tonics), each by its id. The game's own resources are the default pack; a player's pack (#1858) shares this format. One file per pack, named after its id.",
 	"type": "object",
 	"additionalProperties": false,
-	"required": ["id", "name", "version", "game_version", "textures", "models", "audio", "regions", "region_pieces", "realms", "quests", "species", "translations", "tiles", "loot_tables", "materials", "harvest_tables"],
+	"required": ["id", "name", "version", "game_version", "textures", "models", "audio", "regions", "region_pieces", "realms", "quests", "species", "translations", "tiles", "loot_tables", "materials", "harvest_tables", "tonics"],
 	"properties": {
 		"id": {
 			"description": "Stable: lowercase words joined by underscores.",
@@ -134,6 +134,15 @@
 		},
 		"materials": {
 			"description": "Each material's JSONC file (#1953), in the loot slice's material format (slices/loot/data/materials.schema.json), by its id, relative to the pack's root, never climbing out of it. The game reads every material a pack has; a loot table names one by id.",
+			"type": "object",
+			"propertyNames": { "pattern": "^[a-z][a-z0-9_]*$" },
+			"additionalProperties": {
+				"type": "string",
+				"pattern": "^[A-Za-z0-9_-][A-Za-z0-9._/-]*\\.jsonc$"
+			}
+		},
+		"tonics": {
+			"description": "Each tonic's JSONC file (#2090), in the tonics slice's format (slices/tonics/data/tonics.schema.json), by its id, relative to the pack's root, never climbing out of it. The game reads every tonic a pack has: its ingredients, its traits and every brew it allows.",
 			"type": "object",
 			"propertyNames": { "pattern": "^[a-z][a-z0-9_]*$" },
 			"additionalProperties": {

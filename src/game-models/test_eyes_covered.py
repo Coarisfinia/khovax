@@ -4,6 +4,8 @@ set clear of its skin as marked_eyes.clear sets them with `rim`: they pass. Plan
 pushed half their size into the ball, so the skin cuts across them, and a loose patch of skin (an
 open surface, as a generated model's loose pieces are) lying over the lower half of an eye, as on
 the Wobulumu (#1747), or a loose closed lump of it there, which only a brow over the eye may be.
+A wisp (a lump on a `wisp.*` bone, lib/wisps.py) flying past in front of the eye isn't the body:
+it passes (#2368).
 
     uv run --locked src/game-models/blender.py --background --factory-startup \
         --python src/game-models/test_eyes_covered.py
@@ -23,7 +25,7 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "game-shared"))
 
 from game_shared import log  # noqa: E402
-from lib import attachments, covered, eyes, marked_eyes, scene  # noqa: E402
+from lib import attachments, covered, eyes, marked_eyes, scene, wisps  # noqa: E402
 
 # The head: a ball this big; our eye this big, where the left one sits (the model faces -Y, its
 # left is +X; the right one mirrors it).
@@ -32,13 +34,14 @@ EYE = Vector((0.35, -1.0, 0.3)).normalized() * RADIUS
 # The check's tolerance, as check_eyes_covered.py's default.
 TOLERANCE = 0.01
 # Name: (how far the eyes are pushed into the ball, in their size; the loose piece of skin lying
-# over the left one's lower half, if any: "open" a patch, "closed" a lump; whether the check
-# passes it).
+# over the left one's lower half, if any: "open" a patch, "closed" a lump, "wisp" a lump on a
+# wisp's bone further out; whether the check passes it).
 CASES = {
     "clear": (0.0, None, True),
     "pushed_in": (0.5, None, False),
     "loose_patch": (0.0, "open", False),
     "loose_lump": (0.0, "closed", False),
+    "wisp": (0.0, "wisp", True),
 }
 
 
@@ -51,7 +54,8 @@ def material(name, colour):
 def patch(at, look, size, mat, kind):
     """A loose piece of skin `size` across, its own island, a little in front of the eye at `at`
     and over its lower half: an "open" flat square facing the way the eye looks, or a "closed"
-    ball, which a brow is too, but under the eye."""
+    ball, which a brow is too, but under the eye; a "wisp" is such a ball twice as far out, on a
+    wisp's bone."""
     mesh = bpy.data.meshes.new("Patch")
     built = bmesh.new()
     if kind == "open":
@@ -61,11 +65,13 @@ def patch(at, look, size, mat, kind):
     built.to_mesh(mesh)
     built.free()
     turn = look.to_track_quat("Z", "Y").to_matrix().to_4x4()
-    mesh.transform(Matrix.Translation(at + look * SIZE * 0.8 - Vector((0.0, 0.0, size * 0.4))) @ turn)
+    out = SIZE * (2.0 if kind == "wisp" else 0.8)
+    mesh.transform(Matrix.Translation(at + look * out - Vector((0.0, 0.0, size * 0.4))) @ turn)
     obj = bpy.data.objects.new("Patch", mesh)
     bpy.context.scene.collection.objects.link(obj)
     obj.data.materials.append(mat)
-    obj.vertex_groups.new(name="head").add(range(len(mesh.vertices)), 1.0, "REPLACE")
+    bone = wisps.PREFIX + "0" if kind == "wisp" else "head"
+    obj.vertex_groups.new(name=bone).add(range(len(mesh.vertices)), 1.0, "REPLACE")
     return obj
 
 

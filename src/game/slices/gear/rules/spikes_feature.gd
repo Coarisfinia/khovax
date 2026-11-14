@@ -11,8 +11,10 @@ extends Feature
 ## their trap slot comes in as a request from their profile's outbox (#818, OutboxEntry.TRAP), and
 ## this keeps the trap in their entry of the player's world store (#724): it lasts between sessions
 ## and goes with them from instance to instance. The ids of the requests it applied are kept there
-## too (OutboxReceipts), so one sent again changes nothing. The strikes fall on the instance's
-## ticks.
+## too (OutboxReceipts), so one sent again changes nothing. Gear changes only outside a fight
+## (owner, #223, #776), here too, not only in the gear panel: a request taken while the player is in
+## one (Fight.involves) is acknowledged, but their trap stays as it was. The strikes fall on the
+## instance's ticks.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "spikes"
@@ -45,6 +47,13 @@ func requires() -> Array[String]:
 func after() -> Array[String]:
 	var earlier: Array[String] = [WildMonsterFeature.ID]
 	return earlier
+
+
+## The hiding and the companions, which tell with the wild monsters and the rings whether a player
+## is in a fight (Fight), where their trap doesn't change (#776), as the last tick left them.
+func before() -> Array[String]:
+	var later: Array[String] = [HidingFeature.ID, CompanionFeature.ID]
+	return later
 
 
 ## The code a request carries for the gear `gear_id` in the trap slot (CommandCodes):
@@ -100,14 +109,15 @@ static func _hurt(
 
 
 ## Puts the gear each player here asks for into their trap, in slot order, unless its request was
-## applied before. A code of no spikes this build knows is kept all the same: it hurts nothing.
+## applied before or they're in a fight. A code of no spikes this build knows is kept all the same:
+## it hurts nothing.
 func _change_traps(state: GameState, commands: Array[Command]) -> void:
 	for slot: int in GameState.MAX_PLAYERS:
 		var command: Command = Command.of(commands, slot)
 		var changing: bool = command != null and command.request_kind == OutboxEntry.TRAP
 		if not changing or state.player(slot) == null:
 			continue
-		if not OutboxReceipts.take(state, slot, id(), command):
+		if not OutboxReceipts.take(state, slot, id(), command) or Fight.involves(state, slot):
 			continue
 		var entry: Dictionary = state.store(slot, id())
 		if command.request_data == CommandCodes.NONE:

@@ -322,6 +322,158 @@ msgstr ""
 msgid "Wobulumu"
 msgstr ""
 
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Berry tonic"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Strong berry tonic"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Shared berry tonic"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Slow-release berry tonic"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Moss tonic"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Strong moss tonic"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Lasting moss tonic"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Shared moss tonic"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Slow-release moss tonic"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Pondweed tonic"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Strong pondweed tonic"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Lasting pondweed tonic"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Shared pondweed tonic"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Slow-release pondweed tonic"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Feather tonic"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Strong feather tonic"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Lasting feather tonic"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Shared feather tonic"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Slow-release feather tonic"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Bone tonic"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Strong bone tonic"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Lasting bone tonic"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Shared bone tonic"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Slow-release bone tonic"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Berry draught"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Strong berry draught"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Shared berry draught"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Slow-release berry draught"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Moss draught"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Strong moss draught"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Lasting moss draught"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Shared moss draught"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Slow-release moss draught"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Pondweed draught"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Strong pondweed draught"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Lasting pondweed draught"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Shared pondweed draught"
+msgstr ""
+
+#: resourcepacks/default/tonics/tonic.jsonc
+msgid "Slow-release pondweed draught"
+msgstr ""
+
 #: slices/blueprints/data/brekhal_varn.jsonc
 msgid "The mountain pass southwest of Edhra Tewk. Its name is rocky to say, br and k, as the pass is to walk; Varn is the Land-speech word for a pass."
 msgstr ""
@@ -566,6 +718,14 @@ msgstr ""
 
 #: slices/credits/ui/credits_tab.tscn
 msgid "Error log: save it as a file"
+msgstr ""
+
+#: slices/credits/ui/error_log_button.gd
+msgid "Your browser may ask to allow the download; answer it with the mouse or keyboard."
+msgstr ""
+
+#: slices/credits/ui/error_log_button.gd
+msgid "The log's newest lines:"
 msgstr ""
 
 #: slices/damage_numbers/look/damage_numbers_view.gd
@@ -1173,6 +1333,10 @@ msgid "Revive beasts at waystones"
 msgstr ""
 
 #: slices/menu/ui/game_menu.gd
+msgid "Invincible"
+msgstr ""
+
+#: slices/menu/ui/game_menu.gd
 msgid "Menu"
 msgstr ""
 
@@ -1434,6 +1598,10 @@ msgstr ""
 
 #: slices/settings/ui/settings_tab.gd
 msgid "Game"
+msgstr ""
+
+#: slices/settings/ui/settings_tab.gd
+msgid "Debug"
 msgstr ""
 
 #: slices/settings/ui/settings_tab.gd

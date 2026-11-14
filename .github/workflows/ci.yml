@@ -184,6 +184,13 @@ jobs:
           uv run --locked --package khovax-game-checks ../game-checks/test_known_gaps_check.py
           uv run --locked --package khovax-game-checks ../game-checks/known_gaps_check.py HEAD^1
 
+      - name: "🔐 Check a workflow calling another grants every permission its jobs ask for"
+        # #2352: GitHub refuses the caller's run before it starts otherwise (nightly.yml calls this
+        # file), which no push or pull request sees. Its reader's test runs first.
+        run: |
+          uv run --locked --package khovax-game-checks ../game-checks/test_called_workflow_permissions.py
+          uv run --locked --package khovax-game-checks ../game-checks/called_workflow_permissions.py
+
       - name: "🤖 Set up Godot and import the project"
         uses: ./.github/actions/setup-godot
 
@@ -280,6 +287,12 @@ jobs:
         run: |
           GODOT=~/godot/godot uv run --locked --package khovax-game-checks \
             ../game-checks/test_missing_pack_link.py
+
+      - name: "🧯 Check the e2e runner fails on an error logged during its setup"
+        # The runner reads all the content ahead, before the first flow, and an error there is
+        # logged once and cached, so no flow sees it (#2367). The test runs it on a copy of the
+        # project with one content file broken and a single flow that passes.
+        run: GODOT=~/godot/godot uv run --locked --package khovax-game-checks ../game-checks/test_e2e_setup_errors.py
 
       - name: "🧪 Run the headless e2e tests"
         # timeout guards against a script error in the runner leaving the SceneTree running forever.
@@ -401,8 +414,9 @@ jobs:
         uses: ./.github/actions/setup-blender
 
       - name: "🐺 Check every scripted model's .glb is what its script builds"
-        # Builds each model listed above twice and compares the bytes with each other and the
-        # committed .glb (#1085, #1161), several models at once (#2031); a difference is an error
+        # Builds each model listed above twice, on 1 and 4 of Blender's threads (#2317), and
+        # compares the bytes with each other and the committed .glb (#1085, #1161), several models
+        # at once (#2031); a difference is an error
         # annotation naming the model and what differs. A model script without a .glb always fails.
         if: steps.models.outputs.changed == 'true'
         timeout-minutes: 8
@@ -613,6 +627,16 @@ jobs:
           xargs -0 -r -a /tmp/models.list uv run --locked --package khovax-game-models \
             ../game-models/blender.py --background --factory-startup \
             --python ../game-models/check_world_scale.py --
+
+      - name: "🚪 Check the player can walk through every portal"
+        # Rays through a portal's opening, from the ground to the player's height, meet nothing but
+        # the portal itself (#2157); a model that isn't a portal passes.
+        if: steps.models.outputs.changed == 'true'
+        timeout-minutes: 3
+        run: |
+          xargs -0 -r -a /tmp/models.list uv run --locked --package khovax-game-models \
+            ../game-models/blender.py --background --factory-startup \
+            --python ../game-models/check_passage.py --
 
       - name: "📤 Upload the models CI built"
         # On a difference, the .glb files this runner built, to compare with or commit.

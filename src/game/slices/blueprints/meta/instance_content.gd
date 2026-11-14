@@ -18,6 +18,7 @@ static func kinds() -> Dictionary[String, Callable]:
 		MaterialContent.KEY: MaterialContent.cached,
 		GearContent.DIR: GearContent.cached,
 		RecipeContent.DIR: RecipeContent.cached,
+		TonicContent.KEY: TonicContent.cached,
 		FactionContent.DIR: FactionContent.cached,
 		PeopleContent.DIR: PeopleContent.cached,
 		DialogContent.DIR: DialogContent.cached,

@@ -8,6 +8,10 @@ extends RefCounted
 ## companions' attacks declare; kept apart from them so the features that only call their static
 ## helpers (the specials) don't read it.
 
+## The most a Quicken and a haste when hurt take off a companion's wait together (#2049). Its number
+## is in Tuning (#1309).
+const MOST_QUICKENED: int = Tuning.MOST_QUICKENED
+
 
 ## The resting companion `companion_id` gets the share of its full HP its passives heal at rest
 ## (`rest_heals`, by passive id) back, at least 1 HP, at the start of each second.
@@ -28,7 +32,9 @@ static func rest(
 
 
 ## The wait `wait` of the companion `companion_id`, shortened by its passives' haste when hurt
-## (`hastes`, by passive id) times the share of its HP it has lost; never below one tick.
+## (`hastes`, by passive id) times the share of its HP it has lost, and by the share of a Quicken it
+## drank (#2311, TonicEffectsFeature): that one adds to the haste, but together they never take off
+## more than MOST_QUICKENED, nor less than the haste alone. Never below one tick.
 static func hastened(
 	state: GameState,
 	companions: CompanionFeature,
@@ -37,14 +43,23 @@ static func hastened(
 	hastes: Dictionary[String, int],
 ) -> int:
 	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
-	if health == null or hastes.is_empty():
+	var quicken: int = TonicEffectReads.strength_of(
+		state,
+		companion_id,
+		TonicEffectsFeature.QUICKEN,
+	)
+	if health == null or (hastes.is_empty() and quicken == 0):
 		return wait
 	var haste: int = _share(state, companions, companion_id, hastes)
 	var full: int = health.max_hp_of(state, companion_id)
 	var lost: int = clampi(full - health.hp_of(state, companion_id), 0, full)
-	# Multiplied out first and divided once, so only the whole result rounds down.
+	# Multiplied out first and divided once, so only the whole result rounds down: every share
+	# is in thousandths of the whole HP.
 	var whole: int = Fixed.ONE * full
-	return maxi(Fixed.div_floor(wait * (whole - haste * lost), whole), 1)
+	var off: int = haste * lost
+	if quicken > 0:
+		off = maxi(off, mini(off + quicken * full, MOST_QUICKENED * full))
+	return maxi(Fixed.div_floor(wait * (whole - off), whole), 1)
 
 
 ## The shares `by_passive` gives the passives working for the companion `companion_id` in `state`

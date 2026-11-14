@@ -28,11 +28,16 @@ const MOVE_TICKS: int = 6
 const REVIVE_TICKS: int = 3 * Simulation.TICKS_PER_SECOND
 ## How long a knocked-down player waits before going back to the spawn (#479).
 const DOWN_TICKS: int = 30 * Simulation.TICKS_PER_SECOND
+## How long a player waits between two tonics or draughts (#2049, #2310).
+const DRINK_WAIT_TICKS: int = 10 * Simulation.TICKS_PER_SECOND
 ## How near an ally has to be for a fallen player to be knocked down rather than sent back (#479).
 const ALLY_RANGE: int = 200
 # Companions.
 ## The ticks between two strikes of one companion (#221).
 const COMPANION_STRIKE_TICKS: int = Simulation.TICKS_PER_SECOND
+## The most a Quicken and a passive's haste when hurt take off a companion's wait between strikes
+## together, in thousandths (#2049, #2311), so the wait never drops below half.
+const MOST_QUICKENED: int = 500
 ## How much of a species' stats (its HP plus twice its strength and its speed) widens a companion's
 ## reach by a tile (#338).
 const COMPANION_STATS_PER_TILE: int = 120
@@ -81,8 +86,9 @@ const HUNT_GIVE_UP_TICKS: int = 20 * Simulation.TICKS_PER_SECOND
 const PACK_SIZE: int = 4
 const PACK_REACH: int = 6
 const PACK_KEEP_NEAR: int = 2
-## How likely each bundle of wild monsters is to hold babies, in thousandths (owner's ground rule,
-## #1697): young of its line, level 1 and unevolved, beside the grown ones.
+## The share of bundles of wild monsters that hold babies, in thousandths, counted over an
+## instance's bundles, not rolled (owner's ground rule, #1697; #2239): young of their line, level 1
+## and unevolved, beside the grown ones.
 const WILD_BABY_CHANCE: int = 600
 # Wild monsters' days (#1201).
 ## How many hours a diurnal or nocturnal monster sleeps in one block, and over how many hours after

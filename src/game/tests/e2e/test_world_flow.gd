@@ -29,6 +29,9 @@ extends RefCounted
 ## factions' territory as flags, which its save data keeps (#637). A walk out through an exit holds
 ## while the content next door isn't read on any machine yet, and goes on once it is (#816). A
 ## player out of HP is sent back to the spawn (#457), and an invincible one never runs out (#1142).
+## Every region a realm's instance can have, each variant's too, has a clearing for every seed
+## (#2323): a tile players walk to from the first start, neither an exit nor a start, at least
+## CLEARING_DISTANCE tiles from every wild monster's spot, where #1872 places its standing stone.
 
 const SEEDS: int = 40
 ## The damage the companion walks through the exit with, to see it arrive as hurt (#716).
@@ -41,6 +44,11 @@ const BESIDE_WILD_TICKS: int = WildAttackFeature.STRIKE_TICKS * 60
 const INSTANCE_SEEDS: int = 6
 ## How many tiles wide every join between region pieces and every exit is at least (#689).
 const SEAM_WIDTH: int = 3
+## How many tiles (hex distance) every region's clearing keeps from every wild monster (#2323).
+const CLEARING_DISTANCE: int = 15
+## The regions that wait for their clearing, each with its issue (#2323): the list only shrinks, and
+## a region on it that has its clearing fails the check until it's taken off.
+const CLEARINGS_WAITING: Dictionary[String, int] = {}
 ## The dungeon behind the escort guide's seal (#1591), its end piece and the place marked there.
 const DUNGEON: String = "hrovumel_stolm"
 const DUNGEON_END: String = "shrine"
@@ -66,6 +74,8 @@ const WEB_PASSIVE: String = "tikazzir_kazri_tazri"
 const ROSTER_SCREEN: Vector2 = Vector2(1280.0, 720.0)
 ## Where _check_roster's profile is saved, apart from the player's own: it spends a revive item.
 const ROSTER_PROFILE: String = "user://test_world_profile.json"
+## How many ticks _check_idle_bookkeeping counts what the idle instances ask (#2296).
+const IDLE_TICKS: int = 20
 
 ## The made-up crown _check_room_caught gives CROWN_KIND.
 var _crown: TileBlueprint
@@ -79,16 +89,11 @@ var _entered: Array[String] = []
 
 
 func run(tree: SceneTree) -> String:
-	for instance_name: String in InstanceBlueprints.names():
-		var problem: String = InstanceBlueprints.exit_problem(instance_name)
-		if not problem.is_empty():
-			return problem
-	# Without a way back, no exit can lead to it either: exit_problem refuses that.
-	if not InstanceBlueprints.region_of(FlowSteps.BASIC, 0).exits.is_empty():
-		return "the playground, which only the tests play, has an exit"
 	var steps: Array[Callable] = [
+		_check_exit_problems,
 		_check_glade_exit,
 		_check_wide_seams,
+		_check_clearings,
 		_check_refused,
 		_check_exits_reachable,
 		_check_start_variants,
@@ -114,9 +119,11 @@ func run(tree: SceneTree) -> String:
 		_check_story_beat,
 		_check_territory,
 		_check_start_kept,
+		_check_idle_bookkeeping,
 		_check_start_corrupted,
 		_check_sent_to_spawn,
 		_check_invincible,
+		_check_invincible_requested,
 		_check_layout,
 		_check_tile_changed,
 	]
@@ -262,6 +269,36 @@ func _check_invincible() -> String:
 			or world.player(0).id != player.id
 			or health.hp_of(basic, player.id) != HealthFeature.PLAYER_HP):
 		return "an invincible player was hurt, knocked down or sent back to the spawn"
+	return ""
+
+
+## The Debug submenu's request (#2273, OutboxEntry.INVINCIBLE): a player asking to be invincible is
+## from
+## the tick the world applies it, and acknowledged; asking to stop makes them vulnerable again.
+## The same request sent again changes nothing.
+func _check_invincible_requested() -> String:
+	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.BASIC)
+	var basic: GameState = world.instances[FlowSteps.BASIC]
+	var health: HealthFeature = basic.feature(HealthFeature.ID) as HealthFeature
+	var outbox: Outbox = Outbox.new()
+	var on: Command = Command.new()
+	outbox.post(OutboxEntry.INVINCIBLE, InvincibleChoice.ON).fill(on)
+	var asking: Array[Command] = [on]
+	world.step(asking)
+	var acknowledged: bool = false
+	for event: RefCounted in basic.events:
+		acknowledged = acknowledged or event is RequestApplied
+	if not acknowledged or not health.is_invincible(basic, world.player(0).id):
+		return "a player asking to be invincible isn't, or isn't acknowledged"
+	var off: Command = Command.new()
+	outbox.post(OutboxEntry.INVINCIBLE, InvincibleChoice.OFF).fill(off)
+	var stopping: Array[Command] = [off]
+	world.step(stopping)
+	if health.is_invincible(basic, world.player(0).id):
+		return "a player asking to stop being invincible still is"
+	world.step(asking)
+	if health.is_invincible(basic, world.player(0).id):
+		return "a request to be invincible, sent again, was applied twice"
 	return ""
 
 
@@ -1426,6 +1463,33 @@ func _idle_until(world: World, until: int) -> void:
 		world.step(_still())
 
 
+## An idle instance costs the tick next to nothing (#2296): with every instance next to the forest
+## loaded and nobody but the player in the forest, the ticks after the first ask the source no
+## variant, as the flags haven't changed, and the host's reset delay at most once a tick, however
+## many instances lie idle.
+func _check_idle_bookkeeping() -> String:
+	var source: CountingSource = CountingSource.new()
+	var world: World = World.new(source, 3, FlowSteps.FOREST)
+	for target: String in world.instances[FlowSteps.FOREST].region.exit_blueprints:
+		if world.instance(target) == null:
+			return "the forest's neighbour %s doesn't load" % target
+	if world.instances.size() < 3:
+		return "the forest has fewer than two neighbours to leave idle"
+	world.step(_still())
+	source.variants = 0
+	source.resets = 0
+	for _tick: int in IDLE_TICKS:
+		world.step(_still())
+	if source.variants != 0 or source.resets > IDLE_TICKS:
+		return "%d idle instances asked the source %d variants and %d reset delays in %d ticks" % [
+			world.instances.size() - 1,
+			source.variants,
+			source.resets,
+			IDLE_TICKS,
+		]
+	return ""
+
+
 ## Walks player 0 one step in `direction`, through the world, until they stand still again, noting
 ## the instances they entered meanwhile.
 func _walk_in(world: World, direction: int) -> void:
@@ -2087,6 +2151,73 @@ static func _narrow_seam(region: Region) -> String:
 	return ""
 
 
+## Every exit leads to a blueprint that exists and has the way back, and the playground has none.
+func _check_exit_problems() -> String:
+	for instance_name: String in InstanceBlueprints.names():
+		var problem: String = InstanceBlueprints.exit_problem(instance_name)
+		if not problem.is_empty():
+			return problem
+	# Without a way back, no exit can lead to it either: exit_problem refuses that.
+	if not InstanceBlueprints.region_of(FlowSteps.BASIC, 0).exits.is_empty():
+		return "the playground, which only the tests play, has an exit"
+	return ""
+
+
+## Every region a realm's instance can have, the blueprint's own and each variant's, has a clearing
+## for every seed (#2323), unless it waits on CLEARINGS_WAITING: the failure names every region and
+## seed without one, and every waiting region that has it.
+func _check_clearings() -> String:
+	var missing: Array[String] = []
+	var done: Array[String] = []
+	for instance_name: String in InstanceBlueprints.names():
+		if Realms.holding(instance_name) == null:
+			continue
+		var regions: Array[String] = [instance_name]
+		for chosen_by: PackedStringArray in InstanceBlueprints.blueprint(instance_name).variants:
+			if not chosen_by[1].is_empty() and not regions.has(chosen_by[1]):
+				regions.append(chosen_by[1])
+		for region_name: String in regions:
+			var variant: String = "" if region_name == instance_name else region_name
+			var lacking: Array[String] = []
+			for seed_value: int in INSTANCE_SEEDS:
+				var region: Region = InstanceBlueprints.region_of(
+					instance_name,
+					seed_value,
+					variant,
+				)
+				if not _has_clearing(region):
+					lacking.append("%s (seed %d)" % [region_name, seed_value])
+			if not CLEARINGS_WAITING.has(region_name):
+				missing.append_array(lacking)
+			elif lacking.is_empty():
+				done.append(region_name)
+	if not missing.is_empty():
+		return "no tile %d tiles from every wild monster in %s" % [
+			CLEARING_DISTANCE,
+			", ".join(missing),
+		]
+	if not done.is_empty():
+		return "%s has its clearing: take it off CLEARINGS_WAITING" % ", ".join(done)
+	return ""
+
+
+## Whether `region` has a tile players walk to from the first start, neither an exit nor a start,
+## at least CLEARING_DISTANCE tiles from every wild monster's spot.
+static func _has_clearing(region: Region) -> bool:
+	if not region.problem.is_empty() or region.starts.is_empty():
+		return false
+	var exits: Array[Vector2i] = []
+	for exit: Vector3i in region.exits:
+		exits.append(Vector2i(exit.x, exit.y))
+	for tile: Vector2i in region.reachable(region.starts[0]):
+		var far: bool = region.wild_monsters.all(
+			func(spot: Vector2i) -> bool: return Hex.distance(tile, spot) >= CLEARING_DISTANCE
+		)
+		if far and not exits.has(tile) and not region.starts.has(tile):
+			return true
+	return false
+
+
 ## An exit that doesn't lead off the edge is refused, and no piece may cover the tile outside an
 ## exit.
 func _check_refused() -> String:
@@ -2140,3 +2271,20 @@ class RisingSource:
 	func variant(instance_name: String, flags: Array[String]) -> String:
 		var risen: bool = instance_name == FlowSteps.GLADE and flags.has(RISEN)
 		return FlowSteps.ARENA if risen else ""
+
+
+## The blueprints, counting how often the world asks them a variant and the host's reset delay
+## (#2296).
+class CountingSource:
+	extends BlueprintSource
+
+	var variants: int = 0
+	var resets: int = 0
+
+	func variant(instance_name: String, flags: Array[String]) -> String:
+		variants += 1
+		return super.variant(instance_name, flags)
+
+	func reset_ticks(stores: Array[PlayerStore]) -> int:
+		resets += 1
+		return super.reset_ticks(stores)

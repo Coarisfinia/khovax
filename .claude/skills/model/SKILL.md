@@ -207,12 +207,17 @@ a second model could use goes into the library or a generic tool, never into one
   - `scene`: a clean scene at the clip rate, `apply_scale`, `triangles`, and `export_glb` (the
     export settings the game takes: GLB, skins, one animation per NLA track, Y up, every mesh's
     faces in a fixed order so a rebuild gives the same bytes).
+  - `fixed_order` (#2317): mesh steps that build the same file on any count of Blender's threads:
+    `weld` in place of `remove_doubles`, `canonical` (a bmesh rebuilt in a fixed order), `cut`
+    in place of `bisect_plane`, `vertex_normals` summed in the faces' order (area-weighted, or
+    angle-weighted like Blender's own with `angle`) and `snap` to a grid. A script that cuts or merges uses them.
   - `materials`: cel-friendly flat colours and emissive glows (`palette`).
   - `prop_paint` (#1853): the props' shared CC0 texture set and its triplanar mapping, moss and
     shade (below, "Props from a bare shape").
   - `body`: soft organic bodies from metaballs (`Blob`: `ball`, `ellipsoid`, `capsule`, `limb`,
     and `tube`, one smooth tapering form along a curve, such as a tail, where a `limb`'s joints
-    would bulge into beads, #1171), converted and reduced to a triangle budget.
+    would bulge into beads, #1171), converted and reduced to a triangle budget; a `symmetric`
+    body snaps to a fine grid first, so its mirrored reduction doesn't follow the thread count (#2335).
   - `parts`: rigid pieces weighted to one bone (`part`), faceted `crystal`s (with an optional
     `curl`), curling fur `tuft`s.
   - `surface`: patterns laid on a body and bending with it: glowing `vein`s, whose loose ends
@@ -386,6 +391,11 @@ a second model could use goes into the library or a generic tool, never into one
   measures each model against the world's scale (`lib/world_scale.py`): a model that isn't a
   monster by the kind its script names, the players' figure against the player's height (step
   23). `test_world_scale.py` tests it on boxes of each kind, sized to it or off it.
+- **The passage check (#2157):** `src/game-models/check_passage.py -- <model.glb> [...]` casts
+  rays through a `portal`'s opening, from the ground to the player's height, through its open
+  clip (`Sitting`: the tentacle gate sat on the ground, tentacles withdrawn), and fails any that
+  meets more than the portal (the piece holding the `portal` bone's vertices), or a portal without
+  that clip: the player walks through it on the ground, and only while it's open.
 - **The dimensions check (#1299):** `src/game-models/check_dimensions.py -- <model.glb> [...]`
   measures each limb at rest per body plan (forearm against upper arm, shin against thigh, the
   foreleg against the shoulder's height) and fails a measure outside its range
@@ -511,8 +521,8 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
   mesh without a rig or clips (as `mana_gems.py`). `check_glb.gd` and `check_ground.py` expect a
   rigged creature and don't apply.
 - **Shading in patches:** clearing the custom normals leaves the seam splits apart, so a smooth
-  surface shades island by island. Weld by position (`bmesh.ops.remove_doubles`, UVs stay on the
-  corners) and shade smooth by angle, keeping a crack's rim sharp.
+  surface shades island by island. Weld by position (`fixed_order.weld`, not `remove_doubles`,
+  whose survivors change with the thread count; UVs stay on the corners) and shade smooth by angle, keeping a crack's rim sharp.
 
 **The traps found on Fohossa (#1619)**, a four-legged Meshy auto-rig with a long trunk:
 - **One piece for every leg:** with a long spine between the hips' fork and the withers' fork,
@@ -853,7 +863,8 @@ clips. Ask the owner only when it's unclear what should move how.
 
 14. **Rebuild (#1085):** `uv run --locked --package khovax-game-models
    src/game-models/check_rebuild.py src/game-models/<name>.py resourcepacks/default/models/<name>/<name>.glb` builds the model twice,
-   side by side, and compares the two builds with each other and with the committed `.glb`; it
+   side by side, on 1 and 4 of Blender's threads (#2317), and compares the two builds with each
+   other and with the committed `.glb`; it
    must print `REBUILD CHECK: PASS`. On a difference it names what differs (the JSON's part, or
    each mesh's indices or attribute and each clip's channel, by how much): indices that only move
    point to a face order, values off by a hair to float noise. Run it after the last build, before
@@ -940,7 +951,8 @@ clips. Ask the owner only when it's unclear what should move how.
    in front of it within its rim, in any frame of any clip, its shut lid included (the owner, on
    #1747: the Wobulumu's skin crossed the bottom of its eyes). A model without eye points passes.
    `marked_eyes.replace`'s `rim=True` keeps the rim clear of the skin too when it sets the eyes
-   (`clear`), and a generated model's loose pieces of skin over the eyes go with
+   (`clear`), its `out` lets them go further out than `OUT` where a lopsided head still covers them
+   there (the Kavrikka's, #1818), and a generated model's loose pieces of skin over the eyes go with
    `marked_eyes.modelled`. A model the check still fails waits in its `KNOWN` list with the issue
    that fixes it. Its lines go into the PR. CI runs it on every `.glb`, with its test
    (`test_eyes_covered.py`).

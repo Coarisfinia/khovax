@@ -1,7 +1,8 @@
 class_name CreditsPage
 extends VBoxContainer
 ## The Credits tab's root, which the menu titles the tab from (#1677): the bug report and error log
-## buttons over the credits text (CreditsTab).
+## buttons, the note the error log button shows after a save (#1817), then the credits text
+## (CreditsTab).
 
 
 ## The menu's title for this tab: a literal tr(), so the translation template has it; the node

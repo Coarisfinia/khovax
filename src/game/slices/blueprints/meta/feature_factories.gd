@@ -48,6 +48,9 @@ static func _world_rules() -> Dictionary[String, Callable]:
 		TrailFeature.ID: _plain(TrailFeature),
 		# Before the wild monsters and every feature that hurts or heals (#835).
 		HealthFeature.ID: HealthFactory.build,
+		# Right after the HP a Regrowth heals, and before every strike a Ward, a Quicken or a
+		# Fortify changes (#2311).
+		TonicEffectsFeature.ID: _plain(TonicEffectsFeature),
 		WildMonsterFeature.ID: WildMonsterFactory.build,
 		ScheduleFeature.ID: ScheduleFactory.build,
 		# Right after the schedules, so a pack member is on its leader's day before sleep puts it
@@ -106,6 +109,9 @@ static func _region_and_party_rules() -> Dictionary[String, Callable]:
 		CompanionSwapFeature.ID: _plain(CompanionSwapFeature),
 		# After the companions too, whose fainted ones a revive item brings back (#656).
 		ReviveItemFeature.ID: _plain(ReviveItemFeature),
+		# Drinking tonics and draughts (#2310), after the companions, whose out companion a tonic
+		# helps, and after the knockdowns, whose downed players drink nothing.
+		DrinkingFeature.ID: DrinkingFactory.build,
 		# Waystones (#1890), after the knockdowns, whose downed players activate none, and after the
 		# companions, whose fainted ones they bring back while the host has it so (#1891).
 		WaystoneFeature.ID: _waystones,

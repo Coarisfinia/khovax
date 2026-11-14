@@ -182,6 +182,7 @@ func _open_menu(menu: GameMenu) -> String:
 		HostSettings.DROP_RATE,
 		HostSettings.RESET_DELAY,
 		HostSettings.REVIVE_ON_WAYSTONES,
+		InvincibleChoice.SETTING,
 	]
 	# Every setting, whatever order their owners added their rows in (#1614): each row's submenu,
 	# and so where it shows, is checked on its own (_menu_submenus).
@@ -192,12 +193,12 @@ func _open_menu(menu: GameMenu) -> String:
 		return "the Settings tab lists %s, not every setting" % [listed]
 	# The world's settings have no Auto: Standard at first (#1315, #1316, #1892), and off (#1891).
 	var hosts: Array[String] = []
-	for setting: String in settings.slice(-5):
+	for setting: String in settings.slice(-6, -1):
 		hosts.append(shown[setting])
 	var standard: Array[String] = ["Standard", "Standard (100%)", "Standard (100%)"]
 	if hosts != standard + ["Standard (1 hour)", "Off"]:
 		return "the world's settings aren't Standard at first: %s" % [hosts]
-	for setting: String in settings.slice(0, -5):
+	for setting: String in settings.slice(0, -6):
 		if not shown[setting].begins_with("Auto ("):
 			return "%s isn't on Auto at first: %s" % [setting, shown[setting]]
 	return _menu_submenus(menu)
@@ -310,6 +311,25 @@ func _menu_monsters(menu: GameMenu, main: Node) -> String:
 	tab.materials.refresh()
 	if tab.materials.shown != (["Berry: 1", "Moss: 3"] as Array[String]):
 		return "the Character tab's materials are %s, not the ones found" % [tab.materials.shown]
+	return _menu_brews(tab, main)
+
+
+## A crafted tonic is counted like a material (#2090), and the Character tab lists it by its own
+## name, not as an unknown material (#2282).
+func _menu_brews(tab: CharacterTab, main: Node) -> String:
+	var dew: Gain = Gain.new()
+	dew.materials.assign({ "dew": 1 })
+	var keeper: ProfileKeeper = FlowGame.holder(main).keeper
+	var taken: String = keeper.take(dew, Time.get_ticks_msec())
+	var crafted: String = TonicCrafting.craft(keeper.profile, "tonic_moss")
+	tab.materials.refresh()
+	var expected: Array[String] = ["Berry: 1", "Moss: 1", "Moss tonic: 1"]
+	if not taken.is_empty() or not crafted.is_empty() or tab.materials.shown != expected:
+		return "the Character tab lists %s after crafting a moss tonic: %s %s" % [
+			tab.materials.shown,
+			taken,
+			crafted,
+		]
 	return _menu_factions(tab, main)
 
 
@@ -1033,6 +1053,7 @@ func _menu_submenus(menu: GameMenu) -> String:
 		HostSettings.DROP_RATE: SettingsTab.WORLD,
 		HostSettings.RESET_DELAY: SettingsTab.WORLD,
 		HostSettings.REVIVE_ON_WAYSTONES: SettingsTab.WORLD,
+		InvincibleChoice.SETTING: SettingsTab.DEBUG,
 	}
 	for setting: String in homes:
 		if tab.submenu_of(setting) != homes[setting]:
@@ -1080,6 +1101,8 @@ func _submenus_open(menu: GameMenu, tab: SettingsTab, anti_aliasing: Button) -> 
 	if tab.get_viewport().gui_get_focus_owner() != tab.opener(SettingsTab.GRAPHICS):
 		return "going back doesn't move the focus onto the submenu's button"
 	var difficulty: String = _menu_difficulty(menu, tab)
+	if difficulty.is_empty():
+		difficulty = _menu_debug(menu, tab)
 	if not difficulty.is_empty():
 		return difficulty
 	tab.opener(SettingsTab.GAME).pressed.emit()
@@ -1121,6 +1144,33 @@ func _menu_difficulty(menu: GameMenu, tab: SettingsTab) -> String:
 	tab.back_button(SettingsTab.DIFFICULTY).pressed.emit()
 	if tab.open_submenu() != SettingsTab.LIST or next.is_visible_in_tree():
 		return "the Difficulty submenu's Back button doesn't return to the list"
+	return ""
+
+
+## The Debug submenu (#2273), last in the list, holds the Invincible row, Off at first, with no
+## Auto button: stepping it on says On at once and posts the request to the profile's outbox for
+## the world (OutboxEntry.INVINCIBLE); stepping back says Off again.
+func _menu_debug(menu: GameMenu, tab: SettingsTab) -> String:
+	if tab.submenu_titles().keys().back() != SettingsTab.DEBUG:
+		return "the Settings tab's last submenu isn't Debug: %s" % [tab.submenu_titles().keys()]
+	tab.opener(SettingsTab.DEBUG).pressed.emit()
+	var next: Button = tab.button(InvincibleChoice.SETTING, "Next")
+	if tab.open_submenu() != SettingsTab.DEBUG or not next.is_visible_in_tree():
+		return "the Debug button doesn't show the Invincible row"
+	var at_first: String = tab.shown[InvincibleChoice.SETTING]
+	if next.get_parent().has_node("Auto") or at_first != "Off":
+		return "the Invincible row has an Auto button, or says %s" % at_first
+	next.pressed.emit()
+	var outbox: Outbox = (menu.driver.holder as ProfileHolder).keeper.profile.outbox
+	var asked: bool = false
+	for request: OutboxEntry in outbox.entries:
+		var on: bool = request.data == InvincibleChoice.ON
+		asked = asked or (request.kind == OutboxEntry.INVINCIBLE and on)
+	var said: String = tab.shown[InvincibleChoice.SETTING]
+	tab.button(InvincibleChoice.SETTING, "Previous").pressed.emit()
+	if said != "On" or not asked or tab.shown[InvincibleChoice.SETTING] != "Off":
+		return "stepping invincibility on says %s, asking the world: %s" % [said, asked]
+	tab.back_button(SettingsTab.DEBUG).pressed.emit()
 	return ""
 
 

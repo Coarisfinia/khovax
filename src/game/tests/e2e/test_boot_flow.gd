@@ -16,11 +16,11 @@ const UNWORN_MODELS: Array[String] = ["model_drakkudor", "model_fohossa"]
 ## Animated props built before the view that places them (#1634), with the clips each plays:
 ## checked like a view's model, until a view names it and it leaves this list.
 const UNPLACED_PROPS: Dictionary[String, Array] = {
-	"model_tentacle_gate": [&"Idle"],
+	"model_tentacle_gate": [&"Idle", &"Sit", &"Sitting"],
 }
 ## Static models built before anything places them in the world (#1635): each must load and show
 ## a mesh, until what places it names it and it leaves this list.
-const UNPLACED_MODELS: Array[String] = ["model_starry_egg"]
+const UNPLACED_MODELS: Array[String] = ["model_mossy_sandstone_wall", "model_starry_egg"]
 ## Clip libraries built before the body that plays them (#1935), with the clips each holds: each
 ## loads with its clips on Godot's humanoid skeleton profile (the BoneMap in its .import), so any
 ## body mapped to that profile plays them, until a view names it and it leaves this list.
@@ -67,6 +67,8 @@ func _steps() -> Array[Callable]:
 		_check_grid,
 		_check_grid_colors,
 		_check_water_surfaces,
+		_check_still_water,
+		_check_still_water_calm,
 		_check_player_placement,
 		_check_player_model,
 		_check_view_models,
@@ -91,7 +93,9 @@ func _steps() -> Array[Callable]:
 ## Launching (#243): the project starts in the boot scene, which shows thick fog over the whole
 ## screen at once, with a caption saying the world is loading (#270), and starts loading the game
 ## only once that fog has been drawn, so the page never waits on a blank splash; it starts the
-## game under the fog as the current scene, and then lifts the fog and leaves.
+## game under the fog as the current scene, and then lifts the fog and leaves. Under the caption a
+## bar shows how far the packs' files have loaded (#2083), and it's full, with every file the
+## loaded packs give in Godot's resource cache, by the time the game starts.
 func _check_boot(tree: SceneTree) -> String:
 	if str(ProjectSettings.get_setting("application/run/main_scene")) != "res://game/boot.tscn":
 		return "the project doesn't start in the boot scene"
@@ -100,6 +104,9 @@ func _check_boot(tree: SceneTree) -> String:
 	var fogged: bool = boot.cover.color == Boot.FOG and boot.game == null
 	fogged = fogged and boot.caption.text == boot.loading_text()
 	fogged = fogged and boot.caption.is_visible_in_tree()
+	var bars: Array[Node] = boot.cover.find_children("*", "ProgressBar", true, false)
+	var bar: ProgressBar = null if bars.is_empty() else bars[0] as ProgressBar
+	fogged = fogged and bar != null and bar.is_visible_in_tree()
 	# Nothing loads before the fog has been drawn once.
 	fogged = fogged and not boot.is_processing()
 	# A game that never starts fails the flow on the runner's timeout.
@@ -109,6 +116,11 @@ func _check_boot(tree: SceneTree) -> String:
 		result = "the boot scene didn't show fog first and then start the game"
 	elif tree.current_scene != game or not boot.cover.visible:
 		result = "the started game isn't the current scene under the fog"
+	elif bar.value != bar.max_value or not _uncached_pack_file().is_empty():
+		result = "the game started before the packs had loaded: %s, %s" % [
+			bar.value,
+			_uncached_pack_file(),
+		]
 	else:
 		await tree.create_timer(Boot.LIFT_SECONDS + 1.0).timeout
 		if is_instance_valid(boot):
@@ -119,6 +131,18 @@ func _check_boot(tree: SceneTree) -> String:
 		game.queue_free()
 	await tree.process_frame
 	return result
+
+
+## The first file of the loaded packs that loads as a resource but isn't in Godot's resource cache,
+## or "" when every one is.
+func _uncached_pack_file() -> String:
+	for pack: ResourcePack in ResourcePacks.loaded():
+		for kind: String in ResourcePack.KINDS:
+			var files: Dictionary = {} if ResourcePack.KINDS[kind].is_empty() else pack.get(kind)
+			for file: Variant in files.values():
+				if not ResourceLoader.has_cached(pack.root + str(file)):
+					return pack.root + str(file)
+	return ""
 
 
 ## Launch options (#237) read as given: a seed, an instance blueprint, invincibility and a user
@@ -321,6 +345,37 @@ func _check_water_surfaces(main: Node) -> String:
 			if named_water and not _is_water_material(material):
 				return "%s is water drawn by another material" % shown.get_path()
 	return "" if _is_water_material(surface.material_override) else "the tiles' water isn't the one"
+
+
+## Still water (#2255): the headless renderer can't draw the water, so this reads its shader. A zero
+## vector has no direction, and normalising one gives NaN on most GPUs, which blacks out the
+## surface. So each `normalize(` in the water shader sits behind a length test on its own line,
+## falling back to a fixed direction, and a still water's zero `flow_direction` draws as water.
+func _check_still_water(_main: Node) -> String:
+	var lines: PackedStringArray = WaterSurface.SHADER.code.split("\n")
+	for line: int in lines.size():
+		if lines[line].contains("normalize(") and not lines[line].contains("length("):
+			return "water.gdshader:%d normalises a vector with no length test" % (line + 1)
+	return ""
+
+
+## Still water stands still (#2269): the ripples drift along the flow only as fast as it flows, so
+## a zero `flow_direction` leaves a standing pattern with only the shimmer moving it, while the
+## default flow drifts. The headless renderer can't draw it, so `WaterRipples` runs the shader's own
+## ripple lines, with the arguments the fragment passes them, and watches their time average.
+func _check_still_water_calm(_main: Node) -> String:
+	var ripples: WaterRipples = WaterRipples.new(WaterSurface.SHADER.code)
+	if not ripples.problem().is_empty():
+		return "water.gdshader %s" % ripples.problem()
+	var still: float = ripples.standing(Vector2.ZERO)
+	var flowing: float = ripples.standing(Vector2(1.0, 0.35))
+	if not ripples.problem().is_empty():
+		return "water.gdshader %s" % ripples.problem()
+	if still < 0.25:
+		return "still water's ripples drift: their time average is %.3f, not standing" % still
+	if flowing > 0.1:
+		return "flowing water's ripples stand still: their time average is %.3f" % flowing
+	return ""
 
 
 ## The materials `shown` draws with: its override, or each of its mesh's surfaces'.

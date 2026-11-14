@@ -31,12 +31,9 @@ from lib import covered, ground, imported  # noqa: E402
 
 # Models whose eyes the body still covers, with the issue that fixes them; that issue takes them off.
 KNOWN = {
-    "kavrikka": 1818,
     "mana_pup": 1818,
     "mana_wolf": 1818,
     "nuvvoluvvo": 1818,
-    "ombulumo": 1818,
-    "ombuwomo": 1818,
 }
 
 

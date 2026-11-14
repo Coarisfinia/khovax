@@ -22,15 +22,13 @@ import numpy
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-from lib import scene, starfield  # noqa: E402
+from lib import fixed_order, scene, starfield  # noqa: E402
 
 SOURCE = os.path.join(HERE, "sources", "starry_egg.glb")
 FPS = 30
 # Its kind on the world's scale (lib/world_scale.py): a thing standing on one hex.
 WORLD_SCALE = "prop"
-# Vertices closer than this are one (the export's seam splits), and an edge sharper than this
-# angle stays sharp in the shading.
-WELD = 1e-5
+# An edge sharper than this angle stays sharp in the shading.
 SHARP = math.radians(50.0)
 
 # The blob's middle, roughly: of the source's three pieces (the shell's lower half, its cap and
@@ -108,10 +106,10 @@ def main():
     bpy.ops.mesh.customdata_custom_splitnormals_clear()
     # The export split every vertex where its UVs part; welded again, the shell shades smooth
     # across those seams instead of in patches (UVs live on the corners, so they stay). The
-    # crack's jagged rim keeps its edges sharp.
+    # crack's jagged rim keeps its edges sharp. In a fixed order (lib/fixed_order.py).
     work = bmesh.new()
     work.from_mesh(egg.data)
-    bmesh.ops.remove_doubles(work, verts=work.verts, dist=WELD)
+    fixed_order.weld(work)
     work.to_mesh(egg.data)
     work.free()
     bpy.ops.object.shade_smooth_by_angle(angle=SHARP)

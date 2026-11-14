@@ -26,8 +26,24 @@ const QUEST_EVENT: int = 6
 ## is 1 while gear that keeps them (GearItem.keeps_passives) is in the ward slot, 0 otherwise
 ## (CompanionPassives.keep).
 const PASSIVES_KEPT: int = 7
+## Make the player invincible, or stop (#2273, the Settings tab's Debug submenu): its data is 1 for
+## invincible, 0 for not (HealthFeature).
+const INVINCIBLE: int = 8
+## Drink a tonic or a draught (#2310, DrinkingFeature): its data is the brew's code
+## (DrinkingFeature.code_of).
+const DRINK: int = 9
 ## Every kind there is.
-const KINDS: Array[int] = [TERRITORY, REVIVE, TRAP, CARRY, HOST_SETTING, QUEST_EVENT, PASSIVES_KEPT]
+const KINDS: Array[int] = [
+	TERRITORY,
+	REVIVE,
+	TRAP,
+	CARRY,
+	HOST_SETTING,
+	QUEST_EVENT,
+	PASSIVES_KEPT,
+	INVINCIBLE,
+	DRINK,
+]
 
 ## The profile's id for it, a short id (ShortId, #791) no other request in the outbox has: the
 ## world records the ids it applied.

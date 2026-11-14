@@ -43,7 +43,7 @@ from game_shared.git_files import git_files
 SLICE_ORDER: tuple[str, ...] = (
     "resource_packs", "emoji_grid", "menu_widgets", "realms", "camera", "music", "credits",
     "movement", "entering", "paths", "loot", "board", "exits", "fog", "input_prompts",
-    "action_buttons", "triggers", "texts", "species", "development", "outbox", "host_settings", "health", "players",
+    "action_buttons", "triggers", "texts", "species", "development", "outbox", "host_settings", "health", "tonic_effects", "players",
     "npcs", "trail",
     "wild_monsters", "hiding", "schedules", "packs", "tiles", "controls",
     "settings", "factions",
@@ -51,7 +51,7 @@ SLICE_ORDER: tuple[str, ...] = (
     "domination", "control_points", "totems", "enrage", "hunts", "foraging", "domination_loot",
     "companions", "wild_attacks", "gear", "chests",
     "damage_numbers", "harvest", "dialogs",
-    "profile", "quests", "revive_items", "waystones", "crafting", "blueprints", "might", "codex",
+    "profile", "quests", "revive_items", "waystones", "crafting", "tonics", "blueprints", "might", "codex",
     "move_hint", "text_names",
 )  # fmt: skip
 # The back-edges still waiting ("slice>later slice": the issue that drops it).
