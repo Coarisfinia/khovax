@@ -10,7 +10,8 @@ remains, in front of the eyeball. The eye looks from the eyeball's centre throug
 **face** is the rim's outline seen along that way: what must show. The eye's **own pieces**,
 which may lie in front of its face, are those islands, the lid's (the faces weighted to a `lid.*`
 bone) and any closed piece in the body's material whose centre lies near the eye (a hand-built
-eye's brow); every other surface is the body, a generated skin's loose pieces included (the
+eye's brow); the wisps (the faces weighted to a `wisp.*` bone, lib/wisps.py) fly free of the body
+and don't count either (#2368); every other surface is the body, a generated skin's loose pieces included (the
 Wobulumu's, #1758). Islands are told apart with the vertices welded by position, since a glTF's
 skin comes apart along its UV seams.
 
@@ -27,7 +28,7 @@ import bpy
 from mathutils import Vector
 from mathutils.bvhtree import BVHTree
 
-from . import brows, imported
+from . import brows, imported, wisps
 
 LID = "lid."
 # The grid cast at the eye, in its radius: across its whole disc, rays STEP apart.
@@ -41,11 +42,12 @@ SECTORS = 32
 WELD = 1e-5
 
 
-def lid_faces(model, meshes):
-    """The faces most of whose corners are weighted mostly to a lid's bone."""
+def lid_faces(model, meshes, prefix=LID):
+    """The faces most of whose corners are weighted mostly to a lid's bone (or to another bone
+    whose name starts with `prefix`)."""
     faces, offset = set(), 0
     for obj in meshes:
-        lids = {group.index for group in obj.vertex_groups if group.name.startswith(LID)}
+        lids = {group.index for group in obj.vertex_groups if group.name.startswith(prefix)}
         on_lid = [bool(vertex.groups) and max(vertex.groups, key=lambda g: g.weight).group in lids
                   for vertex in obj.data.vertices]
         for polygon in obj.data.polygons:
@@ -230,11 +232,15 @@ def report(rig, meshes, tolerance, every=2):
     same = welded(rest)
     island = islands(model, same)
     eyes = {}
+    # The wisps fly free of the body (lib/wisps.py): one passing in front of an eye isn't the body
+    # over it (#2368).
+    flying = lid_faces(model, meshes, wisps.PREFIX)
     for bone in bones:
         spot, _look = brows._spot(rig, bone)
         eyes[bone] = Eye(model, rest, spot, lids, same, island)
         if not eyes[bone].rim:
             return ["FAIL %s: no rim, eyeball and iris around it" % bone], False
+        eyes[bone].own |= flying
 
     def worst_at(frame):
         """The most of any eye the body covers at the scene's current pose, and where."""
