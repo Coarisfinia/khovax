@@ -28,24 +28,24 @@ func offered(_state: GameState, _slot: int) -> PackedStringArray:
 	return held(holder)
 
 
-## The ids of the tonics and draughts the profile `holder` keeps holds, in the order their tonic
+## The ids of the tonics and draughts the profile `kept_by` keeps holds, in the order their tonic
 ## lists them; none without a profile.
-static func held(holder: ProfileHolder) -> PackedStringArray:
+static func held(kept_by: ProfileHolder) -> PackedStringArray:
 	var brews: PackedStringArray = PackedStringArray()
-	if holder == null or holder.keeper == null:
+	if kept_by == null or kept_by.keeper == null:
 		return brews
-	var materials: Dictionary = holder.keeper.profile.materials
+	var materials: Dictionary = kept_by.keeper.profile.materials
 	for brew_id: String in TonicContent.cached().brews:
 		if materials.get(brew_id, 0) > 0:
 			var _added: bool = brews.append(brew_id)
 	return brews
 
 
-## How many tonics and draughts, of every brew, the profile `holder` keeps holds.
-static func held_count(holder: ProfileHolder) -> int:
+## How many tonics and draughts, of every brew, the profile `kept_by` keeps holds.
+static func held_count(kept_by: ProfileHolder) -> int:
 	var count: int = 0
-	for brew_id: String in held(holder):
-		count += holder.keeper.profile.materials[brew_id]
+	for brew_id: String in held(kept_by):
+		count += kept_by.keeper.profile.materials[brew_id]
 	return count
 
 

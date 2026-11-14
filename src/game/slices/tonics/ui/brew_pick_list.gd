@@ -1,8 +1,10 @@
 class_name BrewPickList
 extends Control
 ## The list of the tonics and draughts to pick from (#2313), shown while this machine's player picks
-## one to drink (LocalInput's drink_pick): beside the drink button (DrinkButton), at the bottom
-## right, one row per brew they hold, with how many, in the order their tonic lists them. The
+## one to drink (LocalInput's drink_pick): left of the drink button (DrinkButton), level with its
+## top,
+## or in its place where it's hidden (no touch),
+## one row per brew they hold, with how many, in the order their tonic lists them. The
 ## picked one is marked with an arrow, never by color alone (#68); the arrows or the d-pad move
 ## the mark and Enter or A drinks it, and a tap or a click on a row drinks that one at once. Hidden
 ## while nothing is picked, and so while the menu or a dialog shows, which ends the pick.
@@ -57,11 +59,16 @@ func refresh() -> void:
 	_card.visible = not picked.is_empty()
 	if _card.visible and button != null:
 		_card.reset_size()
+		# Its top level with the button's, growing down over the play area rather than up into the
+		# Survey at the top right, and never past the screen's bottom.
+		# Without touch the button is hidden, so the list takes its place at the right edge.
 		var beside: Rect2 = button.rect()
-		_card.position = Vector2(
-			beside.position.x - ActionButton.GAP - _card.size.x,
-			beside.end.y - _card.size.y,
-		)
+		var screen: Vector2 = get_viewport_rect().size
+		var right: float = beside.position.x - ActionButton.GAP
+		if not button.visible:
+			right = screen.x - ActionButton.MARGIN
+		var lowest: float = screen.y - ActionButton.MARGIN - _card.size.y
+		_card.position = Vector2(right - _card.size.x, minf(beside.position.y, lowest))
 
 
 ## Where the list is on the screen, for tests and taps.
