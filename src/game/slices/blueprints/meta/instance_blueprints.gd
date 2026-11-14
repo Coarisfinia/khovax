@@ -190,11 +190,13 @@ static func _piece_texts(instance_name: String, region_name: String) -> Dictiona
 static func _changes_problem(instance_name: String, region_name: String) -> String:
 	var files: RegionFiles = RegionFiles.cached(region_name)
 	var own: RegionFiles = RegionFiles.cached(instance_name)
-	if region_name == instance_name or own.whole:
+	if region_name == instance_name:
 		return ""
+	# A blueprint that is one whole region file has no pieces for a variant's to replace.
 	var kept: Dictionary[String, String] = {}
-	for path: String in own.texts:
-		kept[path.get_file()] = own.texts[path]
+	if not own.whole:
+		for path: String in own.texts:
+			kept[path.get_file()] = own.texts[path]
 	for path: String in files.texts:
 		if path.get_file() == START_PIECE:
 			return ""
