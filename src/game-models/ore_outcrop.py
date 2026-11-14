@@ -25,7 +25,7 @@ from mathutils import Matrix
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-from lib import footprint, prop_paint, scene  # noqa: E402
+from lib import fixed_order, footprint, prop_paint, scene  # noqa: E402
 
 SOURCE = os.path.join(HERE, "sources", "ore_outcrop.glb")
 FPS = 30
@@ -60,10 +60,10 @@ def place(obj):
 
 def weld(obj):
     """Joins the seam splits by position, so the surface shades whole, not island by island (the
-    starry egg's trap, model skill)."""
+    starry egg's trap, model skill), in a fixed order (lib/fixed_order.py)."""
     work = bmesh.new()
     work.from_mesh(obj.data)
-    bmesh.ops.remove_doubles(work, verts=work.verts, dist=1e-5)
+    fixed_order.weld(work)
     work.to_mesh(obj.data)
     work.free()
 
