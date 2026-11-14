@@ -30,9 +30,7 @@ from game_shared import log  # noqa: E402
 from lib import covered, ground, imported  # noqa: E402
 
 # Models whose eyes the body still covers, with the issue that fixes them; that issue takes them off.
-KNOWN = {
-    "mana_wolf": 1818,
-}
+KNOWN = {}
 
 
 def main():
