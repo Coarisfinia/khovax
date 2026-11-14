@@ -52,8 +52,8 @@ func _check_ward_and_wait() -> String:
 
 
 ## A Slow-release berry draught drunk on the forest's exit at 1 HP still waits in the glade, and
-## mends the player, hurt there too, by its share 5 s after the drink, not a tick before; then nothing of it
-## is left in their world store.
+## mends the player, hurt there too, by its share 5 s after the drink, not a tick before; then
+## nothing of it is left in their world store.
 func _check_slow_mend() -> String:
 	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.FOREST)
 	var profile: Profile = Profile.new()
