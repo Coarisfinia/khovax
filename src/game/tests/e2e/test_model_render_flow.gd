@@ -4,7 +4,6 @@ extends RefCounted
 ## first frame. A model whose rest pose stands elsewhere, as the Nuvvoluvvo's does, is otherwise
 ## framed off its body: the face close-up shows its chest and legs.
 
-const RenderInGame: GDScript = preload("res://tools/models/render_in_game.gd")
 ## How far a shown vertex may lie outside the framed box, in metres: float noise only.
 const SLACK: float = 0.001
 

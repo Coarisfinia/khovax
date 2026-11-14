@@ -1,5 +1,6 @@
 # gdstyle:ignore-file=quality/no-debug-print
 # The tool reports what it wrote on stdout; that is what it is for.
+class_name RenderInGame
 extends SceneTree
 ## Renders a model inside the real game (the model skill's in-game check, #990): the main scene
 ## runs in a SubViewport, under the game's cel shading, ink outline and sun, and the model stands
