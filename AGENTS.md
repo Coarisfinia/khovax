@@ -554,7 +554,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   user flow however long it grows. A suppression is a `# gdstyle:ignore=<rule>` or
   `# gdstyle:ignore-file=<rule>` comment directly below a line giving the reason.
 - **Before pushing, run `gdstyle fmt .`**: it fixes the formatting rather than only checking it.
-  gdstyle is installed with scoop from `tools/scoop/gdstyle.json`; its version is pinned only there
+  gdstyle is installed with scoop from `tools/gdstyle.json`; its version is pinned only there
   (CI reads it from the manifest), so a bump also updates CI's `GDSTYLE_SHA256`, the checksum of
   that version's Linux archive.
 - **On WSL, run gdstyle as `uv run --locked ../game-build/gdstyle.py`** from `src/game/` (#2215),
@@ -1029,7 +1029,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   names like `web` or `site` stay free for other parts of the project, such as a website; the game
   itself is `src/game/`, and a member's uv name is `khovax-<its folder>`. A member with dependencies runs with `--package <its name>`, which installs them. The GDScript tools Godot runs stay in the
   game, in `src/game/tools/` (`godot/`, and `models/` for the model checks and renders),
-  since Godot only runs scripts under `res://`. `tools/scoop/` holds the pinned scoop manifests.
+  since Godot only runs scripts under `res://`. `tools/` holds gdstyle's pinned manifest.
   New tooling is Python, run with uv from the repository's root (`uv run --locked
   src/<package>/<script>.py`). Godot commands name the project: `--path src/game`.
 - **Only the file endings on the list** (owner, #1095: *"I would like all currently used file

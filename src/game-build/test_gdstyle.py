@@ -144,8 +144,8 @@ class GdstyleDownloadTest(unittest.TestCase):
         self.addCleanup(server.release.set)  # type: ignore[attr-defined]
         folder = Path(self.enterContext(tempfile.TemporaryDirectory()))
         root = folder / "repository"
-        (root / "tools/scoop").mkdir(parents=True)
-        (root / "tools/scoop/gdstyle.json").write_text(json.dumps({"version": VERSION}), encoding="utf-8")
+        (root / "tools").mkdir(parents=True)
+        (root / "tools/gdstyle.json").write_text(json.dumps({"version": VERSION}), encoding="utf-8")
         (root / ".github/workflows").mkdir(parents=True)
         checksum = sha256 or hashlib.sha256(body).hexdigest()
         (root / ".github/workflows/ci.yml").write_text(f"env:\n  GDSTYLE_SHA256: {checksum}\n", encoding="utf-8")
