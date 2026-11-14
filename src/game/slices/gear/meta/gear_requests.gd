@@ -21,10 +21,11 @@ static func post_change(gear: GearSlots, outbox: Outbox, slot: String) -> bool:
 
 
 ## Posts the requests for the gear `gear` to `outbox` that the world's `store` (the player's world
-## store) once the outbox's waiting requests are applied isn't: for a world new to it, or one that
-## missed a change; returns whether it posted any.
+## store) once the outbox's waiting requests are applied isn't, counting a trap the world holds back
+## until a fight ends (SpikesFeature.wanted_of, #2350): for a world new to it, or one that missed a
+## change; returns whether it posted any.
 static func catch_up(gear: GearSlots, outbox: Outbox, store: PlayerStore) -> bool:
-	var trap: int = SpikesFeature.trap_of(store.stored(SpikesFeature.ID))
+	var trap: int = SpikesFeature.wanted_of(store.stored(SpikesFeature.ID))
 	var kept: int = 1 if CompanionPassives.kept(store.stored(CompanionFeature.ID)) else 0
 	for request: OutboxEntry in outbox.entries:
 		if request.kind == OutboxEntry.TRAP:

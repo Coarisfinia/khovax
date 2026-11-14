@@ -16,6 +16,9 @@ extends Feature
 ## exit into another instance, where it carries on from the next tick (#2343). An effect
 ## starts on the tick after it was drunk and works for its whole time from then, so every rule it
 ## changes sees it for the same ticks, whether that rule steps before the drinks or after them.
+## A Slow-release brew's effect (#2312) waits its time before it starts instead, and its Mend waits
+## as a MEND, which heals its share of its target's full HP once its wait has passed, at least 1 HP,
+## and ends: until then, a replacement or an ending rule cancels either.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "tonic_effects"
@@ -25,6 +28,8 @@ const WARD: String = "ward"
 const QUICKEN: String = "quicken"
 const FORTIFY: String = "fortify"
 const KINDS: Array[String] = [REGROWTH, WARD, QUICKEN, FORTIFY]
+## A Slow-release Mend still waiting to land (#2312): not an effect over time, so not in KINDS.
+const MEND: String = "mend"
 ## The longest an effect lasts: an hour, the longest the tonics' content data allows.
 const MOST_TICKS: int = 3600 * Simulation.TICKS_PER_SECOND
 
@@ -58,6 +63,11 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 			continue
 		if effect.waits > 0:
 			effect.waits -= 1
+			if effect.waits == 0 and effect.kind == MEND:
+				var mended_hp: int = health.max_hp_of(state, target_id)
+				health.heal(state, target_id, maxi(1, Fixed.scale(mended_hp, effect.strength)))
+				var _landed: bool = _effects.erase(target_id)
+				continue
 		else:
 			effect.ticks -= 1
 		if effect.ticks <= 0:
@@ -72,8 +82,9 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 		_keep(state, slot)
 
 
-## Gives `target_id` in `state` the effect `effect` (its kind one of KINDS), in place of the one it
-## had: its ticks from 1 to MOST_TICKS, and its wait to start at most MOST_TICKS. Inside a tick.
+## Gives `target_id` in `state` the effect `effect` (its kind one of KINDS, or a MEND that waits),
+## in place of the one it had: its ticks from 1 to MOST_TICKS, and its wait to start at most
+## MOST_TICKS. Inside a tick.
 func give(state: GameState, target_id: int, effect: TonicEffect) -> void:
 	_put(target_id, effect.kind, effect.strength, effect.ticks, effect.waits)
 	_keep_on(state, target_id)
@@ -113,8 +124,14 @@ func _take_brought(state: GameState) -> void:
 		var share: int = strength
 		var left: int = ticks
 		var waiting: int = waits
-		if KINDS.has(named) and share > 0 and share < Fixed.ONE and left > 0 and waiting >= 0:
+		if _known(named, waiting) and share > 0 and share < Fixed.ONE and left > 0:
 			_put(player.id, named, share, left, waiting)
+
+
+## Whether an effect of `kind` still waiting `waits` ticks to start is one this knows: one of KINDS,
+## or a MEND that hasn't landed yet. Neither waits less than 0.
+static func _known(kind: String, waits: int) -> bool:
+	return waits >= 0 and (KINDS.has(kind) or (kind == MEND and waits > 0))
 
 
 ## Keeps the effect of `target_id` in `state` in their world store, when it's a player here.
@@ -218,8 +235,9 @@ func save_values() -> Dictionary:
 	return { "effects": saved }
 
 
-## Each effect must be on an entity in the restored instance, at most one each, of a known kind,
-## with a strength below a whole, from 1 to MOST_TICKS left and at most MOST_TICKS still to wait.
+## Each effect must be on an entity in the restored instance, at most one each, of a known kind
+## (KINDS, or a MEND still waiting), with a strength below a whole, from 1 to MOST_TICKS left and at
+## most MOST_TICKS still to wait.
 func load_values(state: GameState, values: DataReader) -> void:
 	_effects.clear()
 	for entry: DataReader in values.entries("effects"):
@@ -230,7 +248,7 @@ func load_values(state: GameState, values: DataReader) -> void:
 		var waits: int = entry.whole("waits", 0, MOST_TICKS)
 		if values.failed():
 			return
-		if state.entity(target_id) == null or _effects.has(target_id) or not KINDS.has(kind):
+		if state.entity(target_id) == null or _effects.has(target_id) or not _known(kind, waits):
 			values.fail("tonic effect on %d isn't one known effect on an entity here" % target_id)
 			return
 		_put(target_id, kind, strength, ticks, waits)
