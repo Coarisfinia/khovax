@@ -125,11 +125,11 @@ the export (`exclude_default_pack.py`), which rewrites the committed `export_pre
 build skips that and carries some of them twice, which a test run doesn't mind:
 
 ```sh
-rm -rf /tmp/khovax-default-pack /tmp/khovax-default-pck  # the pack builder refuses a folder that exists
-uv run --locked --package khovax-game-pack-builder src/game-pack-builder/default_pack.py /tmp/khovax-default-pack
+pack=$(mktemp -d)  # the pack builder refuses a folder that exists, so each run takes a new one
+uv run --locked --package khovax-game-pack-builder src/game-pack-builder/default_pack.py "$pack/default"
 uv run --locked --package khovax-game-pack-builder \
-  src/game-pack-builder/build_pack.py /tmp/khovax-default-pack /tmp/khovax-default-pck
-mkdir -p src/game/packs && cp /tmp/khovax-default-pck/default.desktop.pck src/game/packs/default.pck
+  src/game-pack-builder/build_pack.py "$pack/default" "$pack/pck"
+mkdir -p src/game/packs && cp "$pack/pck/default.desktop.pck" src/game/packs/default.pck
 godot --headless --path src/game --export-release "Web Test" build/web-test/index.html
 uv run --locked --package khovax-game-web-e2e playwright install ffmpeg
 CHROME=<path to chrome-headless-shell> EXPECTED_HASH=<hash> \
