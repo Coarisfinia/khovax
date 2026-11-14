@@ -50,6 +50,11 @@
 			"type": "boolean",
 			"default": false
 		},
+		"debug_zone": {
+			"description": "Whether it's the debug zone (#2274): the Settings tab's Debug submenu sends a player onto their start in it. The first blueprint marked, in file name order, is the one.",
+			"type": "boolean",
+			"default": false
+		},
 		"loot_table": {
 			"description": "Its instance loot table (resourcepacks/default/loot_tables/): what a blank and the loot on its ground give (#90, #203).",
 			"type": "string",

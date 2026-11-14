@@ -322,7 +322,7 @@ func _relay_names(named: Control) -> void:
 ## The world's settings, which the host chooses (#1309), in the Settings tab: the difficulty preset
 ## (#1892) and the wild monsters' factor (#1315) in its Difficulty submenu, the world settings in
 ## its World submenu (#1316). And this machine's player's invincibility in its Debug submenu
-## (#2273), which goes to the world the same way.
+## (#2273), and its buttons to the debug zone and back (#2274), which go to the world the same way.
 func _add_host_settings() -> void:
 	if driver == null:
 		return
@@ -349,6 +349,21 @@ func _add_host_settings() -> void:
 	)
 	var invincible: InvincibleChoice = InvincibleChoice.new(driver, off_on)
 	_add_choice_row(SettingsTab.DEBUG, invincible, tr("Invincible"))
+	var teleport: TeleportChoice = TeleportChoice.new(driver)
+	teleport.name = teleport.setting.to_pascal_case()
+	add_child(teleport)
+	var _there: Button = settings.add_button(
+		SettingsTab.DEBUG,
+		"TeleportToDebugZone",
+		tr("Teleport to the debug zone"),
+		teleport.to_debug_zone,
+	)
+	var _back: Button = settings.add_button(
+		SettingsTab.DEBUG,
+		"TeleportBack",
+		tr("Back to the spawn"),
+		teleport.back,
+	)
 
 
 ## A row in the Settings tab's `submenu` for the host's `setting` (HostChoice), named `title`, its

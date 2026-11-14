@@ -124,6 +124,7 @@ func run(tree: SceneTree) -> String:
 		_check_sent_to_spawn,
 		_check_invincible,
 		_check_invincible_requested,
+		_check_teleport_requested,
 		_check_layout,
 		_check_tile_changed,
 	]
@@ -300,6 +301,56 @@ func _check_invincible_requested() -> String:
 	if health.is_invincible(basic, world.player(0).id):
 		return "a request to be invincible, sent again, was applied twice"
 	return ""
+
+
+## The Debug submenu's teleport (#2274, OutboxEntry.TELEPORT): a player in the world's start
+## asking to go to the debug zone lands on their start in the playground, and is acknowledged;
+## asking to go back lands them on their start in the world's starting instance, even with a
+## respawn point in the debug zone. The same request sent again changes nothing.
+func _check_teleport_requested() -> String:
+	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.GLADE)
+	var outbox: Outbox = Outbox.new()
+	var there: Command = Command.new()
+	outbox.post(OutboxEntry.TELEPORT, TeleportChoice.TO_DEBUG_ZONE).fill(there)
+	var asking: Array[Command] = [there]
+	world.step(asking)
+	var acknowledged: bool = false
+	for event: RefCounted in world.instances[FlowSteps.GLADE].events:
+		acknowledged = acknowledged or event is RequestApplied
+	if not acknowledged or world.instance_of(0) != FlowSteps.BASIC:
+		return "a player asking to go to the debug zone is in %s, acknowledged: %s" % [
+			world.instance_of(0),
+			acknowledged,
+		]
+	var zone: GameState = world.instances[FlowSteps.BASIC]
+	if world.player(0).tile != zone.region.starts[0]:
+		return "a player sent to the debug zone isn't on its start: %s" % world.player(0).tile
+	# A respawn point in the debug zone (#1890) mustn't keep them there: back is the world's spawn.
+	_respawn_at_start(world, FlowSteps.BASIC)
+	var back: Command = Command.new()
+	outbox.post(OutboxEntry.TELEPORT, TeleportChoice.BACK).fill(back)
+	var leaving: Array[Command] = [back]
+	world.step(leaving)
+	var glade: GameState = world.instances[FlowSteps.GLADE]
+	if world.instance_of(0) != FlowSteps.GLADE or world.player(0).tile != glade.region.starts[0]:
+		return "a player asking to go back from the debug zone is in %s" % world.instance_of(0)
+	world.step(asking)
+	if world.instance_of(0) != FlowSteps.GLADE:
+		return "a request to go to the debug zone, sent again, was applied twice"
+	return ""
+
+
+## Makes player 0's start in the instance `instance_name` of `world` their respawn point (#1890).
+static func _respawn_at_start(world: World, instance_name: String) -> void:
+	var region: Region = world.instances[instance_name].region
+	var start: Vector2i = region.starts[0]
+	var point: Dictionary = {
+		"instance": instance_name,
+		"q": start.x,
+		"r": start.y,
+		"kind": region.terrain[start],
+	}
+	world.set_entry(0, RespawnPoint.ENTRY, point)
 
 
 ## Player 0 of `world`, placed beside the wild monster of its basic instance.

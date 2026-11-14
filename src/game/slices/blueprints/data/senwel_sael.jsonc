@@ -1,6 +1,7 @@
 // The playground (#338), Senwel Sael: the hand-made region
 // resourcepacks/default/regions/senwel_sael.md. Only the tests play it (#712): no exit leads to
-// it, so they load it directly.
+// it, so they load it directly. It's the debug zone too (#2274): the Settings tab's Debug submenu
+// sends a player there.
 {
 	"id": "senwel_sael",
 	"name": "Senwel Sael",
@@ -9,6 +10,7 @@
 		"gloss": "the quiet pool"
 	},
 	"rules": "standard",
+	"debug_zone": true,
 	"loot_table": "wild_ground",
 	"wild_species": { "ombulumo": 3, "tikazzir": 1 }
 }

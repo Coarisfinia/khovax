@@ -68,7 +68,7 @@ func _initialize() -> void:
 	var setup_note: String = ", and the setup failed" if setup_errors > 0 else ""
 	print("%d passed, %d failed%s" % [tests.size() - failed, failed, setup_note])
 	# The last flow's music may still be stopping; quitting at once could leak it (#1906).
-	QuietQuit.quit(self, 1 if failed > 0 or setup_errors > 0 else 0)
+	QuietQuit.quit(self, 1 if failed > 0 or setup_errors > 0 else 0, _errors)
 
 
 ## Runs the tests from `index` on, one after another, and returns how many failed.
