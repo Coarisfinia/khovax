@@ -94,6 +94,7 @@
 		"model_ore_outcrop": "models/ore-outcrop/ore_outcrop.glb",
 		"model_pearl_bracelet": "models/armory3d-pearl-bracelet/pearl_bracelet.glb",
 		"model_pebble": "models/quaternius-items/pebble.glb",
+		"model_ranch_feeding_trough": "models/ranch-feeding-trough/ranch_feeding_trough.glb",
 		"model_player_body": "models/player/player_body.glb",
 		"model_player_clips": "models/player/player_clips.glb",
 		"model_rock_single_a": "models/kaykit-hexagon/rock_single_A.gltf",
