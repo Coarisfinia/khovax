@@ -13,6 +13,21 @@ edit it by hand.
 - **License:** CC0 1.0, see `LICENSE.md` next to this file (the site names the license; the file is
   its legal text). Credit is welcome, not required.
 
+## Copper ore
+
+- **Files:** `resourcepacks/default/models/copper-ribbons-ore/`
+- **Author:** the project (shape generated with Meshy AI, paid plan, Private licence); textures by
+  Poly Haven (CC0)
+- **Source:** its shape ("folded copper ribbons in stone") generated without a texture with Meshy
+  AI by the owner (#2012, #1949), turned into `src/game-models/sources/copper_ribbons_ore.glb` by
+  `src/game-models/import_source.py`; `src/game-models/copper_ribbons_ore.py` removes the one
+  ribbon that left the stone as two strands (the owner's fix), textures the stone from the props'
+  shared texture set (`src/game-models/textures/`: Poly Haven's "Rock Boulder Dry",
+  https://polyhaven.com/a/rock_boulder_dry, CC0, reduced to a few flat tones), gives the ribbons a
+  flat copper tint, and exports `copper_ribbons_ore.glb`
+- **License:** Unlicense, the repository's own license, see `LICENSE.md` next to this file; its
+  textures are CC0 1.0 (`src/game-models/textures/LICENSE.md`).
+
 ## Drakkudor
 
 - **Files:** `resourcepacks/default/models/drakkudor/`
