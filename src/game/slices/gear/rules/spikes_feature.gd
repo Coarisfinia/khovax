@@ -13,8 +13,10 @@ extends Feature
 ## and goes with them from instance to instance. The ids of the requests it applied are kept there
 ## too (OutboxReceipts), so one sent again changes nothing. Gear changes only outside a fight
 ## (owner, #223, #776), here too, not only in the gear panel: a request taken while the player is in
-## one (Fight.involves) is acknowledged, but their trap stays as it was. The strikes fall on the
-## instance's ticks.
+## one (Fight.involves) is acknowledged, but their trap stays as it was until the fight is over. The
+## choice waits in their entry meanwhile (PENDING, #2350), so the world catches up with their
+## profile's gear on the first tick out of the fight, not at the next session; a later request
+## replaces it. The strikes fall on the instance's ticks.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "spikes"
@@ -22,6 +24,9 @@ const ID: String = "spikes"
 const STRIKE_TICKS: int = Tuning.SPIKES_STRIKE_TICKS
 ## The key of the trap's code (code_of) in a player's store entry: none for an empty trap slot.
 const TRAP: String = "trap"
+## The key of the code (code_of) a request taken in a fight asked for, in a player's store entry,
+## until the fight is over (#2350): none while no choice waits.
+const PENDING: String = "pending"
 
 ## Each spikes' damage, by the code of its gear id (code_of), from the gear's content data (the
 ## gear slice reads it).
@@ -70,6 +75,13 @@ static func trap_of(entry: Dictionary) -> int:
 	return code
 
 
+## The code of the gear the trap a player's store entry `entry` of this feature holds is going to
+## hold (code_of): the choice waiting for a fight to end (PENDING, #2350), or the trap's (trap_of).
+static func wanted_of(entry: Dictionary) -> int:
+	var code: int = entry.get(PENDING, trap_of(entry))
+	return code
+
+
 ## Takes every player's change of their trap, in slot order, then lets every ring's spikes, in its
 ## dominator's id order, hurt the wild monsters pushing on it, on every STRIKE_TICKS-th tick.
 func step(state: GameState, commands: Array[Command]) -> void:
@@ -109,21 +121,25 @@ static func _hurt(
 
 
 ## Puts the gear each player here asks for into their trap, in slot order, unless its request was
-## applied before or they're in a fight. A code of no spikes this build knows is kept all the same:
-## it hurts nothing.
+## applied before, once they're out of a fight: a new request's choice waits as PENDING until then
+## (#2350). A code of no spikes this build knows is kept all the same: it hurts nothing.
 func _change_traps(state: GameState, commands: Array[Command]) -> void:
 	for slot: int in GameState.MAX_PLAYERS:
+		if state.player(slot) == null:
+			continue
 		var command: Command = Command.of(commands, slot)
 		var changing: bool = command != null and command.request_kind == OutboxEntry.TRAP
-		if not changing or state.player(slot) == null:
-			continue
-		if not OutboxReceipts.take(state, slot, id(), command) or Fight.involves(state, slot):
+		if changing and OutboxReceipts.take(state, slot, id(), command):
+			state.store(slot, id())[PENDING] = command.request_data
+		if not state.stored(slot, id()).has(PENDING) or Fight.involves(state, slot):
 			continue
 		var entry: Dictionary = state.store(slot, id())
-		if command.request_data == CommandCodes.NONE:
+		var wanted: int = entry[PENDING]
+		var _taken: bool = entry.erase(PENDING)
+		if wanted == CommandCodes.NONE:
 			var _emptied: bool = entry.erase(TRAP)
 		else:
-			entry[TRAP] = command.request_data
+			entry[TRAP] = wanted
 
 
 ## The damage of the spikes in the trap of the dominator `dominator_id`, or 0.

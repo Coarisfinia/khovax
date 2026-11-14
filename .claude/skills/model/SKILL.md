@@ -955,7 +955,9 @@ clips. Ask the owner only when it's unclear what should move how.
    there (the Kavrikka's, #1818), and a generated model's loose pieces of skin over the eyes go with
    `marked_eyes.modelled`. A model the check still fails waits in its `KNOWN` list with the issue
    that fixes it. Its lines go into the PR. CI runs it on every `.glb`, with its test
-   (`test_eyes_covered.py`).
+   (`test_eyes_covered.py`). Where skin lies in front of an eye without burying it (the
+   Nuvvoluvvo's, #1818), `replace`'s `seen=True` sets the eyes by the check's own measure
+   (`marked_eyes.hidden`).
 
 23. **World scale (#1837):** `uv run --locked src/game-models/blender.py --background
    --factory-startup --python src/game-models/check_world_scale.py -- <model.glb>` must print

@@ -515,7 +515,10 @@ def build(out):
     colour, glow = paint(skin, starry=False)
     material(skin, colour, glow)
     rename(rig, skin)
-    lids, eye_points = marked_eyes.replace(rig, skin, materials.palette(EYE_MATERIALS), FAINT_LIDS)
+    # Set clear as check_eyes_covered.py sees them (`seen`): the skin lay in front of the right
+    # eye's lower part without burying its iris, and counting the rim (`rim`) found no spot clear
+    # within reach (#1818).
+    lids, eye_points = marked_eyes.replace(rig, skin, materials.palette(EYE_MATERIALS), FAINT_LIDS, seen=True)
     for image, starry in zip((colour, glow), night):
         image.pixels.foreach_set(numpy.array(starry.pixels[:], dtype=numpy.float32))
         image.pack()

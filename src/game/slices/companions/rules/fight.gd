@@ -4,7 +4,8 @@ extends RefCounted
 ## (owner, 1+3 on #690) while a wild monster that isn't hiding (nobody sees it, #202) stands within
 ## REACH tiles of them or of their companion, close enough to strike or be struck; while any wild
 ## monster in their instance is enraged (#220); and while their ring is sealing wild monsters in
-## (#409). It only reads the state.
+## (#409). It only reads the state. It lives with the companions, the last slice it reads, so they
+## can ask it too (#2349).
 
 ## How near a wild monster has to be, in tiles, for a fight.
 const REACH: int = 2
