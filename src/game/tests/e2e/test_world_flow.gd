@@ -303,7 +303,7 @@ func _check_invincible_requested() -> String:
 	return ""
 
 
-## The Debug submenu's teleport (#2274, the outbox kind 9): a player in the world's start asking
+## The Debug submenu's teleport (#2274, the outbox kind 10): a player in the world's start asking
 ## to go to the debug zone (data 1) lands on their start in the playground, and is acknowledged;
 ## asking to go back (data 0) lands them on their start in the world's starting instance. The same
 ## request sent again changes nothing.
@@ -311,7 +311,7 @@ func _check_teleport_requested() -> String:
 	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.GLADE)
 	var outbox: Outbox = Outbox.new()
 	var there: Command = Command.new()
-	outbox.post(9, 1).fill(there)
+	outbox.post(10, 1).fill(there)
 	var asking: Array[Command] = [there]
 	world.step(asking)
 	var acknowledged: bool = false
@@ -326,7 +326,7 @@ func _check_teleport_requested() -> String:
 	if world.player(0).tile != zone.region.starts[0]:
 		return "a player sent to the debug zone isn't on its start: %s" % world.player(0).tile
 	var back: Command = Command.new()
-	outbox.post(9, 0).fill(back)
+	outbox.post(10, 0).fill(back)
 	var leaving: Array[Command] = [back]
 	world.step(leaving)
 	var glade: GameState = world.instances[FlowSteps.GLADE]
