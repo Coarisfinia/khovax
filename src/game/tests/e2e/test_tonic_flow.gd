@@ -676,7 +676,9 @@ func _fought(state: GameState, ticks: int, fire: bool = false) -> Dictionary:
 ## The drink button (#2313) in the main scene, with the player's Ombulumo out and hurt down to 1 HP
 ## and one berry tonic held: the button shows 1, usable, and its key sends the drink in the next
 ## command, a request from the profile's outbox posted as the profile spends the tonic; the
-## simulation mends the companion by the tonic's share of its full HP.
+## simulation mends the companion by the tonic's share of its full HP, and the button then shows
+## the wait's seconds and its circle, faded. With two brews held, the key picks one
+## (_check_drink_pick), and a refused drink is said in a notice, never silently.
 func _check_drink_button(tree: SceneTree) -> String:
 	if not InputMap.has_action(DRINK_ACTION):
 		return "there is no %s action to drink a tonic or a draught with" % DRINK_ACTION
@@ -711,6 +713,65 @@ func _drink_button_drinks(main: Node) -> String:
 			health.hp_of(driver.state, companion_id),
 			expected,
 		]
+	driver.ticked.emit(driver.state.tick, driver.state.events)
+	(main.get_node("EventBus") as EventBus).flush()
+	var wait: String = str(Fixed.div_floor(DrinkingFeature.WAIT_TICKS, Simulation.TICKS_PER_SECOND))
+	if button.corner_text() != wait or button.cooldown_share() <= 0.0 or button.usable():
+		return "the drink button shows %s, not the wait's %s s, faded with its circle" % [
+			button.corner_text(),
+			wait,
+		]
+	return await _check_drink_pick(main, driver)
+
+
+## With a moss tonic and a berry draught held, the drink key picks the first the tonic lists, the
+## player standing, and the list beside the button shows both, the picked one marked; the arrows
+## move the mark on. Enter drinks it, refused while the player waits: a notice says why, and nothing
+## is spent. Once the wait is over, a tap on the moss tonic's row drinks it. With none held, the key
+## says there's nothing to drink.
+func _check_drink_pick(main: Node, driver: GameDriver) -> String:
+	var holder: ProfileHolder = FlowGame.holder(main)
+	holder.keeper.profile.materials["tonic_moss"] = 1
+	holder.keeper.profile.materials["draught_berry"] = 1
+	var held: PackedStringArray = DrinkTie.held(holder)
+	var input: LocalInput = driver.input as LocalInput
+	var list: BrewPickList = main.get_node("Hud/BrewPickList") as BrewPickList
+	var picking: Command = await FlowInput.pressed(driver, DRINK_ACTION)
+	list.refresh()
+	if (held.size() != 2 or picking.move != Command.NO_MOVE
+			or input.drink_pick.picked != held[0] or list.shown != held
+			or not list.lines[0].begins_with(BrewPickList.MARK)):
+		return "the drink key didn't pick the first of %s, shown marked in the list" % [held]
+	var _on: Command = await FlowInput.pressed(driver, &"ui_right")
+	var refused: Command = await FlowInput.pressed(driver, &"ui_accept")
+	var notice: NoticeScreen = main.get_node("Hud/NoticeScreen") as NoticeScreen
+	if (refused.request_kind == OutboxEntry.DRINK or not input.drink_pick.picked.is_empty()
+			or holder.keeper.profile.materials[held[1]] != 1
+			or not notice.shown_text().begins_with("Wait ")):
+		return "a drink while waiting wasn't refused with a notice: %s" % notice.shown_text()
+	return await _drink_tapped(main, driver)
+
+
+## Once the wait is over, a tap on the moss tonic's row in the pick drinks it; with none held, the
+## drink key says there's nothing to drink.
+func _drink_tapped(main: Node, driver: GameDriver) -> String:
+	var idle: Array[Command] = [Command.new()]
+	for _tick: int in DrinkingFeature.WAIT_TICKS:
+		driver.world.step(idle)
+	var holder: ProfileHolder = FlowGame.holder(main)
+	var input: LocalInput = driver.input as LocalInput
+	var list: BrewPickList = main.get_node("Hud/BrewPickList") as BrewPickList
+	var _again: Command = await FlowInput.pressed(driver, DRINK_ACTION)
+	list.refresh()
+	list.row_of("tonic_moss").pressed.emit()
+	var tapped: Command = input.command(driver.state)
+	if tapped.request_data != DrinkingFeature.code_of("tonic_moss"):
+		return "a tap on the moss tonic's row didn't drink it"
+	holder.keeper.profile.materials.clear()
+	var _nothing: Command = await FlowInput.pressed(driver, DRINK_ACTION)
+	var notice: NoticeScreen = main.get_node("Hud/NoticeScreen") as NoticeScreen
+	if notice.shown_title() != "Nothing to drink":
+		return "the drink key with nothing held didn't say so"
 	return ""
 
 

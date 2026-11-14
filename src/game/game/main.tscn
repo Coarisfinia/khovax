@@ -85,6 +85,9 @@
 [ext_resource type="Script" path="res://slices/gear/ui/gear_panel.gd" id="75_gear_panel"]
 [ext_resource type="Script" path="res://slices/waystones/look/waystone_glow.gd" id="90_waystone_glow"]
 [ext_resource type="Script" path="res://slices/waystones/ui/waystone_notice_tie.gd" id="91_waystone_notice"]
+[ext_resource type="Script" path="res://slices/tonics/ui/drink_tie.gd" id="92_drink_tie"]
+[ext_resource type="Script" path="res://slices/tonics/ui/drink_button.gd" id="93_drink_button"]
+[ext_resource type="Script" path="res://slices/tonics/ui/brew_pick_list.gd" id="94_brew_pick_list"]
 
 [sub_resource type="Environment" id="Environment_daylight"]
 ambient_light_source = 2
@@ -100,10 +103,11 @@ keeper = NodePath("../WorldKeeper")
 quest_tie = NodePath("../QuestTie")
 holder = NodePath("../ProfileHolder")
 
-[node name="LocalInput" type="Node" parent="." node_paths=PackedStringArray("acks", "revive") unique_id=1290447713]
+[node name="LocalInput" type="Node" parent="." node_paths=PackedStringArray("acks", "revive", "drink") unique_id=1290447713]
 script = ExtResource("2_input")
 acks = NodePath("../ProfileTie")
 revive = NodePath("../ReviveTie")
+drink = NodePath("../DrinkTie")
 
 [node name="FocusPicker" type="Node" parent="." node_paths=PackedStringArray("input", "camera", "wild_view", "instance")]
 script = ExtResource("36_focus_picker")
@@ -168,6 +172,13 @@ holder = NodePath("../ProfileHolder")
 script = ExtResource("51_revive_tie")
 input = NodePath("../LocalInput")
 holder = NodePath("../ProfileHolder")
+
+[node name="DrinkTie" type="Node" parent="." node_paths=PackedStringArray("input", "holder", "driver", "notice")]
+script = ExtResource("92_drink_tie")
+input = NodePath("../LocalInput")
+holder = NodePath("../ProfileHolder")
+driver = NodePath("../Driver")
+notice = NodePath("../Hud/NoticeScreen")
 
 [node name="QuestTie" type="Node" parent="." node_paths=PackedStringArray("bus", "input", "quests") unique_id=2066135786]
 script = ExtResource("47_quest_tie")
@@ -471,6 +482,21 @@ mouse_filter = 2
 script = ExtResource("44_revive_button")
 driver = NodePath("../../Driver")
 holder = NodePath("../../ProfileHolder")
+
+[node name="DrinkButton" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "holder")]
+layout_mode = 3
+mouse_filter = 2
+script = ExtResource("93_drink_button")
+driver = NodePath("../../Driver")
+holder = NodePath("../../ProfileHolder")
+
+[node name="BrewPickList" type="Control" parent="Hud" node_paths=PackedStringArray("input", "holder", "button")]
+layout_mode = 3
+mouse_filter = 2
+script = ExtResource("94_brew_pick_list")
+input = NodePath("../../LocalInput")
+holder = NodePath("../../ProfileHolder")
+button = NodePath("../DrinkButton")
 
 [node name="RosterHud" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "survey")]
 process_priority = -1
