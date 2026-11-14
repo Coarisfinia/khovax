@@ -8,6 +8,8 @@ same everywhere.
 """
 
 import os
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Literal
 
@@ -45,6 +47,19 @@ def warning(message: str, file: str | None = None, line: int | None = None) -> N
 
 def error(message: str, file: str | None = None, line: int | None = None) -> None:
     print(text("error", message, file, line))
+
+
+@contextmanager
+def group(title: str) -> Iterator[None]:
+    """Folds what is printed inside it under `title` in CI's log; elsewhere `title` is a plain
+    heading line. Flushed, since a subprocess inside it writes to the same log straight away."""
+    in_ci = os.environ.get("GITHUB_ACTIONS") == "true"
+    print(f"::group::{title}" if in_ci else f"--- {title}", flush=True)
+    try:
+        yield
+    finally:
+        if in_ci:
+            print("::endgroup::", flush=True)
 
 
 def _from_root(file: str) -> str:
