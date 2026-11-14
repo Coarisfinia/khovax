@@ -93,16 +93,20 @@ func _drink(state: GameState, slot: int, code: int) -> void:
 	state.store(slot, ID)[UNTIL] = state.world_tick + WAIT_TICKS
 	var effects: TonicEffectsFeature = state.feature(TonicEffectsFeature.ID) as TonicEffectsFeature
 	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
+	# What it gives each target, the same for all, unless it mends them at once. Without a wait it
+	# starts on the next tick, with one once the wait has passed.
+	var given: TonicEffect = null
+	if dose.mend > 0 and dose.waits > 0:
+		given = TonicEffect.new(TonicEffectsFeature.MEND, dose.mend, 1, dose.waits)
+	elif dose.mend == 0 and not dose.effect.is_empty():
+		given = TonicEffect.new(dose.effect, dose.strength, dose.ticks, maxi(1, dose.waits))
 	for target_id: int in reached(state, slot, dose):
-		effects.end(target_id)
-		if dose.mend > 0 and dose.waits > 0:
-			effects.give(target_id, TonicEffectsFeature.MEND, dose.mend, 1, dose.waits)
+		effects.end(state, target_id)
+		if given != null:
+			effects.give(state, target_id, given)
 		elif dose.mend > 0:
 			var full_hp: int = health.max_hp_of(state, target_id)
 			health.heal(state, target_id, maxi(1, Fixed.scale(full_hp, dose.mend)))
-		elif not dose.effect.is_empty():
-			# Without a wait it starts on the next tick, with one once the wait has passed.
-			effects.give(target_id, dose.effect, dose.strength, dose.ticks, maxi(1, dose.waits))
 
 
 ## The targets the brew `dose` the player in `slot` drinks reaches in `state`, in entity id order:

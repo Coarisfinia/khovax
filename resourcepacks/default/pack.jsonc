@@ -126,6 +126,7 @@
 	// among them unless it is a variant changing only some of its blueprint's pieces (#1590).
 	"region_pieces": {
 		"brekhal_varn": [
+			"regions/brekhal_varn/clearing.md",
 			"regions/brekhal_varn/narrows.md",
 			"regions/brekhal_varn/saddle.md",
 			"regions/brekhal_varn/sealed.md",

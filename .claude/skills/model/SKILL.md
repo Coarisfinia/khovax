@@ -216,7 +216,8 @@ a second model could use goes into the library or a generic tool, never into one
     shade (below, "Props from a bare shape").
   - `body`: soft organic bodies from metaballs (`Blob`: `ball`, `ellipsoid`, `capsule`, `limb`,
     and `tube`, one smooth tapering form along a curve, such as a tail, where a `limb`'s joints
-    would bulge into beads, #1171), converted and reduced to a triangle budget.
+    would bulge into beads, #1171), converted and reduced to a triangle budget; a `symmetric`
+    body snaps to a fine grid first, so its mirrored reduction doesn't follow the thread count (#2335).
   - `parts`: rigid pieces weighted to one bone (`part`), faceted `crystal`s (with an optional
     `curl`), curling fur `tuft`s.
   - `surface`: patterns laid on a body and bending with it: glowing `vein`s, whose loose ends

@@ -6,7 +6,7 @@ import math
 import bpy
 from mathutils import Vector
 
-from . import scene
+from . import fixed_order, scene
 
 # A lone metaball element's surface sits at this share of its radius (Blender's default threshold
 # and stiffness); the helpers below take the surface size and scale by it.
@@ -17,6 +17,8 @@ STIFFNESS = 2.0
 THRESHOLD = 0.6
 # How finely `Blob.tube` samples its curve to space its balls evenly along it.
 FINE = 1000
+# The grid (decimals of a metre) a symmetric body's vertices snap to before it is reduced.
+SYMMETRIC_GRID = 5
 
 
 def _line_radius(surface, spacing):
@@ -124,6 +126,13 @@ class Blob:
         scene.select_only(self.obj)
         bpy.ops.object.convert(target="MESH")
         body = bpy.context.object
+        if symmetric:
+            # The converted surface's halves mirror each other only to the last bits (a third of
+            # its vertices have no exact mirror), and the Decimate modifier's symmetry, pairing
+            # near mirrors, then hands back another body on another count of Blender's threads
+            # (#2335). On a grid nearly every vertex has its exact mirror, and the reduction comes
+            # out alike on any count.
+            fixed_order.snap(body.data, SYMMETRIC_GRID)
         decimate = body.modifiers.new("Decimate", "DECIMATE")
         decimate.ratio = min(1.0, triangles / max(1, scene.triangles(body)))
         decimate.use_symmetry = symmetric
