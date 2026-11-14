@@ -118,9 +118,18 @@ yourself, with uv and a
 [chrome-headless-shell](https://googlechromelabs.github.io/chrome-for-testing/) download (the
 version CI pins in `.github/workflows/ci.yml`), from the repository's root. The run films itself
 with Playwright's ffmpeg, which `playwright install ffmpeg` fetches once; `EXPECTED_HASH` is the
-state hash the headless run of the same flow ends in:
+state hash the headless run of the same flow ends in. Every build carries the default resource pack
+as the pack builder's `.pck` (#1941), so it's built first, outside the project, and put where the
+export picks it up (`src/game/packs/`, which git ignores). CI also leaves the pack's own files out of
+the export (`exclude_default_pack.py`), which rewrites the committed `export_presets.cfg`; a local
+build skips that and carries some of them twice, which a test run doesn't mind:
 
 ```sh
+rm -rf /tmp/khovax-default-pack /tmp/khovax-default-pck  # the pack builder refuses a folder that exists
+uv run --locked --package khovax-game-pack-builder src/game-pack-builder/default_pack.py /tmp/khovax-default-pack
+uv run --locked --package khovax-game-pack-builder \
+  src/game-pack-builder/build_pack.py /tmp/khovax-default-pack /tmp/khovax-default-pck
+mkdir -p src/game/packs && cp /tmp/khovax-default-pck/default.desktop.pck src/game/packs/default.pck
 godot --headless --path src/game --export-release "Web Test" build/web-test/index.html
 uv run --locked --package khovax-game-web-e2e playwright install ffmpeg
 CHROME=<path to chrome-headless-shell> EXPECTED_HASH=<hash> \
