@@ -6,7 +6,7 @@ a player's pack would. The script is named after its .glb, which pairs the two, 
 of two models (the player's body and clips). Its imported source is `build/source.glb`; the
 player's clip library keeps its skeleton and clip sources there too.
 
-Godot never sees a build folder: its `.gdignore` (GDIGNORE) keeps Godot from importing, listing
+Godot never sees a build folder: its empty `.gdignore` (GDIGNORE) keeps Godot from importing, listing
 or exporting what is in it, so the shipped game doesn't carry it. The shared model library, the
 checks and the import tools stay in src/game-models/.
 
