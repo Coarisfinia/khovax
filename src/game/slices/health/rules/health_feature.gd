@@ -18,7 +18,8 @@ extends Feature
 ## invincible, or vulnerable again, from the tick it's applied; like every request, it's applied
 ## once (OutboxReceipts), and one with data that's neither 0 nor 1 is acknowledged and changes
 ## nothing. So is the submenu's teleport (OutboxEntry.TELEPORT, #2274): 1 sends the player to the
-## debug zone (SentToDebugZone), 0 back to the spawn (SentToSpawn), as a new entity at full HP.
+## debug zone (SentToDebugZone), 0 back to the world's spawn (SentToWorldSpawn), as a new entity at
+## full HP.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "health"
@@ -115,7 +116,7 @@ static func _teleport(state: GameState, player: Entity, slot: int, data: int) ->
 	if data == 1:
 		state.events.append(SentToDebugZone.new(player.id, slot))
 	elif data == 0:
-		state.events.append(SentToSpawn.new(player.id, slot))
+		state.events.append(SentToWorldSpawn.new(player.id, slot))
 
 
 ## Gives `entity_id` its species' HP: its feature calls this when it adds or restores it. A wild

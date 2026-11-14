@@ -33,7 +33,8 @@ const INVINCIBLE: int = 8
 ## (DrinkingFeature.code_of).
 const DRINK: int = 9
 ## Send the player to the debug zone, or back (#2274, the Settings tab's Debug submenu): its data is
-## 1 for the debug zone (SentToDebugZone), 0 for back to the spawn (SentToSpawn) (HealthFeature).
+## 1 for the debug zone (SentToDebugZone), 0 for back to the world's spawn (SentToWorldSpawn)
+## (HealthFeature).
 const TELEPORT: int = 10
 ## Every kind there is.
 const KINDS: Array[int] = [

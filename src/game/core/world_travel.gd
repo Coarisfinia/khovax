@@ -5,7 +5,8 @@ extends RefCounted
 ## it leads to, onto its way back, and the world raises that they entered it (InstanceEntered,
 ## #370). A player sent to the spawn (SentToSpawn, #457) is moved beside their respawn point
 ## (RespawnPoint, #1890), or else onto their start in the starting instance; one sent to the debug
-## zone (SentToDebugZone, #2274) onto their start there. Whoever follows a
+## zone (SentToDebugZone, #2274) onto their start there, and one sent to the world's spawn
+## (SentToWorldSpawn, #2274) onto their start in the starting instance. Whoever follows a
 ## player (Feature.followers_of, #716), like their companion, moves with
 ## them, carrying its data along. It keeps nothing: the world is handed in, as to WorldLayout.
 ## Deterministic, like everything in core/.
@@ -68,15 +69,16 @@ static func _arrival(world: World, from: String, taken: ExitTaken, region: Regio
 ## Moves the player `sent` names from `from` back, as a new entity, so at full HP: beside their
 ## respawn point (#1890, RespawnPoint) while it's still there, else onto their start in the
 ## starting instance (#457), the world's spawn. One sent to the debug zone (SentToDebugZone,
-## #2274) lands on their start there instead, and stays while there's none.
+## #2274) lands on their start there instead, and stays while there's none; one sent to the world's
+## spawn (SentToWorldSpawn, #2274) goes there whatever their respawn point.
 static func _send_to_spawn(world: World, from: String, sent: SentToSpawn) -> void:
 	var landing: Array = []
 	if sent is SentToDebugZone:
 		landing = _start_landing(world, world.source.debug_zone(), sent.slot)
-	else:
+	elif not sent is SentToWorldSpawn:
 		landing = _respawn_landing(world, sent.slot)
-		if landing.is_empty():
-			landing = _start_landing(world, world.start_name, sent.slot)
+	if landing.is_empty() and not sent is SentToDebugZone:
+		landing = _start_landing(world, world.start_name, sent.slot)
 	if landing.is_empty():
 		return
 	var target_name: String = landing[0]
