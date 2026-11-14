@@ -5,7 +5,8 @@ pushed half their size into the ball, so the skin cuts across them, and a loose 
 open surface, as a generated model's loose pieces are) lying over the lower half of an eye, as on
 the Wobulumu (#1747), or a loose closed lump of it there, which only a brow over the eye may be.
 A wisp (a lump on a `wisp.*` bone, lib/wisps.py) flying past in front of the eye isn't the body:
-it passes (#2368).
+it passes (#2368), but a patch of skin only partly on one, a minority of each face's corners on the
+wisp's bone, is still the body over the eye: it fails (#2378).
 
     uv run --locked src/game-models/blender.py --background --factory-startup \
         --python src/game-models/test_eyes_covered.py
@@ -35,13 +36,15 @@ EYE = Vector((0.35, -1.0, 0.3)).normalized() * RADIUS
 TOLERANCE = 0.01
 # Name: (how far the eyes are pushed into the ball, in their size; the loose piece of skin lying
 # over the left one's lower half, if any: "open" a patch, "closed" a lump, "wisp" a lump on a
-# wisp's bone further out; whether the check passes it).
+# wisp's bone further out, "partly_wisp" a patch with one corner of each face on a wisp's bone;
+# whether the check passes it).
 CASES = {
     "clear": (0.0, None, True),
     "pushed_in": (0.5, None, False),
     "loose_patch": (0.0, "open", False),
     "loose_lump": (0.0, "closed", False),
     "wisp": (0.0, "wisp", True),
+    "partly_wisp": (0.0, "partly_wisp", False),
 }
 
 
@@ -55,15 +58,20 @@ def patch(at, look, size, mat, kind):
     """A loose piece of skin `size` across, its own island, a little in front of the eye at `at`
     and over its lower half: an "open" flat square facing the way the eye looks, or a "closed"
     ball, which a brow is too, but under the eye; a "wisp" is such a ball twice as far out, on a
-    wisp's bone."""
+    wisp's bone; a "partly_wisp" is an "open" one with one corner of each face on a wisp's bone and
+    the rest on the head, so each face is mostly the body's."""
     mesh = bpy.data.meshes.new("Patch")
     built = bmesh.new()
-    if kind == "open":
+    if kind in ("open", "partly_wisp"):
         bmesh.ops.create_grid(built, x_segments=4, y_segments=4, size=size / 2.0)
     else:
         bmesh.ops.create_uvsphere(built, u_segments=12, v_segments=6, radius=size / 3.0)
     built.to_mesh(mesh)
     built.free()
+    # Every other vertex along both of the grid's ways: exactly one corner of each of its faces.
+    xs, ys = (sorted({round(vertex.co[axis], 6) for vertex in mesh.vertices}) for axis in (0, 1))
+    on_wisp = {vertex.index for vertex in mesh.vertices if kind == "partly_wisp"
+               and xs.index(round(vertex.co.x, 6)) % 2 == 0 and ys.index(round(vertex.co.y, 6)) % 2 == 0}
     turn = look.to_track_quat("Z", "Y").to_matrix().to_4x4()
     out = SIZE * (2.0 if kind == "wisp" else 0.8)
     mesh.transform(Matrix.Translation(at + look * out - Vector((0.0, 0.0, size * 0.4))) @ turn)
@@ -71,7 +79,10 @@ def patch(at, look, size, mat, kind):
     bpy.context.scene.collection.objects.link(obj)
     obj.data.materials.append(mat)
     bone = wisps.PREFIX + "0" if kind == "wisp" else "head"
-    obj.vertex_groups.new(name=bone).add(range(len(mesh.vertices)), 1.0, "REPLACE")
+    rest = [index for index in range(len(mesh.vertices)) if index not in on_wisp]
+    obj.vertex_groups.new(name=bone).add(rest, 1.0, "REPLACE")
+    if on_wisp:
+        obj.vertex_groups.new(name=wisps.PREFIX + "0").add(sorted(on_wisp), 1.0, "REPLACE")
     return obj
 
 
