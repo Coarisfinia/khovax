@@ -29,7 +29,9 @@ extends Feature
 ## CompanionAttackFeature (#221).
 ## A monster's passives (#222) work only while it is out, as its player's companion here (#616,
 ## CompanionPassives): its species' own, and the one its web grants it (#1472, from its party),
-## unless gear keeps them on (#617), which its player's requests say.
+## unless gear keeps them on (#617), which its player's requests say. Gear changes only outside a
+## fight (owner, #223, #2349), here too, not only in the gear panel: a request taken while the
+## player is in one (Fight.involves) is acknowledged, but their passives stay as they were.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "companions"
@@ -103,9 +105,16 @@ func requires() -> Array[String]:
 	return needed
 
 
-## The health feature, which a companion's HP is kept in (#835), where the instance has it.
+## The health feature, which a companion's HP is kept in (#835), where the instance has it, and the
+## wild monsters, the rings and the hiding, which tell whether a player is in a fight (Fight), where
+## their ward gear doesn't change (#2349).
 func after() -> Array[String]:
-	var earlier: Array[String] = [HealthFeature.ID]
+	var earlier: Array[String] = [
+		HealthFeature.ID,
+		WildMonsterFeature.ID,
+		DominationFeature.ID,
+		HidingFeature.ID,
+	]
 	return earlier
 
 
@@ -150,7 +159,7 @@ func step(state: GameState, commands: Array[Command]) -> void:
 
 ## Takes the request each player here sends to bring monsters into their party (CarryRequest), or
 ## to keep their passives on or stop (#617, CompanionPassives.keep), unless it was applied before
-## (OutboxReceipts).
+## (OutboxReceipts). One to keep them on or stop taken in a fight changes nothing (#2349).
 func _take_parties(state: GameState, commands: Array[Command]) -> void:
 	for slot: int in GameState.MAX_PLAYERS:
 		var command: Command = Command.of(commands, slot)
@@ -169,7 +178,7 @@ func _take_parties(state: GameState, commands: Array[Command]) -> void:
 				_species_by_code,
 				_passives_by_code,
 			)
-		else:
+		elif not Fight.involves(state, slot):
 			CompanionPassives.keep(state, slot, command.request_data)
 
 

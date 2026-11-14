@@ -1733,8 +1733,8 @@ func _check_least_damage() -> String:
 ## one in reserve, a wild monster's hit on the player comes in less the weak species' player guard
 ## alone, and one on the companion less its own guard; the out one's web passive (#1472) takes its
 ## guard off the hit on the player as well; with every carried monster fainted, none is out, and
-## the hit on the player comes in whole. Gear that keeps the passives on (#617) lets the one in
-## reserve guard the player too, until it faints.
+## the hit on the player comes in whole. Gear that keeps the passives on (#617), put on outside a
+## fight (#2349), lets the one in reserve guard the player too, until it faints.
 func _check_guards() -> String:
 	var state: GameState = _strike_state([Vector2i.ZERO], [], 0, GUARDS)
 	FlowSteps.carry(state, 0, [WEAK, STRONG])
@@ -1759,7 +1759,7 @@ func _check_guards() -> String:
 		_wild_strikes_over(state, ticks, Vector2i(-3, 0)), player.id, guarded, "the player")
 	if not struck.is_empty():
 		return struck
-	struck = _check_kept(state, player.id)
+	struck = _check_kept(state, player)
 	if not struck.is_empty():
 		return struck
 	state = _strike_state([Vector2i.ZERO], [], 0, GUARDS)
@@ -1870,18 +1870,30 @@ func _check_undodged_player(state: GameState, player: Entity, hits: int) -> Stri
 
 
 ## With the weak species out, its web passive granted, and the strong one in reserve in `state`,
-## the request (#818) that the player `player_id`'s ward gear keeps their passives on (#617,
-## OutboxEntry.PASSIVES_KEPT) lets a wild monster's hit on them come in less both species' player
-## guards and the web's; once the strong one has fainted, less the weak one's two alone again.
-func _check_kept(state: GameState, player_id: int) -> String:
-	var keep: Array[Command] = FlowSteps.command(Command.NO_MOVE)
+## the request (#818) that the player `player`'s ward gear keeps their passives on (#617,
+## OutboxEntry.PASSIVES_KEPT), sent beside the wild monster, in the fight, is acknowledged but
+## changes nothing (#2349). Sent again away from it, outside a fight, it lets a wild monster's hit
+## on them come in less both species' player guards and the web's; once the strong one has
+## fainted, less the weak one's two alone again.
+func _check_kept(state: GameState, player: Entity) -> String:
 	# The first id a profile's outbox draws (Outbox, #942).
-	keep[0].request = ShortId.code(ShortId.of_code(1))
-	keep[0].request_kind = OutboxEntry.PASSIVES_KEPT
-	keep[0].request_data = 1
-	Simulation.step(state, keep)
+	Simulation.step(state, _keep_passives(1))
+	var stored: Dictionary = state.stored(0, CompanionFeature.ID)
+	if CompanionPassives.kept(stored):
+		return "a request in the fight kept the passives on"
+	var applied: Array = stored.get(OutboxReceipts.APPLIED, [])
+	if not applied.has(ShortId.of_code(1)):
+		return "the world didn't acknowledge the request in the fight to keep the passives on"
+	# The player and their companion out of the wild monster's reach (Fight.REACH).
+	var beside: Vector2i = player.tile
+	player.tile = Vector2i(-OUTCOME_RADIUS, 0)
+	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
+	state.entity(companions.companion_of(0)).tile = Vector2i(1 - OUTCOME_RADIUS, -1)
+	Simulation.step(state, _keep_passives(2))
+	player.tile = beside
 	if not CompanionPassives.kept(state.stored(0, CompanionFeature.ID)):
 		return "the request to keep the passives on wasn't kept in the player's store"
+	var player_id: int = player.id
 	var ticks: int = WildAttackFeature.STRIKE_TICKS
 	var weak: int = GUARDS[PLAYER_GUARD] + GUARDS[WEB_GUARD]
 	var struck: String = _struck_for(
@@ -1899,6 +1911,16 @@ func _check_kept(state: GameState, player_id: int) -> String:
 		Fixed.scale(WEAK_STRENGTH, Fixed.ONE - weak),
 		"the player with the passives kept on and the reserve fainted",
 	)
+
+
+## A still command for the player in slot 0 carrying a request (#818) with the profile's `n`th
+## outbox id, that their ward gear keeps their passives on (#617).
+static func _keep_passives(n: int) -> Array[Command]:
+	var keep: Array[Command] = FlowSteps.command(Command.NO_MOVE)
+	keep[0].request = ShortId.code(ShortId.of_code(n))
+	keep[0].request_kind = OutboxEntry.PASSIVES_KEPT
+	keep[0].request_data = 1
+	return keep
 
 
 ## Why `strikes` weren't one strike on `target_id` (`what`) for `damage`, or "".
