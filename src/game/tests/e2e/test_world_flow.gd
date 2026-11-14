@@ -51,7 +51,6 @@ const CLEARING_DISTANCE: int = 15
 const CLEARINGS_WAITING: Dictionary[String, int] = {
 	"brekhal_varn": 2327,
 	"brekhal_varn_opened": 2327,
-	"hrovumel_stolm": 2330,
 	"ivenwhal_wudhen": 2331,
 	"lymwen_hoall": 2332,
 }
