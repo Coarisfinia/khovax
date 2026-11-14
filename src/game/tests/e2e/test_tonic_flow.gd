@@ -10,7 +10,12 @@ extends RefCounted
 ## berry tonic mends the out companion and a berry draught the player, at the brew's potency, and
 ## each player then waits 10 s before the next, a wait that goes with them through an exit (#2334).
 ## A drink is refused before anything is spent with no out companion for a tonic, a knocked-down
-## player for a draught, none left, or while waiting.
+## player for a draught, none left, or while waiting, and a Mend for a target at full HP (#2311).
+## The timed effects (#2311): a moss draught heals its share of the player's full HP at the end of
+## every second for its 20 s, and stops once the player is knocked down; a pondweed draught takes
+## its guard off every wild monster's hit on the player for its 30 s; a bone tonic scales the
+## companion's strikes, its auto attack and its special, after the type chart, and a feather tonic
+## drunk after it ends that and shortens the companion's wait between strikes.
 
 ## The tonic's id in the resource packs.
 const TONIC: String = "tonic"
@@ -32,6 +37,24 @@ const TRAITS_LISTED: Array[String] = ["none", "strong", "lasting", "shared", "sl
 ## Shared's reach in tiles and Slow-release's wait in seconds (section 3).
 const REACH_TILES: int = 3
 const DELAY_SECONDS: int = 5
+## The rules a fight with a wild monster needs (#2311): the rest are switched off, so the wild
+## monster neither sleeps, roams nor rages, and nothing but the strikes changes the HP.
+const FIGHT_RULES: Array[String] = [
+	"host_settings",
+	"movement",
+	"knockdown",
+	"health",
+	"tonic_effects",
+	"wild_monsters",
+	"wild_attacks",
+	"companions",
+	"drinking",
+	"type_effectiveness",
+	"companion_attacks",
+	"specials",
+]
+## The species of the wild monster and of the companion in the fights.
+const FIGHTER: String = "ombulumo"
 
 
 func run(_tree: SceneTree) -> String:
@@ -44,6 +67,8 @@ func run(_tree: SceneTree) -> String:
 		result = _check_drinking()
 	if result.is_empty():
 		result = _check_through_exit()
+	if result.is_empty():
+		result = _check_effects()
 	return result
 
 
@@ -395,16 +420,17 @@ func _refused(profile: Profile, state: GameState, brew: String, what: String) ->
 	return ""
 
 
-## A player's wait goes with them through an exit (#2334): a berry draught drunk on the forest's
-## exit keeps them waiting in the glade they walk into, until 10 s after the drink and no longer.
+## A player's wait goes with them through an exit (#2334): a pondweed draught drunk on the forest's
+## exit keeps them waiting in the glade they walk into, until 10 s after the drink and no longer. A
+## Ward, since a Mend for a player at full HP would be refused (#2311).
 func _check_through_exit() -> String:
 	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.FOREST)
 	for direction: int in FlowSteps.INTO_GLADE.slice(0, -1):
 		_walk_in(world, direction)
 	var profile: Profile = Profile.new()
-	profile.materials.assign({ "draught_berry": 2 })
+	profile.materials.assign({ "draught_pondweed": 2 })
 	var forest: GameState = world.instances[FlowSteps.FOREST]
-	var refusal: String = TonicDrinking.drink(profile, forest, 0, "draught_berry")
+	var refusal: String = TonicDrinking.drink(profile, forest, 0, "draught_pondweed")
 	if not refusal.is_empty() or profile.outbox.entries.size() != 1:
 		return "a draught on the forest's exit was refused or posted nothing: " + refusal
 	var command: Command = Command.new()
@@ -417,13 +443,13 @@ func _check_through_exit() -> String:
 	if world.instance_of(0) != FlowSteps.GLADE:
 		return "walking southeast off the forest's exit didn't lead into the glade"
 	var glade: GameState = world.instances[FlowSteps.GLADE]
-	var why: String = _refused(profile, glade, "draught_berry", "a draught just through an exit")
+	var why: String = _refused(profile, glade, "draught_pondweed", "a draught just through an exit")
 	while why.is_empty() and world.tick < drunk_at + DrinkingFeature.WAIT_TICKS - 1:
 		world.step(FlowSteps.command(Command.NO_MOVE))
 	if why.is_empty():
-		why = _refused(profile, glade, "draught_berry", "a draught through an exit a tick early")
+		why = _refused(profile, glade, "draught_pondweed", "a draught through an exit a tick early")
 	world.step(FlowSteps.command(Command.NO_MOVE))
-	refusal = TonicDrinking.problem(profile, glade, 0, "draught_berry")
+	refusal = TonicDrinking.problem(profile, glade, 0, "draught_pondweed")
 	if why.is_empty() and not refusal.is_empty():
 		why = "a draught through an exit was refused once the wait was over: " + refusal
 	return why
@@ -440,3 +466,222 @@ static func _walk_in(world: World, direction: int) -> void:
 static func _idle(state: GameState) -> void:
 	var commands: Array[Command] = [Command.new()]
 	Simulation.step(state, commands)
+
+
+## Every timed effect (#2311) and the refused Mend, each checked on its own, so each one that's
+## wrong is named.
+func _check_effects() -> String:
+	var wrong: Array[String] = []
+	for why: String in [
+		_check_full_mend(),
+		_check_regrowth(),
+		_check_regrowth_knocked_down(),
+		_check_ward(),
+		_check_fortify_and_quicken(),
+	]:
+		if not why.is_empty():
+			wrong.append(why)
+	return "; ".join(wrong)
+
+
+## A berry draught for a player at full HP is refused before anything is spent: it would mend
+## nothing.
+func _check_full_mend() -> String:
+	var state: GameState = FlowSteps.rules_on(FlowSteps.BASIC, Region.disc(3), 42)
+	var _player: Entity = state.add_entity(0, Vector2i.ZERO)
+	var profile: Profile = Profile.new()
+	profile.materials.assign({ "draught_berry": 1 })
+	return _refused(profile, state, "draught_berry", "a Mend for a player at full HP")
+
+
+## A moss draught (25 thousandths for 20 s) drunk at 1 HP heals the player at the end of every
+## second for 20 s, and no more after.
+func _check_regrowth() -> String:
+	var state: GameState = FlowSteps.rules_on(FlowSteps.BASIC, Region.disc(3), 42)
+	var why: String = _drank_moss(state)
+	var player: Entity = state.player(0)
+	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
+	var each: int = maxi(1, Fixed.scale(HealthFeature.PLAYER_HP, 25))
+	var seen: Array[int] = []
+	var expected: Array[int] = [1, 1 + each, 1 + 20 * each, 1 + 20 * each]
+	for ticks: int in [
+		Simulation.TICKS_PER_SECOND - 1,
+		1,
+		19 * Simulation.TICKS_PER_SECOND,
+		Simulation.TICKS_PER_SECOND,
+	]:
+		for _tick: int in ticks:
+			_idle(state)
+		seen.append(health.hp_of(state, player.id))
+	if why.is_empty() and seen != expected:
+		why = "a moss draught left the player %s HP over 21 s, not %s" % [seen, expected]
+	return why
+
+
+## A moss draught's Regrowth ends once its player is knocked down: they heal no more.
+func _check_regrowth_knocked_down() -> String:
+	var state: GameState = FlowSteps.rules_on(FlowSteps.BASIC, Region.disc(3), 42)
+	var why: String = _drank_moss(state)
+	var player: Entity = state.player(0)
+	for _tick: int in Simulation.TICKS_PER_SECOND:
+		_idle(state)
+	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
+	var healed: int = health.hp_of(state, player.id)
+	var knockdown: KnockdownFeature = state.feature(KnockdownFeature.ID) as KnockdownFeature
+	knockdown.knock_down(player.id)
+	for _tick: int in 3 * Simulation.TICKS_PER_SECOND:
+		_idle(state)
+	if why.is_empty() and (healed == 1 or health.hp_of(state, player.id) != healed):
+		why = "a knocked-down player's Regrowth healed them from %d to %d HP" % [
+			healed,
+			health.hp_of(state, player.id),
+		]
+	return why
+
+
+## Adds player 0 to `state`, hurts them down to 1 HP and has them drink a moss draught; returns
+## why that went wrong, or "".
+func _drank_moss(state: GameState) -> String:
+	var player: Entity = state.add_entity(0, Vector2i.ZERO)
+	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
+	var _hurt: bool = health.hurt(state, player.id, HealthFeature.PLAYER_HP - 1)
+	var profile: Profile = Profile.new()
+	profile.materials.assign({ "draught_moss": 1 })
+	return _drunk(profile, state, "draught_moss")
+
+
+## A pondweed draught (200 thousandths for 30 s) takes its guard off every hit a wild monster lands
+## on the player while it lasts, and none once it's over.
+func _check_ward() -> String:
+	var state: GameState = _fight("🔴🐸🟫", false)
+	var profile: Profile = Profile.new()
+	profile.materials.assign({ "draught_pondweed": 1 })
+	var hit: Array[int] = _fought(state, 2 * Simulation.TICKS_PER_SECOND + 1)["wild"]
+	# A hit of 1 can't be guarded below 1, so it couldn't show the Ward.
+	if hit.is_empty() or not _all(hit, hit[0]) or hit[0] < 2:
+		return "a wild monster's hits on the player before a Ward were %s" % [hit]
+	var why: String = _drunk(profile, state, "draught_pondweed")
+	var guarded: int = maxi(1, Fixed.scale(hit[0], 800))
+	var warded: Array[int] = _fought(state, 2 * Simulation.TICKS_PER_SECOND + 1)["wild"]
+	# Past the Ward's 30 s, counted from the tick after the drink.
+	var _rest: Dictionary = _fought(state, 29 * Simulation.TICKS_PER_SECOND)
+	var after: Array[int] = _fought(state, 2 * Simulation.TICKS_PER_SECOND + 1)["wild"]
+	if why.is_empty() and not (_all(warded, guarded) and _all(after, hit[0])):
+		why = "a Ward of 200 left hits of %s on the player, then %s, not %d then %d" % [
+			warded,
+			after,
+			guarded,
+			hit[0],
+		]
+	return why
+
+
+## A bone tonic (+200 thousandths for 20 s) scales the companion's auto attacks and its special
+## once after the type chart; a feather tonic (200 thousandths for 20 s) drunk while it lasts ends
+## it, and shortens the companion's wait between strikes by its share instead.
+func _check_fortify_and_quicken() -> String:
+	var state: GameState = _fight("🔴🟫🐸", true)
+	var profile: Profile = Profile.new()
+	profile.materials.assign({ "tonic_bone": 1, "tonic_feather": 1 })
+	var before: Dictionary = _fought(state, 2 * Simulation.TICKS_PER_SECOND + 1, true)
+	var hit: Array[int] = before["companion"]
+	var special: Array[int] = before["special"]
+	if hit.is_empty() or not _all(hit, hit[0]) or special.size() != 1:
+		return "the companion struck %s and fired %s before a Fortify" % [hit, special]
+	var why: String = _drunk(profile, state, "tonic_bone")
+	var fortified: Dictionary = _fought(state, 11 * Simulation.TICKS_PER_SECOND, true)
+	var strong: Array[int] = [Fixed.scale(hit[0], 1200), Fixed.scale(special[0], 1200)]
+	var strikes: Array[int] = fortified["companion"]
+	var specials: Array[int] = fortified["special"]
+	if why.is_empty() and not (_all(strikes, strong[0]) and _all(specials, strong[1])):
+		why = "a Fortify of 200 left strikes of %s and specials of %s, not %d and %d" % [
+			strikes,
+			specials,
+			strong[0],
+			strong[1],
+		]
+	# Checked even after a wrong Fortify, so a wrong Quicken is named too.
+	return _joined(why, _check_quicken(profile, state, hit[0]))
+
+
+## The problems `first` and `second`, either of them "", as one.
+static func _joined(first: String, second: String) -> String:
+	if first.is_empty() or second.is_empty():
+		return first + second
+	return first + "; " + second
+
+
+## A feather tonic (200 thousandths for 20 s) drunk by the companion of player 0 in `state`, which
+## strikes for `plain` without a Fortify, ends its Fortify and shortens its wait between strikes by
+## its share.
+func _check_quicken(profile: Profile, state: GameState, plain: int) -> String:
+	var why: String = _drunk(profile, state, "tonic_feather")
+	var quickened: Dictionary = _fought(state, 3 * Simulation.TICKS_PER_SECOND)
+	var at: Array[int] = quickened["at"]
+	var waits: Array[int] = []
+	for i: int in range(1, at.size()):
+		waits.append(at[i] - at[i - 1])
+	var wait: int = Fixed.scale(CompanionAttackFeature.STRIKE_TICKS, 800)
+	var strikes: Array[int] = quickened["companion"]
+	if why.is_empty() and not (waits.size() >= 2 and _all(waits, wait) and _all(strikes, plain)):
+		why = "a Quicken after a Fortify left strikes of %s every %s ticks, not %d every %d" % [
+			strikes,
+			waits,
+			plain,
+			wait,
+		]
+	return why
+
+
+## Whether `values` holds something and all of it is `value`.
+static func _all(values: Array[int], value: int) -> bool:
+	return not values.is_empty() and values.count(value) == values.size()
+
+
+## Senwel Sael's rules on a region of one row, `grid`, whose 🐸 is a wild monster, with only
+## FIGHT_RULES on, player 0 on its start and, when `with_companion`, their companion out beside
+## them. The wild monster and the companion are held still, so they stand where they are.
+func _fight(grid: String, with_companion: bool) -> GameState:
+	var legend: String = "- `🐸`: a wild monster, always %s\n" % FIGHTER
+	var state: GameState = FlowSteps.rules_on(
+		FlowSteps.BASIC,
+		FlowSteps.region(grid, legend),
+		42,
+	)
+	for each: Feature in state.features:
+		state.set_enabled(each.id(), FIGHT_RULES.has(each.id()))
+	if with_companion:
+		FlowSteps.carry(state, 0, [FIGHTER])
+	var _player: Entity = state.add_entity(0, state.region.starts[0])
+	_idle(state)
+	var movement: MovementFeature = state.feature(MovementFeature.ID) as MovementFeature
+	for entity: Entity in state.entities:
+		if entity.slot == Entity.NO_SLOT:
+			movement.hold(entity.id, true)
+	return state
+
+
+## Steps `state` `ticks` times with player 0 standing, firing their special when `fire`, everyone
+## back at full HP before each tick so nobody falls. Returns the damage of the companion's strikes
+## ("companion"), of its specials ("special") and of the wild monster's hits ("wild"), and the
+## ticks, counted from 0, the companion struck on ("at").
+func _fought(state: GameState, ticks: int, fire: bool = false) -> Dictionary:
+	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
+	var companion: Array[int] = []
+	var special: Array[int] = []
+	var wild: Array[int] = []
+	var at: Array[int] = []
+	var commands: Array[Command] = [Command.new(Command.NO_MOVE, fire)]
+	for tick: int in ticks:
+		for entity: Entity in state.entities:
+			health.heal(state, entity.id, Fixed.MAX_AMOUNT)
+		Simulation.step(state, commands)
+		for event: RefCounted in state.events:
+			if event is CompanionStruck:
+				companion.append((event as CompanionStruck).damage)
+				at.append(tick)
+			elif event is SpecialStruck:
+				special.append((event as SpecialStruck).damage)
+			elif event is WildMonsterStruck:
+				wild.append((event as WildMonsterStruck).damage)
+	return { "companion": companion, "special": special, "wild": wild, "at": at }

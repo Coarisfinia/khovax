@@ -9,7 +9,9 @@ extends Feature
 ## sealing in a ring (#409): the ring has them, and its seal was worked out from their HP. Each hit
 ## raises CompanionStruck. A companion that just joined or has nothing to strike is ready at once.
 ## Its passives that hasten it when hurt or heal it at rest work here too (#1500,
-## CompanionPassiveEffects).
+## CompanionPassiveEffects), and so do the Quicken and the Fortify it drank (#2311,
+## TonicEffectsFeature): one shortens its wait with its haste, the other scales its strikes once
+## after the type chart.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "companion_attacks"
@@ -52,6 +54,7 @@ func after() -> Array[String]:
 		HidingFeature.ID,
 		DominationFeature.ID,
 		TypeEffectivenessFeature.ID,
+		TonicEffectsFeature.ID,
 	]
 	return earlier
 
@@ -78,8 +81,8 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 
 
 ## The companion `companion_id`, a `species`, strikes `target` for its strength as it leans, after
-## the type chart, then waits STRIKE_TICKS, shortened or lengthened by its leaning's speed, and
-## shortened by its haste when hurt.
+## the type chart and its Fortify, then waits STRIKE_TICKS, shortened or lengthened by its leaning's
+## speed, and shortened by its haste when hurt and its Quicken.
 func _strike(
 		state: GameState,
 		wild: WildMonsterFeature,
@@ -93,6 +96,7 @@ func _strike(
 	var species_strength: int = wild.strengths.get(species, 1)
 	var strength: int = CompanionGrowth.stat(species_strength, leaning.strength)
 	var damage: int = TypeEffectivenessFeature.scaled(state, strength, species, false, struck)
+	damage = TonicEffectReads.fortified(state, companion_id, damage)
 	wild.wound(state, target, damage)
 	var wait: int = CompanionGrowth.ticks(STRIKE_TICKS, leaning.speed)
 	_waits[companion_id] = CompanionPassiveEffects.hastened(

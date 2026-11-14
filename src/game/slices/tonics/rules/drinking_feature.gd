@@ -5,12 +5,14 @@ extends Feature
 ## profile's outbox (#818, OutboxEntry.DRINK) whose data is the brew's code (`code_of`), posted as
 ## the brew is spent from the profile (TonicDrinking), so it's applied once (OutboxReceipts). A Mend
 ## (TonicDose.mend) heals its target at once by its share of their full HP, at least 1 HP
-## (HealthFeature.heal). Every other brew is drunk all the same but does nothing yet: the timed
-## effects are #2311, Shared and Slow-release #2312. After a drink the player waits WAIT_TICKS
-## before the next, kept in their world store (#724) as the world tick it ends on (UNTIL), so the
-## wait goes with them through an exit into another instance (#2334). A request this can't carry
-## out (an unknown brew, no target that can use it, or while waiting) is acknowledged and changes
-## nothing; the profile refuses those before spending (`problem`).
+## (HealthFeature.heal); a Regrowth, Ward, Quicken or Fortify (#2311) gives its target that effect
+## for its time (TonicEffectsFeature). A target has one effect at a time: whatever it drinks ends
+## the one it had. Shared's reach and Slow-release's wait are #2312: a Slow-release brew is drunk
+## all the same but does nothing yet. After a drink the player waits WAIT_TICKS before the next,
+## kept in their world store (#724) as the world tick it ends on (UNTIL), so the wait goes with them
+## through an exit into another instance (#2334). A request this can't carry out (an unknown brew,
+## no target that can use it, a Mend for a target at full HP, or while waiting) is acknowledged and
+## changes nothing; the profile refuses those before spending (`problem`).
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "drinking"
@@ -32,10 +34,15 @@ func id() -> String:
 	return ID
 
 
-## The HP it heals, the knockdowns, whose downed players drink no draught, and the companions,
-## whose out one drinks a tonic.
+## The HP it heals, the knockdowns, whose downed players drink no draught, the companions, whose out
+## one drinks a tonic, and the effects over time it gives.
 func requires() -> Array[String]:
-	var needed: Array[String] = [KnockdownFeature.ID, HealthFeature.ID, CompanionFeature.ID]
+	var needed: Array[String] = [
+		KnockdownFeature.ID,
+		HealthFeature.ID,
+		TonicEffectsFeature.ID,
+		CompanionFeature.ID,
+	]
 	return needed
 
 
@@ -72,22 +79,28 @@ static func wait_of(state: GameState, slot: int) -> int:
 	return left if left > 0 and left <= WAIT_TICKS else 0
 
 
-## The player in `slot` drinks the brew `code`, if they can: its target is helped and they wait.
+## The player in `slot` drinks the brew `code`, if they can: its target is helped, in place of the
+## effect it had, and they wait.
 func _drink(state: GameState, slot: int, code: int) -> void:
 	var dose: TonicDose = doses.get(code)
-	if dose == null or not problem(state, slot, dose.for_player).is_empty():
+	if dose == null or not problem(state, slot, dose).is_empty():
 		return
 	state.store(slot, ID)[UNTIL] = state.world_tick + WAIT_TICKS
+	var target_id: int = target_of(state, slot, dose.for_player)
+	var effects: TonicEffectsFeature = state.feature(TonicEffectsFeature.ID) as TonicEffectsFeature
+	effects.end(target_id)
 	if dose.mend > 0:
-		var target_id: int = target_of(state, slot, dose.for_player)
 		var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
 		var full_hp: int = health.max_hp_of(state, target_id)
 		health.heal(state, target_id, maxi(1, Fixed.scale(full_hp, dose.mend)))
+	elif not dose.effect.is_empty():
+		effects.give(target_id, dose.effect, dose.strength, dose.ticks)
 
 
-## Why the player in `slot` can't drink a brew now, a draught (`for_player`) or a tonic, or "":
-## they're here, not waiting, and its target can use it.
-func problem(state: GameState, slot: int, for_player: bool) -> String:
+## Why the player in `slot` can't drink the brew `dose` does now, or "": they're here, not waiting,
+## and its target can use it (a Mend, one that isn't at full HP).
+func problem(state: GameState, slot: int, dose: TonicDose) -> String:
+	var for_player: bool = dose.for_player
 	var player: Entity = state.player(slot)
 	if player == null:
 		return "no player drinks here"
@@ -97,8 +110,12 @@ func problem(state: GameState, slot: int, for_player: bool) -> String:
 			wait + Simulation.TICKS_PER_SECOND - 1,
 			Simulation.TICKS_PER_SECOND,
 		)
-	if target_of(state, slot, for_player) == 0:
+	var target_id: int = target_of(state, slot, for_player)
+	if target_id == 0:
 		return "a knocked-down player can't drink" if for_player else "no companion is out"
+	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
+	if dose.mend > 0 and health.hp_of(state, target_id) >= health.max_hp_of(state, target_id):
+		return "nothing to mend: already at full HP"
 	return ""
 
 

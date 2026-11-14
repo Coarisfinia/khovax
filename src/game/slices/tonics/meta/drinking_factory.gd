@@ -1,8 +1,9 @@
 class_name DrinkingFactory
 extends RefCounted
 ## Builds an instance's drinking feature (#2310, #823) with what each brew does, by the code of its
-## id, from the tonics' content data: who it helps, and a Mend's share. Tonics that don't load, or
-## two brews sharing a code, are an error, and those brews do nothing then.
+## id, from the tonics' content data: who it helps, a Mend's share, or the effect over time it gives
+## (#2311). Tonics that don't load are an error, and so is a brew whose code another brew filed
+## first: that one keeps the code, and the later one is left out, so drinking it is refused.
 
 
 static func build(_setup: FeatureSetup) -> DrinkingFeature:
@@ -20,14 +21,18 @@ static func build(_setup: FeatureSetup) -> DrinkingFeature:
 	return DrinkingFeature.new(doses)
 
 
-## What drinking `brew` does: who it helps and what it mends.
+## What drinking `brew` does: who it helps, and what it mends or which effect over time it gives,
+## at its potency for its seconds. A Slow-release brew does nothing yet: its wait is #2312.
 static func _dose_of(brew: TonicBrew) -> TonicDose:
-	return TonicDose.new(brew.target == "player", _mend_of(brew))
-
-
-## The share of its target's full HP `brew` heals at once: a Mend's potency, unless it waits
-## (Slow-release, #2312); 0 for every other brew.
-static func _mend_of(brew: TonicBrew) -> int:
-	if brew.effect != TonicBrew.INSTANT or brew.delay_seconds > 0:
-		return 0
-	return brew.potency
+	var dose: TonicDose = TonicDose.new(brew.target == "player")
+	if brew.delay_seconds > 0:
+		return dose
+	if brew.effect == TonicBrew.INSTANT:
+		dose.mend = brew.potency
+	elif TonicEffectsFeature.KINDS.has(brew.effect):
+		dose.effect = brew.effect
+		dose.strength = brew.potency
+		dose.ticks = brew.seconds * Simulation.TICKS_PER_SECOND
+	else:
+		push_error("brew %s has an effect no rule knows: %s" % [brew.id, brew.effect])
+	return dose

@@ -18,7 +18,8 @@ extends Feature
 ## on a companion follows the type chart where the instance has it (TypeEffectivenessFeature, #626).
 ## A passive that guards takes its share off every hit on whom it helps (#616), only while its
 ## monster is out (CompanionPassives): a self passive off its
-## companion, a player passive off its player. A hit that lands still deals at least 1 (#702).
+## companion, a player passive off its player. A Ward drunk (#2311, TonicEffectsFeature) adds its
+## guard to theirs. A hit that lands still deals at least 1 (#702).
 ## A self passive that dodges (#1499, Zirki-kirki) makes its share of the hits on its companion
 ## miss, by count and never on a roll (#2234, #1602): each hit adds the dodge to the companion's
 ## count, and the hit that makes a whole misses, so a fifth is every fifth hit. A miss deals
@@ -85,8 +86,9 @@ func requires() -> Array[String]:
 
 ## The wild monsters that strike, which an instance without wild monster spots lacks (#884): nothing
 ## strikes there.
+## The wild monsters, and the Wards drunk, which an instance may lack.
 func after() -> Array[String]:
-	var earlier: Array[String] = [WildMonsterFeature.ID]
+	var earlier: Array[String] = [WildMonsterFeature.ID, TonicEffectsFeature.ID]
 	return earlier
 
 
@@ -285,12 +287,14 @@ static func _on_companion(state: GameState, struck: WildMonsterStruck) -> WildMo
 
 ## `damage` on the companion or player `target_id`, less the guards of the passives working for them
 ## now (#616): a companion's own, or the player's companion's while it's out, its web's included
-## (#1472). All of them together
+## (#1472), and of the Ward they drank (#2311). All of them together
 ## take off less than a whole hit, and a hit that deals anything deals at least 1 (#702).
 func _guarded(state: GameState, target_id: int, on_companion: bool, damage: int) -> int:
-	if damage == 0 or guards.is_empty():
+	if damage == 0:
 		return damage
-	var guard: int = 0
+	var guard: int = TonicEffectReads.strength_of(state, target_id, TonicEffectsFeature.WARD)
+	if guards.is_empty() and guard == 0:
+		return damage
 	for passive: String in _passives(state, target_id, on_companion):
 		guard += guards.get(passive, 0)
 	guard = mini(guard, Fixed.ONE - 1)
