@@ -133,13 +133,14 @@ static func _region_for(
 
 ## The named blueprint's region for `seed_value`, from its `variant_name`'s region (#529) or, for
 ## "", its own: the region file as it is, or its region pieces arranged, the start piece first and
-## the others by file name, and turned if the blueprint is. Its `problem` says what's wrong.
+## the others by file name, and turned if the blueprint is, with its standing stone (_with_stone).
+## Its `problem` says what's wrong.
 static func region_of(instance_name: String, seed_value: int, variant_name: String = "") -> Region:
 	var region_name: String = variant_name if not variant_name.is_empty() else instance_name
 	var files: RegionFiles = RegionFiles.cached(region_name)
 	if files.whole:
 		var whole: String = files.texts.values()[0]
-		return _lead_exits(read_region(whole), instance_name)
+		return _with_stone(_lead_exits(read_region(whole), instance_name), instance_name)
 	var texts: Dictionary[String, String] = _piece_texts(instance_name, region_name)
 	var pieces: Array[Region] = []
 	for path: String in _piece_order(texts):
@@ -154,7 +155,15 @@ static func region_of(instance_name: String, seed_value: int, variant_name: Stri
 		seed_value,
 		named != null and named.turned,
 	)
-	return _lead_exits(arranged, instance_name)
+	return _with_stone(_lead_exits(arranged, instance_name), instance_name)
+
+
+## `region`, the named blueprint's, with its standing stone (WaystonePlacement, #1872) when a realm
+## holds the blueprint: the test-only regions no realm holds stay as their files have them.
+static func _with_stone(region: Region, instance_name: String) -> Region:
+	if Realms.holding(instance_name) != null:
+		WaystonePlacement.place(region)
+	return region
 
 
 ## The text of each region piece of the region `region_name`, by its path. A variant's folder
