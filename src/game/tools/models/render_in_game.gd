@@ -204,8 +204,8 @@ func _place() -> void:
 	_side_camera = Camera3D.new()
 	_main.add_child(_side_camera)
 	_side_camera.fov = FOV
+	var points: PackedVector3Array = framed_points(model)
 	_bounds = _bounds_of(model)
-	var points: PackedVector3Array = _points_of(model)
 	var face: PackedVector3Array = PackedVector3Array(Array(points).filter(_in_face(model)))
 	# A model without vertices is framed by its bounds' corners, and a face without any by all of
 	# it.
@@ -347,7 +347,7 @@ func _posed_over(
 	var points: PackedVector3Array = []
 	for time: float in times:
 		animations.seek(time, true)
-		var posed: PackedVector3Array = _points_of(model)
+		var posed: PackedVector3Array = points_of(model)
 		if _from == "face":
 			var face: PackedVector3Array = PackedVector3Array(Array(posed).filter(_in_face(model)))
 			posed = posed if face.is_empty() else face
@@ -504,8 +504,13 @@ func _box_of(points: PackedVector3Array) -> AABB:
 	return box
 
 
+## What the still shots frame of `model`: its vertices in the world.
+static func framed_points(model: Node3D) -> PackedVector3Array:
+	return points_of(model)
+
+
 ## Every vertex of every mesh under `model`, in the world, in the pose its skeleton holds now.
-func _points_of(model: Node3D) -> PackedVector3Array:
+static func points_of(model: Node3D) -> PackedVector3Array:
 	var points: PackedVector3Array = []
 	for node: Node in model.find_children("*", "MeshInstance3D", true, false):
 		var mesh: MeshInstance3D = node as MeshInstance3D
@@ -525,7 +530,7 @@ func _points_of(model: Node3D) -> PackedVector3Array:
 
 ## Where each of `mesh`'s skin binds moves its vertices in the skeleton's current pose, or nothing
 ## when the mesh isn't skinned: what the renderer skins it by.
-func _bones_of(mesh: MeshInstance3D) -> Array[Transform3D]:
+static func _bones_of(mesh: MeshInstance3D) -> Array[Transform3D]:
 	var skeleton: Skeleton3D = mesh.get_node_or_null(mesh.skeleton) as Skeleton3D
 	var bones: Array[Transform3D] = []
 	if skeleton == null or mesh.skin == null:
@@ -540,7 +545,7 @@ func _bones_of(mesh: MeshInstance3D) -> Array[Transform3D]:
 
 
 ## `vertices` skinned: each moved by its `weights` of its `binds`' `bones` (four or eight each).
-func _skinned(
+static func _skinned(
 		vertices: PackedVector3Array,
 		binds: PackedInt32Array,
 		weights: PackedFloat32Array,
