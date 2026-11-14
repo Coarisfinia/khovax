@@ -1,13 +1,13 @@
 """The sandstone turret (#1836, from #1824): an octagonal tower of pale sandstone blocks with a
 pointed roof of red clay tiles and one arrow slit, the tower at a hex corner where the fliers'
 realm's (#1834) walls meet (the mossy sandstone wall, #1832). Its shape and its paint are the
-owner's generated model (`sources/sandstone_turret.glb`, from the download by import_source.py:
+owner's generated model (`source.glb` beside this script, from the download by import_source.py:
 see the asset's SOURCE.md); the paint is the download's own, which held up on every side, its
 UVs carried onto the cut pieces by lib/source_uv.py. A
 static model: no rig and no clips.
 
     uv run --locked src/game-models/blender.py --background --factory-startup \
-        --python src/game-models/sandstone_turret.py -- resourcepacks/default/models/sandstone-turret/sandstone_turret.glb
+        --python resourcepacks/default/models/sandstone-turret/build/sandstone_turret.py -- resourcepacks/default/models/sandstone-turret/sandstone_turret.glb
 
 It's a tower on the world's scale (lib/world_scale.py, #1837): it stands at a hex corner, its
 origin at the corner, and the wall pieces' ends meet inside it. The prompt asked for a tower as
@@ -31,11 +31,12 @@ import numpy
 from mathutils import Matrix, Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
+# The model library, src/game-models/lib/, from this model's build folder (#2438).
+sys.path.insert(0, os.path.normpath(os.path.join(HERE, *[os.pardir] * 5, "src", "game-models")))
 
 from lib import fixed_order, scene, source_uv, world_scale  # noqa: E402
 
-SOURCE = os.path.join(HERE, "sources", "sandstone_turret.glb")
+SOURCE = os.path.join(HERE, "source.glb")
 FPS = 30
 # Its kind on the world's scale (lib/world_scale.py): a tower at a hex corner, above the walls.
 WORLD_SCALE = "tower"
