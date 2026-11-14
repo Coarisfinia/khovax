@@ -1,6 +1,6 @@
 """The Tolvakkor (#1770): the Kalvrakkor's ice form, the frost side taken over the whole hound, in
 a full suit of ice armour under a helmet with a crest of frost feathers. Its mesh, paint and rig
-come from the owner's generated model (`sources/tolvakkor.glb`, made by import_source.py from the
+come from the owner's generated model (`source.glb` beside this script, made by import_source.py from the
 download, fitted to its hex as a large monster: see the asset's SOURCE.md). The owner's vibe: "armored
 frost doggy incoming. very sturdy vibe.", so it moves as a heavy thing: short lifts of its paws, a
 shallow bob, a slow wind-up to its Attack, a helmet-first slam, and a blow barely shifts it.
@@ -14,7 +14,7 @@ It names the generator's bones to the library's quadruped scheme and animates ev
 with the library's clips, its legs planted by lib/adopted.py.
 
     uv run --locked src/game-models/blender.py --background --factory-startup \
-        --python src/game-models/tolvakkor.py -- resourcepacks/default/models/tolvakkor/tolvakkor.glb
+        --python resourcepacks/default/models/tolvakkor/build/tolvakkor.py -- resourcepacks/default/models/tolvakkor/tolvakkor.glb
 
 It prints the speeds the motion check (src/game-models/check_motion.py) takes. `NAME=value`
 after the output path sets one of its GAIT values (lib/tuning.py), for the gait sweep
@@ -33,12 +33,13 @@ import numpy
 from mathutils import Matrix, Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
+# The model library, src/game-models/lib/, from this model's build folder (#2438).
+sys.path.insert(0, os.path.normpath(os.path.join(HERE, *[os.pardir] * 5, "src", "game-models")))
 
 from lib import adopted, attachments, clips, legs, marked_eyes, metrics, repaint, rigged, scene, tuning  # noqa: E402
 from lib.materials import palette  # noqa: E402
 
-SOURCE = os.path.join(HERE, "sources", "tolvakkor.glb")
+SOURCE = os.path.join(HERE, "source.glb")
 FPS = 30
 SCALE = 1.0
 

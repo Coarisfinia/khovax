@@ -1,6 +1,6 @@
 """The Frostfire Hound (#1609): a lean, long-eared hound, magma on its right side and ice on its
 left, with one magma tail and one icy tail. Its mesh and rig come from the owner's generated
-model (`sources/frostfire_hound.glb`, made by import_source.py from the download, fitted to its
+model (`source.glb` beside this script, made by import_source.py from the download, fitted to its
 hex as a regular monster: see the asset's SOURCE.md). The generator's paint was a patchwork, so
 this script paints the texture anew from where each texel lies on the body (lib/frostfire.py,
 which its pup, the Kavrikka, shares), as the owner asked on the issue:
@@ -18,7 +18,7 @@ It names the generator's bones to the library's quadruped scheme and animates ev
 with the library's clips, its legs planted by lib/adopted.py.
 
     uv run --locked src/game-models/blender.py --background --factory-startup \
-        --python src/game-models/frostfire_hound.py -- resourcepacks/default/models/frostfire_hound/frostfire_hound.glb
+        --python resourcepacks/default/models/frostfire_hound/build/frostfire_hound.py -- resourcepacks/default/models/frostfire_hound/frostfire_hound.glb
 
 It prints the speeds the motion check (src/game-models/check_motion.py) takes. `NAME=value`
 after the output path sets one of its GAIT values (lib/tuning.py), for the gait sweep
@@ -38,11 +38,12 @@ import numpy
 from mathutils import Matrix, Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
+# The model library, src/game-models/lib/, from this model's build folder (#2438).
+sys.path.insert(0, os.path.normpath(os.path.join(HERE, *[os.pardir] * 5, "src", "game-models")))
 
 from lib import adopted, attachments, clips, frostfire, metrics, repaint, rigged, scene, tuning  # noqa: E402
 
-SOURCE = os.path.join(HERE, "sources", "frostfire_hound.glb")
+SOURCE = os.path.join(HERE, "source.glb")
 FPS = 30
 SCALE = 1.0
 

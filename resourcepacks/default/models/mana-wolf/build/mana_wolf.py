@@ -3,7 +3,7 @@ runes, rigged and animated. Only its parameters and its own parts live here; the
 are the shared library in src/game-models/lib/ (model skill).
 
     uv run --locked src/game-models/blender.py --background --factory-startup \
-        --python src/game-models/mana_wolf.py -- resourcepacks/default/models/mana-wolf/mana_wolf.glb
+        --python resourcepacks/default/models/mana-wolf/build/mana_wolf.py -- resourcepacks/default/models/mana-wolf/mana_wolf.glb
 
 It prints the speeds the motion check (src/game-models/check_motion.py) takes. `NAME=value`
 after the output path sets one of its GAIT values (lib/tuning.py), for the gait sweep
@@ -17,7 +17,9 @@ import math
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+HERE = os.path.dirname(os.path.abspath(__file__))
+# The model library, src/game-models/lib/, from this model's build folder (#2438).
+sys.path.insert(0, os.path.normpath(os.path.join(HERE, *[os.pardir] * 5, "src", "game-models")))
 
 from lib import attachments, body, clips, eyes, marked_eyes, metrics, muzzle, parts, pulse, quadruped, scene, surface, symmetry, tuning, weights, wisps  # noqa: E402
 from lib.materials import palette  # noqa: E402

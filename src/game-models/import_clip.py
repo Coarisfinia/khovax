@@ -6,8 +6,8 @@ the body (lib/clip_sources.py), which a clip library's script merges with the ot
 
 Meshy rigs one clip per export (#1934): the owner exports each clip from the same rigged body, and
 each becomes its own clip source, named after the clip the game plays (`Wave`), in the library's
-`clips/` folder (sources/player/clips/Wave.glb). `rest` instead of a clip name keeps only the rig at
-rest: the library's skeleton (sources/player/skeleton.glb), which every clip must share. The
+`clips/` folder, in its build folder (resourcepacks/default/models/player/build/clips/Wave.glb, #2438). `rest` instead of a clip name keeps only the rig at
+rest: the library's skeleton (resourcepacks/default/models/player/build/skeleton.glb), which every clip must share. The
 library's build checks that they do (lib/skeleton.py) and fails naming what differs."""
 
 import os

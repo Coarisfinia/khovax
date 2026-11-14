@@ -1,11 +1,11 @@
 """The starry egg (#1635): a cracked egg with a blob of night sky peeking out through the crack,
 two pale eyes on it. Its mesh and the shell's colour come from the owner's generated model
-(`sources/starry_egg.glb`, made by import_source.py from the download with its rig dropped: see
+(`source.glb` beside this script, made by import_source.py from the download with its rig dropped: see
 the asset's SOURCE.md). The blob inside gets our own starry sky (lib/starfield.py), drawn from a
 fixed seed, instead of the generator's paint. A static model: no rig and no clips.
 
     uv run --locked src/game-models/blender.py --background --factory-startup \
-        --python src/game-models/starry_egg.py -- resourcepacks/default/models/starry-egg/starry_egg.glb
+        --python resourcepacks/default/models/starry-egg/build/starry_egg.py -- resourcepacks/default/models/starry-egg/starry_egg.glb
 
 Blender is Z-up and it faces -Y (the game's +Z); the origin is at the egg's foot, in the middle of
 its hex. The source is already at the game's size (SCALE 1): it stands well inside its hex.
@@ -20,11 +20,12 @@ import bpy
 import numpy
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
+# The model library, src/game-models/lib/, from this model's build folder (#2438).
+sys.path.insert(0, os.path.normpath(os.path.join(HERE, *[os.pardir] * 5, "src", "game-models")))
 
 from lib import fixed_order, scene, starfield  # noqa: E402
 
-SOURCE = os.path.join(HERE, "sources", "starry_egg.glb")
+SOURCE = os.path.join(HERE, "source.glb")
 FPS = 30
 # Its kind on the world's scale (lib/world_scale.py): a thing standing on one hex.
 WORLD_SCALE = "prop"

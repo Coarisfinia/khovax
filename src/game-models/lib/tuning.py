@@ -1,7 +1,7 @@
 """A model script's gait values, set from its arguments (#1524), so the gait sweep
 (sweep_gait.py) can build it over a grid of them:
 
-    ... --python src/game-models/<name>.py -- <out.glb> [NAME=value ...]
+    ... --python resourcepacks/default/models/<folder>/build/<name>.py -- <out.glb> [NAME=value ...]
 
 Only the names the script offers can be set, each to a value of its default's type. Without any,
 the script builds exactly as committed (the rebuild check)."""

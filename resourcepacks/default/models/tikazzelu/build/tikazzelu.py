@@ -1,6 +1,6 @@
 """The Tikazzelu (#1732): the Tikazzir's first form, a ribbon sprite. A ball of pale ribbons wound
 round and round, two stiff ribbon loops on its top for wings, standing on two thin legs. Its mesh
-and colour come from the owner's generated model (`sources/tikazzelu.glb`, made by
+and colour come from the owner's generated model (`source.glb` beside this script, made by
 import_source.py from the download: see the asset's SOURCE.md). The generator couldn't rig it, so
 this script builds a flutterer's rig (lib/flutter.py) and animates every creature clip: it stands
 on its feet and flies to move. It has no eyes, by design (the owner, on #1732), and a slight violet
@@ -8,7 +8,7 @@ shine at its centre: a small glowing core inside the ribbons, swelling as it str
 channels (lib/pulse.py).
 
     uv run --locked src/game-models/blender.py --background --factory-startup \
-        --python src/game-models/tikazzelu.py -- resourcepacks/default/models/tikazzelu/tikazzelu.glb
+        --python resourcepacks/default/models/tikazzelu/build/tikazzelu.py -- resourcepacks/default/models/tikazzelu/tikazzelu.glb
 
 It prints the speeds the motion check (src/game-models/check_motion.py) takes. `NAME=value`
 after the output path sets one of its GAIT values (lib/tuning.py), for the gait sweep
@@ -26,12 +26,13 @@ import sys
 import bpy
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
+# The model library, src/game-models/lib/, from this model's build folder (#2438).
+sys.path.insert(0, os.path.normpath(os.path.join(HERE, *[os.pardir] * 5, "src", "game-models")))
 
 from lib import attachments, clips, flutter, metrics, parts, pulse, scene, tuning  # noqa: E402
 from lib.materials import palette  # noqa: E402
 
-SOURCE = os.path.join(HERE, "sources", "tikazzelu.glb")
+SOURCE = os.path.join(HERE, "source.glb")
 FPS = 30
 # A baby, smaller than the Tikazzir it grows into, well inside its hex, yet big enough to read
 # beside the player.

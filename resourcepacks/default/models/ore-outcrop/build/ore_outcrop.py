@@ -1,6 +1,6 @@
 """The ore outcrop (#1929): a boulder of broken stone with copper running through its cracks, the ore
 source in the mountains (the copper ore tile). Its shape is the owner's generated model, made
-without a texture (`sources/ore_outcrop.glb`, from the download by import_source.py: see the
+without a texture (`source.glb` beside this script, from the download by import_source.py: see the
 asset's SOURCE.md); its colours are the props' shared stone (lib/prop_paint.py, CC0 textures) with
 a darker shaded step, and the veins, the deep cracks between its chunks, as a material of their own,
 one flat copper tint (`prop_paint.flat`): another ore (iron, crystal) is this shape with another
@@ -8,7 +8,7 @@ colour on its veins (retexture first, #1847). No moss, so the veins read from th
 runes or writing (the owner, on #1929). A static model: no rig and no clips.
 
     uv run --locked src/game-models/blender.py --background --factory-startup \
-        --python src/game-models/ore_outcrop.py -- resourcepacks/default/models/ore-outcrop/ore_outcrop.glb
+        --python resourcepacks/default/models/ore-outcrop/build/ore_outcrop.py -- resourcepacks/default/models/ore-outcrop/ore_outcrop.glb
 
 Blender is Z-up; the origin is at the boulder's foot, in the middle of its hex, and it is sized to
 its hex as a prop (lib/footprint.py's `PROP`)."""
@@ -23,11 +23,12 @@ import numpy
 from mathutils import Matrix
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
+# The model library, src/game-models/lib/, from this model's build folder (#2438).
+sys.path.insert(0, os.path.normpath(os.path.join(HERE, *[os.pardir] * 5, "src", "game-models")))
 
 from lib import fixed_order, footprint, prop_paint, scene  # noqa: E402
 
-SOURCE = os.path.join(HERE, "sources", "ore_outcrop.glb")
+SOURCE = os.path.join(HERE, "source.glb")
 FPS = 30
 # Its kind on the world's scale (lib/world_scale.py): a thing standing on one hex.
 WORLD_SCALE = "prop"

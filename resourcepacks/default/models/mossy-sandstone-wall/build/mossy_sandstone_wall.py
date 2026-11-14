@@ -1,13 +1,13 @@
 """The mossy sandstone wall (#1832, from #1824): a wall piece of pillowy sandstone blocks in courses,
 the wall the fliers' realm (#1834) and the buildings (#1835) are built from. Its shape is the owner's
-generated model (`sources/mossy_sandstone_wall.glb`, from the download by import_source.py: see the
+generated model (`source.glb` beside this script, from the download by import_source.py: see the
 asset's SOURCE.md); its colours are the props' shared texture set (lib/prop_paint.py, CC0
 textures), mapped by this script: sandstone, moss on its top and ledges, darker joints and foot.
 The download's own paint (a patchwork that broke at the ends and the back) is dropped with it. A
 static model: no rig and no clips.
 
     uv run --locked src/game-models/blender.py --background --factory-startup \
-        --python src/game-models/mossy_sandstone_wall.py -- resourcepacks/default/models/mossy-sandstone-wall/mossy_sandstone_wall.glb
+        --python resourcepacks/default/models/mossy-sandstone-wall/build/mossy_sandstone_wall.py -- resourcepacks/default/models/mossy-sandstone-wall/mossy_sandstone_wall.glb
 
 It's a wall on the world's scale (lib/world_scale.py, #1837): an edge piece along Blender's X,
 centred on the origin at the edge's middle, `HEX_EDGE` long and `WALL_HEIGHT` tall, its ends cut
@@ -30,11 +30,12 @@ import numpy
 from mathutils import Matrix, Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
+# The model library, src/game-models/lib/, from this model's build folder (#2438).
+sys.path.insert(0, os.path.normpath(os.path.join(HERE, *[os.pardir] * 5, "src", "game-models")))
 
 from lib import fixed_order, prop_paint, scene, world_scale  # noqa: E402
 
-SOURCE = os.path.join(HERE, "sources", "mossy_sandstone_wall.glb")
+SOURCE = os.path.join(HERE, "source.glb")
 FPS = 30
 # Its kind on the world's scale (lib/world_scale.py): a wall piece along one hex edge.
 WORLD_SCALE = "wall"

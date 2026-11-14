@@ -1,6 +1,7 @@
 """Tests that the model checks refuse to pass on nothing (#2203): with no tracked model they fail,
 so a moved folder can't turn them off silently (the mouth check went dark that way, #2199), and an
-entry on a list of models fails when its file isn't tracked (the tails check's, run in Blender's
+entry on a list of models fails when its file isn't tracked, and a model's sources in its build
+folder (#2438) count as no model (the tails check's, run in Blender's
 container without git, when its file isn't there, #2373). No model changing is still fine.
 
     uv run --locked --package khovax-game-models src/game-models/test_model_lists.py
@@ -26,6 +27,9 @@ import check_tails
 # One creature with nothing wrong and on no list, so the only fault left is the lists' other entries.
 ONE_MODEL = ["resourcepacks/default/models/mana-pup/mana_pup.glb"]
 REAL_LISTED = listing._listed
+# Only the sources in a model's build folder (#2438), which are no model of the pack's.
+BUILD_ONLY = ["resourcepacks/default/models/kavrikka/build/source.glb",
+              "resourcepacks/default/models/player/build/clips/Walk.glb"]
 # A model that isn't there, from the game's folder.
 GONE = "resourcepacks/default/models/gone/gone.glb"
 
@@ -77,11 +81,12 @@ def main() -> int:
     failures = []
     with tempfile.TemporaryDirectory(prefix="test_model_lists_") as scratch:
         out = Path(scratch) / "listed"
-        tracked([])
-        for name, check in {**checks, "the rebuild check": rebuild,
-                            "the changed models": lambda: selection(out)}.items():
-            if exit_code(check) == 0:
-                failures.append(f"{name} passes with no tracked model")
+        for models, what in (([], "no tracked model"), (BUILD_ONLY, "only build folders' sources tracked")):
+            tracked(models)
+            for name, check in {**checks, "the rebuild check": rebuild,
+                                "the changed models": lambda: selection(out)}.items():
+                if exit_code(check) == 0:
+                    failures.append(f"{name} passes with {what}")
         tracked(ONE_MODEL)
         for name, check in checks.items():
             if exit_code(check) == 0:

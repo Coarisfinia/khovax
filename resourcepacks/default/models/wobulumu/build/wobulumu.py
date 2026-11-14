@@ -1,13 +1,13 @@
 """The Wobulumu (#1737): the Ombulumo's first form, a tadpole. A round head-and-body as one, pale
 underneath with glowing spots along its sides, and a tail ending in a soft fin; it wriggles over
 the ground on its belly. Its mesh and colour come from the owner's generated model
-(`sources/wobulumu.glb`, made by import_source.py from the download with `static`: see the
+(`source.glb` beside this script, made by import_source.py from the download with `static`: see the
 asset's SOURCE.md). The generator rigged it with one chain bent back on itself at the tail's tip,
 so this script drops that rig and builds a limbless one (lib/limbless.py), swaps the painted eyes
 for ours (lib/marked_eyes.py) and animates every creature clip.
 
     uv run --locked src/game-models/blender.py --background --factory-startup \
-        --python src/game-models/wobulumu.py -- resourcepacks/default/models/wobulumu/wobulumu.glb
+        --python resourcepacks/default/models/wobulumu/build/wobulumu.py -- resourcepacks/default/models/wobulumu/wobulumu.glb
 
 It prints the speeds the motion check (src/game-models/check_motion.py) takes. `NAME=value`
 after the output path sets one of its GAIT values (lib/tuning.py), for the gait sweep
@@ -24,12 +24,13 @@ import sys
 import bpy
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
+# The model library, src/game-models/lib/, from this model's build folder (#2438).
+sys.path.insert(0, os.path.normpath(os.path.join(HERE, *[os.pardir] * 5, "src", "game-models")))
 
 from lib import attachments, clips, limbless, marked_eyes, metrics, scene, tuning  # noqa: E402
 from lib.materials import material, palette  # noqa: E402
 
-SOURCE = os.path.join(HERE, "sources", "wobulumu.glb")
+SOURCE = os.path.join(HERE, "source.glb")
 FPS = 30
 # How much the source is shrunk, so its rest pose lies within its hex with room for its tail's
 # swing (check_footprint.py): a baby, smaller than the Ombulumo it grows into.

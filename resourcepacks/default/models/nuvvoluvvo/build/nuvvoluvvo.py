@@ -1,6 +1,6 @@
 """Nuvvoluvvo (#1620): the dream realm's big, round sleeper, a plump, low beast in pale dusk blue
 with long floppy ears, a paler belly and a patch of our own night sky on its fur. Its mesh, colour
-and rig come from the owner's generated model (`sources/nuvvoluvvo.glb`, made by import_source.py
+and rig come from the owner's generated model (`source.glb` beside this script, made by import_source.py
 from the download, its rig adopted by lib/rigged.py and fitted to its hex as a regular monster:
 see the asset's SOURCE.md). This script:
 
@@ -22,7 +22,7 @@ see the asset's SOURCE.md). This script:
   paws in the air, and back again.
 
     uv run --locked src/game-models/blender.py --background --factory-startup \
-        --python src/game-models/nuvvoluvvo.py -- resourcepacks/default/models/nuvvoluvvo/nuvvoluvvo.glb
+        --python resourcepacks/default/models/nuvvoluvvo/build/nuvvoluvvo.py -- resourcepacks/default/models/nuvvoluvvo/nuvvoluvvo.glb
 
 It prints the speeds the motion check (src/game-models/check_motion.py) takes. `NAME=value`
 after the output path sets one of its GAIT values (lib/tuning.py), for the gait sweep
@@ -41,12 +41,13 @@ import numpy
 from mathutils import Vector, kdtree
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
+# The model library, src/game-models/lib/, from this model's build folder (#2438).
+sys.path.insert(0, os.path.normpath(os.path.join(HERE, *[os.pardir] * 5, "src", "game-models")))
 
 from lib import (adopted, attachments, clips, legs, marked_eyes, materials, metrics, repaint, rigged,  # noqa: E402
                  scene, starfield, tuning)
 
-SOURCE = os.path.join(HERE, "sources", "nuvvoluvvo.glb")
+SOURCE = os.path.join(HERE, "source.glb")
 FPS = 30
 SCALE = 1.0
 

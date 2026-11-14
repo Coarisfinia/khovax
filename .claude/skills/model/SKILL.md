@@ -202,8 +202,9 @@ for look-dev with the owner, but whatever it finds goes back into the script.
 **Tools are built reusable; a model script holds only that model's parameters and parts.** Anything
 a second model could use goes into the library or a generic tool, never into one model's script.
 
-- **The Blender library, `src/game-models/lib/`** (a model script imports it after
-  `sys.path.insert(0, <src/game-models>)`):
+- **The Blender library, `src/game-models/lib/`** (a model script, in its model's build folder,
+  imports it after `sys.path.insert(0, <src/game-models>)`, the path from its own folder, as the
+  existing scripts do):
   - `scene`: a clean scene at the clip rate, `apply_scale`, `triangles`, and `export_glb` (the
     export settings the game takes: GLB, skins, one animation per NLA track, Y up, every mesh's
     faces in a fixed order so a rebuild gives the same bytes).
@@ -404,8 +405,8 @@ a second model could use goes into the library or a generic tool, never into one
   line per clip and limit it misses, with the value, the limit and by how much, and the passing
   clips on one line (`lib/summary.py`). Read those while tuning, not the full logs.
 - **The gait sweep (#1524):** `uv run --locked --package khovax-game-models
-  src/game-models/sweep_gait.py src/game-models/<name>.py
-  resourcepacks/default/models/<name>/<name>.glb NAME=a,b,c ... [--clips Walk,Run] [--keep <folder>]`
+  src/game-models/sweep_gait.py resourcepacks/default/models/<folder>/build/<name>.py
+  resourcepacks/default/models/<folder>/<name>.glb NAME=a,b,c ... [--clips Walk,Run] [--keep <folder>]`
   builds the model over the grid of gait values in parallel, runs those three checks on each in
   summary mode, and prints a Markdown table: `PASS`, or the limit each combination misses most
   and by how much. A model script offers its gait values as module constants named in its `GAIT`
@@ -435,7 +436,7 @@ a second model could use goes into the library or a generic tool, never into one
 
 ## Generated models (Meshy): the order and the traps (#1526)
 A model whose mesh and colour come from the owner's Meshy download (as Drakkudor's do,
-`src/game-models/drakkudor.py`) goes through these steps, in this order:
+`resourcepacks/default/models/drakkudor/build/drakkudor.py`) goes through these steps, in this order:
 
 1. **Generating in Meshy** (the owner generates; owner, #1671): **triangle** topology at about
    **6,000 triangles**. That budget comes out a bit flawed now and then (thin parts merged into
@@ -452,7 +453,7 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
    one report on its mesh, material, painted eyes, body columns and rig. Read it before measuring
    anything by hand. It warns when the download is far above step 1's triangle target.
 3. **Import and strip:** `src/game-models/import_source.py` makes the source the script
-   builds from (`src/game-models/sources/<name>.glb`): only the base colour, opaque,
+   builds from (`resourcepacks/default/models/<folder>/build/source.glb`, beside its script): only the base colour, opaque,
    single-sided and matte (#1476). A download Meshy has rigged keeps its skin and rig, adopted
    by `lib/rigged.py` (#1516): its chains checked against the parts they move, a short one
    regrown and one bleeding into another's part cleaned, its bones named to the library's scheme,
@@ -585,10 +586,10 @@ body**, as a clip library of their own, so a later body plays the same clips:
 
 1. **Each export becomes a clip source:** `uv run --locked src/game-models/blender.py
    --background --factory-startup --python src/game-models/import_clip.py -- <export.glb>
-   <Clip> src/game-models/sources/player/clips/<Clip>.glb`, named after the clip the game
+   <Clip> resourcepacks/default/models/player/build/clips/<Clip>.glb`, named after the clip the game
    plays. It keeps the rig and its one clip, without the body (`lib/clip_sources.py`: a stand-in
    triangle carries the rig as a skin). `rest` instead of a clip name writes the rig alone, the
-   library's skeleton (`sources/player/skeleton.glb`), which every clip must share.
+   library's skeleton (`resourcepacks/default/models/player/build/skeleton.glb`), which every clip must share.
    **A clip no export has can come from free motion capture** (#1951): `import_mocap.py --
    <take.asf> <take.amc> <first> <last> <Clip> <clip-source.glb>` retargets a take in the ASF/AMC
    format (the CMU database's, whose terms allow it here) onto that skeleton by bone direction
@@ -670,9 +671,13 @@ place (a sign's lettering, a banner's pattern, a face), or the owner preferring 
 No runes or carvings by script: they come from the rune set (#1855) and the engraving work (#1856).
 
 ## 1. Build (Blender script)
-- **Where:** `src/game-models/<name>.py` builds the model, and
-  `resourcepacks/default/models/<name>/<name>.glb` is its output, with `SOURCE.md`, a license and a
-  `CREDITS.md` entry, as AGENTS.md's asset rules say.
+- **Where:** each model's folder holds all of it (#2438): `resourcepacks/default/models/<folder>/build/<name>.py`
+  builds the model from the sources beside it (`source.glb`), and
+  `resourcepacks/default/models/<folder>/<name>.glb` is its output, with `SOURCE.md`, a license and
+  a `CREDITS.md` entry, as AGENTS.md's asset rules say. The build folder holds a `.gdignore`, so
+  Godot never imports, lists or ships what is in it (`resource_packs_check.py` fails one without).
+  The script is named after its `.glb`, which pairs them. The shared library, the checks and the
+  import tools stay in `src/game-models/`.
 - **Look:** cel-shaded eye candy, medium-poly for anything the camera sees up close (AGENTS.md,
   #69). It must read from the game's top-down camera, so the shape comes from the silhouette
   first and the detail second. It must also look good **up close**, since its codex page shows
@@ -683,7 +688,7 @@ No runes or carvings by script: they come from the rune set (#1855) and the engr
   body without legs (a vortex, floating rocks, a blob) must be buildable from it too, from `body`,
   `parts`, `surface`, `eyes` and its own rig module.
 - **Baseline:** the mana wolf (#995) is the baseline for the level of detail: every new model
-  matches or exceeds it up close (owner). Its build script, `src/game-models/mana_wolf.py`, and its
+  matches or exceeds it up close (owner). Its build script, `resourcepacks/default/models/mana-wolf/build/mana_wolf.py`, and its
   renders on the `assets` branch (`pr-995-v2-*`, the close-ups `pr-995-v2-portrait.png` and
   `pr-995-v2-face.png` first) are the reference.
 - **Scale and placement:** the origin at the feet, facing +Z after import (glTF's forward,
@@ -862,7 +867,7 @@ clips. Ask the owner only when it's unclear what should move how.
    the rebuild check's build prints (step 14, `--speeds`).
 
 14. **Rebuild (#1085):** `uv run --locked --package khovax-game-models
-   src/game-models/check_rebuild.py src/game-models/<name>.py resourcepacks/default/models/<name>/<name>.glb` builds the model twice,
+   src/game-models/check_rebuild.py resourcepacks/default/models/<folder>/build/<name>.py resourcepacks/default/models/<folder>/<name>.glb` builds the model twice,
    side by side, on 1 and 4 of Blender's threads (#2317), and compares the two builds with each
    other and with the committed `.glb`; it
    must print `REBUILD CHECK: PASS`. On a difference it names what differs (the JSON's part, or

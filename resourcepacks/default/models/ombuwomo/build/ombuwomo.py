@@ -1,7 +1,7 @@
 """The Ombuwomo (#1738): the Ombulumo's middle form, a bud. A round bud of leaves, spotted pale,
 wrapped round a soft body that peeks out through the gap between its front leaves, where its face
 is; it hops and wobbles along without legs. Its mesh and colour come from the owner's generated
-model (`sources/ombuwomo.glb`, made by import_source.py from the download with `static`: see the
+model (`source.glb` beside this script, made by import_source.py from the download with `static`: see the
 asset's SOURCE.md), with the owner's fixes:
 
 - **no legs:** the generator gave it four little feet; they're cut off, and the bud sits on its
@@ -16,7 +16,7 @@ asset's SOURCE.md), with the owner's fixes:
 It is rigged and animated as a limbless body without a tail (lib/limbless.py).
 
     uv run --locked src/game-models/blender.py --background --factory-startup \
-        --python src/game-models/ombuwomo.py -- resourcepacks/default/models/ombuwomo/ombuwomo.glb
+        --python resourcepacks/default/models/ombuwomo/build/ombuwomo.py -- resourcepacks/default/models/ombuwomo/ombuwomo.glb
 
 It prints the speeds the motion check (src/game-models/check_motion.py) takes. `NAME=value`
 after the output path sets one of its GAIT values (lib/tuning.py), for the gait sweep
@@ -36,12 +36,13 @@ import bpy
 from mathutils import Matrix, Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
+# The model library, src/game-models/lib/, from this model's build folder (#2438).
+sys.path.insert(0, os.path.normpath(os.path.join(HERE, *[os.pardir] * 5, "src", "game-models")))
 
 from lib import attachments, clips, limbless, marked_eyes, metrics, repaint, scene, tuning  # noqa: E402
 from lib.materials import palette  # noqa: E402
 
-SOURCE = os.path.join(HERE, "sources", "ombuwomo.glb")
+SOURCE = os.path.join(HERE, "source.glb")
 FPS = 30
 # How much the source is shrunk, so it sits well inside its hex (check_footprint.py): bigger than
 # the tadpole it grows from, smaller than the Ombulumo it grows into.

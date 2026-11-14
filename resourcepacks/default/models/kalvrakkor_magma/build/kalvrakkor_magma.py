@@ -1,7 +1,7 @@
 """The Korvakkar (#1771), the Kalvrakkor's magma form: its fire side has taken over the whole hound,
 lean and fox-like on black basalt cracked with magma, with nine tails of flowing magma fanned out
 behind it, each tipped with an ember crystal. Its mesh, paint and body's rig come from the owner's
-generated model (`sources/kalvrakkor_magma.glb`, made by import_source.py from the download, sized
+generated model (`source.glb` beside this script, made by import_source.py from the download, sized
 to its hex as a stronger monster: see the asset's SOURCE.md). The generator's two black ovals become
 our eyes (lib/marked_eyes.py).
 
@@ -12,7 +12,7 @@ creature clip with the library's clips, its forelegs planted by lib/adopted.py a
 bent at the knee (`limbs`, #2026).
 
     uv run --locked src/game-models/blender.py --background --factory-startup \
-        --python src/game-models/kalvrakkor_magma.py -- resourcepacks/default/models/kalvrakkor_magma/kalvrakkor_magma.glb
+        --python resourcepacks/default/models/kalvrakkor_magma/build/kalvrakkor_magma.py -- resourcepacks/default/models/kalvrakkor_magma/kalvrakkor_magma.glb
 
 It prints the speeds the motion check (src/game-models/check_motion.py) takes. `NAME=value`
 after the output path sets one of its GAIT values (lib/tuning.py), for the gait sweep
@@ -32,12 +32,13 @@ import mathutils
 from mathutils import Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
+# The model library, src/game-models/lib/, from this model's build folder (#2438).
+sys.path.insert(0, os.path.normpath(os.path.join(HERE, *[os.pardir] * 5, "src", "game-models")))
 
 from lib import adopted, attachments, clips, frostfire, legs, marked_eyes, metrics, rigged, scene, tails, tuning  # noqa: E402
 from lib.materials import palette  # noqa: E402
 
-SOURCE = os.path.join(HERE, "sources", "kalvrakkor_magma.glb")
+SOURCE = os.path.join(HERE, "source.glb")
 FPS = 30
 SCALE = 1.0
 

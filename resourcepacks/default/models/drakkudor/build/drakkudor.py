@@ -1,12 +1,12 @@
 """Drakkudor, the ribwalker (#1476): the hollow ribcage of a long-dead giant, walked by the knotted
 heart of dark red muscle that grew inside it, on six legs of bone, a cracked bone plate for a face
 with glowing amber eyes and a short bone tail. Its mesh and colour come from a generated model
-(`sources/drakkudor.glb`, made by import_source.py from the owner's download: see the asset's
+(`source.glb` beside this script, made by import_source.py from the owner's download: see the asset's
 SOURCE.md); this script places it on its feet, rigs it as a hexapod (lib/hexapod.py) and animates
 every creature clip.
 
     uv run --locked src/game-models/blender.py --background --factory-startup \
-        --python src/game-models/drakkudor.py -- resourcepacks/default/models/drakkudor/drakkudor.glb
+        --python resourcepacks/default/models/drakkudor/build/drakkudor.py -- resourcepacks/default/models/drakkudor/drakkudor.glb
 
 It prints the speeds the motion check (src/game-models/check_motion.py) takes. `NAME=value`
 after the output path sets one of its GAIT values (lib/tuning.py), for the gait sweep
@@ -23,11 +23,12 @@ import sys
 import bpy
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
+# The model library, src/game-models/lib/, from this model's build folder (#2438).
+sys.path.insert(0, os.path.normpath(os.path.join(HERE, *[os.pardir] * 5, "src", "game-models")))
 
 from lib import attachments, clips, hexapod, legs, metrics, scene, tuning  # noqa: E402
 
-SOURCE = os.path.join(HERE, "sources", "drakkudor.glb")
+SOURCE = os.path.join(HERE, "source.glb")
 FPS = 30
 # Its footprint from above, in every pose of every clip, stays inside its hex with a twentieth of
 # the hex to spare, as a regular monster's does (the owner, on #1514).

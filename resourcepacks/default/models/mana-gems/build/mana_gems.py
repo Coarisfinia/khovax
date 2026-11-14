@@ -3,7 +3,7 @@ of the gems tile that rings the mana forest. A static prop: no rig and no clips.
 parameters live here; the crystals are the shared library's (src/game-models/lib/).
 
     uv run --locked src/game-models/blender.py --background --factory-startup \
-        --python src/game-models/mana_gems.py -- resourcepacks/default/models/mana-gems/mana_gems.glb
+        --python resourcepacks/default/models/mana-gems/build/mana_gems.py -- resourcepacks/default/models/mana-gems/mana_gems.glb
 
 Blender is Z-up; the origin is at the rock's foot, in the middle of its tile. Sizes are in the
 hexagon pack's units, which the game shrinks to fit a tile (TileDecorations.MODEL_SCALE).
@@ -15,7 +15,9 @@ import sys
 
 import bpy
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+HERE = os.path.dirname(os.path.abspath(__file__))
+# The model library, src/game-models/lib/, from this model's build folder (#2438).
+sys.path.insert(0, os.path.normpath(os.path.join(HERE, *[os.pardir] * 5, "src", "game-models")))
 
 from lib import parts, scene  # noqa: E402
 from lib.materials import palette  # noqa: E402

@@ -4,10 +4,10 @@ rig's bones to its humanoid skeleton profile on import (the BoneMap in player_cl
 so any humanoid rig, whatever its bones are called, can be retargeted to them.
 
     uv run --locked src/game-models/blender.py --background --factory-startup \
-        --python src/game-models/player_clips.py -- resourcepacks/default/models/player/player_clips.glb
+        --python resourcepacks/default/models/player/build/player_clips.py -- resourcepacks/default/models/player/player_clips.glb
 
 Meshy rigs one clip per export (#1934); import_clip.py turns each into a clip source in
-sources/player/clips/, named after its clip, and its skeleton into sources/player/skeleton.glb. The
+clips/ beside this script, named after its clip, and its skeleton into skeleton.glb beside it. The
 build fails when a clip source's skeleton differs from it (bones, their parents, their rest pose;
 lib/skeleton.py), naming each difference: a clip made on another rig would bend the body wrongly.
 CI builds it with every model (check_rebuild.py), so a clip from another rig fails there."""
@@ -18,14 +18,17 @@ import sys
 
 import bpy
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+HERE = os.path.dirname(os.path.abspath(__file__))
+# The model library, src/game-models/lib/, from this model's build folder (#2438).
+sys.path.insert(0, os.path.normpath(os.path.join(HERE, *[os.pardir] * 5, "src", "game-models")))
 
 from lib import (clip_smooth, clip_sources, pace, paced_gait, planted_feet, relaxed_hands, run_cycle, scene,  # noqa: E402
                  skeleton, standing_feet)
 
 # No body to size against the world (check_world_scale.py): the clips play on the stand-in rig.
 WORLD_SCALE = "clip_library"
-SOURCES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sources", "player")
+# The clip sources, in this build folder (#2438).
+SOURCES = HERE
 SKELETON = os.path.join(SOURCES, "skeleton.glb")
 CLIPS = os.path.join(SOURCES, "clips")
 # The clips the player plays standing (#1980): the build plants their feet and fails unless, on

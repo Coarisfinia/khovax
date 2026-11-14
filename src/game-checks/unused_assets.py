@@ -6,7 +6,8 @@ looks it up by its id; when
 a used glTF names it as one of its buffers or images; or when it's a texture Godot's import
 extracted from a used model next to it (named `<model>_<image>`, its .import carrying the
 generating importer's parameters). Each pack's own notes (SOURCE.md, its license) and Godot's .import files are left
-out: they come with the files they describe. Asset paths keep to letters, digits and `._/-`, so
+out: they come with the files they describe, and so is a model's build folder, what builds it
+(#2438). Asset paths keep to letters, digits and `._/-`, so
 a path is always matched whole.
 
     uv run --locked --package khovax-game-checks src/game-checks/unused_assets.py
@@ -19,6 +20,7 @@ from pathlib import Path
 
 from game_shared import log
 from game_shared.git_files import git_files
+from game_shared.model_builds import is_build_file
 from game_shared.resource_packs import (
     MANIFEST,
     extracted_textures,
@@ -39,7 +41,8 @@ NAMING = ("*.gd", "*.tscn", "*.tres", "*.godot", "*.cfg", "*.jsonc")
 def main() -> int:
     # The game's project folder (#1101): every path below is relative to it.
     os.chdir(Path(__file__).resolve().parents[1] / "game")
-    assets = [path for path in git_files(*MOVED) if not NOTES.fullmatch(path)]
+    # A model's build folder holds what builds it, never an asset the game uses (#2438).
+    assets = [path for path in git_files(*MOVED) if not NOTES.fullmatch(path) and not is_build_file(path)]
     odd = [path for path in assets if not PLAIN.fullmatch(path)]
     if odd:
         log.error(f"asset paths keep to letters, digits and ._/-: {', '.join(odd)}")

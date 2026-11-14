@@ -1,6 +1,6 @@
 """The standing stone (#1853), the savepoint (#1854): a slab of stone with a round hole through its
 upper middle, in a ring of flat paving stones. Its shape is the owner's generated model, made
-without a texture (`sources/standing_stone.glb`, from the download by import_source.py: see the
+without a texture (`source.glb` beside this script, from the download by import_source.py: see the
 asset's SOURCE.md); its colours are the props' shared texture set (lib/prop_paint.py, CC0
 textures), mapped by this script: weathered stone, moss on its top and ledges, darker crevices and
 foot, and the hole's inner wall as its own part (`glow`), which the game lights once the stone is
@@ -8,7 +8,7 @@ activated (#1854). No runes: its faces stay free for an engraving (#1855, #1856)
 no rig and no clips.
 
     uv run --locked src/game-models/blender.py --background --factory-startup \
-        --python src/game-models/standing_stone.py -- resourcepacks/default/models/standing-stone/standing_stone.glb
+        --python resourcepacks/default/models/standing-stone/build/standing_stone.py -- resourcepacks/default/models/standing-stone/standing_stone.glb
 
 Blender is Z-up and it faces -Y (the game's +Z), the hole running through along Y; the origin is
 at the stone's foot, in the middle of its hex, and it is sized to its hex as a prop
@@ -24,11 +24,12 @@ import numpy
 from mathutils import Matrix
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
+# The model library, src/game-models/lib/, from this model's build folder (#2438).
+sys.path.insert(0, os.path.normpath(os.path.join(HERE, *[os.pardir] * 5, "src", "game-models")))
 
 from lib import fixed_order, footprint, prop_paint, repaint, scene  # noqa: E402
 
-SOURCE = os.path.join(HERE, "sources", "standing_stone.glb")
+SOURCE = os.path.join(HERE, "source.glb")
 FPS = 30
 # Its kind on the world's scale (lib/world_scale.py): a thing standing on one hex.
 WORLD_SCALE = "prop"

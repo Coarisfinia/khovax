@@ -1,6 +1,6 @@
 """The tentacle gate (#1634): a stone arch with an eye at its crown, a dark, starry portal in its
 opening and four tentacles curling out from its feet onto the ground. Its mesh and colour come from
-the owner's generated model (`sources/tentacle_gate.glb`, made by import_source.py from the
+the owner's generated model (`source.glb` beside this script, made by import_source.py from the
 download at `scale` 2.2: see the asset's SOURCE.md). It's a portal on the world's scale
 (lib/world_scale.py, #1907): it stands on the edge between two hexes, its arch spanning both, and
 the player walks through it along that edge, so the script sizes it until its portal stands just
@@ -10,7 +10,7 @@ less far out over the ground, keeping its rise, until the whole gate stands with
 (a prop's limits in lib/footprint.py, #1641).
 
     uv run --locked src/game-models/blender.py --background --factory-startup \
-        --python src/game-models/tentacle_gate.py -- resourcepacks/default/models/tentacle_gate/tentacle_gate.glb
+        --python resourcepacks/default/models/tentacle_gate/build/tentacle_gate.py -- resourcepacks/default/models/tentacle_gate/tentacle_gate.glb
 
 The generator rigged it as a character (#1634): one chain holds both left tentacles, and the arch's
 crown is taken for a leg. A gate needs neither, so this script drops that rig and builds its own
@@ -35,11 +35,12 @@ import bpy
 from mathutils import Matrix, Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
+# The model library, src/game-models/lib/, from this model's build folder (#2438).
+sys.path.insert(0, os.path.normpath(os.path.join(HERE, *[os.pardir] * 5, "src", "game-models")))
 
 from lib import scene, world_scale  # noqa: E402
 
-SOURCE = os.path.join(HERE, "sources", "tentacle_gate.glb")
+SOURCE = os.path.join(HERE, "source.glb")
 FPS = 30
 # Its kind on the world's scale (lib/world_scale.py): a gate on the edge between two hexes the
 # player walks through (#1634, #1907).

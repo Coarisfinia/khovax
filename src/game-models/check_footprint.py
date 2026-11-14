@@ -17,9 +17,9 @@ both, from the middle of their shared edge, with the same limits (lib/footprint.
 
 It prints a line for the rest pose and one per clip (the largest reach and its frame, and the
 limit) and `FOOTPRINT CHECK: PASS` or `FAIL` (and exits 1 on a fail), through game_shared.log
-(#1115): a failing line is an error on the .glb. It checks every model built by a script here,
+(#1115): a failing line is an error on the .glb. It checks every model built by a model script,
 monsters and props alike, a static one by its rest pose; nothing is let off through a list
-(#1641). A pack's model (no script here: the players' and people's figure, the chest) is measured
+(#1641). A pack's model (no model script: the players' and people's figure, the chest) is measured
 as each view that stands it on the board shows it (#1652, lib/views.py): at the view's scale,
 without the parts it hides, standing in its idle clip rather than its T-pose and in the clips it
 plays, against a prop's limits. Two kinds aren't things standing on a hex and are left out by what
@@ -42,7 +42,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "game-shared"))
 
-from game_shared import log  # noqa: E402
+from game_shared import log, model_builds  # noqa: E402
 from lib import footprint, imported, known, views, world_scale  # noqa: E402
 
 # The Godot project, whose views show the packs' models.
@@ -83,10 +83,10 @@ KNOWN = {
 
 
 def measure(model, glb, fps, scripts):
-    """The report lines for `model`: its own when a script here builds it, else one set per view
+    """The report lines for `model`: its own when a model script builds it, else one set per view
     that shows the pack's model on the board, each line named after its view. None when nothing
     stands it on the board."""
-    script = os.path.join(HERE, model + ".py")
+    script = model_builds.build_script(glb)
     if os.path.exists(script):
         rig = imported.load_view(glb, fps)
         lines, _passed = footprint.report(
@@ -120,7 +120,7 @@ def main():
             # The tile's own look, sized to its tile by TileDecorations, not a thing on the hex.
             log.info("FOOTPRINT %s a tile's decoration: the tile's own look" % model)
             continue
-        if world_scale.clip_library(os.path.join(HERE, model + ".py")):
+        if world_scale.clip_library(model_builds.build_script(glb)):
             # Its stand-in rig has no body: the clips' root motion alone isn't a reach.
             log.info("FOOTPRINT %s a clip library: no body to measure" % model)
             continue

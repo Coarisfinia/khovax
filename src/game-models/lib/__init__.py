@@ -1,4 +1,5 @@
-"""The shared Blender library every model script in src/game-models/ builds on (model skill, #995).
+"""The shared Blender library every model script builds on, each in its
+model's build folder, resourcepacks/default/models/<folder>/build/ (#2438; model skill, #995).
 
 A model script holds only its model's parameters and its own parts; everything reusable lives
 here: the scene and the glTF export (scene), materials (materials), soft metaball bodies (body),

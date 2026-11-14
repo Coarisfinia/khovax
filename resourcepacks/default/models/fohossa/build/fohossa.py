@@ -1,12 +1,12 @@
 """Fohossa, the fogbank (#1619): the dream realm's miniboss, a four-legged beast of solid, rounded fog
 billows with antler-like horns and lantern eyes. Its mesh, colour and rig come from the owner's
-generated model (`sources/fohossa.glb`, made by import_source.py from the download, its rig
+generated model (`source.glb` beside this script, made by import_source.py from the download, its rig
 adopted by lib/rigged.py and fitted to its hex as a large monster: see the asset's SOURCE.md);
 this script names the adopted bones to the library's quadruped scheme and animates every creature
 clip with the library's clips, its many-bone legs planted by lib/adopted.py.
 
     uv run --locked src/game-models/blender.py --background --factory-startup \
-        --python src/game-models/fohossa.py -- resourcepacks/default/models/fohossa/fohossa.glb
+        --python resourcepacks/default/models/fohossa/build/fohossa.py -- resourcepacks/default/models/fohossa/fohossa.glb
 
 It prints the speeds the motion check (src/game-models/check_motion.py) takes. `NAME=value`
 after the output path sets one of its GAIT values (lib/tuning.py), for the gait sweep
@@ -24,11 +24,12 @@ import bpy
 from mathutils import Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
+# The model library, src/game-models/lib/, from this model's build folder (#2438).
+sys.path.insert(0, os.path.normpath(os.path.join(HERE, *[os.pardir] * 5, "src", "game-models")))
 
 from lib import adopted, attachments, clips, metrics, rigged, scene, tuning  # noqa: E402
 
-SOURCE = os.path.join(HERE, "sources", "fohossa.glb")
+SOURCE = os.path.join(HERE, "source.glb")
 FPS = 30
 SCALE = 1.0
 
