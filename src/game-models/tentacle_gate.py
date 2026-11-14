@@ -15,9 +15,13 @@ less far out over the ground, keeping its rise, until the whole gate stands with
 The generator rigged it as a character (#1634): one chain holds both left tentacles, and the arch's
 crown is taken for a leg. A gate needs neither, so this script drops that rig and builds its own
 from the mesh's pieces: a still `root` holding the arch, a chain along each tentacle and a `portal`
-bone in the portal's middle. It plays one clip, `Idle`, a slow loop: the tentacles sway and curl up
-a little, a wave running along each, and the portal turns and swells gently about its middle while
-its rim stays in the arch.
+bone in the portal's middle. It plays three clips. `Idle` is a slow loop, the gate standing on its tentacles: they sway and
+curl up a little, a wave running along each, and the portal turns and swells gently about its
+middle while its rim stays in the arch. Standing, the gate is closed: its portal is raised over the
+tentacles. `Sit` sits it down (the game plays it backwards to stand it up): the gate lowers until
+its feet and the portal's lower edge rest on the ground, and the tentacles withdraw into its feet.
+`Sitting` is the loop it holds while sat, its portal still turning: only then is it open, and the
+player walks through it on the ground (the owner, on #2321; check_passage.py checks it).
 
 Blender is Z-up and the gate faces -Y (the game's +Z); its left is +X.
 """
@@ -49,6 +53,12 @@ OPENING = 1.02
 # about its root towards the arch's line (radians) and reaches this share as far over the ground,
 # blending in over its first band so it still leaves the arch's foot where it did.
 DRAW_TURN, DRAW_REACH = math.radians(25.0), 0.5
+# Sitting down (#2157): how long it takes (frames), and how small each tentacle shrinks into its
+# root as it withdraws (a share of its size).
+SIT, WITHDRAWN = 45, 0.04
+# How far up the arch's legs (metres, the game's) their feet are measured, whose middles the
+# tentacles withdraw into.
+LEG_FOOT = 0.3
 
 # The portal is the smallest of the mesh's pieces (a thin slab behind the arch's opening), the
 # arch the largest; the other two each hold one side's pair of tentacles.
@@ -166,9 +176,10 @@ def draw_in(skin, feet, depth):
             point.x, point.y = root.x + reach * offset.x, root.y + reach * offset.y
 
 
-def armature(portal_middle, portal_size, tentacles):
-    """The gate's rig: a root on the ground, the portal bone pointing out of the portal's front and
-    each tentacle's chain, every bone named."""
+def armature(portal_middle, portal_size, tentacles, legs):
+    """The gate's rig: a root on the ground, the portal bone pointing out of the portal's front, a
+    bone in each of the arch's legs (`legs`, by side) holding that side's tentacles, which they
+    withdraw into, and each tentacle's chain, every bone named."""
     data = bpy.data.armatures.new("TentacleGateRig")
     rig = bpy.data.objects.new("TentacleGateRig", data)
     bpy.context.scene.collection.objects.link(rig)
@@ -180,8 +191,12 @@ def armature(portal_middle, portal_size, tentacles):
     portal.head = portal_middle
     portal.tail = portal_middle + Vector((0.0, -0.5 * portal_size.x, 0.0))
     portal.parent = root
+    for side, foot in sorted(legs.items()):
+        leg = data.edit_bones.new(leg_name(side))
+        leg.head, leg.tail = foot, foot + Vector((0.0, 0.0, 0.3))
+        leg.parent = root
     for (pair, side, _phase), (joints, _start, _width) in tentacles.items():
-        parent = root
+        parent = data.edit_bones[leg_name(side)]
         for number in range(TENTACLE_BONES):
             bone = data.edit_bones.new(bone_name(pair, side, number))
             bone.head, bone.tail = joints[number], joints[number + 1]
@@ -190,6 +205,22 @@ def armature(portal_middle, portal_size, tentacles):
             parent = bone
     bpy.ops.object.mode_set(mode="OBJECT")
     return rig
+
+
+def leg_name(side):
+    return "tentacles.%s" % side
+
+
+def leg_feet(skin, arch, seat):
+    """Per side, the middle of the arch's leg at its foot (its lowest `LEG_FOOT` metres), where
+    that side's tentacles withdraw to, hidden in the stone."""
+    feet = {}
+    for side, sign in (("L", 1.0), ("R", -1.0)):
+        points = [skin.data.vertices[index].co for index in arch
+                  if skin.data.vertices[index].co.x * sign > 0.0 and skin.data.vertices[index].co.z < seat + LEG_FOOT]
+        low, high = bounds(points)
+        feet[side] = (low + high) / 2.0
+    return feet
 
 
 def bone_name(pair, side, number):
@@ -234,7 +265,10 @@ def bind(skin, rig, pieces, portal_middle, portal_half, tentacles):
                 share = smoothstep(start - width, start + ROOT_BLEND * width, point.y * y_sign)
                 weights[bone_name(pair, side, first)] = share * blend
                 weights[bone_name(pair, side, second)] = share * (1.0 - blend)
-        weights["root"] = max(0.0, 1.0 - sum(weights.values()))
+        # A tentacle's base, and the hump where it leaves the arch, go with its side's leg bone,
+        # so they withdraw with it.
+        rest = "root" if vertex.index not in feet else leg_name("L" if point.x > 0.0 else "R")
+        weights[rest] = weights.get(rest, 0.0) + max(0.0, 1.0 - sum(weights.values()))
         for name, weight in weights.items():
             if weight > 0.0:
                 groups[name].add([vertex.index], weight, "REPLACE")
@@ -250,47 +284,77 @@ def turn(bone, axis, angle):
     return Matrix.Rotation(angle, 3, local.normalized()).to_quaternion()
 
 
-def animate(rig, bulge):
-    """Keys the Idle loop on every frame and stashes it on its NLA track (scene.export_glb)."""
-    rig.animation_data_create()
-    action = bpy.data.actions.new("Idle")
-    rig.animation_data.action = action
-    scene.select_only(rig)
-    bpy.ops.object.mode_set(mode="POSE")
-    for bone in rig.pose.bones:
-        bone.rotation_mode = "QUATERNION"
+def pose(rig, time, sat, seat, bulge):
+    """Poses the rig at `time` (radians through the loop) and `sat` (0 standing, 1 sat down):
+    the root lowers by `seat`, so the gate's feet reach the ground, and each tentacle withdraws
+    into its root and stills."""
     portal = rig.pose.bones["portal"]
-    for frame in range(1, LOOP + 2):
-        time = 2.0 * math.pi * (frame - 1) / LOOP
-        portal.rotation_quaternion = Matrix.Rotation(PORTAL_TURN * math.sin(time), 3, "Y").to_quaternion()
-        swell = 1.0 + PORTAL_SWELL * math.sin(time + math.pi / 3.0)
-        portal.scale = (swell, 1.0, swell)
-        # Along the bone, which points out of the portal's front.
-        portal.location = (0.0, bulge * 0.5 * (1.0 - math.cos(time)), 0.0)
-        for pair, side, phase in TENTACLES:
-            for number in range(TENTACLE_BONES):
-                bone = rig.pose.bones[bone_name(pair, side, number)]
-                wave = time - 2.0 * math.pi * (phase + LAG * number)
-                outward = bone.bone.tail_local - bone.bone.head_local
-                outward.z = 0.0
-                lift_axis = outward.normalized().cross(Vector((0.0, 0.0, 1.0)))
-                sway = turn(bone, Vector((0.0, 0.0, 1.0)), SWAY * math.sin(wave))
-                curl = turn(bone, lift_axis, CURL * 0.5 * (1.0 - math.cos(wave)))
-                bone.rotation_quaternion = sway @ curl
+    portal.rotation_quaternion = Matrix.Rotation(PORTAL_TURN * math.sin(time), 3, "Y").to_quaternion()
+    swell = 1.0 + PORTAL_SWELL * math.sin(time + math.pi / 3.0)
+    portal.scale = (swell, 1.0, swell)
+    # Along the bone, which points out of the portal's front.
+    portal.location = (0.0, bulge * 0.5 * (1.0 - math.cos(time)), 0.0)
+    # Along the root bone, which points up.
+    rig.pose.bones["root"].location = (0.0, -seat * sat, 0.0)
+    for pair, side, phase in TENTACLES:
+        for number in range(TENTACLE_BONES):
+            bone = rig.pose.bones[bone_name(pair, side, number)]
+            wave = time - 2.0 * math.pi * (phase + LAG * number)
+            outward = bone.bone.tail_local - bone.bone.head_local
+            outward.z = 0.0
+            lift_axis = outward.normalized().cross(Vector((0.0, 0.0, 1.0)))
+            sway = turn(bone, Vector((0.0, 0.0, 1.0)), (1.0 - sat) * SWAY * math.sin(wave))
+            curl = turn(bone, lift_axis, (1.0 - sat) * CURL * 0.5 * (1.0 - math.cos(wave)))
+            bone.rotation_quaternion = sway @ curl
+    # Each leg bone carries its side's tentacles, which shrink into it.
+    size = 1.0 - sat * (1.0 - WITHDRAWN)
+    for side in ("L", "R"):
+        rig.pose.bones[leg_name(side)].scale = (size, size, size)
+
+
+def clip(rig, name, frames, sat, seat, bulge):
+    """Keys `name` on every frame (`frames` long, `sat` giving each frame's share sat down) and
+    stashes it on its NLA track (scene.export_glb)."""
+    action = bpy.data.actions.new(name)
+    rig.animation_data.action = action
+    for frame in range(1, frames + 2):
+        pose(rig, 2.0 * math.pi * (frame - 1) / LOOP, sat(frame - 1, frames), seat, bulge)
         for bone in rig.pose.bones:
             bone.keyframe_insert("rotation_quaternion", frame=frame)
             bone.keyframe_insert("location", frame=frame)
             bone.keyframe_insert("scale", frame=frame)
-    bpy.ops.object.mode_set(mode="OBJECT")
     track = rig.animation_data.nla_tracks.new()
-    track.name = "Idle"
-    strip = track.strips.new("Idle", 1, action)
-    strip.name = "Idle"
+    track.name = name
+    strip = track.strips.new(name, 1, action)
+    strip.name = name
     rig.animation_data.action = None
+
+
+def animate(rig, seat, bulge):
+    """Keys the three clips: standing (Idle), sitting down (Sit) and sat (Sitting)."""
+    rig.animation_data_create()
+    scene.select_only(rig)
+    bpy.ops.object.mode_set(mode="POSE")
+    for bone in rig.pose.bones:
+        bone.rotation_mode = "QUATERNION"
+    clip(rig, "Idle", LOOP, lambda frame, frames: 0.0, seat, bulge)
+    clip(rig, "Sit", SIT, lambda frame, frames: smoothstep(0.0, frames, frame), seat, bulge)
+    clip(rig, "Sitting", LOOP, lambda frame, frames: 1.0, seat, bulge)
+    bpy.ops.object.mode_set(mode="OBJECT")
     for bone in rig.pose.bones:
         bone.rotation_quaternion = (1.0, 0.0, 0.0, 0.0)
         bone.location = (0.0, 0.0, 0.0)
         bone.scale = (1.0, 1.0, 1.0)
+
+
+def ground_portal(skin, portal, seat):
+    """Stretches the portal slab down to `seat`, the arch's lowest point, its top kept where it
+    was: once the gate sits, its feet and the portal's lower edge rest on the ground together, and
+    the player steps into the portal there."""
+    low, high = bounds([skin.data.vertices[index].co for index in portal])
+    for index in portal:
+        point = skin.data.vertices[index].co
+        point.z = high.z - (high.z - point.z) * (high.z - seat) / (high.z - low.z)
 
 
 def build(out):
@@ -330,20 +394,24 @@ def build(out):
     portal = next(piece for piece in pieces[1:] if bounds([skin.data.vertices[index].co for index in piece])
                   == (portal_low, portal_high))
     pieces = [pieces[0]] + [piece for piece in pieces[1:] if piece is not portal] + [portal]
+    # The arch's lowest point: how far the gate lowers to sit on the ground.
+    seat = min(skin.data.vertices[index].co.z for index in pieces[0])
+    ground_portal(skin, portal, seat)
+    portal_low, portal_high = bounds([skin.data.vertices[index].co for index in portal])
     points = [vertex.co.copy() for vertex in skin.data.vertices]
     low, high = bounds(points)
     portal_middle = (portal_low + portal_high) / 2.0
     portal_half = (portal_high - portal_low) / 2.0
     feet = [points[index] for piece in pieces[1:3] for index in piece]
     tentacles = {key: tentacle_joints(feet, key[1], key[0], depth) for key in TENTACLES}
-    rig = armature(portal_middle, 2.0 * portal_half, tentacles)
+    rig = armature(portal_middle, 2.0 * portal_half, tentacles, leg_feet(skin, pieces[0], seat))
     bind(skin, rig, pieces, portal_middle, portal_half, tentacles)
-    animate(rig, PORTAL_BULGE * size)
+    animate(rig, seat, PORTAL_BULGE * size)
     scene.export_glb(out)
     print("MODEL", out, "triangles", scene.triangles(skin), "bones", len(rig.data.bones),
           "materials", len(skin.data.materials))
-    print("SIZE scale %.3f; %.2f wide, %.2f deep, %.2f tall; portal %.2f wide, %.2f tall" % (
-        size, high.x - low.x, high.y - low.y, high.z - low.z, 2.0 * portal_half.x, 2.0 * portal_half.z))
+    print("SIZE scale %.3f; %.2f wide, %.2f deep, %.2f tall; portal %.2f wide, %.2f tall; sits %.2f lower" % (
+        size, high.x - low.x, high.y - low.y, high.z - low.z, 2.0 * portal_half.x, 2.0 * portal_half.z, seat))
 
 
 build(sys.argv[sys.argv.index("--") + 1])

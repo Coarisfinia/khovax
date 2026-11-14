@@ -144,6 +144,7 @@
 			"regions/dhorvone_stolm/towers.md"
 		],
 		"edhra_tewk": [
+			"regions/edhra_tewk/field.md",
 			"regions/edhra_tewk/north_hold.md",
 			"regions/edhra_tewk/south_hold.md",
 			"regions/edhra_tewk/start.md",
@@ -170,6 +171,7 @@
 		],
 		"morwe_wudhen": [
 			"regions/morwe_wudhen/boulders.md",
+			"regions/morwe_wudhen/clearing.md",
 			"regions/morwe_wudhen/felling.md",
 			"regions/morwe_wudhen/grove.md",
 			"regions/morwe_wudhen/start.md",
