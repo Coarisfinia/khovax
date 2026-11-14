@@ -16,8 +16,8 @@ is a squat tower, not even twice as tall as it is wide. So the script keeps the 
 scaled alike in every direction, cuts it at a mortar joint below the slit and stacks copies of two
 of its courses there (`COURSES`), each turned an eighth further so the same stones don't line up,
 until its eaves stand a course above a wall. Its foot is cut flat above the download's strip of
-grass: the ground is ours. Its flats face the game's ±Z, so a wall along an edge in the game's Z
-meets a flat.
+grass: the ground is ours. Its flats face the game's ±X, ±Z and the diagonals between, so a wall
+along an edge in the game's Z meets a flat.
 
 Blender is Z-up and its slit looks along -Y (the game's +Z); the origin is at its foot."""
 
@@ -65,10 +65,10 @@ DECIMALS = 5
 
 
 def body_scale(points):
-    """The scale that makes the body `BODY_WIDTH` across its flats: the band's median distance
-    from the axis is about its flats' (its stones bulge past them, its joints sink behind)."""
+    """The scale that makes the body `BODY_WIDTH` across its flats, which face ±X: the band's
+    width along X."""
     band = points[(points[:, 2] > BODY[0]) & (points[:, 2] < BODY[1])]
-    return round(BODY_WIDTH / (2.0 * float(numpy.median(numpy.hypot(band[:, 0], band[:, 1])))), 4)
+    return round(BODY_WIDTH / float(band[:, 0].max() - band[:, 0].min()), 4)
 
 
 def copies(size):

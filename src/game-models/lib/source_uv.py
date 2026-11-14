@@ -5,8 +5,9 @@ model that keeps the generator's paint needs its UVs.
 `transfer` gives each face of a piece, still where it lay in the source, the UVs its corners have on
 the source face under its middle: a cut face lies inside the source face it was cut from, so its
 corners land inside that face too, and a face never takes UVs across one of the atlas's seams. The
-faces closing a cut lie inside the model, where no source face is: they take whatever face is
-nearest, and stay out of sight (a joint, the foot standing on the ground).
+faces closing a cut lie inside the model, off the source's surface, where several source faces can
+be equally near and the one found would depend on the tree: they all take one fixed spot of the
+atlas (`CAP`), and stay out of sight (a joint, the foot standing on the ground).
 
 Blender's BVH tree and barycentric maths are single-threaded and the UVs are rounded, so a build on
 another machine gives the same bytes."""
@@ -19,6 +20,10 @@ from mathutils.bvhtree import BVHTree
 LAYER = "UVMap"
 # The UVs are rounded to this many decimals (a texel of a 1024 atlas is about 0.001).
 DECIMALS = 6
+# A face whose middle lies farther than this from the source's surface (its units) closes a cut.
+SURFACE = 1e-4
+# The UV every face closing a cut takes.
+CAP = (0.0, 0.0)
 
 
 class Source:
@@ -44,6 +49,6 @@ def transfer(work, source):
     """Gives the bmesh `work`, lying where it lay in `source` (a `Source`), a UV layer from it."""
     layer = work.loops.layers.uv.get(LAYER) or work.loops.layers.uv.new(LAYER)
     for face in work.faces:
-        _location, _normal, index, _distance = source.tree.find_nearest(face.calc_center_median())
+        _location, _normal, index, distance = source.tree.find_nearest(face.calc_center_median())
         for loop in face.loops:
-            loop[layer].uv = source.uv(index, loop.vert.co)
+            loop[layer].uv = CAP if distance > SURFACE else source.uv(index, loop.vert.co)
