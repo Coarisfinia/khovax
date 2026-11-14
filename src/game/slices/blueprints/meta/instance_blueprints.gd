@@ -184,8 +184,9 @@ static func _piece_texts(instance_name: String, region_name: String) -> Dictiona
 ## Why the variant region `region_name`, a folder without a start piece that holds only the pieces
 ## it changes (_piece_texts), doesn't change the blueprint `instance_name`'s pieces alike (#2383),
 ## or "": each of its pieces must replace one of the blueprint's by file name, keeping its tiles and
-## connectors, so the variant arranges like the blueprint for every seed. A piece that can't be read
-## is left for its own reading to report.
+## connectors, so the variant arranges like the blueprint for every seed. A variant piece that can't
+## be read is left for its own reading to report; one replacing a blueprint piece that can't is
+## refused.
 static func _changes_problem(instance_name: String, region_name: String) -> String:
 	var files: RegionFiles = RegionFiles.cached(region_name)
 	var own: RegionFiles = RegionFiles.cached(instance_name)
@@ -205,14 +206,21 @@ static func _changes_problem(instance_name: String, region_name: String) -> Stri
 				file_name,
 				instance_name,
 			]
-		var changed: Region = read_region(files.texts[path])
 		var before: Region = read_region(kept[file_name])
-		var readable: bool = changed.problem.is_empty() and before.problem.is_empty()
+		if not before.problem.is_empty():
+			# The variant would hide the blueprint's broken piece, so it isn't loaded either.
+			return "variant %s's piece %s replaces %s's, which can't be read: %s" % [
+				region_name,
+				file_name,
+				instance_name,
+				before.problem,
+			]
+		var changed: Region = read_region(files.texts[path])
 		var alike: bool = (
 			changed.sorted_tiles() == before.sorted_tiles()
 			and changed.connectors == before.connectors
 		)
-		if readable and not alike:
+		if changed.problem.is_empty() and not alike:
 			return "variant %s's piece %s doesn't keep the tiles and connectors of %s's" % [
 				region_name,
 				file_name,
