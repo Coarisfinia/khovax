@@ -62,6 +62,10 @@ extends RefCounted
 ## A wild monster in a tile that hides (#202), the glade pond's in its shrubs, starts hidden and
 ## jumps out once the player comes next to it, not a step before. A legend can only hide one in a
 ## tile that hides.
+##
+## A legend marks a named wild monster a boss (#2410): beside its auto attacks, it fires its
+## species' special at the player next to it as soon as it's ready, then again once it has cooled
+## down, never on a roll.
 
 ## Where the flow's profile is saved, apart from the player's own.
 const SAVE_PATH: String = "user://test_domination_profile.json"
@@ -159,6 +163,10 @@ const GUARDS: Dictionary[String, int] = {
 	STRONG_GUARD: 200,
 	WEB_GUARD: 200,
 }
+## The clause that marks a named wild monster a boss (#2410), and how many of its special's
+## cooldowns the boss check plays.
+const BOSS_CLAUSE: String = ", a boss"
+const BOSS_COOLDOWNS: int = 2
 ## Where many weak monsters stand in the big ring.
 const CROWD: Array[Vector2i] = [
 	Vector2i(0, 0),
@@ -179,6 +187,7 @@ func run(tree: SceneTree) -> String:
 		_check_outcomes,
 		_check_species,
 		_check_early_monster,
+		_check_boss_specials,
 	]
 	for check: Callable in steps:
 		var result: String = check.call()
@@ -1153,6 +1162,64 @@ func _outcome_state(
 	]
 	ordered.append_array(extra)
 	return GameState.new(region, 1, ordered)
+
+
+## A legend marks a named wild monster a boss (#2410), and the boss fires its species' special at
+## the player next to it, under the starting instance's rules and its species' own special: over
+## each of its cooldowns, it strikes them once more than the same monster unmarked does, for the
+## special's power times its strength.
+func _check_boss_specials() -> String:
+	var legend: String = "- `🐸`: a wild monster, always %s%s\n" % [COMPANION, BOSS_CLAUSE]
+	var region: Region = FlowSteps.region("🔴🐸", legend)
+	if not region.problem.is_empty():
+		return "a legend couldn't mark a wild monster a boss: " + region.problem
+	var special: Ability = SpeciesContent.cached().specials()[COMPANION]
+	var ticks: int = special.cooldown_seconds * Simulation.TICKS_PER_SECOND * BOSS_COOLDOWNS
+	var boss: GameState = _boss_state(true)
+	var strength: int = _wild(boss).strength_of(boss, _wild(boss).monsters[0])
+	var expected: Vector2i = Vector2i(1, Fixed.scale(strength, special.power)) * BOSS_COOLDOWNS
+	var extra: Vector2i = _strikes_on_player(
+		boss,
+		ticks,
+	) - _strikes_on_player(_boss_state(false), ticks)
+	if extra != expected:
+		return "a boss struck the player beside it (%d, %d) more (strikes, damage), not %s" % [
+			extra.x,
+			extra.y,
+			expected,
+		]
+	return ""
+
+
+## A disc under the starting instance's rules with one awake wild monster of COMPANION's species
+## in the middle, marked a boss when `boss`, and the player in slot 0 next to it.
+func _boss_state(boss: bool) -> GameState:
+	var region: Region = Region.disc(OUTCOME_RADIUS)
+	region.wild_monsters = [Vector2i.ZERO]
+	var meaning: String = WildSpot.NAMED + COMPANION + (BOSS_CLAUSE if boss else "")
+	region.add_placement(WildSpotPlacements.KIND, Vector2i.ZERO, meaning)
+	var state: GameState = FlowSteps.rules_on(Realms.start(), region, 42)
+	_wild(state).sleep(_wild(state).monsters[0], false)
+	var _player: Entity = state.add_entity(0, Vector2i(1, 0))
+	return state
+
+
+## The wild monsters' strikes on the player in slot 0 over `ticks` ticks of them standing still,
+## healed before each so they never fall: how many (x), and their damage together (y).
+func _strikes_on_player(state: GameState, ticks: int) -> Vector2i:
+	var player: int = 0
+	for entity: Entity in state.entities:
+		player = entity.id if entity.slot == 0 else player
+	var still: Array[Command] = FlowSteps.command(Command.NO_MOVE)
+	var strikes: Vector2i = Vector2i.ZERO
+	for _tick: int in ticks:
+		_health(state).heal(state, player, Tuning.PLAYER_HP)
+		Simulation.step(state, still)
+		for event: RefCounted in state.events:
+			var struck: WildMonsterStruck = event as WildMonsterStruck
+			if struck != null and struck.target_id == player:
+				strikes += Vector2i(1, struck.damage)
+	return strikes
 
 
 ## An early wild monster is dominated by a small ring around it, and defeated by a companion of
