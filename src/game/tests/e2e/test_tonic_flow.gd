@@ -557,7 +557,8 @@ func _check_ward() -> String:
 	var profile: Profile = Profile.new()
 	profile.materials.assign({ "draught_pondweed": 1 })
 	var hit: Array[int] = _fought(state, 2 * Simulation.TICKS_PER_SECOND + 1)["wild"]
-	if hit.is_empty() or not _all(hit, hit[0]):
+	# A hit of 1 can't be guarded below 1, so it couldn't show the Ward.
+	if hit.is_empty() or not _all(hit, hit[0]) or hit[0] < 2:
 		return "a wild monster's hits on the player before a Ward were %s" % [hit]
 	var why: String = _drunk(profile, state, "draught_pondweed")
 	var guarded: int = maxi(1, Fixed.scale(hit[0], 800))

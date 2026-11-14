@@ -3,18 +3,16 @@ extends Feature
 ## The effects over time of the tonics and draughts drunk (#2311, the potion design on #2049,
 ## sections 2 and 6), which DrinkingFeature gives their targets (`give`). A Regrowth heals its share
 ## of its target's full HP at the end of each second it lasts, at least 1 HP, through the health
-## feature. The others are read by the rules they change, each in a slice before the tonics', which
-## is why this is a slice of its own: a Ward's guard is added to the passives' guards on every hit
-## (WildAttackFeature), a Quicken shortens a companion's wait between strikes together with its
-## haste when hurt (CompanionPassiveEffects.hastened), and a Fortify scales a companion's strikes
-## once
-## after the type chart (`fortified`). A target has one effect at a time, and a new one replaces it.
-## An effect ends when its time is up, when its companion leaves the instance (it fainted, was
-## swapped out or went back to its player), or when its player is knocked down. A companion keeps
-## its
-## effect when it follows its player through an exit (`carry_out`). An effect starts on the tick
-## after it was drunk and works for its whole time from then, so every rule it changes sees it for
-## the same ticks, whether that rule steps before the drinks or after them.
+## feature. The others are read by the rules they change (TonicEffectReads), each in a slice before
+## the tonics', which is why this is a slice of its own: a Ward's guard is added to the passives'
+## guards on every hit (WildAttackFeature), a Quicken shortens a companion's wait between strikes
+## together with its haste when hurt (CompanionPassiveEffects.hastened), and a Fortify scales a
+## companion's strikes once after the type chart. A target has one effect at a time, and a new one
+## replaces it. An effect ends when its time is up, when its companion leaves the instance (it
+## fainted, was swapped out or went back to its player), or when its player is knocked down. A
+## companion keeps its effect when it follows its player through an exit (`carry_out`). An effect
+## starts on the tick after it was drunk and works for its whole time from then, so every rule it
+## changes sees it for the same ticks, whether that rule steps before the drinks or after them.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "tonic_effects"
@@ -82,27 +80,9 @@ func end(target_id: int) -> void:
 	var _ended: bool = _effects.erase(target_id)
 
 
-## The strength, in thousandths, of the effect `kind` on `target_id` in `state` now; 0 when it has
-## another, none, or the instance has no tonic effects working.
-static func strength_of(state: GameState, target_id: int, kind: String) -> int:
-	var effects: TonicEffectsFeature = state.feature(ID) as TonicEffectsFeature
-	if effects == null or not effects.enabled:
-		return 0
-	var effect: TonicEffect = effects.effect_of(target_id)
-	if effect == null or effect.waits > 0 or effect.kind != kind:
-		return 0
-	return effect.strength
-
-
 ## The effect `target_id` has, or null.
 func effect_of(target_id: int) -> TonicEffect:
 	return _effects.get(target_id)
-
-
-## The damage `damage` of a strike by the companion `companion_id`, scaled once by its Fortify.
-static func fortified(state: GameState, companion_id: int, damage: int) -> int:
-	var fortify: int = strength_of(state, companion_id, FORTIFY)
-	return damage if fortify == 0 else Fixed.scale(damage, Fixed.ONE + fortify)
 
 
 ## The targets with an effect, in id order.

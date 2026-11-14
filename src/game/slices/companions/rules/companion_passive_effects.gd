@@ -43,7 +43,7 @@ static func hastened(
 	hastes: Dictionary[String, int],
 ) -> int:
 	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
-	var quicken: int = 0 * TonicEffectsFeature.strength_of(
+	var quicken: int = TonicEffectReads.strength_of(
 		state,
 		companion_id,
 		TonicEffectsFeature.QUICKEN,

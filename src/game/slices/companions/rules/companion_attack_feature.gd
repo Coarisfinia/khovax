@@ -96,7 +96,7 @@ func _strike(
 	var species_strength: int = wild.strengths.get(species, 1)
 	var strength: int = CompanionGrowth.stat(species_strength, leaning.strength)
 	var damage: int = TypeEffectivenessFeature.scaled(state, strength, species, false, struck)
-	damage = TonicEffectsFeature.fortified(state, companion_id, damage)
+	damage = TonicEffectReads.fortified(state, companion_id, damage)
 	wild.wound(state, target, damage)
 	var wait: int = CompanionGrowth.ticks(STRIKE_TICKS, leaning.speed)
 	_waits[companion_id] = CompanionPassiveEffects.hastened(

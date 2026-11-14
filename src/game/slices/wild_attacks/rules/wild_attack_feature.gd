@@ -292,7 +292,7 @@ static func _on_companion(state: GameState, struck: WildMonsterStruck) -> WildMo
 func _guarded(state: GameState, target_id: int, on_companion: bool, damage: int) -> int:
 	if damage == 0:
 		return damage
-	var guard: int = TonicEffectsFeature.strength_of(state, target_id, TonicEffectsFeature.WARD)
+	var guard: int = TonicEffectReads.strength_of(state, target_id, TonicEffectsFeature.WARD)
 	if guards.is_empty() and guard == 0:
 		return damage
 	for passive: String in _passives(state, target_id, on_companion):

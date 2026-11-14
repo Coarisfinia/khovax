@@ -162,7 +162,7 @@ func _strike(
 	var damage: int = Fixed.scale(strength, power)
 	var struck: String = wild.species_of(target)
 	damage = TypeEffectivenessFeature.scaled(state, damage, species, true, struck)
-	damage = TonicEffectsFeature.fortified(state, companion_id, damage)
+	damage = TonicEffectReads.fortified(state, companion_id, damage)
 	wild.wound(state, target, damage, lethal)
 	var strong: Array[bool] = TypeEffectivenessFeature.strong_against(state, species, true, struck)
 	var event: SpecialStruck = SpecialStruck.new(
