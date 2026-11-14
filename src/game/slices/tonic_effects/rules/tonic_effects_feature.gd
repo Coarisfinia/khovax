@@ -9,8 +9,11 @@ extends Feature
 ## together with its haste when hurt (CompanionPassiveEffects.hastened), and a Fortify scales a
 ## companion's strikes once after the type chart. A target has one effect at a time, and a new one
 ## replaces it. An effect ends when its time is up, when its companion leaves the instance (it
-## fainted, was swapped out or went back to its player), or when its player is knocked down. A
-## companion keeps its effect when it follows its player through an exit (`carry_out`). An effect
+## fainted, was swapped out or went back to its player), or when its player is knocked down or
+## falls (`end`, from the rule whose hit fells them). A companion keeps its effect when it follows
+## its player through an exit (`carry_out`). A player isn't a follower, so theirs is also kept in
+## their world store (#724), the same as here after every change, and goes with them through an
+## exit into another instance, where it carries on from the next tick (#2343). An effect
 ## starts on the tick after it was drunk and works for its whole time from then, so every rule it
 ## changes sees it for the same ticks, whether that rule steps before the drinks or after them.
 
@@ -39,10 +42,13 @@ func requires() -> Array[String]:
 	return needed
 
 
-## Ends the effects of the players knocked down, then lets every other effect run a tick, in id
-## order: one waiting to start waits a tick less (starting when it's done), one working a tick less
-## (ending when its time is up), and a Regrowth heals on the last tick of each of its seconds.
+## Takes up the effect each player who just came in brought in their world store, ends the effects
+## of the players knocked down, then lets every other effect run a tick, in id order: one waiting to
+## start waits a tick less (starting when it's done), one working a tick less (ending when its time
+## is up), and a Regrowth heals on the last tick of each of its seconds. Last, it keeps each
+## player's effect in their world store.
 func step(state: GameState, _commands: Array[Command]) -> void:
+	_take_brought(state)
 	var knockdown: KnockdownFeature = state.feature(KnockdownFeature.ID) as KnockdownFeature
 	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
 	for target_id: int in _targets():
@@ -62,11 +68,24 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 			if (effect.ticks - 1) % Simulation.TICKS_PER_SECOND == 0:
 				var full_hp: int = health.max_hp_of(state, target_id)
 				health.heal(state, target_id, maxi(1, Fixed.scale(full_hp, effect.strength)))
+	for slot: int in GameState.MAX_PLAYERS:
+		_keep(state, slot)
 
 
-## Gives `target_id` the effect `kind` (KINDS) at `strength` thousandths for `ticks`, starting once
-## `waits` ticks have passed (the next tick by default), in place of the one it had.
-func give(target_id: int, kind: String, strength: int, ticks: int, waits: int = 1) -> void:
+## Gives `target_id` in `state` the effect `effect` (its kind one of KINDS), in place of the one it
+## had: its ticks from 1 to MOST_TICKS, and its wait to start at most MOST_TICKS. Inside a tick.
+func give(state: GameState, target_id: int, effect: TonicEffect) -> void:
+	_put(target_id, effect.kind, effect.strength, effect.ticks, effect.waits)
+	_keep_on(state, target_id)
+
+
+## Ends the effect `target_id` in `state` has, if any. Inside a tick.
+func end(state: GameState, target_id: int) -> void:
+	var _ended: bool = _effects.erase(target_id)
+	_keep_on(state, target_id)
+
+
+func _put(target_id: int, kind: String, strength: int, ticks: int, waits: int) -> void:
 	_effects[target_id] = TonicEffect.new(
 		kind,
 		strength,
@@ -75,9 +94,54 @@ func give(target_id: int, kind: String, strength: int, ticks: int, waits: int = 
 	)
 
 
-## Ends the effect `target_id` has, if any.
-func end(target_id: int) -> void:
-	var _ended: bool = _effects.erase(target_id)
+## Takes up the effect kept in the world store of each player in `state` who has none here: one who
+## came in from another instance with it. One a broken save left there that isn't a known effect is
+## none, and dropped at the end of the step.
+func _take_brought(state: GameState) -> void:
+	for slot: int in GameState.MAX_PLAYERS:
+		var player: Entity = state.player(slot)
+		if player == null or _effects.has(player.id):
+			continue
+		var kept: Dictionary = state.stored(slot, ID)
+		var kind: Variant = kept.get("kind")
+		var strength: Variant = kept.get("strength")
+		var ticks: Variant = kept.get("ticks")
+		var waits: Variant = kept.get("waits")
+		if not (kind is String and strength is int and ticks is int and waits is int):
+			continue
+		var named: String = kind
+		var share: int = strength
+		var left: int = ticks
+		var waiting: int = waits
+		if KINDS.has(named) and share > 0 and share < Fixed.ONE and left > 0 and waiting >= 0:
+			_put(player.id, named, share, left, waiting)
+
+
+## Keeps the effect of `target_id` in `state` in their world store, when it's a player here.
+func _keep_on(state: GameState, target_id: int) -> void:
+	var target: Entity = state.entity(target_id)
+	if target != null and target.slot != Entity.NO_SLOT:
+		_keep(state, target.slot)
+
+
+## Keeps the effect of the player in `slot` of `state`, if they're here, in their world store: the
+## same as here, or none.
+func _keep(state: GameState, slot: int) -> void:
+	var player: Entity = state.player(slot)
+	if player == null:
+		return
+	var kept: Dictionary = state.store(slot, ID)
+	kept.clear()
+	var effect: TonicEffect = _effects.get(player.id)
+	if effect != null:
+		kept.merge(
+			{
+				"kind": effect.kind,
+				"strength": effect.strength,
+				"ticks": effect.ticks,
+				"waits": effect.waits,
+			},
+		)
 
 
 ## The effect `target_id` has, or null.
@@ -115,7 +179,7 @@ func carry_in(_state: GameState, arrived: Entity, carried: Dictionary) -> void:
 	var strength: int = carried["strength"]
 	var ticks: int = carried["ticks"]
 	var waits: int = carried["waits"]
-	give(arrived.id, kind, strength, ticks, waits)
+	_put(arrived.id, kind, strength, ticks, waits)
 
 
 ## How many effects there are, then each target's id, kind (its name's code), strength, ticks left
@@ -169,4 +233,4 @@ func load_values(state: GameState, values: DataReader) -> void:
 		if state.entity(target_id) == null or _effects.has(target_id) or not KINDS.has(kind):
 			values.fail("tonic effect on %d isn't one known effect on an entity here" % target_id)
 			return
-		give(target_id, kind, strength, ticks, waits)
+		_put(target_id, kind, strength, ticks, waits)

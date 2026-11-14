@@ -69,8 +69,10 @@ def weld(obj):
 
 
 def vertex_data(mesh):
+    """Each vertex's position and normal, the normal summed here in a fixed order (lib/fixed_order.py):
+    Blender's own differs with the thread count, and the paint's cuts would follow it."""
     return (numpy.array([vertex.co[:] for vertex in mesh.vertices]),
-            numpy.array([vertex.normal[:] for vertex in mesh.vertices]))
+            fixed_order.vertex_normals(mesh, angle=True))
 
 
 def main():

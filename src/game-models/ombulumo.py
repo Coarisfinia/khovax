@@ -25,7 +25,7 @@ from mathutils import Vector
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib import attachments, body, clips, eyes, legs, metrics, muzzle, parts, pulse, quadruped, scene, surface, symmetry, tuning, weights  # noqa: E402
+from lib import attachments, body, clips, eyes, legs, marked_eyes, metrics, muzzle, parts, pulse, quadruped, scene, surface, symmetry, tuning, weights  # noqa: E402
 from lib.materials import palette  # noqa: E402
 
 FPS = 30
@@ -104,6 +104,8 @@ MOUTH = [(0.40 * math.sin(1.25 * share), -0.42 - 0.46 * math.cos(1.25 * share), 
 # The eyes' turrets on top of the head (the left one; the right mirrors it): the skin there moves
 # with the head alone, so it never slides across the eye set into it (check_brows.py).
 TURRET, TURRET_RADIUS = (0.24, -0.52, 0.80), 0.12
+# The eyes' radius.
+EYE_SIZE = 0.09
 
 # How high its belly sits off the ground: the faint and the sleep sink it this far.
 BELLY_HEIGHT = 0.16
@@ -227,13 +229,16 @@ def head_parts(skin, mats):
     left = []
     # Set forward and low on its turret, looking level ahead: from the top camera it shows as an
     # eye, not a ring facing the sky, and from the front its rings sit round its pupil (#1294).
-    for piece in eyes.eye(skin, "Eye.L", (0.27, -0.60, 0.88), (0.25, -1.0, 0.0), 0.09,
+    for piece in eyes.eye(skin, "Eye.L", (0.27, -0.60, 0.88), (0.25, -1.0, 0.0), EYE_SIZE,
                           {"dark": mats["dark"], "glow": mats["glow"], "light": mats["light"], "skin": mats["skin"]},
                           "head", almond=0.95, pupil=(0.42, 0.34), lid=eyes.LID + "L"):
         if piece.name.endswith(".brow"):
             bpy.data.objects.remove(piece, do_unlink=True)
         else:
             left.append(piece)
+    # Set out of the turret's skin where it would cover the eye's lower half, rim included
+    # (check_eyes_covered.py, #1818).
+    marked_eyes.clear(skin, left, EYE_SIZE, rim=True)
     made += left + eyes.mirrored(left)
     return made
 

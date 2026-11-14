@@ -184,6 +184,13 @@ jobs:
           uv run --locked --package khovax-game-checks ../game-checks/test_known_gaps_check.py
           uv run --locked --package khovax-game-checks ../game-checks/known_gaps_check.py HEAD^1
 
+      - name: "🔐 Check a workflow calling another grants every permission its jobs ask for"
+        # #2352: GitHub refuses the caller's run before it starts otherwise (nightly.yml calls this
+        # file), which no push or pull request sees. Its reader's test runs first.
+        run: |
+          uv run --locked --package khovax-game-checks ../game-checks/test_called_workflow_permissions.py
+          uv run --locked --package khovax-game-checks ../game-checks/called_workflow_permissions.py
+
       - name: "🤖 Set up Godot and import the project"
         uses: ./.github/actions/setup-godot
 

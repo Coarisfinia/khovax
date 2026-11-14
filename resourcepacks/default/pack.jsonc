@@ -118,7 +118,6 @@
 	// Each region drawn whole in one file (#1861), in the pack's own folder (#1978).
 	"regions": {
 		"ivenwhal_wudhen": "regions/ivenwhal_wudhen.md",
-		"lymwen_hoall": "regions/lymwen_hoall.md",
 		"senwel_sael": "regions/senwel_sael.md",
 		"thudren_orl": "regions/thudren_orl.md"
 	},
@@ -126,6 +125,7 @@
 	// among them unless it is a variant changing only some of its blueprint's pieces (#1590).
 	"region_pieces": {
 		"brekhal_varn": [
+			"regions/brekhal_varn/clearing.md",
 			"regions/brekhal_varn/narrows.md",
 			"regions/brekhal_varn/saddle.md",
 			"regions/brekhal_varn/sealed.md",
@@ -168,6 +168,10 @@
 			"regions/lumwen_hoal/pond.md",
 			"regions/lumwen_hoal/start.md",
 			"regions/lumwen_hoal/thicket.md"
+		],
+		"lymwen_hoall": [
+			"regions/lymwen_hoall/clearing.md",
+			"regions/lymwen_hoall/start.md"
 		],
 		"morwe_wudhen": [
 			"regions/morwe_wudhen/boulders.md",
