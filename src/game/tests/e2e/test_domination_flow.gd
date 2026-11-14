@@ -825,7 +825,32 @@ func _check_escape_hit() -> String:
 	_wild(off).wound(off, off_monster, OUTCOME_HP * 10, true)
 	if not _wild(off).is_fainted(off_monster):
 		return "with the escapes switched off, a lethal hit didn't fell an escaper"
+	var resumed: String = _escape_off_resumed()
+	if not resumed.is_empty():
+		return resumed
 	return _check_escape_seal()
+
+
+## A world saved with the escapes switched off (#2411) resumes with them off: holding nobody, so
+## a lethal hit fells the escaper, and with an escaper that fainted meanwhile it loads and hashes
+## the same.
+func _escape_off_resumed() -> String:
+	var off: GameState = _escape_state(false)
+	Simulation.step(off, FlowSteps.command(Command.NO_MOVE))
+	off.set_enabled(EscapeFeature.ID, false)
+	var monster: int = _wild(off).monsters[0]
+	var resumed: GameState = _escape_state(false)
+	resumed.load_data(DataReader.new(off.to_data()))
+	_wild(resumed).wound(resumed, monster, OUTCOME_HP * 10, true)
+	if not _wild(resumed).is_fainted(monster):
+		return "a world saved with the escapes off resumed holding its escaper at its line"
+	_wild(off).wound(off, monster, OUTCOME_HP * 10, true)
+	var fainted: GameState = _escape_state(false)
+	var data: DataReader = DataReader.new(off.to_data())
+	fainted.load_data(data)
+	if data.failed() or fainted.state_hash() != off.state_hash():
+		return "a world saved with the escapes off and its escaper fainted didn't resume"
+	return ""
 
 
 ## The escaper in `state`, reloaded, is still held at its line by a lethal hit.

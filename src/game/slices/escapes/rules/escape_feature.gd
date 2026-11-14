@@ -92,8 +92,8 @@ static func has_escaper(region: Region) -> bool:
 	return false
 
 
-## Keeps every escaper at its line's HP or more against every hit: worked out again each tick, as
-## its full HP follows the host's difficulty.
+## Keeps every escaper at its line's HP or more against every hit: pushed again each tick, like
+## a shield (HealthFeature.shield), so it follows its full HP and is never left behind.
 func _hold(state: GameState) -> void:
 	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
 	for monster: int in _escapers():
@@ -186,7 +186,7 @@ func hash_values() -> Array[int]:
 	return values
 
 
-## Every standing escaper's line, and the event it emits, if any, by its entity id.
+## Every escaper's line, and the event it emits, if any, by its entity id.
 func save_values() -> Dictionary:
 	var emitting: Array[Dictionary] = []
 	for monster: int in _escapers():
@@ -195,8 +195,9 @@ func save_values() -> Dictionary:
 	return { "lines": DataReader.flat_pairs(lines), "emits": emitting }
 
 
-## Restores the escapers' lines, each a standing wild monster's, from 1 to 999 thousandths, and
-## holds them at them.
+## Restores the escapers' lines, each a wild monster's, from 1 to 999 thousandths, and holds them at
+## them while the feature is on (off, it holds nobody). One that fainted while the feature was off
+## is still among them, as in the run that saved it, until its next step lets it go.
 func load_values(state: GameState, values: DataReader) -> void:
 	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
 	for monster: int in lines:
@@ -205,12 +206,15 @@ func load_values(state: GameState, values: DataReader) -> void:
 	var saved: Dictionary[int, int] = values.pairs("lines", 0, DataReader.MOST)
 	for monster: int in saved:
 		var line: int = saved[monster]
-		if not _wild(state).monsters.has(monster) or line <= 0 or line >= Fixed.ONE:
-			values.fail("escaper %d isn't one standing wild monster with a line" % monster)
+		var wild: WildMonsterFeature = _wild(state)
+		var known: bool = wild.monsters.has(monster) or wild.is_fainted(monster)
+		if not known or line <= 0 or line >= Fixed.ONE:
+			values.fail("escaper %d isn't one wild monster with a line" % monster)
 			return
 		lines[monster] = line
 	_load_emits(values)
-	_hold(state)
+	if enabled:
+		_hold(state)
 
 
 ## Restores the events the escapers emit, each an id, for an escaper the lines named.

@@ -141,8 +141,7 @@ func is_shielded(entity_id: int) -> bool:
 
 
 ## Whether `entity_id` is an invincible player (`Invincibility.make`). A tracked one is a wild
-## monster
-## or a companion, never a player: a ring hurts them every tick, so they skip the lookup.
+## monster or a companion, never a player: a ring hurts them every tick, so they skip the lookup.
 func is_invincible(state: GameState, entity_id: int) -> bool:
 	if _species.has(entity_id):
 		return false

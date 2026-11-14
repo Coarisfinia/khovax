@@ -28,8 +28,7 @@ var target: String = ""
 ## The meaning of the tile kind it stands on (`sand`), or "" for ground.
 var stands_on: String = ""
 ## The share of the way left where it escapes (`, escaping at`), in thousandths (Fixed), or 0 when
-## it
-## never does.
+## it never does.
 var escapes_at: int = 0
 
 
