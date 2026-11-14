@@ -52,7 +52,6 @@ const CLEARINGS_WAITING: Dictionary[String, int] = {
 	"brekhal_varn": 2327,
 	"brekhal_varn_opened": 2327,
 	"dhorvone_stolm": 2328,
-	"edhra_tewk": 2326,
 	"hrovumel_stolm": 2330,
 	"ivenwhal_wudhen": 2331,
 	"lymwen_hoall": 2332,
