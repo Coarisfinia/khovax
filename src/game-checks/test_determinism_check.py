@@ -10,6 +10,7 @@ from unittest import mock
 
 from determinism_check import (
     forbidden_lines,
+    inherited_members,
     int_vector_functions,
     int_vector_members,
     own_test_passes,
@@ -440,6 +441,59 @@ class FormsTest(unittest.TestCase):
             "\n\n\nfunc g() -> int:\n\treturn obj.tiles[0].length()",
         ):
             self.assertEqual(forbidden_lines(source, int_vector_members(source)), [], source)
+
+    def test_an_inherited_member_used_by_bare_name_is_refused(self) -> None:
+        # A class has the members of the class it extends: an inner class of the same file, through
+        # every step, or another rules class (#2306).
+        bases = {"Base": {"tile"}}
+        for source in (
+            "class A:\n\tvar tile: Vector2i\n\n\nclass B extends A:\n\tfunc f() -> void:"
+            "\n\t\tvar a := tile.length()",
+            "class A:\n\tvar tile: Vector2i\n\n\nclass B:\n\textends A\n\n\tvar a := tile.length()",
+            "class A:\n\tvar tile: Vector2i\n\n\nclass B extends A:\n\tpass\n\n\nclass C extends B:"
+            "\n\tvar a := self.tile.length()",
+            "class A:\n\tvar tiles: Array[Vector2i]\n\n\nclass B extends A:"
+            "\n\tvar a := tiles[0].length()",
+            "extends Base\n\n\nfunc f() -> void:\n\tvar a := tile.length()",
+            "class_name Leaf extends Base\n\n\nfunc f() -> void:\n\tvar a := tile.length()",
+            "extends RefCounted\n\n\nclass B extends Base:\n\tvar a := tile.length()",
+            # The nearest class of that name around it, not a later one elsewhere.
+            "class First:\n\tclass A:\n\t\tvar tile: Vector2i\n\n\tclass B extends A:"
+            "\n\t\tvar a := tile.length()\n\n\nclass Second:\n\tclass A:"
+            "\n\t\tvar tile: String",
+        ):
+            hit = [
+                f"{number}:{line}"
+                for number, line in enumerate(source.split("\n"), 1)
+                if "length(" in line
+            ]
+            self.assertEqual(forbidden_lines(source, bases=bases), hit, source)
+
+    def test_a_member_of_a_class_not_extended_stays_allowed(self) -> None:
+        bases = {"Base": {"tile"}}
+        for source in (
+            "class A:\n\tvar tile: Vector2i\n\n\nclass B extends RefCounted:\n\tvar tile: String"
+            "\n\tvar a := tile.length()",
+            "extends Other\n\n\nfunc f() -> void:\n\tvar a := tile.length()",
+            'extends "res://base.gd"\n\n\nfunc f() -> void:\n\tvar a := tile.length()',
+            "extends Base\n\n\nclass B:\n\tvar tile: String\n\tvar a := tile.length()",
+            # Classes extending each other in a circle never compile, but mustn't hang the check.
+            "class A extends B:\n\tpass\n\n\nclass B extends A:\n\tvar a := tile.length()",
+        ):
+            self.assertEqual(forbidden_lines(source, bases=bases), [], source)
+
+    def test_inherited_members_follow_the_rules_classes_extends(self) -> None:
+        sources = [
+            "class_name Base\nextends RefCounted\n\nvar tile: Vector2i\n\n\nclass Inner:"
+            "\n\tvar inner: Vector2i",
+            "class_name Mid\nextends Base\n\nconst SPOT: Vector2i = Vector2i.ONE",
+            "class_name Leaf extends Mid",
+            "extends Base\n\nvar nameless: Vector2i",
+        ]
+        self.assertEqual(
+            inherited_members(sources),
+            {"Base": {"tile"}, "Mid": {"tile", "SPOT"}, "Leaf": {"tile", "SPOT"}},
+        )
 
     def test_an_element_of_an_integer_vector_array_is_refused(self) -> None:
         # A subscript, and a loop variable, over an Array[Vector2i] (#2261).
