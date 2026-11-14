@@ -11,6 +11,7 @@ from unittest import mock
 from determinism_check import (
     forbidden_lines,
     inherited_members,
+    int_vector_functions,
     int_vector_members,
     own_test_passes,
 )
@@ -466,7 +467,7 @@ class FormsTest(unittest.TestCase):
                 for number, line in enumerate(source.split("\n"), 1)
                 if "length(" in line
             ]
-            self.assertEqual(forbidden_lines(source, set(), bases), hit, source)
+            self.assertEqual(forbidden_lines(source, bases=bases), hit, source)
 
     def test_a_member_of_a_class_not_extended_stays_allowed(self) -> None:
         bases = {"Base": {"tile"}}
@@ -479,7 +480,7 @@ class FormsTest(unittest.TestCase):
             # Classes extending each other in a circle never compile, but mustn't hang the check.
             "class A extends B:\n\tpass\n\n\nclass B extends A:\n\tvar a := tile.length()",
         ):
-            self.assertEqual(forbidden_lines(source, set(), bases), [], source)
+            self.assertEqual(forbidden_lines(source, bases=bases), [], source)
 
     def test_inherited_members_follow_the_rules_classes_extends(self) -> None:
         sources = [
@@ -604,6 +605,104 @@ class FormsTest(unittest.TestCase):
                 if "length(" in line
             ]
             self.assertEqual(forbidden_lines(source), hit, source)
+
+
+    def test_a_call_to_a_function_returning_an_integer_vector_is_refused(self) -> None:
+        # The script's own function, called on its own or on self (#2263).
+        source = "func tile() -> Vector2i:\n\treturn Vector2i.ONE\n"
+        for line in (
+            "var a := tile().length()",
+            "var a := self.tile().distance_to(b)",
+            "var a := tile().abs().length()",
+            "var a := tile ().length()",
+        ):
+            self.assertEqual(forbidden_lines(source + line), [f"3:{line}"], line)
+
+    def test_a_call_to_another_scripts_integer_vector_function_is_refused(self) -> None:
+        # One some rules script declares, called on any object, its arguments balanced (#2263).
+        for line in (
+            "var a := entity.tile_at(1, f(2)).length()",
+            "var a := get_world().grid.tile_at(x).distance_to(b)",
+            "var a := entities[0].tile_at((1 + 2) * 3).mini(4).length()",
+            "var a := tile_at(x).length()",
+            "var a := obj.tile_at (x).length()",
+        ):
+            self.assertEqual(forbidden_lines(line, functions={"tile_at"}), [f"1:{line}"], line)
+
+    def test_a_call_to_any_other_function_stays_allowed(self) -> None:
+        source = "func count() -> int:\n\treturn 1\nfunc name() -> String:\n\treturn \"\"\n"
+        for line in (
+            "var a := count().length()",
+            "var a := name().length()",
+            "var a := entity.name().length()",
+        ):
+            self.assertEqual(forbidden_lines(source + line), [], line)
+        for line in (
+            "var a := entity.tile_at_name(x).length()",
+            "var a := entity.tile_at.length()",
+            "var a := tile_at.length()",
+            "var a := entity.tile_at(x).y.length()",
+        ):
+            self.assertEqual(forbidden_lines(line, functions={"tile_at"}), [], line)
+
+    def test_the_scripts_own_function_of_another_type_wins_on_its_own_or_on_self(self) -> None:
+        # Another script's tile() returns a Vector2i, this one's a String.
+        source = "func tile() -> String:\n\treturn \"\"\n"
+        for line, hit in (
+            ("var a := tile().length()", []),
+            ("var a := self.tile().length()", []),
+            ("var a := entity.tile().length()", ["3:var a := entity.tile().length()"]),
+        ):
+            self.assertEqual(forbidden_lines(source + line, functions={"tile"}), hit, line)
+
+    def test_a_bare_or_self_call_reaches_its_own_classs_functions_only(self) -> None:
+        # An inner class reaches an outer class's static func only through its name (#2263).
+        for source, hit in (
+            ("func tile() -> Vector2i:\n\treturn Vector2i.ONE\n\n\nclass Inner:"
+             "\n\tfunc f() -> int:\n\t\treturn tile().length()", []),
+            ("class Inner:\n\tfunc tile() -> Vector2i:\n\t\treturn Vector2i.ONE"
+             "\n\n\nvar a := tile().length()", []),
+            ("class A:\n\tfunc tile() -> Vector2i:\n\t\treturn Vector2i.ONE\n\n\nclass B:"
+             "\n\tfunc tile() -> String:\n\t\treturn \"\"\n\n\tfunc f() -> int:"
+             "\n\t\treturn self.tile().length()", []),
+            ("class Inner:\n\tfunc tile() -> Vector2i:\n\t\treturn Vector2i.ONE"
+             "\n\n\tfunc f() -> int:\n\t\treturn self.tile().length()",
+             ["6:\t\treturn self.tile().length()"]),
+            ("class Inner:\n\tfunc tile() -> Vector2i:\n\t\treturn Vector2i.ONE"
+             "\n\tvar a := tile().length()", ["4:\tvar a := tile().length()"]),
+            ("static func tile() -> Vector2i:\n\treturn Vector2i.ONE\n\n\nclass Inner:"
+             "\n\tfunc f() -> int:\n\t\treturn Outer.tile().length()",
+             ["7:\t\treturn Outer.tile().length()"]),
+            ("class A:\n\tfunc tile() -> Vector2i:\n\t\treturn Vector2i.ONE\n\n\nclass B:"
+             "\n\tfunc tile() -> String:\n\t\treturn \"\"\n\n\tfunc f(a: A) -> int:"
+             "\n\t\treturn a.tile().length()", ["11:\t\treturn a.tile().length()"]),
+        ):
+            self.assertEqual(forbidden_lines(source), hit, source)
+
+    def test_functions_are_those_declared_to_return_an_integer_vector(self) -> None:
+        source = "\n".join(
+            (
+                "func tile() -> Vector2i:",
+                "\treturn Vector2i.ONE",
+                "static func home(a: int, b: String = \"(\") -> Vector3i:",
+                "\treturn Vector3i.ONE",
+                "func spot(",
+                "\ta: Vector2i,",
+                "\tb: int,",
+                ")  ->  Vector4i:",
+                "\treturn Vector4i.ONE",
+                "func count() -> int:",
+                "\treturn 1",
+                "func tiles() -> Array[Vector2i]:",
+                "\treturn []",
+                "func of(at: Vector2i) -> void:",
+                "\tvar f: Callable = func(x: int) -> Vector2i: return Vector2i(x, x)",
+                "class A:",
+                "\tfunc inner() -> Vector2i:",
+                "\t\treturn Vector2i.ZERO",
+            )
+        )
+        self.assertEqual(int_vector_functions(source), {"tile", "home", "spot", "inner"})
 
 
 class OwnTestTest(unittest.TestCase):
