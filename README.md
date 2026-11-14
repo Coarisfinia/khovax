@@ -28,7 +28,7 @@ Install the tools with [scoop](https://scoop.sh) (Windows). The project targets 
 ```sh
 scoop bucket add extras
 scoop install godot gh git uv
-scoop install "$(cygpath -w "$PWD/tools/scoop/gdstyle.json")"
+scoop install "$(cygpath -w "$PWD/tools/gdstyle.json")"
 ```
 
 On macOS and Linux, install uv with [Homebrew](https://brew.sh): `brew install uv`. uv runs the Python
@@ -39,7 +39,8 @@ The game is the Godot project in `src/game/`; every command below runs from the 
 root and names it with `--path src/game`.
 
 `gdstyle` (the GDScript linter and formatter) isn't in a scoop bucket, so the repository carries its
-manifest, and scoop needs its absolute path (the `cygpath` above is for Git Bash).
+manifest, `tools/gdstyle.json`, and scoop needs its absolute path (the `cygpath` above is for Git
+Bash).
 
 Once per checkout, link the game to the resource packs at the repository's root
 (`resourcepacks/`, where the default pack's files lie): `uv run --locked
