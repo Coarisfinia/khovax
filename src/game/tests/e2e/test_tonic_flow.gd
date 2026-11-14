@@ -555,9 +555,9 @@ func _check_fortify_and_quicken() -> String:
 			strong[0],
 			strong[1],
 		]
-	if why.is_empty():
-		why = _check_quicken(profile, state, hit[0])
-	return why
+	# Checked even after a wrong Fortify, so a wrong Quicken is named too.
+	var quicken: String = _check_quicken(profile, state, hit[0])
+	return quicken if why.is_empty() else "; ".join([why, quicken]).trim_suffix("; ")
 
 
 ## A feather tonic (200 thousandths for 20 s) drunk by the companion of player 0 in `state`, which
