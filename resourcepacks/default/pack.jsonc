@@ -77,6 +77,7 @@
 		"model_box_small_decorated": "models/kaykit-dungeon/box_small_decorated.glb",
 		"model_chest": "models/kaykit-dungeon/chest.glb",
 		"model_coin_pouch": "models/quaternius-items/coin_pouch.glb",
+		"model_copper_ribbons_ore": "models/copper-ribbons-ore/copper_ribbons_ore.glb",
 		"model_drakkudor": "models/drakkudor/drakkudor.glb",
 		"model_fohossa": "models/fohossa/fohossa.glb",
 		"model_frostfire_hound": "models/frostfire_hound/frostfire_hound.glb",
