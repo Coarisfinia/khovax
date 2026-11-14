@@ -407,8 +407,9 @@ def shadowed_names(
     shadowed: list[set[str]] = [set() for _ in lines]
     # Every other binding in a function, which may hold an integer vector: by its function.
     rebound: dict[int, set[str]] = {}
-    locals_: dict[int, set[tuple[int, str]]] = {}  # Each var and const, with its line.
-    hiding: set[tuple[int, str]] = set()  # The locals that hide.
+    # Each var and const by where its name stands, so two on one line stay apart.
+    locals_: dict[int, set[tuple[int, int, str]]] = {}
+    hiding: set[tuple[int, int, str]] = set()  # The locals that hide.
     for at, (_, function) in enumerate(scopes):
         if function is None:
             continue
@@ -421,7 +422,7 @@ def shadowed_names(
                 hit.group(1) for index in body for hit in LOOP_BINDING.finditer(lines[index])
             }
             locals_[function] = {
-                (index, hit.group(1))
+                (index, hit.start(1), hit.group(1))
                 for index in body
                 for hit in LOCAL_BINDING.finditer(lines[index])
             }
@@ -458,7 +459,7 @@ def shadowed_names(
         )
         if MATCH.match(lines[opener]):
             continue
-        hiding.add((at, local.group(1)))
+        hiding.add((at, local.start(1), local.group(1)))
         following = next((index for index in range(at + 1, len(lines)) if starts[index]), None)
         if following is None:
             continue
@@ -469,7 +470,7 @@ def shadowed_names(
                 break
             shadowed[index].add(local.group(1))
     for function, bindings in locals_.items():
-        rebound[function].update(name for at, name in bindings - hiding)
+        rebound[function].update(name for _, _, name in bindings - hiding)
     return [
         frozenset(names - rebound.get(function, set()) if function is not None else names)
         for names, (_, function) in zip(shadowed, scopes)
