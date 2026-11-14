@@ -35,7 +35,6 @@ KNOWN = {
     "mana_pup": 1818,
     "mana_wolf": 1818,
     "nuvvoluvvo": 1818,
-    "ombulumo": 1818,
     "ombuwomo": 1818,
 }
 
