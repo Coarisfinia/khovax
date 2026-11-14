@@ -207,7 +207,73 @@ func _check_kits(content: SpeciesContent) -> String:
 	if SpeciesKit.problem(missing, loaded.abilities).is_empty():
 		return "a special that doesn't exist wasn't refused"
 	var result: String = _check_path_marks(loaded.abilities)
+	if result.is_empty():
+		result = _check_core_skills(loaded.abilities)
 	return result if not result.is_empty() else _check_abilities_refused()
+
+
+## A species' core skills (#2409) are its special, its two passives and its optional `core` list,
+## in that order: abilities of kind core, which carry no special's or passive's fields. A core list
+## naming an ability of another kind, one named twice or one another species lists is refused.
+func _check_core_skills(abilities: Dictionary[String, Ability]) -> String:
+	var core: String = "{\"id\": \"%s\", \"kind\": \"core\", \"name\": \"N\","
+	core += " \"description\": \"d\"%s}"
+	var with_core: Dictionary[String, Ability] = abilities.duplicate()
+	for id: String in ["xo_absorb", "xo_grow"]:
+		var ability: Ability = Ability.parse(id, core % [id, ""])
+		if not ability.problem.is_empty():
+			return "a core ability was refused: " + ability.problem
+		with_core[id] = ability
+	for extra: String in [", \"guard\": 100", ", \"power\": 1000", ", \"hush\": 3"]:
+		if Ability.parse("xo_absorb", core % ["xo_absorb", extra]).problem.is_empty():
+			return "a core ability with %s wasn't refused" % extra
+	var files: Dictionary[String, String] = ResourcePacks.species()
+	var data: Dictionary = Content.object_of(FileAccess.get_file_as_string(files["tikazzir"]))
+	data["core"] = ["xo_absorb", "xo_grow"]
+	var content: SpeciesContent = SpeciesContent.new()
+	for id: String in ["tikazzir", "ombulumo"]:
+		var text: String = FileAccess.get_file_as_string(files[id])
+		var problem: String = content.add(id, JSON.stringify(data) if id == "tikazzir" else text)
+		if not problem.is_empty():
+			return "a species with a core list didn't read: " + problem
+	var finch: Species = content.species["tikazzir"]
+	var wanted: Array[String] = [finch.special, finch.player_passive, finch.self_passive]
+	wanted.append_array(["xo_absorb", "xo_grow"])
+	if content.call("core_skills", "tikazzir") != wanted:
+		return "the core skills read %s, not %s" % [content.call("core_skills", "tikazzir"), wanted]
+	return _check_core_lists_refused(content, with_core)
+
+
+## A core list naming a passive, an ability twice or one another species lists is refused, and so
+## is a development web granting a core ability as its passive (#2409).
+func _check_core_lists_refused(
+	content: SpeciesContent,
+	abilities: Dictionary[String, Ability],
+) -> String:
+	var kit: Object = SpeciesKit
+	var problem: String = str(kit.call("problem", content.species, abilities, content.get("cores")))
+	if not problem.is_empty():
+		return "a species' core list was refused: " + problem
+	var passive: String = content.species["ombulumo"].self_passive
+	var cases: Dictionary[String, Array] = {
+		"isn't an ability of kind core": [[passive], []],
+		"twice": [["xo_absorb", "xo_absorb"], []],
+		"share the core skill": [["xo_absorb"], ["xo_absorb"]],
+	}
+	for wanted: String in cases:
+		var cores: Dictionary[String, Array] = {
+			"tikazzir": cases[wanted][0],
+			"ombulumo": cases[wanted][1],
+		}
+		problem = str(kit.call("problem", content.species, abilities, cores))
+		if not problem.contains(wanted):
+			return "a core list %s was refused with \"%s\"" % [cores, problem]
+	var webs: Dictionary[String, DevelopmentWeb] = DevelopmentContent.load_webs().webs
+	webs["ombulumo"].passives["deep_4"] = "xo_absorb"
+	problem = DevelopmentPassives.problem(webs, content.species, abilities)
+	if not problem.contains("isn't a passive"):
+		return "a web granting a core ability was refused with \"%s\"" % problem
+	return ""
 
 
 ## Quests and abilities read their path marks (#471) as written, none when they have none, and a
