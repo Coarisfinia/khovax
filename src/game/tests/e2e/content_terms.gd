@@ -57,8 +57,8 @@ const NAME_RULES: Dictionary[String, String] = {
 	+ "same consonants and other vowels, sharing two consonants with its species",
 	"passive": "a beast-call of two parts joined by a hyphen, the second in lower case, differing "
 	+ "only in their first consonant, sharing two consonants with its species",
-	"core": "a beast-call of two parts joined by a hyphen, the second in lower case, the first said "
-	+ "again, sharing two consonants with its species",
+	"core": "a beast-call of two parts joined by a hyphen, the second in lower case, the first "
+	+ "said again, sharing two consonants with its species",
 	"realm": "one land-speech word of 2 or 3 syllables ending in -vaun",
 	"instance": "a land-speech name of 1 to 3 syllables, then a landform word",
 	"region": "its instance's name corrupted: y for the first vowel, the landform's last consonant "
