@@ -4,9 +4,8 @@ extends RefCounted
 ## lists them: what its region pieces' legends place, over all of its pieces. A slice that places
 ## something on the ground says through its PlacementReader which feature runs it; the core's own
 ## meanings (exits, wild monsters, their schedules, packs, sleep, hunts and foraging, hiding,
-## bosses' specials, #2410), tiles bare hands can harvest (#696) and region pieces to enter are
-## matched here. Only which features; FeatureFactories says when they
-## step.
+## bosses' specials, #2410, and escapers, #2411), tiles bare hands can harvest (#696) and region
+## pieces to enter are matched here. Only which features; FeatureFactories says when they step.
 
 
 ## Every slice's reader of what it places on a region's ground (#824).

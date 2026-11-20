@@ -22,6 +22,10 @@ extends Feature
 ## `special_of` alone, so a transformation can swap in its current form's (#2413). Switched off (a
 ## phase, #30), it fires nothing and its cooldowns wait.
 ##
+## Its specials land through WildAttackFeature.land, so it requires the wild monsters' auto attacks:
+## an instance whose region marks a boss but whose blueprint leaves `wild_attacks` out is refused
+## (GameState.order_problem, #2450).
+##
 ## It runs right after the wild monsters' auto attacks, so it strikes companions where they stood
 ## at the end of the last tick, as they step later.
 
@@ -238,8 +242,11 @@ func load_values(state: GameState, values: DataReader) -> void:
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	for boss: int in marked:
 		var here: bool = not wild.species_of(boss).is_empty()
-		if here != saved.has(boss):
-			values.fail("boss %d is a boss the legend marks only while it's here" % boss)
+		if here and not saved.has(boss):
+			values.fail("the save leaves out boss %d, which the legend marks" % boss)
+			return
+		if saved.has(boss) and not here:
+			values.fail("the save keeps boss %d, which is gone" % boss)
 			return
 		if here:
 			bosses.append(boss)

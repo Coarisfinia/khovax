@@ -66,7 +66,9 @@ extends RefCounted
 ## A legend marks a named wild monster a boss (#2410): beside its auto attacks, it fires its
 ## species' special at the player next to it as soon as it's ready, then again once it has cooled
 ## down, never on a roll, at the companion beside it before the player; a save resumes its
-## cooldown. Asleep, held or switched off, it fires nothing.
+## cooldown. Asleep, held, switched off, hidden, encircled, sealing, fainted or dominated, it fires
+## nothing, and a save after it fainted or was dominated resumes (#2450). One marked escaping too
+## portals away at its line before it fires, and is no boss from then on.
 
 ## Where the flow's profile is saved, apart from the player's own.
 const SAVE_PATH: String = "user://test_domination_profile.json"
@@ -171,6 +173,10 @@ const GUARDS: Dictionary[String, int] = {
 ## cooldowns the boss check plays.
 const BOSS_CLAUSE: String = ", a boss"
 const BOSS_COOLDOWNS: int = 2
+## The clause that marks a boss escaping too (#2411), at ESCAPE_LINE.
+const BOSS_ESCAPING: String = ", escaping at 25%"
+## A tile kind a wild monster hides in (#202).
+const HIDING_TILE: String = "shrubs"
 ## Where many weak monsters stand in the big ring.
 const CROWD: Array[Vector2i] = [
 	Vector2i(0, 0),
@@ -1381,21 +1387,36 @@ static func _forged_loads(state: GameState, bosses: BossSpecialFeature, forged: 
 	return not values.failed()
 
 
-## Asleep, held or with its feature switched off, a boss fires no special: it strikes nothing more
-## than the same monster unmarked. Next to the player and their companion, it fires at the
+## Asleep, held, switched off, fainted or dominated, a boss fires no special: over `ticks` it
+## strikes nothing more than the same monster unmarked. Hidden, encircled by a ring waiting for a
+## totem or sealing in one, it fires none in the tick after either, though its special is ready:
+## those holds end soon (a hidden one jumps out at the player next to it, a waiting ring wears
+## through, a seal holds or breaks). Next to the player and their companion, it fires at the
 ## companion.
 func _check_boss_held(ticks: int) -> String:
 	var holds: Dictionary[String, Callable] = {
 		"asleep": func(state: GameState) -> void: _wild(state).sleep(_boss_of(state), true),
 		"held": func(state: GameState) -> void: _wild(state).hold(_boss_of(state), true),
 		"off": func(state: GameState) -> void: state.set_enabled(BossSpecialFeature.ID, false),
+		"fainted": _faint_boss,
+		"dominated": _dominate_boss,
+		"hidden": func(_state: GameState) -> void: pass,
+		"encircled": func(state: GameState) -> void: _ring_boss(state, false, true),
+		"sealing": func(state: GameState) -> void: _ring_boss(state, true, true),
 	}
+	var briefly: Array[String] = ["hidden", "encircled", "sealing"]
 	for what: String in holds:
-		var boss: GameState = _boss_state(true)
-		var plain: GameState = _boss_state(false)
+		var over: int = 1 if briefly.has(what) else ticks
+		var boss: GameState = _boss_state(true, false, "", what == "hidden")
+		var plain: GameState = _boss_state(false, false, "", what == "hidden")
 		holds[what].call(boss)
 		holds[what].call(plain)
-		var extra: Vector2i = _strikes_on_player(boss, ticks) - _strikes_on_player(plain, ticks)
+		# Else a check that it holds fire could pass only because its special still cools down.
+		var specials: BossSpecialFeature = boss.feature(BossSpecialFeature.ID) as BossSpecialFeature
+		for marked: int in specials.bosses:
+			if specials.cooldown_left(marked) > 0:
+				return "a boss %s had fired before its check" % what
+		var extra: Vector2i = _strikes_on_player(boss, over) - _strikes_on_player(plain, over)
 		if extra != Vector2i.ZERO:
 			return "a boss %s struck the player (%d, %d) more (strikes, damage)" % [
 				what,
@@ -1406,7 +1427,110 @@ func _check_boss_held(ticks: int) -> String:
 	var on_plain: Vector2i = _boss_strikes_with_companion(false)
 	if on_boss - on_plain != Vector2i(1, 0):
 		return "a boss next to a companion and a player didn't fire at the companion first"
+	return _check_boss_gone_reloads(ticks)
+
+
+## A save taken after the boss fainted, or after it was dominated, resumes and hashes the same: a
+## fainted boss stays a boss, a dominated one is gone from the bosses. Then a boss that escapes too
+## (`_check_boss_escaping`, over `ticks`).
+func _check_boss_gone_reloads(ticks: int) -> String:
+	var gone: Dictionary[String, Callable] = { "fainted": _faint_boss, "dominated": _dominate_boss }
+	for what: String in gone:
+		var state: GameState = _boss_state(true)
+		var boss: int = _boss_of(state)
+		gone[what].call(state)
+		if (state.entity(boss) == null) != (what == "dominated"):
+			return "a boss %s wasn't, or was, still in the instance" % what
+		var resumed: String = _boss_resumed(state, "")
+		if not resumed.is_empty():
+			return "a save taken after a boss %s: %s" % [what, resumed]
+		var bosses: BossSpecialFeature = state.feature(BossSpecialFeature.ID) as BossSpecialFeature
+		if bosses.bosses.has(boss) != (what == "fainted"):
+			return "a boss %s was kept a boss, or dropped, wrongly" % what
+	return _check_boss_escaping(ticks)
+
+
+## A legend marks a named wild monster a boss that escapes too (#2410, #2411): it brings both
+## features, and until it escapes, its special fires and cools down as a boss's that doesn't. At
+## its line, it portals away in the next tick before it fires, and is no boss from then on; a save
+## taken after resumes and hashes the same.
+func _check_boss_escaping(ticks: int) -> String:
+	var spot: WildSpot = WildSpot.read(WildSpot.NAMED + COMPANION + BOSS_CLAUSE + BOSS_ESCAPING)
+	if spot == null or not spot.boss or spot.escapes_at != ESCAPE_LINE:
+		return "a legend didn't mark its wild monster both a boss and escaping"
+	var escaping: GameState = _boss_state(true, false, BOSS_ESCAPING)
+	if escaping.feature(EscapeFeature.ID) == null:
+		return "a boss marked escaping didn't bring the escapes"
+	var standing: GameState = _boss_state(true)
+	if _strikes_on_player(escaping, ticks) != _strikes_on_player(standing, ticks):
+		return "a boss marked escaping struck the player otherwise before it escaped"
+	var cooling: BossSpecialFeature = escaping.feature(BossSpecialFeature.ID) as BossSpecialFeature
+	var plain: BossSpecialFeature = standing.feature(BossSpecialFeature.ID) as BossSpecialFeature
+	if cooling.hash_values() != plain.hash_values():
+		return "a boss marked escaping cooled its special down otherwise"
+	var state: GameState = _boss_state(true, false, BOSS_ESCAPING)
+	var boss: int = _boss_of(state)
+	# A lethal hit stops at its line (HealthFeature.hold_at), so it doesn't faint.
+	_wild(state).wound(state, boss, _hp(state, boss), true)
+	if _wild(state).is_fainted(boss):
+		return "a lethal hit felled a boss marked escaping past its line"
+	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	for event: RefCounted in state.events:
+		if event is WildMonsterStruck and (event as WildMonsterStruck).monster_id == boss:
+			return "a boss at its line struck before it escaped"
+	var bosses: BossSpecialFeature = state.feature(BossSpecialFeature.ID) as BossSpecialFeature
+	if (state.entity(boss) != null
+			or not bosses.bosses.is_empty()
+			or bosses.cooldown_left(boss) != 0):
+		return "a boss at its line didn't escape, or stayed a boss"
+	var resumed: String = _boss_resumed(state, BOSS_ESCAPING)
+	if not resumed.is_empty():
+		return "a save taken after a boss escaped: " + resumed
 	return ""
+
+
+## Whether a save of `state` loads into a fresh `_boss_state` of a boss marked with `clauses` too,
+## and hashes the same; why not, or "".
+func _boss_resumed(state: GameState, clauses: String) -> String:
+	var resumed: GameState = _boss_state(true, false, clauses)
+	var data: DataReader = DataReader.new(state.to_data())
+	resumed.load_data(data)
+	if data.failed():
+		return "it didn't load: " + data.problem
+	# Its own hash: the world's tick is the World's to restore, not the instance's.
+	if resumed.own_hash() != state.own_hash():
+		return "it hashed otherwise"
+	return ""
+
+
+## Fells the boss check's wild monster in `state` with a lethal hit: it faints.
+func _faint_boss(state: GameState) -> void:
+	var boss: int = _boss_of(state)
+	_wild(state).wound(state, boss, _hp(state, boss), true)
+
+
+## Has the player in slot 0 dominate the boss check's wild monster in `state`, worn down to 1 HP
+## first so the seal is short, and asleep so it fires nothing meanwhile.
+func _dominate_boss(state: GameState) -> void:
+	var boss: int = _boss_of(state)
+	_wild(state).wound(state, boss, _hp(state, boss))
+	_ring_boss(state, true, false)
+	var _events: Array[RefCounted] = _settle(state)
+
+
+## Closes a ring of the player in slot 0, next to the boss check's wild monster in `state`, around
+## it, asleep meanwhile so it fires nothing yet, and places their totem on it when `totem`: then
+## it's encircled by a ring waiting for a totem, or sealing in one. It wakes after when `wake`.
+func _ring_boss(state: GameState, totem: bool, wake: bool) -> void:
+	var boss: int = _boss_of(state)
+	_wild(state).sleep(boss, true)
+	var ring: Array[Vector2i] = Hex.ring(SMALL_RING)
+	var at: int = ring.find(state.player(0).tile)
+	var path: Array[Vector2i] = ring.slice(at + 1)
+	path.append_array(ring.slice(0, at))
+	_close(state, path, totem)
+	if wake:
+		_wild(state).sleep(boss, false)
 
 
 ## The boss check's wild monster in `state`.
@@ -1432,13 +1556,21 @@ func _boss_strikes_with_companion(boss: bool) -> Vector2i:
 
 
 ## A disc under the starting instance's rules with one awake wild monster of COMPANION's species
-## in the middle, marked a boss when `boss`, and the player in slot 0 next to it, carrying a
-## COMPANION when `carrying`.
-func _boss_state(boss: bool, carrying: bool = false) -> GameState:
+## in the middle, marked a boss when `boss` and with the legend's `clauses` after, hidden in
+## HIDING_TILE when `hidden`, and the player in slot 0 next to it, carrying a COMPANION when
+## `carrying`.
+func _boss_state(
+		boss: bool,
+		carrying: bool = false,
+		clauses: String = "",
+		hidden: bool = false,
+) -> GameState:
 	var region: Region = Region.disc(OUTCOME_RADIUS)
 	region.wild_monsters = [Vector2i.ZERO]
-	var meaning: String = WildSpot.NAMED + COMPANION + (BOSS_CLAUSE if boss else "")
+	var meaning: String = WildSpot.NAMED + COMPANION + (BOSS_CLAUSE if boss else "") + clauses
 	region.add_placement(WildSpotPlacements.KIND, Vector2i.ZERO, meaning)
+	if hidden:
+		region.terrain[Vector2i.ZERO] = HIDING_TILE
 	var state: GameState = FlowSteps.rules_on(Realms.start(), region, 42)
 	_wild(state).sleep(_wild(state).monsters[0], false)
 	if carrying:
@@ -2563,13 +2695,14 @@ func _strikes_over(state: GameState, ticks: int) -> Array[CompanionStruck]:
 
 
 ## Walks the player in slot 0 along `path` up to the start of its last step, which closes the
-## ring, and places their totem on it the next tick (#423): the seal starts on the state's tick
-## then.
-func _close(state: GameState, path: Array[Vector2i]) -> void:
+## ring, and places their totem on it the next tick (#423) unless not `totem`: the seal starts on
+## the state's tick then.
+func _close(state: GameState, path: Array[Vector2i], totem: bool = true) -> void:
 	var _walked: Array[RefCounted] = FlowSteps.walk(state, path.slice(0, path.size() - 1))
 	var last: int = Hex.DIRECTIONS.find(path[path.size() - 1] - state.player(0).tile)
 	Simulation.step(state, FlowSteps.command(last))
-	Simulation.step(state, FlowSteps.totem())
+	if totem:
+		Simulation.step(state, FlowSteps.totem())
 
 
 ## Steps the player in slot 0 standing until no ring seals, first placing their totem on a ring
