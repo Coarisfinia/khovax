@@ -2299,9 +2299,8 @@ func _check_terms() -> String:
 	return _check_name_rules()
 
 
-## Each kind's name rule (#909) on NAME_CASES, a core ability's among them (#2447): a case whose
-## kind
-## has no rule fails.
+## Each kind's name rule (#909) on NAME_CASES, a core ability's among them (#2447). A case whose
+## kind has no rule fails.
 func _check_name_rules() -> String:
 	var cases: Dictionary[String, String] = NAME_CASES
 	var named: ContentTerms = ContentTerms.new()
