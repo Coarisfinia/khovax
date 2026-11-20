@@ -1470,7 +1470,10 @@ func _check_boss_escaping(ticks: int) -> String:
 		return "a boss marked escaping cooled its special down otherwise"
 	var state: GameState = _boss_state(true, false, BOSS_ESCAPING)
 	var boss: int = _boss_of(state)
+	# A lethal hit stops at its line (HealthFeature.hold_at), so it doesn't faint.
 	_wild(state).wound(state, boss, _hp(state, boss), true)
+	if _wild(state).is_fainted(boss):
+		return "a lethal hit felled a boss marked escaping past its line"
 	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
 	for event: RefCounted in state.events:
 		if event is WildMonsterStruck and (event as WildMonsterStruck).monster_id == boss:
