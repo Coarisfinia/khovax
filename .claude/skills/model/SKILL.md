@@ -82,7 +82,14 @@ instructions when it's really necessary." So every creature prompt, base or evol
 its core vibe (an evolution copypasta keeps the owner's opening line, and its change follows it
 straight away) and prescribes no facial details, eye markers, mouth position, limb count or posture
 unless the specific concept truly needs it. No fixed eye sentence, no blanket rest-pose,
-mouth-open, mouth-closed or rigging-pose line, and no other universal anatomy recipe in its place.
+mouth-closed or rigging-pose line, and no other universal anatomy recipe in its place.
+**A prompt for a beast with a mouth says the mouth is open; a beast may have no mouth** (owner's
+ground rule, in chat on 2026-11-21, #2482, which amends #2052 for mouths only): "prompts that need
+a mouth need the detail that the mouth is open - but not every beast needs a mouth". So every
+creature prompt, base or evolution, for a design with a mouth says plainly `Its mouth is open.`,
+and one for a design without a mouth says `It has no mouth.`; whether it has one is the concept's
+call, never a default. A mouthless import goes into `MOUTHLESS` in `check_mouth.py` (step 24).
+Eyes, limbs and posture stay unprescribed unless the concept needs them.
 Our own-eye import tooling (`lib/marked_eyes.py`, below) is a separate concern: its convenience
 never dictates the design, and a creature designed without eyes goes into the eye check's
 `EYELESS` list (step 21).
@@ -104,8 +111,11 @@ form is judged on its own.
 ground rule of 2026-10-30, #1821): a baby form or any other evolution of an existing beast is asked
 for with the best picture of the earlier form attached as the reference and its block, word for
 word, including its capitals and punctuation, only its `<…>` parts differing between the issue's 20
-variations. Neither carries a pose, mouth or eye line any more (#2052, above): where a
-variation's concept truly needs one, it says so in its change.
+variations. Neither carries a pose or eye line any more (#2052, above): where a
+variation's concept truly needs one, it says so in its change. **The mouth is the exception**
+(#2482, above): each variation states it in one fixed line of its own right after its change,
+`Its mouth is open.` for a form with a mouth or `It has no mouth.` for one without, and the line
+counts as part of the change, so the rest of the block stays word for word.
 **An evolved form redesigns its body; it never copies the earlier form's body** (owner's ground
 rule, 2026-10-30, #1821): copying it isn't interesting. So each variation has a change, written as
 a plain sentence, that adds something unique, unusual or fantastical, such as nine tails, a
@@ -978,8 +988,9 @@ clips. Ask the owner only when it's unclear what should move how.
    creature model we import (a new beast, a baby form or any other evolution) passes this before
    its import may be merged. Props and the other non-creatures (`NOT_CREATURES` in
    `check_clip_set.py`) don't take it, and models already in the game are handled in their own
-   issues (#2183 and its follow-ups). It checks the import, never the design: no creature prompt
-   gains a mouth line for it (#2052). `uv run --locked --package khovax-game-models src/game-models/check_mouth.py`
+   issues (#2183 and its follow-ups). It checks the import, never the design: the prompt's mouth
+   line is the concept's (`Its mouth is open.` or `It has no mouth.`, #2482, above), never added
+   for this check. `uv run --locked --package khovax-game-models src/game-models/check_mouth.py`
    (#2191, on every push in CI) fails a creature without a `jaw` bone that moves skin and opens in
    Attack and ChannelStart; how the mouth looks, the builder still judges from the renders.
    - **What passes:** closed, the mouth reads as a mouth, with no holes, torn faces or stray
