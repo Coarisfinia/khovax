@@ -596,7 +596,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   mouth need the detail that the mouth is open - but not every beast needs a mouth". A prompt for
   a design with a mouth says `Its mouth is open.`, one for a mouthless design says `It has no
   mouth.` (its import goes into `MOUTHLESS` in `check_mouth.py`); an evolution variation puts that
-  line right after its change (the model skill). Our eye
+  line on its own line right after its change (the model skill). Our eye
   import tooling never dictates the design (an eyeless design goes into the eye check's `EYELESS`
   list). A concept carries as much visual weight as its base
   shape (owner, #2051): it transforms the whole anatomy, material, form and behaviour (a melting

@@ -88,7 +88,8 @@ ground rule, in chat on 2026-11-21, #2482, which amends #2052 for mouths only): 
 a mouth need the detail that the mouth is open - but not every beast needs a mouth". So every
 creature prompt, base or evolution, for a design with a mouth says plainly `Its mouth is open.`,
 and one for a design without a mouth says `It has no mouth.`; whether it has one is the concept's
-call, never a default. A mouthless import goes into `MOUTHLESS` in `check_mouth.py` (step 24).
+call, never a default. A mouthless import is exempt from step 24's jaw and open-mouth renders:
+it goes into `MOUTHLESS` in `check_mouth.py`, with step 24's evidence for an exemption.
 Eyes, limbs and posture stay unprescribed unless the concept needs them.
 Our own-eye import tooling (`lib/marked_eyes.py`, below) is a separate concern: its convenience
 never dictates the design, and a creature designed without eyes goes into the eye check's
@@ -113,9 +114,10 @@ for with the best picture of the earlier form attached as the reference and its 
 word, including its capitals and punctuation, only its `<…>` parts differing between the issue's 20
 variations. Neither carries a pose or eye line any more (#2052, above): where a
 variation's concept truly needs one, it says so in its change. **The mouth is the exception**
-(#2482, above): each variation states it in one fixed line of its own right after its change,
-`Its mouth is open.` for a form with a mouth or `It has no mouth.` for one without, and the line
-counts as part of the change, so the rest of the block stays word for word.
+(#2482, above): each variation adds one line of its own, `Its mouth is open.` for a form with a
+mouth or `It has no mouth.` for one without, on the line right after its change (after the
+`The change:` line of a later form, after the change sentence of a baby form). The change itself
+stays one plain sentence, and every other line of the block stays word for word.
 **An evolved form redesigns its body; it never copies the earlier form's body** (owner's ground
 rule, 2026-10-30, #1821): copying it isn't interesting. So each variation has a change, written as
 a plain sentence, that adds something unique, unusual or fantastical, such as nine tails, a
