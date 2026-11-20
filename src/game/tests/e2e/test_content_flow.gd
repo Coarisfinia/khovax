@@ -2422,8 +2422,9 @@ func _check_pack_species(pack: ResourcePack) -> String:
 
 
 ## A pack's species whose kit or core list doesn't hold together (SpeciesKit, #2448) is refused on
-## load with the reason, as CI refuses the default pack's: each case is a pack replacing the finch
-## and the toad. Two core abilities stand among the abilities meanwhile, since none exists yet.
+## load with the reason, as CI refuses the default pack's: each case is a player's pack replacing
+## the finch and the toad, read from the player's folder. Two core abilities stand among the
+## abilities meanwhile, since none exists yet.
 func _check_pack_kits_refused() -> String:
 	var abilities: Dictionary[String, Ability] = AbilityContent.cached().abilities
 	var core: String = "{\"id\": \"%s\", \"kind\": \"core\", \"name\": \"N\","
@@ -2450,41 +2451,57 @@ func _pack_kits_problem() -> String:
 		"share the core skill": [{ "core": ["xo_absorb"] }, { "core": ["xo_absorb"] }],
 		"": [{ "core": ["xo_absorb", "xo_grow"] }, {}],
 	}
-	var pack: ResourcePack = _kits_pack(finch, toad, cases.values())
-	if not pack.problem.is_empty():
-		return "a pack with species wasn't mounted: " + pack.problem
 	for i: int in cases.size():
-		var read: Dictionary[String, String] = {}
-		read.assign(files)
-		read["tikazzir"] = pack.root + "species/%d/tikazzir.jsonc" % i
-		read["ombulumo"] = pack.root + "species/%d/ombulumo.jsonc" % i
+		var changes: Array = cases.values()[i]
 		var wanted: String = cases.keys()[i]
-		var problem: String = SpeciesContent.load_files(read).problem
+		var problem: String = _with_player_pack(
+			"pack_kits_%d" % i,
+			_kits_pack(i, finch, toad, changes),
+		)
 		if problem.is_empty() != wanted.is_empty() or not problem.contains(wanted):
 			return "a pack's species %s were refused with \"%s\", not \"%s\"" % [
-				cases.values()[i],
+				changes,
 				problem,
 				wanted,
 			]
 	return ""
 
 
-## The pack pack_kits, mounted, holding the finch `finch` and the toad `toad` changed by each of
-## `cases` (its changes to each), under species/<case's index>/.
-func _kits_pack(finch: Dictionary, toad: Dictionary, cases: Array) -> ResourcePack:
-	var manifest: String = _pack_manifest("pack_kits").replace(
+## Why the species don't load while the pack `pack_id`'s .pck `pck` lies in the player's folder, or
+## "": that it doesn't give the finch, if it doesn't. The pack is taken out again after.
+func _with_player_pack(pack_id: String, pck: String) -> String:
+	var _folder: Error = DirAccess.make_dir_recursive_absolute(PackFolder.path())
+	var placed: String = PackFolder.path() + pack_id + ".pck"
+	var _copied: Error = DirAccess.copy_absolute(pck, placed)
+	ResourcePacks.refresh()
+	var given: String = ResourcePacks.species()["tikazzir"]
+	var problem: String = SpeciesContent.load_species().problem
+	var _removed: Error = DirAccess.remove_absolute(placed)
+	ResourcePacks.refresh()
+	if not given.begins_with(PackLoader.ROOT % pack_id):
+		return "the player's pack didn't give the finch: " + given
+	return problem
+
+
+## The .pck of the pack pack_kits_<`index`>, replacing the finch `finch` and the toad `toad` with
+## them changed by `changes` (its changes to each).
+func _kits_pack(index: int, finch: Dictionary, toad: Dictionary, changes: Array) -> String:
+	var pack_id: String = "pack_kits_%d" % index
+	var manifest: String = _pack_manifest(pack_id).replace(
 		"\"species\": {}",
-		"\"species\": {\"tikazzir\": \"species/0/tikazzir.jsonc\"}",
+		"\"species\": {\"tikazzir\": \"species/tikazzir.jsonc\","
+		+ " \"ombulumo\": \"species/ombulumo.jsonc\"}",
 	)
-	var held: Dictionary[String, PackedByteArray] = {
-		"pack.jsonc": manifest.to_utf8_buffer(), "regions/r.md": "# R".to_utf8_buffer() }
-	for i: int in cases.size():
-		var changes: Array = cases[i]
-		var finch_text: String = JSON.stringify(finch.merged(changes[0], true))
-		held["species/%d/tikazzir.jsonc" % i] = finch_text.to_utf8_buffer()
-		var toad_text: String = JSON.stringify(toad.merged(changes[1], true))
-		held["species/%d/ombulumo.jsonc" % i] = toad_text.to_utf8_buffer()
-	return PackLoader.mount(_packed("pack_kits", held))
+	var finch_changes: Dictionary = changes[0]
+	var toad_changes: Dictionary = changes[1]
+	var finch_text: String = JSON.stringify(finch.merged(finch_changes, true))
+	var toad_text: String = JSON.stringify(toad.merged(toad_changes, true))
+	return _packed(pack_id, {
+		"pack.jsonc": manifest.to_utf8_buffer(),
+		"regions/r.md": "# R".to_utf8_buffer(),
+		"species/tikazzir.jsonc": finch_text.to_utf8_buffer(),
+		"species/ombulumo.jsonc": toad_text.to_utf8_buffer(),
+	})
 
 
 ## The loot tables, materials (#1953) and harvest tables (#1990) are the default pack's, read from
