@@ -1388,11 +1388,11 @@ static func _forged_loads(state: GameState, bosses: BossSpecialFeature, forged: 
 
 
 ## Asleep, held, switched off, fainted or dominated, a boss fires no special: over `ticks` it
-## strikes nothing more than the same monster unmarked. Hidden, encircled by a ring waiting for a
-## totem or sealing in one, it fires none in the tick after either, though its special is ready:
-## those holds end soon (a hidden one jumps out at the player next to it, a waiting ring wears
-## through, a seal holds or breaks). Next to the player and their companion, it fires at the
-## companion.
+## strikes nothing more than the same monster unmarked. Hidden (and not held, #2465), encircled by
+## a ring waiting for a totem or sealing in one, it fires none in the tick after either, though its
+## special is ready and the hold still stands: those holds end soon (a hidden one jumps out at the
+## player next to it, a waiting ring wears through, a seal holds or breaks). Next to the player
+## and their companion, it fires at the companion.
 func _check_boss_held(ticks: int) -> String:
 	var holds: Dictionary[String, Callable] = {
 		"asleep": func(state: GameState) -> void: _wild(state).sleep(_boss_of(state), true),
@@ -1400,7 +1400,8 @@ func _check_boss_held(ticks: int) -> String:
 		"off": func(state: GameState) -> void: state.set_enabled(BossSpecialFeature.ID, false),
 		"fainted": _faint_boss,
 		"dominated": _dominate_boss,
-		"hidden": func(_state: GameState) -> void: pass,
+		# HidingFeature.start holds it too: let go, only hiding keeps it from firing.
+		"hidden": func(state: GameState) -> void: _wild(state).hold(_boss_of(state), false),
 		"encircled": func(state: GameState) -> void: _ring_boss(state, false, true),
 		"sealing": func(state: GameState) -> void: _ring_boss(state, true, true),
 	}
@@ -1416,6 +1417,9 @@ func _check_boss_held(ticks: int) -> String:
 		for marked: int in specials.bosses:
 			if specials.cooldown_left(marked) > 0:
 				return "a boss %s had fired before its check" % what
+		# Else a brief hold could pass only because it had already ended.
+		if briefly.has(what) and not _boss_hold_stands(boss, what):
+			return "a boss %s wasn't, before its check" % what
 		var extra: Vector2i = _strikes_on_player(boss, over) - _strikes_on_player(plain, over)
 		if extra != Vector2i.ZERO:
 			return "a boss %s struck the player (%d, %d) more (strikes, damage)" % [
@@ -1428,6 +1432,21 @@ func _check_boss_held(ticks: int) -> String:
 	if on_boss - on_plain != Vector2i(1, 0):
 		return "a boss next to a companion and a player didn't fire at the companion first"
 	return _check_boss_gone_reloads(ticks)
+
+
+## Whether the brief hold `what` of `_check_boss_held` still stands on the boss in `state`: hidden
+## but not held, encircled by a ring waiting for a totem, or sealing in one.
+func _boss_hold_stands(state: GameState, what: String) -> bool:
+	var boss: int = _boss_of(state)
+	match what:
+		"hidden":
+			var hiding: HidingFeature = state.feature(HidingFeature.ID) as HidingFeature
+			return hiding != null and hiding.is_hidden(boss) and not _wild(state).held.has(boss)
+		"encircled":
+			return _domination(state).waiting_dominator(boss) != 0
+		"sealing":
+			return _domination(state).is_sealed(boss)
+	return false
 
 
 ## A save taken after the boss fainted, or after it was dominated, resumes and hashes the same: a
