@@ -189,7 +189,8 @@ static func _every(kind: String) -> Dictionary[String, String]:
 
 
 ## The credits of the loaded packs (#2585), in lookup order: each pack that gives the game a
-## texture, model or sound, with the credit notes beside what it gives. The Credits tab shows them.
+## texture, model, sound or rune, with the credit notes beside what it gives. The Credits tab shows
+## them.
 static func credits() -> Array[PackCredits]:
 	return PackCredits.of(loaded())
 

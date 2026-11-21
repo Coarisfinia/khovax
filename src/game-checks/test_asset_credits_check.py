@@ -32,7 +32,7 @@ class AssetCreditsTest(unittest.TestCase):
         self.write("models/wolf/SOURCE.md", NOTE)
         self.write("models/wolf/wolf.glb", "")
         self.write("models/wolf/LICENSE.md", "CC0 1.0 Universal\n")
-        self.manifest: dict[str, object] = {"textures": {}, "models": {"model_wolf": "pack/models/wolf/wolf.glb"}, "audio": {}}
+        self.manifest: dict[str, object] = {"textures": {}, "models": {"model_wolf": "pack/models/wolf/wolf.glb"}, "audio": {}, "runes": {}}
 
     def write(self, path: str, text: str) -> None:
         target = Path(self.root, path)
@@ -56,6 +56,13 @@ class AssetCreditsTest(unittest.TestCase):
         found = problems(self.manifest, self.root)
         self.assertIn(("has no SOURCE.md crediting its author, source and license", "pack/textures/icons"), found)
         self.assertTrue(any(file == "pack/textures/icons/cog.svg" for _, file in found))
+
+    def test_a_rune_script_without_a_note_fails(self) -> None:
+        # The runes are credited like the textures, models and sounds (#1855).
+        self.write("runes/my-runes/a.svg", "")
+        self.manifest["runes"] = {"rune_a": "pack/runes/my-runes/a.svg"}
+        found = problems(self.manifest, self.root)
+        self.assertIn(("has no SOURCE.md crediting its author, source and license", "pack/runes/my-runes"), found)
 
     def test_an_asset_loose_in_its_kind_folder_fails(self) -> None:
         self.write("audio/theme.ogg", "")

@@ -1480,12 +1480,12 @@ func _menu_credits(menu: GameMenu) -> String:
 
 
 ## The Credits tab's text `shown` names the pack `pack` and the title of the credit note beside
-## each of its textures, models and sounds (#2585); or why not.
+## each of its textures, models, sounds and runes (#2585, #1855); or why not.
 static func _credits_from_pack(shown: String, pack: ResourcePack) -> String:
 	if not shown.contains("Resource pack: " + pack.name):
 		return "the Credits tab doesn't name the pack %s: %s" % [pack.name, shown.left(300)]
-	for kind: String in ["textures", "models", "audio"]:
-		var files: Dictionary = pack.get(kind)
+	for kind: String in PackCredits.CREDITED:
+		var files: Dictionary = pack.files_in(kind)
 		for file: Variant in files.values():
 			var title: String = _note_title(pack.root, str(file))
 			if title.is_empty() or not shown.contains("[b]%s[/b]" % title):

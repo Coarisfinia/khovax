@@ -25,6 +25,7 @@ const FIELDS: Array[String] = [
 	"materials",
 	"harvest_tables",
 	"tonics",
+	"runes",
 ]
 ## Each section of resources the manifest lists, one file per id, with the type its files load as;
 ## "" for a file read as text (a region file or a realm, #1861, a quest, #1888, a species, #1903, a
@@ -45,6 +46,7 @@ const KINDS: Dictionary[String, String] = {
 	"materials": "",
 	"harvest_tables": "",
 	"tonics": "",
+	"runes": "Texture2D",
 }
 ## The section of regions arranged from pieces (#1861): each region's piece files by its id, read as
 ## text like the region files.
@@ -64,12 +66,15 @@ const ENDINGS: Dictionary[String, Array] = {
 	"materials": ["jsonc"],
 	"harvest_tables": ["jsonc"],
 	"tonics": ["jsonc"],
+	"runes": ["svg", "png", "jpg", "jpeg", "webp"],
 }
 ## The sections read whole by their Content from the files files_of gives, never looked up by one
 ## id: each realm (#1861), quest (#1888), species (#1903), tile blueprint (#1901), loot table and
-## material (#1953), harvest table (#1990) and tonic (#2090).
+## material (#1953), harvest table (#1990) and tonic (#2090), and the rune script's glyphs
+## (#1855), a whole script a pack replaces.
 const LISTED: Array[String] = [
 	"realms", "quests", "species", "tiles", "loot_tables", "materials", "harvest_tables", "tonics",
+	"runes",
 ]
 ## A version: major.minor.patch.
 const VERSION: String = "\\A[0-9]+\\.[0-9]+\\.[0-9]+\\z"
@@ -128,6 +133,12 @@ func files_of(kind: String) -> Dictionary[String, String]:
 	var listed: Dictionary = _listed.get(kind, {})
 	files.assign(listed)
 	return files
+
+
+## The files of the section `kind` (one of KINDS), LISTED or looked up by id alike, each relative to
+## `root` by its id.
+func files_in(kind: String) -> Dictionary:
+	return files_of(kind) if LISTED.has(kind) else get(kind)
 
 
 ## imported them, compressed for the GPU; reading a player's raw files is #1858's.

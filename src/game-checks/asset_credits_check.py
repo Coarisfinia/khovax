@@ -1,9 +1,9 @@
 """Checks the credit notes of the default resource pack's assets (#2585): each lies beside its
 asset in the pack, as SOURCE.md (game_shared.resource_packs.CREDIT_NOTE), and the game's Credits
 tab reads them from the loaded packs (PackCredits), so nothing here is generated. It fails when
-- an asset folder (resourcepacks/default/<kind>/<folder>/, for the textures, models and sounds)
+- an asset folder (resourcepacks/default/<kind>/<folder>/, for the textures, models, sounds and runes)
   has no credit note;
-- a texture, model or sound the manifest lists has no credit note in its folder or a folder above
+- a texture, model, sound or rune the manifest lists has no credit note in its folder or a folder above
   it in the pack (credit_note), so the game would credit it nowhere;
 - a credit note lacks its `# ` title, or its `- **Author:**`, `- **Source:**` or `- **License:**`
   line, or leaves one empty (#70);

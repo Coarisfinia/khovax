@@ -10,6 +10,7 @@ members = [
     "khovax-game-offscreen",
     "khovax-game-pack-builder",
     "khovax-game-replays",
+    "khovax-game-runes",
     "khovax-game-shared",
     "khovax-game-visuals",
     "khovax-game-web-e2e",
@@ -96,6 +97,11 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "khovax-game-shared", editable = "src/game-shared" }]
+
+[[package]]
+name = "khovax-game-runes"
+version = "0.0.0"
+source = { virtual = "src/game-runes" }
 
 [[package]]
 name = "khovax-game-shared"

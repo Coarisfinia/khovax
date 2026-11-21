@@ -1,8 +1,9 @@
 // The default resource pack (#1860): the game's own resources, in the manifest format a player's
 // pack shares (#1858). Every lookup goes through ResourcePacks, which walks the loaded packs in
-// order, this one last. Its files are named from this folder, its root: its textures, models and sounds
-// load as Godot imported them, its region files, pieces, realms, quests, species, tile blueprints, loot
-// tables, materials and tonics are read as text, and its translation catalogues load as gettext .po files.
+// order, this one last. Its files are named from this folder, its root: its textures, models,
+// sounds and runes load as Godot imported them, its region files, pieces, realms, quests, species,
+// tile blueprints, loot tables, materials and tonics are read as text, and its translation
+// catalogues load as gettext .po files.
 {
 	"id": "default",
 	"name": "Default",
@@ -323,5 +324,51 @@
 	},
 	"tonics": {
 		"tonic": "tonics/tonic.jsonc"
+	},
+	// Our own rune script (#1855), one glyph per letter, digit and sign, by its character's name; a
+	// pack replaces the script by listing its own glyphs under these ids.
+	"runes": {
+		"rune_0": "runes/khovax-runes/0.svg",
+		"rune_1": "runes/khovax-runes/1.svg",
+		"rune_2": "runes/khovax-runes/2.svg",
+		"rune_3": "runes/khovax-runes/3.svg",
+		"rune_4": "runes/khovax-runes/4.svg",
+		"rune_5": "runes/khovax-runes/5.svg",
+		"rune_6": "runes/khovax-runes/6.svg",
+		"rune_7": "runes/khovax-runes/7.svg",
+		"rune_8": "runes/khovax-runes/8.svg",
+		"rune_9": "runes/khovax-runes/9.svg",
+		"rune_a": "runes/khovax-runes/a.svg",
+		"rune_apostrophe": "runes/khovax-runes/apostrophe.svg",
+		"rune_b": "runes/khovax-runes/b.svg",
+		"rune_c": "runes/khovax-runes/c.svg",
+		"rune_comma": "runes/khovax-runes/comma.svg",
+		"rune_d": "runes/khovax-runes/d.svg",
+		"rune_e": "runes/khovax-runes/e.svg",
+		"rune_f": "runes/khovax-runes/f.svg",
+		"rune_g": "runes/khovax-runes/g.svg",
+		"rune_gap": "runes/khovax-runes/gap.svg",
+		"rune_h": "runes/khovax-runes/h.svg",
+		"rune_hyphen": "runes/khovax-runes/hyphen.svg",
+		"rune_i": "runes/khovax-runes/i.svg",
+		"rune_j": "runes/khovax-runes/j.svg",
+		"rune_k": "runes/khovax-runes/k.svg",
+		"rune_l": "runes/khovax-runes/l.svg",
+		"rune_m": "runes/khovax-runes/m.svg",
+		"rune_n": "runes/khovax-runes/n.svg",
+		"rune_o": "runes/khovax-runes/o.svg",
+		"rune_p": "runes/khovax-runes/p.svg",
+		"rune_period": "runes/khovax-runes/period.svg",
+		"rune_q": "runes/khovax-runes/q.svg",
+		"rune_r": "runes/khovax-runes/r.svg",
+		"rune_s": "runes/khovax-runes/s.svg",
+		"rune_slash": "runes/khovax-runes/slash.svg",
+		"rune_t": "runes/khovax-runes/t.svg",
+		"rune_u": "runes/khovax-runes/u.svg",
+		"rune_v": "runes/khovax-runes/v.svg",
+		"rune_w": "runes/khovax-runes/w.svg",
+		"rune_x": "runes/khovax-runes/x.svg",
+		"rune_y": "runes/khovax-runes/y.svg",
+		"rune_z": "runes/khovax-runes/z.svg"
 	}
 }
