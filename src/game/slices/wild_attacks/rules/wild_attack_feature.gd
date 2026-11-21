@@ -24,7 +24,8 @@ extends Feature
 ## A self passive that dodges (#1499, Zirki-kirki) makes its share of the hits on its companion
 ## miss, by count and never on a roll (#2234, #1602): each hit adds the dodge to the companion's
 ## count, and the hit that makes a whole misses, so a fifth is every fifth hit. A miss deals
-## nothing, like a hit on an invincible player, and its WildMonsterStruck says it was dodged.
+## nothing, like a hit on an invincible player, and its WildMonsterStruck says it was dodged. A
+## boss's special is dodged only with a whole dodge saved up (`dodges_special`, #2449).
 ##
 ## Encircled, it attacks only its ring: in a ring waiting for a totem (#423), it strikes the wall
 ## segment nearest to it, wherever that is, and once a segment is worn through, the ring breaks
@@ -284,10 +285,19 @@ static func _on_companion(state: GameState, struck: WildMonsterStruck) -> WildMo
 	)
 
 
+## Whether the companion `companion_id` dodges a boss's special on it (#2449, BossSpecialFeature):
+## only with a whole dodge saved up, its count and its dodge's share of a hit together a whole (the
+## dodge its next auto attack would take), which the miss spends. A special that lands adds nothing
+## to its count.
+func dodges_special(state: GameState, companion_id: int) -> bool:
+	return _dodges(state, companion_id, true)
+
+
 ## Whether the companion `companion_id` dodges this hit on it (#1499, #2234): the dodges of its
 ## passives working now, together less than a whole, are added to its count, and the hit that makes
-## a whole is dodged. One without a dodge counts nothing.
-func _dodges(state: GameState, companion_id: int) -> bool:
+## a whole is dodged. One without a dodge counts nothing, and neither does a `special` that isn't
+## dodged (`dodges_special`).
+func _dodges(state: GameState, companion_id: int, special: bool = false) -> bool:
 	if dodges.is_empty():
 		return false
 	var dodge: int = 0
@@ -297,6 +307,8 @@ func _dodges(state: GameState, companion_id: int) -> bool:
 		return false
 	var count: int = _dodge_counts.get(companion_id, 0) + mini(dodge, Fixed.ONE - 1)
 	var dodged: bool = count >= Fixed.ONE
+	if special and not dodged:
+		return false
 	count -= Fixed.ONE if dodged else 0
 	if count > 0:
 		_dodge_counts[companion_id] = count

@@ -13,8 +13,9 @@ extends Feature
 ## special's strike type), and lands like an auto attack (WildHit.land): the guards and
 ## the Wards take their share off it, and it raises WildMonsterStruck, so a struck companion's bind
 ## breaks (#1167). An invincible player is struck for nothing (#1147). A dodging companion
-## (#1499) can't dodge it: its dodges count the auto attacks only (#2449 asks whether a special
-## should count too).
+## (#1499) dodges it only with a whole dodge saved up, which the miss spends; otherwise it lands in
+## full and adds nothing to the companion's count (WildAttackFeature.dodges_special, #2449). The
+## counts are the auto attacks', so where an instance lacks them, nothing dodges it.
 ##
 ## Like its auto attack, it doesn't fire while asleep (#1202), hidden in its tile (#202), held
 ## (WildMonsterFeature.held, #1167) or encircled (#219, #423): a ring's monster attacks only its
@@ -174,14 +175,19 @@ static func _target_beside(state: GameState, boss: int, enraged: bool) -> int:
 
 
 ## The boss `boss` fires its special at `target`, a companion or a player next to it, and its
-## special cools down.
+## special cools down. A companion with a whole dodge saved up dodges it (#2449).
 func _fire(state: GameState, wild: WildMonsterFeature, boss: int, target: int) -> void:
 	var species: String = special_of(wild, boss)
 	var special: Ability = specials[species]
 	_cooling[boss] = special.cooldown_seconds * Simulation.TICKS_PER_SECOND
 	var damage: int = Fixed.scale(wild.strength_of(state, boss), special.power)
 	var on_companion: bool = state.entity(target).slot == Entity.NO_SLOT
-	WildHit.land(state, _struck(state, boss, species, target, damage), on_companion, guards)
+	var struck: WildMonsterStruck = _struck(state, boss, species, target, damage)
+	var attacks: WildAttackFeature = state.feature(WildAttackFeature.ID) as WildAttackFeature
+	if on_companion and attacks != null and attacks.dodges_special(state, target):
+		struck.damage = 0
+		struck.dodged = true
+	WildHit.land(state, struck, on_companion, guards)
 
 
 ## The strike of the boss `boss`'s special, `species`' own, on `target` for `damage`: after the type
