@@ -14,6 +14,10 @@ var decoration_turns: Dictionary[Vector2i, int] = {}
 ## for the check that a crown above it leaves it room; every other tile is as tall as its tallest
 ## object, measured from the models.
 var height_overrides: Dictionary[Vector2i, int] = {}
+## The floor (#2498) under a tile of another kind, for the tiles of a piece that has one (#2587):
+## its hex shows the floor's color under the tile's decoration, so a boulder on flagstone doesn't
+## stand on a patch of grass.
+var floors: Dictionary[Vector2i, String] = {}
 
 
 ## These looks turned `turns` times by 60 degrees around the origin, with their region.
@@ -24,6 +28,8 @@ func turned(turns: int) -> PieceLooks:
 		looks.decoration_turns[Hex.turn(tile, turns)] = turn
 	for tile: Vector2i in height_overrides:
 		looks.height_overrides[Hex.turn(tile, turns)] = height_overrides[tile]
+	for tile: Vector2i in floors:
+		looks.floors[Hex.turn(tile, turns)] = floors[tile]
 	return looks
 
 
@@ -33,3 +39,5 @@ func place(looks: PieceLooks, offset: Vector2i) -> void:
 		decoration_turns[tile + offset] = looks.decoration_turns[tile]
 	for tile: Vector2i in looks.height_overrides:
 		height_overrides[tile + offset] = looks.height_overrides[tile]
+	for tile: Vector2i in looks.floors:
+		floors[tile + offset] = looks.floors[tile]

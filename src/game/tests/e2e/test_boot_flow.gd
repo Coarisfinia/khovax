@@ -85,6 +85,7 @@ func _steps() -> Array[Callable]:
 		_check_fog,
 		_check_wild_monster_removed,
 		_check_terrain_colors,
+		_check_decorations_on_floor,
 		_check_music,
 		_check_lookouts,
 		_check_canopy_cutaway,
@@ -1396,6 +1397,32 @@ func _check_terrain_colors(main: Node) -> String:
 				tile,
 				grid.tile_color_of(tile),
 				expected[tile],
+			]
+	return ""
+
+
+## A decorated tile on a paved piece (#2587) is drawn in its piece's floor's color, not its own
+## kind's: a boulder on flagstone stands on flagstone, not on a patch of grass. Without a floor it
+## keeps its kind's.
+func _check_decorations_on_floor(main: Node) -> String:
+	var driver: GameDriver = main.get_node("Driver") as GameDriver
+	var grid: HexGrid = main.get_node("Instance/HexGrid") as HexGrid
+	var text: String = "# T\n\n## Tiles\n\n```\n🔴🪨🟫\n```\n\n## Legend\n\n"
+	text += "- `🔴`: where player 1 starts\n- `🪨`: boulder\n- `🟫`: %s\n"
+	for floor_kind: String in ["flagstone, the floor", "ground"]:
+		var region: Region = InstanceBlueprints.read_region(text % floor_kind)
+		if not region.problem.is_empty() or not region.terrain.values().has("boulder"):
+			return "the paved region couldn't be read: " + region.problem
+		var boulder: Vector2i = region.terrain.find_key("boulder")
+		driver.state.region = region
+		grid.show_state()
+		var under: String = "flagstone" if floor_kind.ends_with("the floor") else "boulder"
+		if grid.tile_color_of(boulder) != grid.terrain_color(under):
+			return "a boulder on %s is drawn %s, not %s's %s" % [
+				floor_kind,
+				grid.tile_color_of(boulder),
+				under,
+				grid.terrain_color(under),
 			]
 	return ""
 

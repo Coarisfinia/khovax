@@ -1,7 +1,8 @@
 @tool
 class_name HexGrid
 extends Node3D
-## The region's tiles, one hexagonal tile per cell, each in its kind's color (#36, #116). It only
+## The region's tiles, one hexagonal tile per cell, each in its kind's color (#36, #116), a
+## decorated one on a piece's floor in the floor's (#2587). It only
 ## draws tiles: features color tiles through `paint`, each on its own layer (e.g. TrailView and
 ## SealFillView), and know nothing about each other (#851); TileDecorations stands each kind's
 ## decoration on them. A tile a rule changes in place (#530) eases into its new kind's color when
@@ -166,6 +167,17 @@ func terrain_color(kind: String) -> Color:
 	return TileLooks.color_of(blueprint) if blueprint != null else Color.BLACK
 
 
+## The color `tile` has as a tile of kind `kind` when nothing paints it: its kind's, or for a
+## decorated kind on a piece's floor (PieceLooks.floors, #2587) the floor's, which the decoration
+## stands on.
+func _ground_color(tile: Vector2i, kind: String) -> Color:
+	var floor_kind: String = _region.looks.floors.get(tile, "")
+	var blueprint: TileBlueprint = TileLooks.of(kind)
+	if floor_kind.is_empty() or blueprint == null or blueprint.model.is_empty():
+		return terrain_color(kind)
+	return terrain_color(floor_kind)
+
+
 func tile_mesh() -> CylinderMesh:
 	return _mesh
 
@@ -218,7 +230,7 @@ func _ease_into(tile: Vector2i, kind: String) -> void:
 	_show_water()
 	var tween: Tween = create_tween()
 	var ease_to: Callable = _ease.bind(tile)
-	var to: Color = terrain_color(kind)
+	var to: Color = _ground_color(tile, kind)
 	var _eased: MethodTweener = tween.tween_method(ease_to, _base[tile], to, CHANGE_SECONDS)
 	var _done: CallbackTweener = tween.tween_callback(_drop_easing.bind(tile, tween))
 	easing[tile] = tween
@@ -264,7 +276,7 @@ func _build(region: Region) -> void:
 		var center: Vector3 = HexLayout.to_world(tile) + Vector3(0.0, TILE_HEIGHT / 2.0, 0.0)
 		_index[tile] = i
 		_kinds[tile] = region.terrain[tile]
-		_base[tile] = terrain_color(_kinds[tile])
+		_base[tile] = _ground_color(tile, _kinds[tile])
 		_transforms[tile] = Transform3D(Basis.IDENTITY, center)
 		_tiles.multimesh.set_instance_transform(i, _transforms[tile])
 	_show_water()
