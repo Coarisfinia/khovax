@@ -20,7 +20,7 @@ Dhorvone Stolm's courtyard (#689): a ring of wall with gaps where the gates were
 
 ## Legend
 
-- `🟫`: ground
+- `🟫`: flagstone, the floor
 - `⬛`: rock
 - `👾`: a wild monster, of a species rolled from the instance blueprint's list
 - `🔗`: joins another piece to the northwest

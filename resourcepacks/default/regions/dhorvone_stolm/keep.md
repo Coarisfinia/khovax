@@ -20,7 +20,7 @@ Dhorvone Stolm's keep (#689): a small walled ring with three gaps, the heart of 
 
 ## Legend
 
-- `🟫`: ground
+- `🟫`: flagstone, the floor
 - `⬛`: rock
 - `👾`: a wild monster, of a species rolled from the instance blueprint's list
 - `🔗`: joins another piece to the northwest

@@ -13,6 +13,16 @@ edit it by hand.
 - **License:** CC0 1.0, see `LICENSE.md` next to this file (the site names the license; the file is
   its legal text). Credit is welcome, not required.
 
+## Bare rock
+
+- **Files:** `resourcepacks/default/models/bare-rock/`
+- **Author:** the khovax contributors (built in this repository)
+- **Source:** derived from the mana gems (`resourcepacks/default/models/mana-gems/mana_gems.glb`,
+  #1218): `resourcepacks/default/models/bare-rock/build/bare_rock.py` reads that model, breaks its
+  crystals off to short stubs with the shared model library's derive step
+  (`src/game-models/lib/derive.py`), and exports `bare_rock.glb` (#2493)
+- **License:** The Unlicense, the repository's own license, see `LICENSE.md` next to this file.
+
 ## Copper ore
 
 - **Files:** `resourcepacks/default/models/copper-ribbons-ore/`

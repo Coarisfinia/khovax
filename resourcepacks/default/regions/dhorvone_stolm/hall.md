@@ -20,7 +20,7 @@ Dhorvone Stolm's great hall (#689): its walls still standing with doors east and
 
 ## Legend
 
-- `🟫`: ground
+- `🟫`: flagstone, the floor
 - `⬛`: rock
 - `👾`: a wild monster, of a species rolled from the instance blueprint's list
 - `🔗`: joins another piece to the northwest

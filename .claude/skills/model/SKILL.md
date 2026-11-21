@@ -42,13 +42,20 @@ felled, emptied) gets its "after" model one of two ways, never from a fresh, unr
   their material region), and the derive step closes the holes it leaves, so a request for an
   original that is changed later asks for those parts as separate pieces.
   The derive step is the derived model's own build script (`build/<name>.py`), which reads the
-  original's GLB; its `SOURCE.md` names the original as its source. When the original changes, CI's
-  rebuild check (`check_rebuild.py`) fails on a stale derived model.
+  original's GLB through `lib/derive.py` (`derive.original`, then e.g. `derive.stub` to break a
+  part off; `bare-rock/build/bare_rock.py` is the example; it takes an original whose parts are
+  separate meshes of one material each, and refuses one with several materials in a mesh until an
+  original needs that) and names it on a line of its own,
+  `ORIGINAL = "<the .glb from the repository's root>"`; its `SOURCE.md` names the original as its
+  source. CI checks a derived model whenever its original changes (`changed_models.py` reads
+  `ORIGINAL`), so its rebuild check (`check_rebuild.py`) fails on a stale derived model: rebuild
+  the derived models with their original.
 - **Something new appears** (a chest's open lid showing its contents, a sprouting stump): render our
   model from the game, have Gemini edit that picture into the after state, then generate it in Meshy,
-  multi-view where possible. It is a new mesh, so it only stays close to the original (silhouette,
-  proportions, and the colours through the shared texture set) rather than matching it exactly,
-  which is why removing or breaking parts always takes the derive step.
+  multi-view where possible (not the single-image path for the owner's new Gemini images, #2556).
+  It is a new mesh, so it only stays close to the original (silhouette, proportions, and the
+  colours through the shared texture set) rather than matching it exactly, which is why removing
+  or breaking parts always takes the derive step.
 
 A request list never asks for a fresh after-state model: such an entry asks for the Gemini edit of
 our render (with the render attached) or is no model request at all, but a derive task.
@@ -488,9 +495,11 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
    where it can't, we build our own Blender rig (#1732, section 2). An evolution's image comes
    from the copypastas above (#1754).
    A model the main session generates through the Meshy API from the owner's Gemini image is
-   accepted like the owner's own export (#2529); each new one is generated right away; its
-   settings and what still needs the owner's go-ahead are in `AGENTS.md`, next to the
-   model-delivery rules.
+   accepted like the owner's own export (#2529); each new world-prop image is generated right away
+   (an after-state edit keeps the multi-view path above), a group in it is also split into solo
+   pieces, every take is kept, and the image goes beside its GLB as `<slug>.jpg`; its settings and
+   what still needs the owner's go-ahead are in `AGENTS.md`, next to the model-delivery rules
+   (#2556).
 2. **Inspect:** `uv run --locked src/game-models/inspect_meshy.py <download.glb>` (#1523),
    one report on its mesh, material, painted eyes, body columns and rig. Read it before measuring
    anything by hand. It warns when the download is far above step 1's triangle target.
