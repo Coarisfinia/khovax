@@ -95,6 +95,7 @@ const NAME_CASES: Dictionary[String, String] = {
 	"special ombulumo_bulum_bolom Bulum-bolom ombulumo": "",
 	"passive ombulumo_mulbo_lulbo Mulbo-lulbo ombulumo": "",
 	"passive tikazzir_zirki_kirki Zirki-kirki tikazzir": "",
+	"core ombulumo_lobum_lobum Lobum-lobum ombulumo": "",
 	"realm ardvaun - -": "",
 	"instance dhorvone_stolm - -": "",
 	"instance senwel_sael - -": "",
@@ -116,6 +117,9 @@ const NAME_CASES: Dictionary[String, String] = {
 	"special ombulumo_tizik_tazak Tizik-tazak ombulumo": REFUSED,
 	"passive ombulumo_mulbo_mulbo Mulbo-mulbo ombulumo": REFUSED,
 	"passive tikazzir_tizik_tazak Tizik-tazak tikazzir": REFUSED,
+	"core ombulumo_mulbo_lulbo Mulbo-lulbo ombulumo": REFUSED,
+	"core tikazzir_lobum_lobum Lobum-lobum tikazzir": REFUSED,
+	"core ombulumo_lobum Lobum-lobum ombulumo": "its id must be ombulumo_lobum_lobum",
 	"realm zarvaun - -": "Zarvaun has a beast-call's letter",
 	"realm Ardvaun - -": "its id must be lower case",
 	"instance glade - -": REFUSED,
@@ -2295,7 +2299,8 @@ func _check_terms() -> String:
 	return _check_name_rules()
 
 
-## Each kind's name rule (#909) on NAME_CASES.
+## Each kind's name rule (#909) on NAME_CASES, a core ability's among them (#2447). A case whose
+## kind has no rule fails.
 func _check_name_rules() -> String:
 	var cases: Dictionary[String, String] = NAME_CASES
 	var named: ContentTerms = ContentTerms.new()
@@ -2310,7 +2315,8 @@ func _check_name_rules() -> String:
 		)
 	for entry: String in cases:
 		var parts: PackedStringArray = entry.split(" ")
-		var found: String = named.broken["%s %s" % [parts[0], parts[1].replace("_of_", " of ")]]
+		var thing: String = "%s %s" % [parts[0], parts[1].replace("_of_", " of ")]
+		var found: String = named.broken.get(thing, "no name rule for its kind")
 		var expected: String = cases[entry]
 		if not found.is_empty() if expected.is_empty() else not found.contains(expected):
 			return "the name rule on %s gave %s" % [

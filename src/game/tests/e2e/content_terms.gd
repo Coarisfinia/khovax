@@ -57,6 +57,8 @@ const NAME_RULES: Dictionary[String, String] = {
 	+ "same consonants and other vowels, sharing two consonants with its species",
 	"passive": "a beast-call of two parts joined by a hyphen, the second in lower case, differing "
 	+ "only in their first consonant, sharing two consonants with its species",
+	"core": "a beast-call of two parts joined by a hyphen, the second in lower case, the first "
+	+ "said again, sharing two consonants with its species",
 	"realm": "one land-speech word of 2 or 3 syllables ending in -vaun",
 	"instance": "a land-speech name of 1 to 3 syllables, then a landform word",
 	"region": "its instance's name corrupted: y for the first vowel, the landform's last consonant "
@@ -69,6 +71,8 @@ const NAME_RULES: Dictionary[String, String] = {
 	"unique": "a rune, an apostrophe, then a lower-case name of 2 or 3 syllables",
 	"gear": "1 to 3 plain words in sentence case",
 }
+## The kinds of abilities' names (#909, #2447): beast-calls of two parts, each after its species.
+const ABILITY_KINDS: Array[String] = ["special", "passive", "core"]
 ## Things whose names break their kind's rule today, each with the issue renaming it (#909). It only
 ## shrinks: a thing that keeps its rule must be dropped from it.
 const NAME_EXCEPTIONS: Dictionary[String, int] = {}
@@ -136,16 +140,18 @@ static func collected() -> ContentTerms:
 	for tile: String in TileContent.load_tiles().tiles:
 		terms.add("tile", tile)
 	var species_of: Dictionary[String, String] = {}
-	for species: Species in SpeciesContent.load_species().species.values():
+	var all_species: SpeciesContent = SpeciesContent.load_species()
+	for species: Species in all_species.species.values():
 		terms.add("species", species.id, species.name, species.types[0])
-		for ability: String in [species.special, species.player_passive, species.self_passive]:
+		# Its kit and its core list (#2409, #2447).
+		for ability: String in all_species.core_skills(species.id):
 			species_of[ability] = species.id
 	# A passive a development web grants (#1404) is its web's species' too.
 	for web: DevelopmentWeb in DevelopmentContent.load_webs().webs.values():
 		for passive: String in web.passives.values():
 			species_of[passive] = web.species
 	for ability: Ability in AbilityContent.load_abilities().abilities.values():
-		var kind: String = "special" if ability.kind == Ability.SPECIAL else "passive"
+		var kind: String = "passive" if Ability.PASSIVES.has(ability.kind) else ability.kind
 		var owner: String = species_of.get(ability.id, "")
 		terms.add(kind, ability.id, ability.name, owner)
 	for item: GearItem in GearContent.load_gear().items.values():
@@ -178,7 +184,7 @@ static func _rule_problem(kind: String, id: String, name: String, related: Strin
 	if name.is_empty():
 		return "" if id == id.to_lower() else "its id must be lower case (#763)"
 	var own_id: String = RegEx.create_from_string("[ '-]").sub(name.to_lower(), "_", true)
-	if kind == "special" or kind == "passive":
+	if kind in ABILITY_KINDS:
 		own_id = "%s_%s" % [related, own_id]
 	if id != own_id:
 		return "its id must be %s, its name in lower case (#763)" % own_id
@@ -208,8 +214,8 @@ static func _keeps_shape(kind: String, shown: String, related: String) -> bool:
 				and _matches("([aeiou]).*\\1|([^aeiou])\\2", lower)
 				and _shares(lower, sounds, 1)
 			)
-		"special", "passive":
-			return _keeps_call_shape(kind == "special", shown, related)
+		"special", "passive", "core":
+			return _keeps_call_shape(kind, shown, related)
 		"realm":
 			return _matches("^[A-Z][a-z]*vaun$", shown) and _syllables(lower) in [2, 3]
 		"instance":
@@ -241,17 +247,20 @@ static func _keeps_shape(kind: String, shown: String, related: String) -> bool:
 	return true
 
 
-## Whether an ability's name, `shown`, keeps the shape of its kind's rule: a special's
-## two parts have the same consonants and other vowels, a passive's differ only in their first
-## consonant, and either shares two consonants with its species' id, `related`.
-static func _keeps_call_shape(special: bool, shown: String, related: String) -> bool:
+## Whether an ability's name, `shown`, keeps the shape of its `kind`'s rule: a special's two parts
+## have the same consonants and other vowels, a passive's differ only in their first consonant, a
+## core ability's are the same word (#2447), and each shares two consonants with its species' id,
+## `related`.
+static func _keeps_call_shape(kind: String, shown: String, related: String) -> bool:
 	var lower: String = shown.to_lower()
 	if not _matches("^[A-Z][a-z]+-[a-z]+$", shown) or not _shares(lower, related, 2):
 		return false
 	var first: String = lower.get_slice("-", 0)
 	var second: String = lower.get_slice("-", 1)
-	if special:
+	if kind == "special":
 		return first != second and _consonants_of(first) == _consonants_of(second)
+	if kind == "core":
+		return first == second
 	return (
 		first.length() == second.length()
 		and first[0] != second[0]
@@ -265,7 +274,7 @@ static func _keeps_call_shape(special: bool, shown: String, related: String) -> 
 static func _letters_problem(kind: String, lower: String) -> String:
 	if kind in ["gear", "piece", "place", "region"]:
 		return ""
-	if not (kind in ["species", "special", "passive"]) and _matches(BEAST_LETTERS, lower):
+	if not (kind == "species" or kind in ABILITY_KINDS) and _matches(BEAST_LETTERS, lower):
 		return "a beast-call's letter"
 	if not (kind in ["realm", "instance"]) and _matches(LAND_SOUNDS, lower):
 		return "a land-speech sound"
@@ -277,7 +286,7 @@ static func _marks_problem(kind: String, shown: String) -> String:
 	var letters: String = _letters_problem(kind, shown.to_lower())
 	if not letters.is_empty():
 		return letters
-	if shown.contains("-") and not (kind in ["special", "passive"]):
+	if shown.contains("-") and not (kind in ABILITY_KINDS):
 		return "a hyphen"
 	if shown.contains("'") and kind != "unique":
 		return "an apostrophe"
