@@ -164,7 +164,7 @@ static func _check_steps_and_hold() -> String:
 		return "arena setup missing hidden ambusher or prey"
 	var trigger_cmd: Array[Command] = [
 		_quest_event_cmd(1, "ambush_start"),
-		Command.new(WEST),
+		Command.new(),
 	]
 	Simulation.step(state, trigger_cmd)
 	if not scenes.is_running() or scenes.active_id != "ambush":
@@ -238,10 +238,10 @@ static func _record_scene_events(
 static func _check_release_and_once(state: GameState, ambusher_id: int, prey_id: int) -> String:
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	var npcs: NpcFeature = state.feature(NpcFeature.ID) as NpcFeature
-	if state.entity(ambusher_id).tile != Vector2i(3, 0) or not wild.is_fainted(prey_id):
+	if state.entity(ambusher_id).tile != Vector2i(1, 0) or not wild.is_fainted(prey_id):
 		return "ambusher position or lethal strike outcome wrong"
-	if state.entity(npcs.npcs[0]).tile != Vector2i(1, 1):
-		return "NPC didn't reach move target (1, 1)"
+	if state.entity(npcs.npcs[0]).tile != Vector2i(-1, 0):
+		return "NPC didn't reach move target (-1, 0)"
 	var before_release: Vector2i = state.player(1).tile
 	Simulation.step(state, FlowSteps.commands([EAST, WEST]))
 	var hold: SceneHoldFeature = state.feature(SceneHoldFeature.ID) as SceneHoldFeature
@@ -264,11 +264,10 @@ static func _check_release_and_once(state: GameState, ambusher_id: int, prey_id:
 ## A wild monster escaping at its health line (EscapeFeature) raises its EventEmitted and starts
 ## a scene listening for that event.
 static func _check_escape_triggers_scene() -> String:
-	var doc: String = (
-		"```\n🔴🟫🐺\n```\n"
-		+ "- `🐺`: a wild monster, always ombulumo, escaping at 50%, emitting boss_fled\n"
+	var legend: String = (
+		"- `🐺`: a wild monster, always ombulumo, escaping at 50%, emitting boss_fled\n"
 	)
-	var region: Region = InstanceBlueprints.read_region(doc)
+	var region: Region = FlowSteps.region("🔴🟫🐺", legend)
 	if not region.problem.is_empty():
 		return "escape scene region failed: " + region.problem
 	var scene: SceneScript = SceneScript.new()
@@ -306,10 +305,9 @@ static func _check_determinism_and_save_reload() -> String:
 	var saved_data: Dictionary = {}
 	var saved_hash: int = 0
 	var hashes_seen: Dictionary[int, bool] = {}
+	var trigger: Array[Command] = [_quest_event_cmd(1, "ambush_start")]
 	for tick: int in 40:
-		var cmds: Array[Command] = (
-			[_quest_event_cmd(1, "ambush_start")] if tick == 0 else FlowSteps.command(EAST)
-		)
+		var cmds: Array[Command] = trigger if tick == 0 else FlowSteps.command(EAST)
 		Simulation.step(run_a, cmds)
 		Simulation.step(run_b, cmds)
 		if run_a.state_hash() != run_b.state_hash():
@@ -317,10 +315,10 @@ static func _check_determinism_and_save_reload() -> String:
 		hashes_seen[run_a.state_hash()] = true
 		if tick == 6:
 			saved_data = run_a.to_data()
-			saved_hash = run_a.state_hash()
+			saved_hash = run_a.own_hash()
 	if hashes_seen.size() < 4 or saved_data.is_empty():
 		return "state hash didn't reflect scene progression"
-	return _verify_mid_scene_reload(script, saved_data, saved_hash, run_a.state_hash())
+	return _verify_mid_scene_reload(script, saved_data, saved_hash, run_a.own_hash())
 
 
 static func _verify_mid_scene_reload(
@@ -334,14 +332,14 @@ static func _verify_mid_scene_reload(
 	reloaded.load_data(reader)
 	if reader.failed():
 		return "mid-scene reload failed: " + reader.problem
-	if reloaded.state_hash() != saved_hash:
+	if reloaded.own_hash() != saved_hash:
 		return "reloaded mid-scene hash didn't match saved hash"
 	var reloaded_scenes: SceneFeature = reloaded.feature(SceneFeature.ID) as SceneFeature
 	if not reloaded_scenes.is_running() or reloaded_scenes.step_index < 1:
 		return "reloaded scene didn't resume at its saved step"
 	for _tick: int in range(7, 40):
 		Simulation.step(reloaded, FlowSteps.command(EAST))
-	if reloaded.state_hash() != final_hash:
+	if reloaded.own_hash() != final_hash:
 		return "reloaded scene didn't finish at the exact same final state hash"
 	return ""
 
@@ -366,18 +364,14 @@ static func _check_corrupt_saves_refused() -> String:
 
 
 static func _arena_region() -> Region:
-	var doc: String = (
-		"```\n"
-		+ "🔴🟫🟫🟫🌿\n"
-		+ "🧙🟫🐺🟫🔵\n"
-		+ "```\n"
-		+ "- `🔵`: where player 2 starts\n"
+	var legend: String = (
+		"- `🔵`: where player 2 starts\n"
 		+ "- `🧙`: a person to talk to, " + NPC_ID + "\n"
 		+ "- `🌿`: a wild monster, always " + AMBUSHER_SPECIES
-		+ ", the quest target ambusher, on shrub\n"
+		+ ", the quest target ambusher, on shrubs\n"
 		+ "- `🐺`: a wild monster, always " + PREY_SPECIES + ", the quest target prey\n"
 	)
-	return InstanceBlueprints.read_region(doc)
+	return FlowSteps.region("🔴🟫🧙🟫🐺🟫🌿🟫🔵", legend)
 
 
 static func _ambush_scene() -> SceneScript:
@@ -387,10 +381,10 @@ static func _ambush_scene() -> SceneScript:
 	script.once = true
 	script.steps = [
 		SceneStep.make_wait(3),
-		SceneStep.make_move("ambusher", Vector2i(3, 0), 2),
+		SceneStep.make_move("ambusher", Vector2i(1, 0), 2),
 		SceneStep.make_strike("ambusher", "prey", 9999, false),
 		SceneStep.make_strike("ambusher", "prey", 10, true),
-		SceneStep.make_move(NPC_ID, Vector2i(1, 1)),
+		SceneStep.make_move(NPC_ID, Vector2i(-1, 0)),
 		SceneStep.make_emit("ambush_done"),
 	]
 	return script
