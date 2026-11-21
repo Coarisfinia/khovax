@@ -175,6 +175,8 @@ const BOSS_CLAUSE: String = ", a boss"
 const BOSS_COOLDOWNS: int = 2
 ## The clause that marks a boss escaping too (#2411), at ESCAPE_LINE.
 const BOSS_ESCAPING: String = ", escaping at 25%"
+## The share of the hits a dodging companion dodges in the boss checks, in thousandths (#2449).
+const BOSS_DODGE: int = 200
 ## A tile kind a wild monster hides in (#202).
 const HIDING_TILE: String = "shrubs"
 ## Where many weak monsters stand in the big ring.
@@ -1528,7 +1530,61 @@ func _check_boss_escaping(ticks: int) -> String:
 	var resumed: String = _boss_resumed(state, BOSS_ESCAPING)
 	if not resumed.is_empty():
 		return "a save taken after a boss escaped: " + resumed
+	return _check_boss_special_dodged()
+
+
+## A boss's special on a companion whose own passive dodges a fifth of the hits (#2449) misses only
+## with a whole dodge saved up: when its count and that fifth make a whole. The miss deals nothing,
+## says it was dodged and spends the whole; a special that lands, short of one, lands in full and
+## adds nothing to the count.
+func _check_boss_special_dodged() -> String:
+	var short: int = Fixed.ONE - BOSS_DODGE - 1
+	var landed: Vector2i = _boss_special_on_dodger(short)
+	if landed.x <= 0 or landed.y != short:
+		return "a boss's special short of a whole dodge dealt %d and left the count at %d" % [
+			landed.x,
+			landed.y,
+		]
+	if _boss_special_on_dodger(0) != Vector2i(landed.x, 0):
+		return "a boss's special on a companion with no dodge saved up didn't land the same"
+	var saved: Vector2i = _boss_special_on_dodger(Fixed.ONE - BOSS_DODGE)
+	if saved != Vector2i(-1, 0):
+		return "a boss's special on a whole dodge saved up dealt %d (-1: dodged), count %d after" % [
+			saved.x,
+			saved.y,
+		]
 	return ""
+
+
+## A boss's first special on the companion beside it, whose own passive dodges BOSS_DODGE of the
+## hits and whose count starts at `count`, with the auto attacks switched off: the damage it dealt
+## (x, -1 when it was dodged, dealing nothing and leaving the HP as it was), and the count after
+## (y).
+func _boss_special_on_dodger(count: int) -> Vector2i:
+	var state: GameState = _boss_state(true, true)
+	var attacks: WildAttackFeature = state.feature(WildAttackFeature.ID) as WildAttackFeature
+	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
+	companions.self_passives[COMPANION] = SELF_GUARD
+	attacks.dodges = { SELF_GUARD: BOSS_DODGE }
+	state.set_enabled(WildAttackFeature.ID, false)
+	_wild(state).sleep(_boss_of(state), true)
+	var _joined: Array[WildMonsterStruck] = _wild_strikes_over(state, 1, Vector2i(-1, 0))
+	_wild(state).sleep(_boss_of(state), false)
+	var companion: int = companions.companion_of(0)
+	var saved: Dictionary = attacks.save_values()
+	saved["dodge_counts"] = [companion, count] if count > 0 else []
+	attacks.load_values(state, DataReader.new(saved))
+	var hp: int = _hp(state, companion)
+	var dealt: Vector2i = Vector2i(-2, -2)
+	for struck: WildMonsterStruck in _wild_strikes_over(state, 1, Vector2i(-1, 0)):
+		if struck.target_id != companion:
+			continue
+		var missed: bool = struck.dodged and struck.damage == 0 and _hp(state, companion) == hp
+		dealt.x = -1 if missed else struck.damage
+	var counts: Array[int] = []
+	counts.assign(attacks.save_values()["dodge_counts"])
+	dealt.y = counts[1] if counts.size() == 2 and counts[0] == companion else 0
+	return dealt
 
 
 ## Whether a save of `state` loads into a fresh `_boss_state` of a boss marked with `clauses` too,
