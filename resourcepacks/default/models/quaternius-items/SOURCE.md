@@ -20,5 +20,8 @@
   pouch for the berry pouch and the spikes for the thorn spikes, and the stone material's model
   (#1546), a round pebble a hand holds (item models look held, #1596), until the game's own look
   exists.
-- **Only what the game uses is here:** the four models, unchanged, and the texture Godot's import
-  extracts from the pebble.
+- **Only what the game uses is here:** the four models, and the texture Godot's import extracts
+  from the pebble. Three are unchanged. The pebble's UVs all sat on the atlas's near-black
+  cannonball colour, and its material was 0.4 metallic, so it drew as a black blob (#2595): its
+  UVs now sit in the middle of the atlas's mid-grey cell (304, 240 of 1024) and its metallic is 0.
+  Nothing else in its file changed.

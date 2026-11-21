@@ -622,6 +622,15 @@ jobs:
             ../game-models/blender.py --background --factory-startup \
             --python ../game-models/check_world_scale.py --
 
+      - name: "🪨 Check no static model draws black"
+        # Any model without a rig may be a tile's decoration: its mean diffuse albedo, texture
+        # times colour times what its metallic leaves diffuse, must not be near black (#2595).
+        if: steps.models.outputs.changed == 'true'
+        timeout-minutes: 3
+        run: |
+          uv run --locked --package khovax-game-models ../game-models/blender_each.py /tmp/models.list \
+            ../game-models/check_albedo.py
+
       - name: "🚪 Check the player can walk through every portal"
         # Rays through a portal's opening, from the ground to the player's height, meet nothing but
         # the portal itself (#2157); a model that isn't a portal passes.
