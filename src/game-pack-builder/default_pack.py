@@ -1,6 +1,8 @@
 """Gathers the game's default resource pack (#1860) into a pack folder build_pack.py builds (#1869):
 its manifest as pack.jsonc, and every file it lists (a glTF's buffers and images too) at its path
-in the pack, each with the game's import settings, so the pack imports as the game does.
+in the pack, each with the game's import settings, so the pack imports as the game does, and the
+credit note beside each texture, model and sound (#2585), which the game's Credits tab reads from
+the pack it mounts.
 
     uv run --locked --package khovax-game-pack-builder src/game-pack-builder/default_pack.py <out>
 
@@ -16,7 +18,9 @@ import sys
 from pathlib import Path
 
 from game_shared import log
-from game_shared.resource_packs import MANIFEST, PACK_FOLDER, file_lists, gltf_files, read_manifest, section
+from game_shared.resource_packs import (
+    CREDITED, MANIFEST, PACK_FOLDER, credit_note, file_lists, gltf_files, read_manifest, section,
+)
 
 GAME = Path(__file__).resolve().parents[1] / "game"
 # The default pack's own folder at the repository's root (#1978), which the game reaches through
@@ -32,11 +36,14 @@ PROJECT_BOUND = re.compile(r"^(uid|path(\.[a-z0-9_]+)?|source_file|dest_files)="
 
 
 def listed(manifest: dict[str, object]) -> list[str]:
-    """Every file the manifest lists, a glTF's buffers and images included, from res://."""
+    """Every file the manifest lists, a glTF's buffers and images included, and the credit note of
+    each texture, model and sound it lists (credit_note), from res://."""
     files = [path for kind in SINGLE for path in section(manifest, kind).values()]
     files += [path for kind in LISTS for paths in file_lists(manifest, kind).values() for path in paths]
     for model in [path for path in files if path.endswith(".gltf")]:
         files += sorted(gltf_files(model))
+    notes = [credit_note(path) for kind in CREDITED for path in section(manifest, kind).values()]
+    files += [note for note in notes if note is not None]
     return sorted(set(files))
 
 

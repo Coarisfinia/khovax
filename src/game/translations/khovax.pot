@@ -712,6 +712,16 @@ msgstr ""
 msgid "[b]Error log:[/b] %s"
 msgstr ""
 
+#: slices/credits/ui/credits_tab.gd
+msgid "Resource pack: %s"
+msgstr ""
+
+#: slices/credits/ui/credits_tab.gd
+msgid "%d of its files has no credit note."
+msgid_plural "%d of its files have no credit note."
+msgstr[0] ""
+msgstr[1] ""
+
 #: slices/credits/ui/credits_tab.tscn
 msgid "Report a bug"
 msgstr ""
