@@ -1448,7 +1448,8 @@ func _credits_bug_report(menu: GameMenu) -> String:
 
 ## The Credits tab (#462) names the build's version first (#744; a local one here, which CI's
 ## export alone stamps), then where the error log is (#1510), which starts with that version, then
-## shows every pack CREDITS.md credits, each heading in bold, with its
+## the credits it reads from the loaded resource packs (#2585): each pack by its name, and under it
+## the title of the credit note beside each of its textures, models and sounds, in bold, with its
 ## fields' names in bold and no Markdown marks or repository paths left over.
 func _menu_credits(menu: GameMenu) -> String:
 	var tab: CreditsTab = menu.find_child("Credits", true, false).get_node("Text") as CreditsTab
@@ -1468,16 +1469,39 @@ func _menu_credits(menu: GameMenu) -> String:
 	var hidden: String = ErrorLog.new(null).scrubbed(OS.get_user_data_dir() + "/world.json")
 	if hidden != "user://world.json":
 		return "the error log names the user folder: " + hidden
-	var markdown: String = FileAccess.get_file_as_string(CreditsTab.PATH)
-	for line: String in markdown.split("\n"):
-		var heading: String = CreditsTab.to_bbcode(line).strip_edges()
-		if line.begins_with(CreditsTab.PACK) and not shown.contains(heading):
-			return "the Credits tab doesn't show the pack " + line
-	if markdown.is_empty() or shown.contains("**") or shown.contains("Files:"):
+	var pack: ResourcePack = ResourcePacks.loaded()[-1]
+	if not shown.contains("Resource pack: " + pack.name):
+		return "the Credits tab doesn't name the pack %s: %s" % [pack.name, shown.left(300)]
+	for kind: String in ["textures", "models", "audio"]:
+		var files: Dictionary = pack.get(kind)
+		for file: Variant in files.values():
+			var title: String = _note_title(pack.root, str(file))
+			if title.is_empty() or not shown.contains("[b]%s[/b]" % title):
+				return "the Credits tab doesn't credit %s (its note's title: %s)" % [file, title]
+	if shown.contains("**") or shown.contains("Files:") or shown.contains("SOURCE.md"):
 		return "the Credits tab shows Markdown marks or repository paths: " + shown.left(200)
 	if not shown.contains("[b]License:[/b]"):
 		return "the Credits tab doesn't name the licenses"
 	return ""
+
+
+## The title of the credit note beside the file `file` of the pack under `root` (#2585): the
+## SOURCE.md in its folder or the nearest one above it in the pack, its first line without its
+## `# `; or "" when there's none.
+static func _note_title(root: String, file: String) -> String:
+	var folder: String = file.get_base_dir()
+	while not FileAccess.file_exists(_note_in(root, folder)) and not folder.is_empty():
+		folder = folder.get_base_dir()
+	var note: String = _note_in(root, folder)
+	if not FileAccess.file_exists(note):
+		return ""
+	var first: String = FileAccess.get_file_as_string(note).get_slice("\n", 0)
+	return first.trim_prefix("# ").strip_edges()
+
+
+## The credit note's path in `folder` of the pack under `root` ("" for the root itself).
+static func _note_in(root: String, folder: String) -> String:
+	return root + (folder + "/" if not folder.is_empty() else "") + "SOURCE.md"
 
 
 ## The Controls tab (#1414) lists every action the project binds, each row with the glyphs of what

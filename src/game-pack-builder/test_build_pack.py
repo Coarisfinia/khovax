@@ -2,11 +2,14 @@
 run() (#1974) against a stand-in for Godot: a run that exits fine but reports, as Godot does at exit, objects it leaked
 fails the build, like one reporting an error; a clean run passes, and so does one that merely says
 the words. Godot names leaked objects only in a warning once it exits, which the builder's callers
-never see, since it keeps Godot's output to itself unless the run fails.
+never see, since it keeps Godot's output to itself unless the run fails. And default_pack.py's
+listed() gathers each asset's credit note with it (#2585), which the game's Credits tab reads from
+the pack it mounts.
 
     uv run --locked --package khovax-game-pack-builder src/game-pack-builder/test_build_pack.py
 """
 
+import os
 import stat
 import sys
 import tempfile
@@ -14,6 +17,8 @@ import unittest
 from pathlib import Path
 
 from build_pack import refused, run
+from default_pack import GAME, listed
+from game_shared.resource_packs import credit_note, read_manifest, section
 
 # What Godot 4.7 prints at exit when objects outlive it (#1906, #1955).
 LEAKED = "WARNING: 1 ObjectDB instance was leaked at exit (run with `--verbose` for details)."
@@ -74,6 +79,18 @@ class RefusedTest(unittest.TestCase):
             '[remap]\n\nimporter="oggvorbisstr"\ntype="PackedScene"\n', encoding="utf-8"
         )
         self.assertNotEqual(refused(pack), [])
+
+
+class DefaultPackTest(unittest.TestCase):
+    def test_each_assets_credit_note_comes_with_it(self) -> None:
+        self.addCleanup(os.chdir, os.getcwd())
+        os.chdir(GAME)
+        manifest = read_manifest()
+        files = listed(manifest)
+        for kind in ("textures", "models", "audio"):
+            for path in section(manifest, kind).values():
+                with self.subTest(path=path):
+                    self.assertIn(credit_note(path), files)
 
 
 if __name__ == "__main__":

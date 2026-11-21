@@ -13,6 +13,11 @@ from pathlib import Path
 # The default pack's folder (#1978), reached through the game's link, and its manifest there.
 PACK_FOLDER = "resourcepacks/default/"
 MANIFEST = Path(f"{PACK_FOLDER}pack.jsonc")
+# The credit note beside an asset in its pack (#2585): its title, author, source and license, which
+# the game's Credits tab shows (PackCredits) and asset_credits_check.py checks.
+CREDIT_NOTE = "SOURCE.md"
+# The sections whose files are credited: the assets a pack's author may not own.
+CREDITED = ("textures", "models", "audio")
 # A JSON string (kept), a // line comment or a /* */ block comment (dropped, its line breaks kept),
 # as the game's Jsonc.strip reads them.
 JSONC_TOKEN = re.compile(r'"(?:\\.|[^"\\])*"|//[^\n]*|/\*.*?\*/', re.DOTALL)
@@ -136,3 +141,19 @@ def extracted_textures(model: str) -> set[str]:
             for line in Path(imported).read_text(encoding="utf-8").split("\n")
         )
     }
+
+
+def credit_note(path: str, root: str = PACK_FOLDER) -> str | None:
+    """The credit note of the asset file `path` (#2585), as the game's PackCredits finds it: the
+    CREDIT_NOTE in its folder, or else in the nearest folder above it up to the pack's root `root`,
+    that root included. None when there's none. Both are named from the same folder."""
+    top = root.rstrip("/")
+    folder = os.path.dirname(path)
+    while folder == top or folder.startswith(top + "/"):
+        note = f"{folder}/{CREDIT_NOTE}"
+        if os.path.isfile(note):
+            return note
+        if folder == top:
+            break
+        folder = os.path.dirname(folder)
+    return None
