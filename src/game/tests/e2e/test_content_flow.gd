@@ -180,7 +180,6 @@ func run(tree: SceneTree) -> String:
 		_check_text_tags_unread.bind(tree),
 		_check_terms,
 		_check_prefetched,
-		_check_pack_credits,
 	]
 	for check: Callable in checks:
 		var result: String = check.call()
@@ -2908,7 +2907,7 @@ func _check_stepped_preload(pack: ResourcePack) -> String:
 			stepped.progress(),
 			stepped.failed,
 		]
-	return ""
+	return _check_pack_credits()
 
 
 ## The .pck files for _check_player_packs, by the name each takes in the player's folder: a valid

@@ -25,23 +25,32 @@ static func of(packs: Array[ResourcePack]) -> Array[PackCredits]:
 	var found: Array[PackCredits] = []
 	var taken: Dictionary[String, bool] = {}
 	for pack: ResourcePack in packs:
-		var credits: PackCredits = PackCredits.new()
-		credits.pack_name = pack.name
-		var given: bool = false
-		for kind: String in CREDITED:
-			var files: Dictionary = pack.get(kind)
-			for resource_id: String in files:
-				# The first pack that has an id gives it; a later one's file is never used.
-				var key: String = kind + "/" + resource_id
-				if taken.has(key):
-					continue
-				taken[key] = true
-				given = true
-				credits._credit(pack.root, str(files[resource_id]))
-		if given:
-			credits.notes.sort_custom(PackCredits._by_folder)
+		var credits: PackCredits = _given_by(pack, taken)
+		if credits != null:
 			found.append(credits)
 	return found
+
+
+## What `pack` gives the game that no pack before it gave (`taken`, each kind's id, which this adds
+## to), credited; null when it gives no texture, model or sound.
+static func _given_by(pack: ResourcePack, taken: Dictionary[String, bool]) -> PackCredits:
+	var credits: PackCredits = PackCredits.new()
+	credits.pack_name = pack.name
+	var given: bool = false
+	for kind: String in CREDITED:
+		var files: Dictionary = pack.get(kind)
+		for resource_id: String in files:
+			# The first pack that has an id gives it; a later one's file is never used.
+			var key: String = kind + "/" + resource_id
+			if taken.has(key):
+				continue
+			taken[key] = true
+			given = true
+			credits._credit(pack.root, str(files[resource_id]))
+	if not given:
+		return null
+	credits.notes.sort_custom(PackCredits._by_folder)
+	return credits
 
 
 ## The note that credits the file `file` of the pack under `root`: the NOTE in its folder, or else
