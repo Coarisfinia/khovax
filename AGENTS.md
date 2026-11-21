@@ -838,7 +838,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   replacement status entry. Source links and implementation status belong on import issues.
   A concept image among the owner's downloads may be used as a reference or ignored (#2051), but
   alone it never fulfils a requested 3D-model delivery: the request stays active until its model
-  export is supplied.
+  export is supplied. A model generated from the owner's Gemini image counts as that export (#2529,
+  below).
   Replenish the active minimum automatically with genuine eligible requests; never pad it with
   unsupported creatures or needs existing suitable models/textures resolve. The ore/ingot
   exception above still holds. An explicitly rejected trial is archived for reference and does
@@ -852,15 +853,29 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
     `meshy_image_to_3d` with `model_type: smart-topology`, `ai_model: meshy-t2.5`,
     `target_polycount: 4000` and `should_texture: false` (untextured; we colour it from the shared
     texture set).
+  - **Groups are split into solo pieces** (owner, in chat on 2026-11-21, #2556): when an image shows
+    a group, such as a forest stand, the import also cuts each member out as a model of its own, so
+    the pieces can be arranged freely.
+  - **Every take is kept** (owner, in chat on 2026-11-21, #2556): each take of a request
+    (`<slug>.glb`, `<slug>-b.glb`, `<slug>-c.glb`) stays a model of its own, because the owner wants
+    variety: several trees for one environment, reused elsewhere or recoloured.
+  - **The Gemini image is kept beside its model** (owner, in chat on 2026-11-21, #2556): in
+    `Coarisfinia/khovax-sources`, next to the GLB, with the same basename and a `.jpg` extension
+    (`<slug>-b.jpg` beside `<slug>-b.glb`).
   - **Every new Gemini image is generated right away, without asking** (owner, in chat on
     2026-11-21: "monitor my downloads and do it", "for all of em", "the new ones only"): each new
     `Gemini_Generated_*` image in the owner's downloads gets its model at once with the settings
     above, 5 credits each. Images that were already there are generated only when the owner asks.
+    This covers new world-prop images only (#2556): an after-state edit of our own render (a
+    changed object, above, and the model skill) keeps its multi-view path and is never
+    auto-generated.
     Settings that cost more (a texture, `meshy-7.1`, Ultra geometry) still wait for the owner's
     go-ahead on their credit cost. No agent ever handles the Meshy API key.
   - **Check the balance before every generation** (owner, in chat on 2026-11-21): call
     `meshy_check_balance` (free) first, and don't generate when one more run would take the
-    balance below 50 credits. Tell the owner instead (on the image's issue, `question`, @Flixbox).
+    balance below 50 credits. Tell the owner instead (on the image's issue, `question`, mentioning the owner).
+    An image without an issue yet gets one for that note (`question`, mentioning the owner), which names the
+    image as left over, so it is generated once the balance allows (#2556).
 - **Learn from supplied models before requesting more in those groups** (owner, #1998, #2002):
   discard further player-part prompts for now; resume only after the supplied hair and full-body
   cloak are implemented and their lessons recorded. This deferred group does not fill the active
