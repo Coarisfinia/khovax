@@ -20,9 +20,9 @@ The shrine of Hrovumel Stolm (#1591), its end: a closed chamber whose inner floo
 
 ## Legend
 
-- `🟫`: ground
+- `🟫`: flagstone, the floor
 - `⬛`: rock
 - `🔗`: joins another piece to the west
-- `🌟`: ground; stepping here reaches the place inner_shrine
+- `🌟`: flagstone; stepping here reaches the place inner_shrine
 - `🐦`: a wild monster, always tikazzir
 - `🧰`: a treasure chest holding vis_omera on the ground

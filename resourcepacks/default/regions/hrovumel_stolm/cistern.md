@@ -20,7 +20,7 @@ The cistern of Hrovumel Stolm (#1591): a flooded hall, its floor broken by still
 
 ## Legend
 
-- `🟫`: ground
+- `🟫`: flagstone, the floor
 - `⬛`: rock
 - `🟦`: water
 - `👾`: a wild monster, of a species rolled from the instance blueprint's list
