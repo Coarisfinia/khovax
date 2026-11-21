@@ -769,6 +769,20 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   and other assets alike. The summary gives the option's concrete, human-readable vibe or design
   concept (owner, #1996), such as "High umbrella of rounded leaves", never only "First silhouette",
   "Option 1" or "Variation 2". A numbered prefix is fine when the concept follows it.
+- **No weaving, braiding or crossed cords in image prompts** (owner's ground rule, in chat on
+  2026-11-21, #2509): "lesson learned: gemini does *not* understand what "crossing cords" are. it
+  barely understand how rope weaves anyways. lets avoid any weaving, crossing of anything more
+  complex than two wood planks, etc". No prompt asks for weaving, braiding, knots or bindings, or
+  for crossed or twisted cords, ropes, threads, strands or reeds, and nothing crosses that is more
+  complex than two planks laid across each other. Rope, cord or yarn appears only as a plain,
+  smooth, uncrossed band or loop, or is left out. Meshy turns the generator's attempts at these
+  into geometry that doesn't line up (the lookout post export on #2501). **A short chain of a few
+  thick, rigid rings, each linked into the next, is fine** (owner, narrowing it on #2509: "this
+  prompt worked third try, with the linked thingies. so not everything breaks", about #2402's
+  41.3), and may stand in where a cord would otherwise be needed. It is the one exception: nothing
+  else may weave, braid, knot or bind, or cross beyond two planks, whatever its material or
+  thickness. For a small item, ending its prompt with `fully visible.` helps (the owner's addition
+  to 41.3).
 - **Every model request includes choices and a texture decision** (owner, #1996): creatures,
   props, items and player parts alike have at least three genuinely distinct, complete prompts,
   each in its own accordion. This is a minimum; the 20-prompt beast requirements below still hold.
