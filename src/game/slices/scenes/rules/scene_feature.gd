@@ -141,7 +141,7 @@ func _move_walker(
 		movement.add_walk(actor)
 	if movement.walk(actor.id).is_moving():
 		return
-	var direction: int = _first_walk_direction(state, movement, actor.tile, current_step.to)
+	var direction: int = _first_step_toward(state, actor.tile, current_step.to, {}, movement)
 	if direction == -1 or not movement.try_step(state, actor, direction):
 		_advance()
 
@@ -159,10 +159,11 @@ func _step_paced(
 	if step_ticks < pace:
 		return
 	step_ticks = 0
-	var next_tile: Vector2i = _next_step_toward(state, actor.tile, goal, actor.id)
-	if next_tile == actor.tile:
+	var direction: int = _first_step_toward(state, actor.tile, goal, _occupied_set(state, actor.id))
+	if direction == -1:
 		_advance()
 		return
+	var next_tile: Vector2i = actor.tile + Hex.DIRECTIONS[direction]
 	var from: Vector2i = actor.tile
 	if movement != null and movement.walk(actor.id) != null:
 		movement.place(actor, next_tile)
@@ -244,44 +245,23 @@ static func _resolve_actor(state: GameState, actor_name: String) -> int:
 	return 0
 
 
-## First step tile along a shortest walkable path from `from` to `goal`, avoiding tiles occupied
-## by any other entity; returns `from` when unreachable.
-static func _next_step_toward(
-	state: GameState,
-	from: Vector2i,
-	goal: Vector2i,
-	actor_id: int,
-) -> Vector2i:
-	if from == goal:
-		return from
+## Every tile occupied by an entity other than `actor_id`.
+static func _occupied_set(state: GameState, actor_id: int) -> Dictionary[Vector2i, bool]:
 	var occupied: Dictionary[Vector2i, bool] = {}
 	for entity: Entity in state.entities:
 		if entity.id != actor_id:
 			occupied[entity.tile] = true
-	var first: Dictionary[Vector2i, Vector2i] = { from: from }
-	var queue: Array[Vector2i] = [from]
-	var head: int = 0
-	while head < queue.size():
-		var current: Vector2i = queue[head]
-		head += 1
-		if current == goal:
-			return first[current]
-		for direction: Vector2i in Hex.DIRECTIONS:
-			var next: Vector2i = current + direction
-			if first.has(next) or not state.region.is_walkable(next) or occupied.has(next):
-				continue
-			first[next] = next if current == from else first[current]
-			queue.append(next)
-	return from
+	return occupied
 
 
-## Direction index of the first step of a shortest walk from `from` to `goal` for a walker using
-## MovementFeature; -1 when unreachable.
-static func _first_walk_direction(
+## Direction index of the first step of a shortest walkable path from `from` to `goal`, avoiding
+## `occupied` tiles (and `movement.is_occupied` when `movement` is given); -1 when unreachable.
+static func _first_step_toward(
 	state: GameState,
-	movement: MovementFeature,
 	from: Vector2i,
 	goal: Vector2i,
+	occupied: Dictionary[Vector2i, bool],
+	movement: MovementFeature = null,
 ) -> int:
 	if from == goal:
 		return -1
@@ -295,9 +275,9 @@ static func _first_walk_direction(
 			return first[current]
 		for direction: int in Hex.DIRECTIONS.size():
 			var next: Vector2i = current + Hex.DIRECTIONS[direction]
-			if first.has(next) or not state.region.is_walkable(next):
+			if first.has(next) or not state.region.is_walkable(next) or occupied.has(next):
 				continue
-			if movement.is_occupied(state, next):
+			if movement != null and movement.is_occupied(state, next):
 				continue
 			first[next] = direction if current == from else first[current]
 			queue.append(next)

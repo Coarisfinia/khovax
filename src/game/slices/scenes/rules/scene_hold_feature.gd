@@ -86,28 +86,45 @@ func _release(state: GameState, health: HealthFeature) -> void:
 
 
 func hash_values() -> Array[int]:
-	var values: Array[int] = [1 if paused else 0, switched.size()]
-	for paused_id: String in switched:
-		values.append(StateHash.name_code(paused_id))
-	return values
+	var out: Array[int] = [int(paused), switched.size()]
+	for feature_id: String in switched:
+		out.append(StateHash.name_code(feature_id))
+	return out
 
 
 func save_values() -> Dictionary:
-	return { "paused": 1 if paused else 0, "switched": switched.duplicate() }
+	return {
+		"holding": 1 if paused else 0,
+		"paused_features": switched.duplicate(),
+	}
 
 
 func load_values(_state: GameState, values: DataReader) -> void:
-	paused = values.whole("paused", 0, 1) == 1
-	switched.clear()
-	var saved: Variant = values.data.get("switched")
-	if not saved is Array:
-		values.fail("switched isn't a list")
+	var is_holding: bool = values.whole("holding", 0, 1) == 1
+	var restored: Array[String] = _read_paused_features(values)
+	if values.failed():
 		return
-	for paused_id: Variant in saved:
-		if not paused_id is String or not PAUSED.has(paused_id) or switched.has(paused_id):
-			values.fail("a paused feature %s isn't one this pauses" % [paused_id])
-			return
-		switched.append(paused_id)
+	paused = is_holding
+	switched = restored
+
+
+static func _read_paused_features(values: DataReader) -> Array[String]:
+	var raw: Variant = values.data.get("paused_features")
+	if not raw is Array:
+		values.fail("paused_features isn't a list")
+		return []
+	var list: Array = raw
+	var result: Array[String] = []
+	for entry: Variant in list:
+		if not entry is String:
+			values.fail("paused feature isn't a string")
+			return []
+		var feature_id: String = entry
+		if not PAUSED.has(feature_id) or result.has(feature_id):
+			values.fail("paused feature %s isn't valid" % feature_id)
+			return []
+		result.append(feature_id)
+	return result
 
 
 ## A command keeping only the profile outbox request `given` carries: held players stand still.
