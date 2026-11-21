@@ -148,11 +148,11 @@ a plain sentence, that adds something unique, unusual or fantastical, such as ni
 skateboard, wings, extra heads or a landscape on its back. A form later than the pictured one looks
 more powerful and more fantastical, never the same animal recoloured (owner, #1772).
 
-**A later form** (the owner's prompt, #1993, which made the Kalvrakkor's magma form, #1771): two
-parts change per prompt, the `The change:` line and the theme in `more <theme>-themed`, the
-creature's own theme (the owner's prompt says `more magma-themed`). Its pose line, its "no loose
-or floating parts" and its closing eye sentence are dropped by the owner's later rule (#2052), and
-the bold line is added (#2051); the rest is the owner's wording as it was.
+**A later form** (the owner's prompt, #1993, which made the Kalvrakkor's magma form, #1771): three
+parts change per prompt, the `The change:` line, the mouth line after it (#2482) and the theme in
+`more <theme>-themed`, the creature's own theme (the owner's prompt says `more magma-themed`). Its
+pose line, its "no loose or floating parts" and its closing eye sentence are dropped by the owner's
+later rule (#2052), and the bold line is added (#2051); the rest is the owner's wording as it was.
 
 ```text
 Generate a brand-new image of a creature. The attached picture is only a reference for it: it shows this creature's earlier form. Draw its next form: the same creature line.
@@ -168,8 +168,8 @@ No effects such as sparks, steam or smoke.
 Style: a stylized game creature with large, readable shapes and flat matte colours, smooth like a clay 3D render and ready for cel shading: plain flat colour areas without drawn outlines, painted highlights or painted shadows. Soft, even, shadowless light. No text.
 ```
 
-**A baby form** (owner's pick on #1823, 2026-10-30) keeps its own wording: only the change differs
-between variations.
+**A baby form** (owner's pick on #1823, 2026-10-30) keeps its own wording: only the change and the
+mouth line after it (#2482) differ between variations.
 
 ```text
 Generate a brand-new image of a creature. Draw its baby form.
