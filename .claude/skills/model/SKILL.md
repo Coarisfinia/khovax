@@ -46,9 +46,10 @@ felled, emptied) gets its "after" model one of two ways, never from a fresh, unr
   rebuild check (`check_rebuild.py`) fails on a stale derived model.
 - **Something new appears** (a chest's open lid showing its contents, a sprouting stump): render our
   model from the game, have Gemini edit that picture into the after state, then generate it in Meshy,
-  multi-view where possible. It is a new mesh, so it only stays close to the original (silhouette,
-  proportions, and the colours through the shared texture set) rather than matching it exactly,
-  which is why removing or breaking parts always takes the derive step.
+  multi-view where possible (not the single-image path for the owner's new Gemini images, #2556).
+  It is a new mesh, so it only stays close to the original (silhouette, proportions, and the
+  colours through the shared texture set) rather than matching it exactly, which is why removing
+  or breaking parts always takes the derive step.
 
 A request list never asks for a fresh after-state model: such an entry asks for the Gemini edit of
 our render (with the render attached) or is no model request at all, but a derive task.
@@ -488,9 +489,10 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
    where it can't, we build our own Blender rig (#1732, section 2). An evolution's image comes
    from the copypastas above (#1754).
    A model the main session generates through the Meshy API from the owner's Gemini image is
-   accepted like the owner's own export (#2529); each new one is generated right away; its
-   settings and what still needs the owner's go-ahead are in `AGENTS.md`, next to the
-   model-delivery rules.
+   accepted like the owner's own export (#2529); each new one is generated right away, a group in
+   it is also split into solo pieces, every take is kept, and the image goes beside its GLB as
+   `<slug>.jpg`; its settings and what still needs the owner's go-ahead are in `AGENTS.md`, next
+   to the model-delivery rules (#2556).
 2. **Inspect:** `uv run --locked src/game-models/inspect_meshy.py <download.glb>` (#1523),
    one report on its mesh, material, painted eyes, body columns and rig. Read it before measuring
    anything by hand. It warns when the download is far above step 1's triangle target.
