@@ -15,6 +15,8 @@ a paint's cut), so a build on a machine with another count of cores would differ
 - `snap` puts a mesh's vertices on a fine grid, where another machine's float maths lands alike.
 """
 
+from collections import Counter
+
 import bmesh
 import numpy
 
@@ -36,7 +38,9 @@ def weld(work, decimals=5):
 def canonical(work, decimals=6):
     """Rebuilds the bmesh `work` in a fixed order: its vertices by position (on a grid of
     `decimals`), its faces by their vertices, each starting at its lowest one. A sliver whose
-    corners met on the grid is dropped. Only positions and faces are kept."""
+    corners met on the grid is dropped, and so are faces on the same corners in another order (a
+    face and its back, a sheet of no thickness a cut can leave, #2572). Only positions and faces
+    are kept."""
     points = sorted({tuple(round(value, decimals) for value in vert.co) for vert in work.verts})
     index = {point: place for place, point in enumerate(points)}
     faces = set()
@@ -47,6 +51,8 @@ def canonical(work, decimals=6):
             continue
         start = ring.index(min(ring))
         faces.add(tuple(ring[start:] + ring[:start]))
+    corners = Counter(frozenset(face) for face in faces)
+    faces = {face for face in faces if corners[frozenset(face)] == 1}
     work.clear()
     verts = [work.verts.new(point) for point in points]
     for face in sorted(faces):
