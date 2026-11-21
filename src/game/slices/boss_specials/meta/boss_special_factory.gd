@@ -1,8 +1,9 @@
 class_name BossSpecialFactory
 extends RefCounted
 ## Builds an instance's boss specials feature (#2410, #823) with every species' special, from the
-## ability data; a species whose special doesn't load has none.
+## ability data; a species whose special doesn't load has none. It takes every passive's guard too,
+## which its strikes land less of (WildHit, #2458).
 
 
 static func build(_setup: FeatureSetup) -> BossSpecialFeature:
-	return BossSpecialFeature.new(SpeciesContent.cached().specials())
+	return BossSpecialFeature.new(SpeciesContent.cached().specials(), WildAttackFactory.guards())

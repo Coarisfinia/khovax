@@ -257,7 +257,7 @@ func _strike(state: GameState, monster: Entity, damage: int, enraged: bool) -> v
 			if _dodges(state, target_id):
 				struck.damage = 0
 				struck.dodged = true
-		land(state, struck, on_companion)
+		WildHit.land(state, struck, on_companion, guards)
 		return
 	side = _trail_target(state, tile)
 	if side == tile:
@@ -265,25 +265,6 @@ func _strike(state: GameState, monster: Entity, damage: int, enraged: bool) -> v
 	state.events.append(WildMonsterStruck.new(monster.id, 0, side, damage))
 	if _worn_through(side, damage):
 		_clear(state, side)
-
-
-## Lands the hit `struck` on the companion (`on_companion`) or the player it names: less their
-## guards (`_guarded`), raised, and off their HP (HealthFeature.hurt, #455); a hit that fells them
-## ends the effect they drank (#2343). A boss's special lands the same way (BossSpecialFeature,
-## #2410).
-func land(state: GameState, struck: WildMonsterStruck, on_companion: bool) -> void:
-	struck.damage = _guarded(state, struck.target_id, on_companion, struck.damage)
-	state.events.append(struck)
-	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
-	if health.hurt(state, struck.target_id, struck.damage):
-		_end_drunk(state, struck.target_id)
-
-
-## Ends the effect `target_id`, whom a hit just felled, drank (#2343), where the instance has them.
-static func _end_drunk(state: GameState, target_id: int) -> void:
-	var effects: TonicEffectsFeature = state.feature(TonicEffectsFeature.ID) as TonicEffectsFeature
-	if effects != null:
-		effects.end(state, target_id)
 
 
 ## The wild monster's strike `struck` on a companion, after the type chart where the instance has
@@ -303,22 +284,6 @@ static func _on_companion(state: GameState, struck: WildMonsterStruck) -> WildMo
 	)
 
 
-## `damage` on the companion or player `target_id`, less the guards of the passives working for them
-## now (#616): a companion's own, or the player's companion's while it's out, its web's included
-## (#1472), and of the Ward they drank (#2311). All of them together
-## take off less than a whole hit, and a hit that deals anything deals at least 1 (#702).
-func _guarded(state: GameState, target_id: int, on_companion: bool, damage: int) -> int:
-	if damage == 0:
-		return damage
-	var guard: int = TonicEffectReads.strength_of(state, target_id, TonicEffectsFeature.WARD)
-	if guards.is_empty() and guard == 0:
-		return damage
-	for passive: String in _passives(state, target_id, on_companion):
-		guard += guards.get(passive, 0)
-	guard = mini(guard, Fixed.ONE - 1)
-	return maxi(Fixed.scale(damage, Fixed.ONE - guard), 1)
-
-
 ## Whether the companion `companion_id` dodges this hit on it (#1499, #2234): the dodges of its
 ## passives working now, together less than a whole, are added to its count, and the hit that makes
 ## a whole is dodged. One without a dodge counts nothing.
@@ -326,7 +291,7 @@ func _dodges(state: GameState, companion_id: int) -> bool:
 	if dodges.is_empty():
 		return false
 	var dodge: int = 0
-	for passive: String in _passives(state, companion_id, true):
+	for passive: String in WildHit.passives(state, companion_id, true):
 		dodge += dodges.get(passive, 0)
 	if dodge == 0:
 		return false
@@ -338,18 +303,6 @@ func _dodges(state: GameState, companion_id: int) -> bool:
 	else:
 		var _dropped: bool = _dodge_counts.erase(companion_id)
 	return dodged
-
-
-## The passives working now (CompanionPassives) for the companion or player `target_id`: a
-## companion's own, or the player's companion's while it's out; none without companions.
-static func _passives(state: GameState, target_id: int, on_companion: bool) -> Array[String]:
-	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
-	var passives: Array[String] = []
-	if companions == null:
-		return passives
-	if on_companion:
-		return CompanionPassives.of_companion(state, companions, target_id)
-	return CompanionPassives.of_player(state, companions, state.entity(target_id).slot)
 
 
 ## Adds `damage` to the wear on the trail tile `tile`; whether it's worn through now.
