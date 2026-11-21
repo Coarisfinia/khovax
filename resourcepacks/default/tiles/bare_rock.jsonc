@@ -1,9 +1,11 @@
-// Bare rock: the low rock gems stand on, left once a player harvested their crystals (#696). Nobody
-// walks it, but sight passes over it, like the gems were. It lasts until its instance is purged
-// (#212), which brings the gems back.
+// Bare rock: the low rock gems stand on, left once a player harvested their crystals (#696), its
+// model the gems' own with the crystals broken off to stubs (#2493). Nobody walks it, but sight
+// passes over it, like the gems were. It lasts until its instance is purged (#212), which brings
+// the gems back.
 {
 	"id": "bare_rock",
 	"color": "#5a5868",
 	"symbol": "_", // tells it apart without its color (#68)
+	"model": "model_bare_rock",
 	"traits": { "walkable": false }
 }

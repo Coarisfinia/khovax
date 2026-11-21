@@ -42,8 +42,14 @@ felled, emptied) gets its "after" model one of two ways, never from a fresh, unr
   their material region), and the derive step closes the holes it leaves, so a request for an
   original that is changed later asks for those parts as separate pieces.
   The derive step is the derived model's own build script (`build/<name>.py`), which reads the
-  original's GLB; its `SOURCE.md` names the original as its source. When the original changes, CI's
-  rebuild check (`check_rebuild.py`) fails on a stale derived model.
+  original's GLB through `lib/derive.py` (`derive.original`, then e.g. `derive.stub` to break a
+  part off; `bare-rock/build/bare_rock.py` is the example; it takes an original whose parts are
+  separate meshes of one material each, and refuses one with several materials in a mesh until an
+  original needs that) and names it on a line of its own,
+  `ORIGINAL = "<the .glb from the repository's root>"`; its `SOURCE.md` names the original as its
+  source. CI checks a derived model whenever its original changes (`changed_models.py` reads
+  `ORIGINAL`), so its rebuild check (`check_rebuild.py`) fails on a stale derived model: rebuild
+  the derived models with their original.
 - **Something new appears** (a chest's open lid showing its contents, a sprouting stump): render our
   model from the game, have Gemini edit that picture into the after state, then generate it in Meshy,
   multi-view where possible (not the single-image path for the owner's new Gemini images, #2556).
