@@ -1,6 +1,6 @@
 # Morwe Wudhen: felling
 
-A felling in Morwe Wudhen (#689): a clearing of stumps ringed by trees, stacked logs (crates for now) and a wounded Ombulumo to dominate. Joins Morwe Wudhen on its north and south edges.
+A felling in Morwe Wudhen (#689): a clearing of stumps ringed by trees, stacked logs and a wounded Ombulumo to dominate. Joins Morwe Wudhen on its north and south edges.
 
 ## Tiles
 
@@ -9,9 +9,9 @@ A felling in Morwe Wudhen (#689): a clearing of stumps ringed by trees, stacked 
     🟫🟫🟫🟫🟫🟫🟫
    🟫🌲🪵🟫🪵🟫🌲🟫
   🟫🌲🟫🪵🟫🟫🟫🌲🟫
- 🟫🌲🪵🟫🟫🟫📦🟫🌲🟫
+ 🟫🌲🪵🟫🟫🟫🪓🟫🌲🟫
 🟫🌲🟫🟫🟫🟫🟫🪵🟫🌲🟫
- 🟫🦉🟫📦🟫🟫🤕🟫🌲🟫
+ 🟫🦉🟫🪓🟫🟫🤕🟫🌲🟫
   🟫🌲🟫🪵🟫🟫🪵🌲🟫
    🟫🌲🟫🪵🟫🟫🌲🟫
     🟫🟫🟫🟫🟫🟫🟫
@@ -25,6 +25,6 @@ A felling in Morwe Wudhen (#689): a clearing of stumps ringed by trees, stacked 
 - `🧷`: joins another piece to the southwest
 - `🌲`: forest
 - `🪵`: stump
-- `📦`: crates
+- `🪓`: logs
 - `🦉`: a wild monster hiding in forest
 - `🤕`: a wild monster, always ombulumo, wounded
