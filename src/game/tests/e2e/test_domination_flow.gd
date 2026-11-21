@@ -894,11 +894,9 @@ func _escape_held(state: GameState) -> String:
 ## domination. The same holds when an escaper hits its HP line inside a ring still waiting for a
 ## totem, and when two escapers share a seal and reach their lines together (#2446).
 func _check_escape_seal() -> String:
-	var state: GameState = _escape_state(true)
-	var monster: int = _wild(state).monsters[0]
 	var ring: Array[Vector2i] = Hex.ring(SMALL_RING)
-	var _player: Entity = state.add_entity(0, ring[0])
-	_close(state, ring.slice(1))
+	var state: GameState = _ringed_escape_state(ring, true)
+	var monster: int = _wild(state).monsters[0]
 	var events: Array[RefCounted] = _settle(state)
 	var broken: String = _ring_broken_cleanly(state, events, ring)
 	if not broken.is_empty():
@@ -915,11 +913,9 @@ func _check_escape_seal() -> String:
 ## An escaper wounded to its line inside a ring still waiting for a totem breaks that ring (#2446)
 ## and escapes without a domination.
 func _check_escape_waiting() -> String:
-	var state: GameState = _escape_state(true)
-	var monster: int = _wild(state).monsters[0]
 	var ring: Array[Vector2i] = Hex.ring(SMALL_RING)
-	var _player: Entity = state.add_entity(0, ring[0])
-	_close(state, ring.slice(1), false)
+	var state: GameState = _ringed_escape_state(ring, false)
+	var monster: int = _wild(state).monsters[0]
 	if _domination(state).encircled.is_empty() or not _domination(state).seals.is_empty():
 		return "the waiting-ring escape check's ring isn't waiting for a totem"
 	_wild(state).wound(state, monster, OUTCOME_HP * 10, true)
@@ -934,12 +930,10 @@ func _check_escape_waiting() -> String:
 ## the first breaks the seal.
 func _check_escape_shared_seal() -> String:
 	var spots: Array[Vector2i] = [Vector2i(1, 0), Vector2i(-1, 0)]
-	var state: GameState = _escape_state(true, spots)
-	var monsters: Array[int] = _wild(state).monsters.duplicate()
 	var ring: Array[Vector2i] = Hex.ring(2)
-	var player: Entity = state.add_entity(0, ring[0])
-	_close(state, ring.slice(1))
-	var seal: RingSeal = _domination(state).seals.get(player.id)
+	var state: GameState = _ringed_escape_state(ring, true, spots)
+	var monsters: Array[int] = _wild(state).monsters.duplicate()
+	var seal: RingSeal = _domination(state).seals.get(state.player(0).id)
 	if seal == null or seal.monsters.size() != 2:
 		return "the shared-seal escape check didn't seal both escapers in one ring"
 	var events: Array[RefCounted] = _settle(state)
@@ -947,6 +941,19 @@ func _check_escape_shared_seal() -> String:
 	if not broken.is_empty():
 		return broken
 	return _escaped_all(state, events, monsters)
+
+
+## An escape state with weak escapers on `spots` enclosed by `ring`, with or without a totem placed
+## (#2446).
+func _ringed_escape_state(
+	ring: Array[Vector2i],
+	totem: bool,
+	spots: Array[Vector2i] = [Vector2i.ZERO],
+) -> GameState:
+	var state: GameState = _escape_state(true, spots)
+	var _player: Entity = state.add_entity(0, ring[0])
+	_close(state, ring.slice(1), totem)
+	return state
 
 
 ## Whether `events` show a ring broken once, with no ring sealing or waiting in `state` and `ring`
