@@ -859,6 +859,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
     above, 5 credits each. Images that were already there are generated only when the owner asks.
     Settings that cost more (a texture, `meshy-7.1`, Ultra geometry) still wait for the owner's
     go-ahead on their credit cost. No agent ever handles the Meshy API key.
+  - **Check the balance before every generation** (owner, in chat on 2026-11-21): call
+    `meshy_check_balance` (free) first, and don't generate when one more run would take the
+    balance below 50 credits. Tell the owner instead (on the image's issue, `question`, @Flixbox).
 - **Learn from supplied models before requesting more in those groups** (owner, #1998, #2002):
   discard further player-part prompts for now; resume only after the supplied hair and full-body
   cloak are implemented and their lessons recorded. This deferred group does not fill the active
