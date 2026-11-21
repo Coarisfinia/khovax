@@ -198,6 +198,7 @@ func run(tree: SceneTree) -> String:
 		_check_species,
 		_check_early_monster,
 		_check_boss_specials,
+		_check_boss_without_auto_attacks,
 	]
 	for check: Callable in steps:
 		var result: String = check.call()
@@ -1356,6 +1357,28 @@ func _check_boss_specials() -> String:
 	return _check_boss_save_forged(ticks)
 
 
+## A boss fires its special in an instance whose blueprint leaves the wild monsters' auto attacks
+## out (#2458): the instance builds, and over each of its cooldowns the boss strikes the player
+## beside it once, for the special's power times its strength, with no auto attack beside it.
+func _check_boss_without_auto_attacks() -> String:
+	var state: GameState = _boss_state(true, false, "", false, false)
+	if state == null:
+		return "an instance whose region marks a boss but leaves out the auto attacks didn't build"
+	if state.feature(WildAttackFeature.ID) != null:
+		return "an instance without the auto attacks still had them"
+	var special: Ability = SpeciesContent.cached().specials()[COMPANION]
+	var ticks: int = special.cooldown_seconds * Simulation.TICKS_PER_SECOND * BOSS_COOLDOWNS
+	var strength: int = _wild(state).strength_of(state, _boss_of(state))
+	var expected: Vector2i = Vector2i(1, Fixed.scale(strength, special.power)) * BOSS_COOLDOWNS
+	var struck: Vector2i = _strikes_on_player(state, ticks)
+	if struck != expected:
+		return "a boss without auto attacks struck the player %s (strikes, damage), not %s" % [
+			struck,
+			expected,
+		]
+	return ""
+
+
 ## A save names only the bosses the legend marks: one that makes the unmarked wild monster beside a
 ## boss a boss too is refused, and so is one that leaves the boss out. Then the boss holds fire
 ## (`_check_boss_held`, over `ticks`).
@@ -1558,12 +1581,14 @@ func _boss_strikes_with_companion(boss: bool) -> Vector2i:
 ## A disc under the starting instance's rules with one awake wild monster of COMPANION's species
 ## in the middle, marked a boss when `boss` and with the legend's `clauses` after, hidden in
 ## HIDING_TILE when `hidden`, and the player in slot 0 next to it, carrying a COMPANION when
-## `carrying`.
+## `carrying`. Without `auto_attacks`, the instance's rules leave the wild monsters' auto attacks
+## out (#2458); null if they don't load then.
 func _boss_state(
 		boss: bool,
 		carrying: bool = false,
 		clauses: String = "",
 		hidden: bool = false,
+		auto_attacks: bool = true,
 ) -> GameState:
 	var region: Region = Region.disc(OUTCOME_RADIUS)
 	region.wild_monsters = [Vector2i.ZERO]
@@ -1571,7 +1596,17 @@ func _boss_state(
 	region.add_placement(WildSpotPlacements.KIND, Vector2i.ZERO, meaning)
 	if hidden:
 		region.terrain[Vector2i.ZERO] = HIDING_TILE
-	var state: GameState = FlowSteps.rules_on(Realms.start(), region, 42)
+	var state: GameState = null
+	if auto_attacks:
+		state = FlowSteps.rules_on(Realms.start(), region, 42)
+	else:
+		var ordered: Array[Feature] = []
+		for feature: Feature in InstanceBlueprints.features_for(Realms.start(), region):
+			if feature.id() != WildAttackFeature.ID:
+				ordered.append(feature)
+		state = GameState.new(region, 42, ordered)
+		if not state.problem.is_empty():
+			return null
 	_wild(state).sleep(_wild(state).monsters[0], false)
 	if carrying:
 		FlowSteps.carry(state, 0, [COMPANION])
