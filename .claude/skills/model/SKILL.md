@@ -37,14 +37,17 @@ original." On #2489 they picked "1+2", so an object the player changes (harveste
 felled, emptied) gets its "after" model one of two ways, never from a fresh, unrelated generation:
 - **Parts removed or broken:** a derive step in our pipeline edits the original GLB (#2493): bare
   rock is the mana gem model with its crystal parts removed and the stubs capped; rubble is the
-  original rock fractured into chunks and slumped. It matches exactly, costs no Meshy credits, and
-  relies on the original keeping its parts as separate material regions, as shape-only exports do.
+  original rock fractured into chunks and slumped. It matches exactly and costs no Meshy credits. It
+  needs the parts to remove as separable geometry (their own mesh pieces, or faces we can select by
+  their material region), and the derive step closes the holes it leaves, so a request for an
+  original that is changed later asks for those parts as separate pieces.
   The derive step is recorded in the derived model's `SOURCE.md`, so it re-runs when the original
   changes.
 - **Something new appears** (a chest's open lid showing its contents, a sprouting stump): render our
   model from the game, have Gemini edit that picture into the after state, then generate it in Meshy,
-  multi-view where possible. The silhouette and proportions stay close, and the shared texture set
-  keeps the colours.
+  multi-view where possible. It is a new mesh, so it only stays close to the original (silhouette,
+  proportions, and the colours through the shared texture set) rather than matching it exactly,
+  which is why removing or breaking parts always takes the derive step.
 
 A request list never asks for a fresh after-state model: such an entry asks for the Gemini edit of
 our render (with the render attached) or is no model request at all, but a derive task.
