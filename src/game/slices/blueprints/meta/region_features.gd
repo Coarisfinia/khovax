@@ -73,6 +73,8 @@ static func _marked_wild_rules(region: Region) -> Array[String]:
 		needed.append(BossSpecialFeature.ID)
 	if EscapeFeature.has_escaper(region):
 		needed.append(EscapeFeature.ID)
+	if AbsorptionFactory.has_absorber(region):
+		needed.append(AbsorptionFeature.ID)
 	return needed
 
 
@@ -92,4 +94,5 @@ static func _built_in() -> Array[String]:
 		TileHarvestFeature.ID,
 		WaystoneFeature.ID,
 		EscapeFeature.ID,
+		AbsorptionFeature.ID,
 	]
