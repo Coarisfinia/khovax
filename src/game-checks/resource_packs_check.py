@@ -39,7 +39,7 @@ will have (#1858), and looked up only through ResourcePacks. It fails when
   its uid://, loaded or kept for later (stricter than the pack needs: scripts never do; #1865,
   #1919), or builds a path under resourcepacks/, translations/, the
   species', the tile blueprints', the loot tables', the harvest tables' or the materials' folder,
-  or the old assets/ (still refused, #1978), at runtime (#1865; the tools, which list the assets for the credits, may). A path may hold spaces (#1919).
+  or the old assets/ (still refused, #1978), at runtime (#1865; the tools, which may list the assets as files, may). A path may hold spaces (#1919).
 A catalogue the pack lists that leaves texts of the template untranslated, or holds texts the
 template no longer has, is only warned about (catalogue_gaps.py, #1968).
 An id named only in the tests (any tests/ folder, or a test_*.gd anywhere; #1865, #1919) counts as
@@ -204,7 +204,7 @@ PACK_STRING = re.compile(
     + rf"(?:/{PATH_CHAR}*)?)\1"
 )
 WHOLE_FILE = re.compile(rf"([\"'])res://{PATH_CHAR}+\.[A-Za-z0-9]+\1")
-# The tools list the assets as files (the credits), never looking one up for the game.
+# The tools may list the assets as files, never looking one up for the game.
 TOOLS = "tools/"
 # The tests name ids to check them, so an id only they name is unreferenced (#1865): any file in
 # a tests/ folder, the top-level one or a slice's, or named test_*.gd anywhere (#1919)...

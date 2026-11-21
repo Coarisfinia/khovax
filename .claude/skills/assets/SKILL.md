@@ -26,7 +26,7 @@ from a free source also passes the license rules below.
    Reusing an asset costs no new license review.
 2. **Check the license of the exact file, on its source's own page.** A site's general statement
    tells you where to look, not what this file is under, and terms change: the Quaternius case
-   (#1954, refused by `tools/godot/credits.gd`) was a source that relicensed its files. Note the
+   (#1954, refused by `src/game-checks/asset_credits_check.py`) was a source that relicensed its files. Note the
    date you checked.
 3. **Check what we do with it, not only that it's "free".** The repository is public and resource
    packs are shared, so the file itself gets redistributed, usually adapted. Permission to use a
@@ -61,8 +61,10 @@ download:
   import, so after adding the file run `godot --headless --path src/game --import` from the
   repository's root (as for `.uid` files in AGENTS.md's "Testing and CI"). It generates files
   rather than checking anything, so it isn't a rerun of CI.
-- **`SOURCE.md`:** a title, then the three lines `tools/godot/credits.gd` turns into `CREDITS.md`,
-  then the rest of the file's history. Never edit `CREDITS.md` by hand: CI fails when it differs.
+- **`SOURCE.md`:** the asset's credit note, beside it in its pack: a title, then the three lines
+  the in-game Credits tab shows (it reads them from the loaded packs, #2585), then the rest of the
+  file's history. `src/game-checks/asset_credits_check.py` fails on a folder without one or a note
+  missing a line.
 
 ```markdown
 # <Title>
@@ -77,7 +79,7 @@ download:
 ```
 
 A pack of several files names each file within those same lines, continued on indented lines
-(`game-icons/SOURCE.md` lists its authors that way), because `credits.gd` takes only the first of
+(`game-icons/SOURCE.md` lists its authors that way), because the Credits tab takes only the first of
 each. CC BY requires keeping the creator's credit, the license notice and a note of any change, so
 they go wherever the file goes, into a built resource pack as well.
 

@@ -8,7 +8,8 @@ extends RefCounted
 ## builds), and headless (tests/e2e/test_apk_flow.gd). CI compares each device's final hash with
 ## the headless one for the same commit (#876): a pass on a device means it plays the very same
 ## game. On the web it then saves the error log with a controller's press alone (#1598), which the
-## web e2e job checks arrives as a download.
+## web e2e job checks arrives as a download. Everywhere it then checks the Credits tab credits the
+## default pack from the notes the build's pack carries (#2585).
 
 ## With the flow's result: "" when it passed, or why it failed.
 signal finished(result: String)
@@ -31,7 +32,8 @@ const FINGER: int = 0
 ## flows' FlowSteps (#915).
 const GLADE: String = "lumwen_hoal"
 const FOREST: String = "morwe_wudhen"
-## The Credits tab, whose error log button the web flow presses, and what its note says first.
+## The Credits tab, whose credits the flow reads, and whose error log button the web flow presses,
+## and what its note says first.
 const CREDITS: String = "res://slices/credits/ui/credits_tab.tscn"
 const BROWSER_MAY_ASK: String = "Your browser may ask to allow the download"
 
@@ -68,7 +70,22 @@ func run(main: Node, tree: SceneTree) -> String:
 	var result: String = _result(driver, camera, start, camera_before)
 	if result.is_empty():
 		result = _save_log_by_controller(main)
+	if result.is_empty():
+		result = _check_credits(main)
 	return result if not result.is_empty() else _check_pack_folder()
+
+
+## The Credits tab credits the default pack from the credit notes beside its assets (#2585), which
+## a build reads from the default pack's .pck it mounts, not from the project's files.
+func _check_credits(main: Node) -> String:
+	var page: Node = (load(CREDITS) as PackedScene).instantiate()
+	main.add_child(page)
+	var shown: String = (page.get_node("Text") as RichTextLabel).text
+	page.queue_free()
+	var pack: String = ResourcePacks.loaded()[-1].name
+	if not shown.contains("Resource pack: " + pack) or not shown.contains("[b]License:[/b]"):
+		return "the Credits tab doesn't credit the resource pack %s: %s" % [pack, shown.left(300)]
+	return ""
 
 
 func _result(

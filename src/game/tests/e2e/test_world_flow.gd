@@ -32,6 +32,7 @@ extends RefCounted
 ## Every region a realm's instance can have, each variant's too, has a clearing for every seed
 ## (#2323): a tile players walk to from the first start, neither an exit nor a start, at least
 ## CLEARING_DISTANCE tiles from every wild monster's spot, where #1872 places its standing stone.
+## The castle's paved pieces and every piece of the dungeon lie on flagstone, not grass (#2498).
 
 const SEEDS: int = 40
 ## The damage the companion walks through the exit with, to see it arrive as hurt (#716).
@@ -52,6 +53,11 @@ const CLEARINGS_WAITING: Dictionary[String, int] = {}
 ## The dungeon behind the escort guide's seal (#1591), its end piece and the place marked there.
 const DUNGEON: String = "hrovumel_stolm"
 const DUNGEON_END: String = "shrine"
+## The castle's pieces under a roof or paved (#2498), and the floor they and every piece of the
+## dungeon lie on instead of grass.
+const CASTLE: String = "dhorvone_stolm"
+const CASTLE_PAVED: Array[String] = ["courtyard", "hall", "keep"]
+const FLAGSTONE: String = "flagstone"
 const DUNGEON_END_PLACE: String = "inner_shrine"
 ## The pass whose sealed passage leads into the dungeon (#1590), its guide, and the variant their
 ## opening chooses, which keeps the passage open.
@@ -99,6 +105,7 @@ func run(tree: SceneTree) -> String:
 		_check_start_variants,
 		_check_pieces_connected,
 		_check_dungeon_end,
+		_check_floors,
 		_check_pass_seal,
 		_check_variant_pieces,
 		_check_room,
@@ -1636,7 +1643,47 @@ func _check_refusals(tiles: String) -> String:
 	var forest: String = "forest"
 	if not InstanceBlueprints.read_region(thicket).terrain.values().has(forest):
 		return "the glade's thicket has no forest"
-	return _check_kind_and_place(tiles)
+	var result: String = _check_kind_and_place(tiles)
+	return result if not result.is_empty() else _check_floor(tiles)
+
+
+## A legend's floor (#2498): the tiles of every symbol that names neither a terrain nor a kind, a
+## start, a wild monster, a connector, an exit and a chest on the ground among them, lie on it;
+## the symbols naming `ground`, water or a kind keep theirs. Two floors, or a floor nobody walks,
+## are refused.
+func _check_floor(tiles: String) -> String:
+	var base: String = BASE_LEGEND
+	var two: String = tiles % ["🔴🌲🪓", base + "- `🌲`: forest, the floor\n- `🪓`: stump, the floor"]
+	var unwalked: String = tiles % ["🔴🪨🟫", base + "- `🪨`: boulder, the floor"]
+	for text: String in [two, unwalked]:
+		var problem: String = InstanceBlueprints.read_region(text).problem
+		if not problem.begins_with("the legend's floors"):
+			return "two floors or a floor nobody walks weren't refused: " + problem
+	var legend: String = "- `🔴`: where player 1 starts\n- `🟫`: ground\n- `🟩`: sand, the floor\n"
+	legend += "- `👾`: a wild monster, of a species rolled from the instance blueprint's list\n"
+	legend += "- `🔗`: joins another piece to the west\n- `🚪`: exit to the east\n"
+	legend += "- `🧰`: a treasure chest on the ground\n- `💧`: water\n- `🪓`: stump"
+	var region: Region = InstanceBlueprints.read_region(tiles % [" 🟫🧰\n🔗🔴🚪\n 👾🟩💧🪓", legend])
+	var floored: Array[Vector2i] = [
+		Vector2i(-1, 0),
+		Vector2i.ZERO,
+		Vector2i(1, 0),
+		Vector2i(1, -1),
+		Vector2i(-1, 1),
+		Vector2i(0, 1),
+	]
+	var expected: bool = region.problem.is_empty()
+	for tile: Vector2i in floored:
+		expected = expected and region.terrain.get(tile, "") == "sand"
+	expected = expected and region.terrain.get(Vector2i(0, -1), "") == Region.GROUND
+	expected = expected and region.terrain.get(Vector2i(1, 1), "") == Region.WATER
+	expected = expected and region.terrain.get(Vector2i(2, 1), "") == "stump"
+	if not expected:
+		return "a legend's floor didn't lie under its plain tiles: %s %s" % [
+			region.problem,
+			region.terrain,
+		]
+	return ""
 
 
 ## The species `region`'s legend names for the wild monster spot `spot`, or "".
@@ -1771,6 +1818,24 @@ func _check_dungeon_end() -> String:
 				marked,
 				seed_value,
 			]
+	return ""
+
+
+## The castle's paved pieces and every piece of the dungeon lie on flagstone, not grass (#2498):
+## no tile of theirs is plain ground, the tiles under their starts, wild monsters, connectors, exits
+## and chests included.
+func _check_floors() -> String:
+	var paths: Array[String] = ResourcePacks.region_pieces(DUNGEON)
+	for path: String in ResourcePacks.region_pieces(CASTLE):
+		if CASTLE_PAVED.has(path.get_file().get_basename()):
+			paths.append(path)
+	if paths.size() <= CASTLE_PAVED.size():
+		return "the castle's paved pieces or the dungeon's pieces aren't there: %s" % [paths]
+	for path: String in paths:
+		var piece: Region = InstanceBlueprints.read_region(FileAccess.get_file_as_string(path))
+		var kinds: Array = piece.terrain.values()
+		if not piece.problem.is_empty() or kinds.has(Region.GROUND) or not kinds.has(FLAGSTONE):
+			return "%s isn't floored with %s: %s" % [path, FLAGSTONE, piece.problem]
 	return ""
 
 

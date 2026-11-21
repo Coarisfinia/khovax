@@ -20,7 +20,7 @@ The gallery of Hrovumel Stolm (#1591): a long hall of rock pillars, old crates r
 
 ## Legend
 
-- `🟫`: ground
+- `🟫`: flagstone, the floor
 - `⬛`: rock
 - `👾`: a wild monster, of a species rolled from the instance blueprint's list
 - `🔗`: joins another piece to the west

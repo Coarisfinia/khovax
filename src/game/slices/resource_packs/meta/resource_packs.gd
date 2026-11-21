@@ -188,6 +188,12 @@ static func _every(kind: String) -> Dictionary[String, String]:
 	return found
 
 
+## The credits of the loaded packs (#2585), in lookup order: each pack that gives the game a
+## texture, model or sound, with the credit notes beside what it gives. The Credits tab shows them.
+static func credits() -> Array[PackCredits]:
+	return PackCredits.of(loaded())
+
+
 ## Every quest (#1888) the loaded packs have, its file as a res:// path by its id, in id order: the
 ## first pack that has an id gives its file. QuestContent reads them.
 static func quests() -> Dictionary[String, String]:

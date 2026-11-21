@@ -21,8 +21,12 @@ extends RefCounted
 ##   counter-clockwise (#231), so two symbols can stand for the same kind turned apart, and
 ##   `walkable` or `not walkable` overrides its kind's trait for this tile (#201), e.g. `forest, not
 ##   walkable`, and `height <n>` sets how tall it stands for crowns above it (#232), in hundredths
-##   of a tile's radius, where its models' measured height doesn't fit, e.g. `shrubs, height 40`
-## where <side> is one of SIDES. Every symbol but water and rock is ground unless it names a kind.
+##   of a tile's radius, where its models' measured height doesn't fit, e.g. `shrubs, height 40`,
+##   and `the floor` makes the kind the document's floor (#2498), e.g. `flagstone, the floor`
+## where <side> is one of SIDES. Every symbol but water and rock is ground unless it names a kind;
+## in a document with a floor, every symbol that doesn't name a terrain or a kind lies on the floor
+## instead (a start, a wild monster, a connector, an exit, what a slice places), so a paved piece
+## has no grass under them. Only the meaning `ground` itself still lays grass there.
 
 ## The built-in terrains' meanings.
 const TERRAINS: Dictionary[String, String] = {
@@ -48,9 +52,14 @@ const TURNED: String = "turned "
 const WALKABLE: String = "walkable"
 const NOT_WALKABLE: String = "not walkable"
 const HEIGHT: String = "height "
+## What a tile kind's legend meaning says, after the kind, to make it the document's floor (#2498).
+const FLOOR: String = "the floor"
 
 ## The tile's terrain, before a kind it names.
 var terrain: String = Region.GROUND
+## Whether it lies on plain ground without naming a terrain or a kind, which the document's floor
+## replaces (#2498).
+var on_floor: bool = false
 ## The player slot starting here, or -1.
 var start: int = -1
 var wild_monster: bool = false
@@ -65,6 +74,8 @@ var kind: String = ""
 var turns: Array[int] = []
 var walkable_overrides: Array[bool] = []
 var heights: Array[int] = []
+## Whether its clauses make its kind the document's floor (#2498).
+var is_floor: bool = false
 ## The side a connector or exit opens to, or -1.
 var connector_side: int = -1
 var exit_side: int = -1
@@ -80,10 +91,10 @@ static func read(meaning: String, readers: Array[PlacementReader]) -> LegendMean
 	return read_one if understood else null
 
 
-## Builds what lies on `tile` itself: its terrain, its kind with its clauses, and a wild monster
-## on it. Returns why it can't, or "".
-func lay(region: Region, tile: Vector2i) -> String:
-	region.terrain[tile] = terrain
+## Builds what lies on `tile` itself: its terrain, or the document's `floor` where it says none,
+## its kind with its clauses, and a wild monster on it. Returns why it can't, or "".
+func lay(region: Region, tile: Vector2i, floor_kind: String = Region.GROUND) -> String:
+	region.terrain[tile] = floor_kind if on_floor else terrain
 	if wild_monster:
 		region.wild_monsters.append(tile)
 	if kind.is_empty():
@@ -140,6 +151,7 @@ func _read_placed(meaning: String) -> bool:
 		start = slot if meaning == START % (slot + 1) else start
 	wild_monster = meaning == ROLLED
 	terrain = TERRAINS.get(meaning, Region.GROUND)
+	on_floor = not TERRAINS.has(meaning)
 	if start >= 0 or wild_monster or TERRAINS.has(meaning):
 		return true
 	if meaning.begins_with(CONNECTOR):
@@ -177,6 +189,7 @@ func _read_kind(meaning: String) -> bool:
 	var said_turns: Array[int] = []
 	var said_overrides: Array[bool] = []
 	var said_heights: Array[int] = []
+	var said_floor: bool = false
 	for clause: String in clauses.slice(1):
 		var turn: String = clause.trim_prefix(TURNED)
 		var height: String = clause.trim_prefix(HEIGHT)
@@ -186,6 +199,8 @@ func _read_kind(meaning: String) -> bool:
 			said_heights.append(height.to_int())
 		elif clause == WALKABLE or clause == NOT_WALKABLE:
 			said_overrides.append(clause == WALKABLE)
+		elif clause == FLOOR:
+			said_floor = true
 		else:
 			return false
 	if not TileKinds.has(clauses[0]):
@@ -194,4 +209,5 @@ func _read_kind(meaning: String) -> bool:
 	turns = said_turns
 	walkable_overrides = said_overrides
 	heights = said_heights
+	is_floor = said_floor
 	return true
