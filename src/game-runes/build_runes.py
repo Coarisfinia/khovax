@@ -115,7 +115,9 @@ def sheet_svg(data: dict) -> str:
         body.append(label(width / 2, y + 4, f"“{text}”", 14))
         y += 14
         for scale in (4, SMALL):
+            # The ink's width: the spacing after the last glyph isn't part of it.
             run = sum((glyphs[c]["width"] + grid["spacing"]) * scale for c in text)
+            run -= grid["spacing"] * scale
             body += text_svg(text, glyphs, grid, (width - run) / 2, y, scale)
             y += grid["height"] * scale + 12
     height = y + MARGIN
