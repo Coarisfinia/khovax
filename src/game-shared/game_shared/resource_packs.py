@@ -17,7 +17,7 @@ MANIFEST = Path(f"{PACK_FOLDER}pack.jsonc")
 # the game's Credits tab shows (PackCredits) and asset_credits_check.py checks.
 CREDIT_NOTE = "SOURCE.md"
 # The sections whose files are credited: the assets a pack's author may not own.
-CREDITED = ("textures", "models", "audio")
+CREDITED = ("textures", "models", "audio", "runes")
 # A JSON string (kept), a // line comment or a /* */ block comment (dropped, its line breaks kept),
 # as the game's Jsonc.strip reads them.
 JSONC_TOKEN = re.compile(r'"(?:\\.|[^"\\])*"|//[^\n]*|/\*.*?\*/', re.DOTALL)

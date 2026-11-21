@@ -41,7 +41,7 @@ static func start(packs: Array[ResourcePack], step_msec: int = ALL_AT_ONCE) -> P
 			var type: String = ResourcePack.KINDS[kind]
 			if type.is_empty():
 				continue
-			var files: Dictionary = pack.get(kind)
+			var files: Dictionary = pack.files_in(kind)
 			for file: Variant in files.values():
 				loads._request(pack.root + str(file), type)
 	return loads
