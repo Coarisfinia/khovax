@@ -101,10 +101,11 @@ worktree, fully built and reviewed by Codex locally before it's pushed and opene
 one fix or one refactor, whole. Anything beyond it (a related cleanup, side findings, tooling
 tweaks) gets its own issue and its own pull request later, never along for the ride.
 
-**Consider the default resource pack for everything new** (owner's ground rule, #1887):
-whatever is new (content, realms and region pieces, quests, #1888) is weighed for the default
-resource pack (#1860) and goes there if it belongs; every model does (the model skill, #1864). The
-pull request's description says which was chosen and why.
+**New things go into the default resource pack by default, wherever sensible** (owner's ground rule,
+#1887, #2599): new content, data and assets (glyphs, textures, tiles, models, quests, regions,
+realms, rules data, #1888) go into `resourcepacks/default/` (#1860) unless there is a reason they
+can't, such as engine code, build tooling or tests; every model does (the model skill, #1864). A
+pull request that keeps something new outside the pack says why in its description.
 
 **Keep each pull request low in complexity: a concise unit of progress, no bloat** (owner's rule).
 Prefer the simplest solution that does the job, and Godot's built-in way over a hand-built one. When
@@ -511,9 +512,10 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   (owner, #1978), laid out like a player's pack; the schemas and the code stay in their slices. The game reaches it through `res://resourcepacks/`, an untracked link
   (`src/game-build/link_resource_packs.py`; a tracked symlink is a text file in a Windows
   checkout), and `resource_packs_check.py` fails on a file listed outside its kind's folder there (`MOVED`).
-  **Whatever new is built, consider whether it belongs in the default pack** (owner's ground rule,
-  on #1887), and say in the pull request which you chose and why: content a player's pack could
-  add or replace (quests, #1888) does.
+  **New things go into the default pack by default, wherever sensible** (owner's ground rule, #1887,
+  #2599): content, data and assets a player's pack could add or replace (quests, #1888) go there
+  unless there is a reason they can't, and a pull request that keeps something new outside the pack
+  says why.
 - **The presentation** (each slice's `look/` and `ui/`; the hex board everything stands on in
   `slices/board/look/`, the menu in `slices/menu/ui/`, #507): scenes that read the state and draw
   it; they never write it. `HexLayout` is the only tile-to-world conversion. One-shot effects play
