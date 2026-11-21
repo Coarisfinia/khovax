@@ -489,10 +489,11 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
    where it can't, we build our own Blender rig (#1732, section 2). An evolution's image comes
    from the copypastas above (#1754).
    A model the main session generates through the Meshy API from the owner's Gemini image is
-   accepted like the owner's own export (#2529); each new one is generated right away, a group in
-   it is also split into solo pieces, every take is kept, and the image goes beside its GLB as
-   `<slug>.jpg`; its settings and what still needs the owner's go-ahead are in `AGENTS.md`, next
-   to the model-delivery rules (#2556).
+   accepted like the owner's own export (#2529); each new world-prop image is generated right away
+   (an after-state edit keeps the multi-view path above), a group in it is also split into solo
+   pieces, every take is kept, and the image goes beside its GLB as `<slug>.jpg`; its settings and
+   what still needs the owner's go-ahead are in `AGENTS.md`, next to the model-delivery rules
+   (#2556).
 2. **Inspect:** `uv run --locked src/game-models/inspect_meshy.py <download.glb>` (#1523),
    one report on its mesh, material, painted eyes, body columns and rig. Read it before measuring
    anything by hand. It warns when the download is far above step 1's triangle target.
