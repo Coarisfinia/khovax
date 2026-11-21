@@ -25,6 +25,9 @@ BUILD_FOLDER = re.compile(r"^resourcepacks/[^/]+/models/[^/]+/" + BUILD + "/")
 # A model script's export call, as a statement of its own: a script in a build folder without one
 # builds nothing.
 EXPORT = re.compile(r"^\s*scene\.export_glb\(", re.MULTILINE)
+# A derived model's original (#2493): the .glb its script reads and edits, from the repository's
+# root, on a line of its own (`ORIGINAL = "resourcepacks/default/models/mana-gems/mana_gems.glb"`).
+ORIGINAL = re.compile(r'^ORIGINAL = "([^"]+\.glb)"$', re.MULTILINE)
 
 
 def is_build_file(path: str) -> bool:
@@ -53,3 +56,11 @@ def is_model_script(path: str) -> bool:
         return False
     with open(path, encoding="utf-8") as script:
         return bool(EXPORT.search(script.read()))
+
+
+def original_glb(path: str) -> str | None:
+    """The original .glb (from the root) the model script at `path` derives its model from (#2493),
+    or None for a model that isn't derived."""
+    with open(path, encoding="utf-8") as script:
+        found = ORIGINAL.search(script.read())
+    return found.group(1) if found else None
