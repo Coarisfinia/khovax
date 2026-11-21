@@ -44,7 +44,9 @@ const SCALED: Dictionary[String, int] = {
 	"rubble": 400,
 	"waystone": 125,
 	"copper_ore": 125,
+	"copper_ore_rubble": 125,
 	"savanna_tree": 125,
+	"ford": 250,
 }
 ## A species file's speed, abilities (#222), name (#351), strike type (#626), codex entry (#1173),
 ## behaviour traits (#1200) and model (#1223), as a valid species ends.
@@ -827,9 +829,9 @@ static func _step_of(kind: String) -> QuestStep:
 ## missing one is reported; ground, water and rock are the built-in kinds and keep their
 ## walkability; the rules know every kind by its file's name (#802); forest, shrubs and a stump are
 ## walkable and a boulder isn't (#205), each with its model, and sand is plain and walkable (#321);
-## every model a blueprint names is in a resource pack (#1864); the kinds in SCALED are drawn at
-## their scale in hundredths (#588), every other kind at 100, the default; no two kinds share a
-## symbol (#68). Broken blueprints are refused.
+## a ford is walkable, with its stepping stones (#2486); every model a blueprint names is in a
+## resource pack (#1864); the kinds in SCALED are drawn at their scale in hundredths (#588), every
+## other kind at 100, the default; no two kinds share a symbol (#68). Broken blueprints are refused.
 func _check_tiles() -> String:
 	var content: TileContent = TileContent.load_tiles()
 	if not content.problem.is_empty():
@@ -853,6 +855,7 @@ func _check_tiles() -> String:
 		"boulder": false,
 		"stump": true,
 		"sand": true,
+		"ford": true,
 	}
 	var plain: Array[String] = ["ground", "water", "rock", "sand"]
 	for id: String in walkable:

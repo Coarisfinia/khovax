@@ -55,6 +55,52 @@ SET = {
     "moss": Source("https://ambientcg.com/get?file=Moss002_1K-JPG.zip",
                    "727d4e3134f604837c2e11aa3bf12417a022d3c668a6d7339efa572fdbb056bb",
                    member="Moss002_1K-JPG_Color.jpg", tones=4),
+    # The handmade realm (#2460, #2484): pale, muted surfaces, so its colourful beasts stand out
+    # (the owner, on #2484). A prop gives them a colour with `prop_paint.material`'s tint.
+    # Creased sheet paper: pages, pop-up cliffs, shadow screens, the paper floor.
+    "paper": Source("https://ambientcg.com/get?file=Paper003_1K-JPG.zip",
+                    "90b44da4c960ba044b37c26713c50ef1986687a522f1bbe847aeb9b471409040",
+                    member="Paper003_1K-JPG_Color.jpg", tones=4),
+    # Thick folded card: pop-up cliffs, page drifts, the nest.
+    "card": Source("https://ambientcg.com/get?file=Cardboard004_1K-JPG.zip",
+                   "f427eb664e0cbc97fc1e7066a800f3ad656ad4eeaa0d0314182ea8b7f03e4a64",
+                   member="Cardboard004_1K-JPG_Color.jpg", tones=4, saturation=0.55, brightness=1.1),
+    # Woven bookcloth: book covers and spines.
+    "bookcloth": Source("https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/book_pattern/book_pattern_col1_1k.jpg",
+                        "30661c007bd43e5fda5c11a8edb49e0949e19b1b55fdbe3baf7139fb3a0f8a70",
+                        tones=4, saturation=0.5, brightness=2.0),
+    # Chunky knit, greyed to a cream: wound yarn, knitted fabric, the woollen floor.
+    "yarn": Source("https://ambientcg.com/get?file=Fabric018_1K-JPG.zip",
+                   "495f53bb0339963b6405e016435d59763de460e0e659a91a59cb8bc12a687b66",
+                   member="Fabric018_1K-JPG_Color.jpg", tones=4, saturation=0.05, brightness=2.5),
+    # Coarse hessian: cord and rope, kite sails, stage curtains, sandbags.
+    "cloth": Source("https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/hessian_380/hessian_380_diff_1k.jpg",
+                    "5727302df3a9c845e6320ff186ac13fc7d0f1ffcd6fda71667e808e09379fe6f",
+                    tones=4, saturation=0.6, brightness=1.1),
+    # A fine white weave: the stage's painted scenery flats, tinted with their paint.
+    "canvas": Source("https://ambientcg.com/get?file=Fabric019_1K-JPG.zip",
+                     "a6a9310516750214fc4e3e9e05269035d76670223c45d7810f3d89ad67b46562",
+                     member="Fabric019_1K-JPG_Color.jpg", tones=4),
+    # Tarnished brass: the orrery's gears, arms and pedestal, clasps.
+    "brass": Source("https://ambientcg.com/get?file=Metal048C_1K-JPG.zip",
+                    "c24d2f8b82d1ed5e876d6ceae4bedff76f32a5d565ecf21e2b370e56df61fb14",
+                    member="Metal048C_1K-JPG_Color.jpg", tones=4, saturation=0.7),
+    # Worn dark iron: needles, stage weights.
+    "iron": Source("https://ambientcg.com/get?file=Metal015_1K-JPG.zip",
+                   "76fec89bb8e04d97b90bbf9b47caf27476b7d226645e81bff9d8c8087f27f0db",
+                   member="Metal015_1K-JPG_Color.jpg", tones=4, saturation=0.25, brightness=1.4),
+    # Dry, wind-flattened grass: the Kite Ridge's floor.
+    "windswept_grass": Source("https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/withered_grass/withered_grass_diff_1k.jpg",
+                              "8bebfb639ef74f651bc445526c46c845beee52a86d831848b82eb2bbbf2d98ee",
+                              saturation=0.6, brightness=1.2),
+    # Pale floorboards: the Dusk Stage's boards.
+    "stage_boards": Source("https://ambientcg.com/get?file=WoodFloor051_1K-JPG.zip",
+                           "3f493484eab1ec5e1c466b90e515003b286fc6d7f84ff8ff6485900bfc26cef5",
+                           member="WoodFloor051_1K-JPG_Color.jpg", saturation=0.7),
+    # Riveted metal plates: the Orrery Plateau's floor.
+    "metal_plates": Source("https://ambientcg.com/get?file=MetalPlates004_1K-JPG.zip",
+                           "80dd04ac1a96d7280b34fc947b522c0e70e1eeae6c377aec5d1742a36be3139e",
+                           member="MetalPlates004_1K-JPG_Color.jpg", tones=4, saturation=0.5, brightness=1.5),
 }
 
 

@@ -1,0 +1,12 @@
+// Copper ore rubble: the heap of broken stone left once a player broke the copper out of copper ore
+// by hand (#1929), its model the ore outcrop's own, broken into chunks that slumped into a lower
+// heap (#2572). Nobody walks it, and sight passes over it, like the ore was. It lasts until its
+// instance is purged (#212), which brings the ore back.
+{
+	"id": "copper_ore_rubble",
+	"color": "#9c8f80",
+	"symbol": ";", // tells it apart without its color (#68)
+	"model": "model_copper_ore_rubble",
+	"scale": 125, // in hundredths: as the copper ore it was, its outcrop sized to fill its hex
+	"traits": { "walkable": false }
+}

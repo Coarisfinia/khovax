@@ -8,10 +8,10 @@ A stream through Morwe Wudhen (#689), crossed at two fords, with trees on both b
      🟫🟫🔗🟫🟫🟫
     🟫🟫🟫🟫🟫🪨🟫
    🌲🌲🟫🟫🟫🟫🟫🟫
-  🌲🌲🌲🟫🟫🟫🟫🟦🟦
+  🌲🌲🌲🟫🟫🟫🌊🟦🟦
  🪨🌲🌲🟫🟫🟫🟦🟫🟫🟫
 🟫🟫🟫🟫🟫🟫🟦🟦🟫🌲🟫
- 🟫🟫🟦🟦🟫🟫🟦🌲🌲🌲
+ 🟫🟫🟦🟦🌊🌊🟦🌲🌲🌲
   🟦🟦🟦🟦🟫🟫🟫🐸🌲
    🟫🟫🟫🟫🟫🟫🟫🟫
     🟫🟫🦔🟫🟫🟫🟫
@@ -22,6 +22,7 @@ A stream through Morwe Wudhen (#689), crossed at two fords, with trees on both b
 
 - `🟫`: ground
 - `🟦`: water
+- `🌊`: ford
 - `🔗`: joins another piece to the northeast
 - `🧷`: joins another piece to the southwest
 - `🌲`: forest

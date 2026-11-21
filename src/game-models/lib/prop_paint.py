@@ -1,4 +1,5 @@
-"""The props' shared texture set (#1853): a few CC0 textures (stone, sandstone, wood, moss),
+"""The props' shared texture set (#1853): a few CC0 textures (stone, sandstone, wood, moss, and
+the handmade realm's paper, card, bookcloth, yarn, cloth, canvas, brass, iron and floors, #2484),
 each reduced to a few flat tones for the game's cel shading by `prop_textures.py` and kept in
 `textures/`, which every world prop paints itself from. A prop generated as a bare shape (5
 credits, the owner's pick on #1846) needs no texture of its own, only the mapping of its parts
@@ -25,15 +26,19 @@ from mathutils.bvhtree import BVHTree
 
 # The set, made by prop_textures.py: one PNG per material.
 TEXTURES = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "textures")
+# The handmade realm's ink (#2484): a near-black blue-violet, for `flat` with a low roughness.
+INK = (0.10, 0.09, 0.14)
 # Metres one repeat of a texture covers, the same on every prop, so props side by side match.
 REPEAT = 0.9
 
 
-def material(name, texture_name=None, factor=1.0):
-    """A material of the set: the texture `texture_name` (stone, sandstone, wood, moss; `name`
-    when None) times a grey `factor` (linear: a darker step of it), matte and single-sided. Every
-    prop's materials load the same files; the glTF keeps the factor as its base colour factor."""
+def material(name, texture_name=None, factor=1.0, tint=None):
+    """A material of the set: the texture `texture_name` (`name` when None; a PNG in `textures/`)
+    times a grey `factor` (linear: a darker step of it) and a `tint` (sRGB, a flat paint over it:
+    painted wood, a coloured yarn, #2484), matte and single-sided. Every prop's materials load the
+    same files; the glTF keeps factor and tint as its base colour factor."""
     texture_name = texture_name or name
+    colour = [factor * channel for channel in _linear(tint or (1.0, 1.0, 1.0))]
     image = bpy.data.images.get(texture_name) or bpy.data.images.load(os.path.join(TEXTURES, texture_name + ".png"))
     image.name = texture_name
     image.pack()
@@ -43,7 +48,7 @@ def material(name, texture_name=None, factor=1.0):
     shader = nodes["Principled BSDF"]
     texture = nodes.new("ShaderNodeTexImage")
     texture.image = image
-    if factor == 1.0:
+    if colour == [1.0, 1.0, 1.0]:
         links.new(texture.outputs["Color"], shader.inputs["Base Color"])
     else:
         mix = nodes.new("ShaderNodeMix")
@@ -51,7 +56,7 @@ def material(name, texture_name=None, factor=1.0):
         mix.blend_type = "MULTIPLY"
         mix.inputs["Factor"].default_value = 1.0
         links.new(texture.outputs["Color"], mix.inputs["A"])
-        mix.inputs["B"].default_value = (factor, factor, factor, 1.0)
+        mix.inputs["B"].default_value = (*colour, 1.0)
         links.new(mix.outputs["Result"], shader.inputs["Base Color"])
     shader.inputs["Roughness"].default_value = 1.0
     return mat
@@ -81,18 +86,22 @@ def glow(name, colour):
     return flat(name, colour)
 
 
-def flat(name, colour):
-    """A part of one flat `colour` (sRGB, as the set's tones), matte and single-sided, with no
-    texture: an ore's veins (#1929), so another ore is the same shape with another colour."""
+def flat(name, colour, roughness=1.0):
+    """A part of one flat `colour` (sRGB, as the set's tones), single-sided, with no texture: an
+    ore's veins (#1929), so another ore is the same shape with another colour. Matte, unless a
+    lower `roughness` makes it glossy (the handmade realm's ink pools: `INK`, 0.2, #2484)."""
     mat = bpy.data.materials.new(name)
     mat.use_backface_culling = True
     shader = mat.node_tree.nodes["Principled BSDF"]
-    # A node's colour is linear; the set's tones are sRGB.
-    linear = [channel / 12.92 if channel <= 0.04045 else ((channel + 0.055) / 1.055) ** 2.4 for channel in colour]
-    shader.inputs["Base Color"].default_value = (*linear, 1.0)
-    shader.inputs["Roughness"].default_value = 1.0
+    shader.inputs["Base Color"].default_value = (*_linear(colour), 1.0)
+    shader.inputs["Roughness"].default_value = roughness
     shader.inputs["Emission Strength"].default_value = 0.0
     return mat
+
+
+def _linear(colour):
+    """An sRGB colour (as the set's tones) in linear, as a node's colour is."""
+    return [channel / 12.92 if channel <= 0.04045 else ((channel + 0.055) / 1.055) ** 2.4 for channel in colour]
 
 
 def _hash(ix, iy, iz, seed):
