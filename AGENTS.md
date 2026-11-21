@@ -853,8 +853,12 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
     `meshy_image_to_3d` with `model_type: smart-topology`, `ai_model: meshy-t2.5`,
     `target_polycount: 4000` and `should_texture: false` (untextured; we colour it from the shared
     texture set).
-  - **Every generation waits for the owner's go-ahead on its credit cost.** No agent spends
-    credits on its own, and none ever handles the Meshy API key.
+  - **Every new Gemini image is generated right away, without asking** (owner, in chat on
+    2026-11-21: "monitor my downloads and do it", "for all of em", "the new ones only"): each new
+    `Gemini_Generated_*` image in the owner's downloads gets its model at once with the settings
+    above, 5 credits each. Images that were already there are generated only when the owner asks.
+    Settings that cost more (a texture, `meshy-7.1`, Ultra geometry) still wait for the owner's
+    go-ahead on their credit cost. No agent ever handles the Meshy API key.
 - **Learn from supplied models before requesting more in those groups** (owner, #1998, #2002):
   discard further player-part prompts for now; resume only after the supplied hair and full-body
   cloak are implemented and their lessons recorded. This deferred group does not fill the active
