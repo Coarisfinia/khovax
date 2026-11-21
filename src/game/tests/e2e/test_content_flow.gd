@@ -44,6 +44,7 @@ const SCALED: Dictionary[String, int] = {
 	"rubble": 400,
 	"waystone": 125,
 	"copper_ore": 125,
+	"copper_ore_rubble": 125,
 	"savanna_tree": 125,
 	"ford": 250,
 }

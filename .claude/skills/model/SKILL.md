@@ -44,8 +44,11 @@ felled, emptied) gets its "after" model one of two ways, never from a fresh, unr
   The derive step is the derived model's own build script (`build/<name>.py`), which reads the
   original's GLB through `lib/derive.py` (`derive.original`, then e.g. `derive.stub` to break a
   part off; `bare-rock/build/bare_rock.py` is the example; it takes an original whose parts are
-  separate meshes of one material each, and refuses one with several materials in a mesh until an
-  original needs that) and names it on a line of its own,
+  separate meshes of one material each, and refuses one with several materials in a mesh. For
+  such an original, `derive.whole` takes its shape alone as one part, which the derived model
+  paints itself, and `derive.fracture` (a Voronoi split) and `derive.slump` break it into a heap:
+  `copper-ore-rubble/build/copper_ore_rubble.py`, the copper ore's rubble, #2572) and names it on
+  a line of its own,
   `ORIGINAL = "<the .glb from the repository's root>"`; its `SOURCE.md` names the original as its
   source. CI checks a derived model whenever its original changes (`changed_models.py` reads
   `ORIGINAL`), so its rebuild check (`check_rebuild.py`) fails on a stale derived model: rebuild
