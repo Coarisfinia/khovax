@@ -30,6 +30,29 @@ rather than ordinary recolours. Don't request every tool-by-material combination
 deposit and ingot rules above stay as they are. Today's supplied tools are icons and world
 decoration only (AGENTS.md, "Crafting").
 
+**A changed object's "after" model matches its original** (owner's ground rule, #2489,
+2026-11-21). On #2480 the owner wrote: "If the player modifies an object, it doesn't make sense to
+replace it with a freshly generated different model. it's gonna look completely different from the
+original." On #2489 they picked "1+2", so an object the player changes (harvested, broken, opened,
+felled, emptied) gets its "after" model one of two ways, never from a fresh, unrelated generation:
+- **Parts removed or broken:** a derive step in our pipeline edits the original GLB (#2493): bare
+  rock is the mana gem model with its crystal parts removed and the stubs capped; rubble is the
+  original rock fractured into chunks and slumped. It matches exactly and costs no Meshy credits. It
+  needs the parts to remove as separable geometry (their own mesh pieces, or faces we can select by
+  their material region), and the derive step closes the holes it leaves, so a request for an
+  original that is changed later asks for those parts as separate pieces.
+  The derive step is the derived model's own build script (`build/<name>.py`), which reads the
+  original's GLB; its `SOURCE.md` names the original as its source. When the original changes, CI's
+  rebuild check (`check_rebuild.py`) fails on a stale derived model.
+- **Something new appears** (a chest's open lid showing its contents, a sprouting stump): render our
+  model from the game, have Gemini edit that picture into the after state, then generate it in Meshy,
+  multi-view where possible. It is a new mesh, so it only stays close to the original (silhouette,
+  proportions, and the colours through the shared texture set) rather than matching it exactly,
+  which is why removing or breaking parts always takes the derive step.
+
+A request list never asks for a fresh after-state model: such an entry asks for the Gemini edit of
+our render (with the render attached) or is no model request at all, but a derive task.
+
 **Every model request has at least three complete, genuinely distinct prompts** (owner, #1996),
 for creatures, props, items and player parts alike, each in its own accordion as AGENTS.md says.
 Its summary conveys a concrete, human-readable vibe or design concept, such as "High umbrella
