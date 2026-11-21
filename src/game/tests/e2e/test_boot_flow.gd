@@ -1880,7 +1880,7 @@ func _decoration_problem(
 	tile: Vector2i,
 ) -> String:
 	var blueprint: TileBlueprint = TileLooks.of(region.terrain[tile])
-	var size: Vector3 = Vector3.ONE * TileDecorations.MODEL_SCALE * TileLooks.scale_of(blueprint)
+	var size: Vector3 = Vector3.ONE * TileLooks.drawn_scale_of(blueprint)
 	var model: Node3D = null
 	if view.figures.has(tile):
 		model = view.figures[tile].get_child(0) as Node3D

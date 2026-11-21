@@ -6,6 +6,10 @@ extends RefCounted
 
 ## How tall a tile's decoration stands, in hundredths of a tile's radius (#232).
 const HEIGHT_UNITS: float = 100.0 / HexLayout.SIZE
+## The hexagon pack's decorations are modeled for a tile about two world units across, wider than
+## ours (HexLayout.SIZE), so they're drawn shrunk to fit inside it (TileDecorations), and measured
+## so (#2506).
+const MODEL_SCALE: float = 0.8
 
 ## Each kind's measured height, by id, once measured.
 static var _heights: Dictionary[String, int] = {}
@@ -16,8 +20,8 @@ static func of(kind: String) -> TileBlueprint:
 	return TileContent.cached().tiles.get(kind)
 
 
-## How tall a tile of kind `kind` stands (#232): the top of its decoration's model, as drawn (its
-## scale included), in hundredths of a tile's radius; 0 for a kind without one. Measured from the
+## How tall a tile of kind `kind` stands (#232): the top of its decoration's model, as drawn
+## (drawn_scale_of), in hundredths of a tile's radius; 0 for a kind without one. Measured from the
 ## model, so it never drifts from what's drawn.
 static func height_of(kind: String) -> int:
 	if not _heights.has(kind):
@@ -37,11 +41,17 @@ static func _measured(blueprint: TileBlueprint) -> int:
 		var box: AABB = _in_model(model, mesh) * mesh.get_aabb()
 		top = maxf(top, box.end.y)
 	model.free()
-	return ceili(top * scale_of(blueprint) * HEIGHT_UNITS)
+	return ceili(top * drawn_scale_of(blueprint) * HEIGHT_UNITS)
 
 
-## How much larger than the pack made it `blueprint`'s model is drawn, as a factor: the blueprint
-## keeps it in whole hundredths (#588).
+## How much larger than the pack made it `blueprint`'s model is drawn in its tile, as a factor:
+## shrunk to fit a tile (MODEL_SCALE), times the blueprint's own scale.
+static func drawn_scale_of(blueprint: TileBlueprint) -> float:
+	return MODEL_SCALE * scale_of(blueprint)
+
+
+## How much larger than the pack made it the blueprint scales `blueprint`'s model, as a factor: the
+## blueprint keeps it in whole hundredths (#588).
 static func scale_of(blueprint: TileBlueprint) -> float:
 	return float(blueprint.scale) / TileBlueprint.FULL_SCALE
 
