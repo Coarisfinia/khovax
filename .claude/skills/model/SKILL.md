@@ -487,6 +487,9 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
    Meshy rigs it first wherever it can (#1514);
    where it can't, we build our own Blender rig (#1732, section 2). An evolution's image comes
    from the copypastas above (#1754).
+   A model the main session generates through the Meshy API from the owner's Gemini image is
+   accepted like the owner's own export (#2529); its settings and the owner's go-ahead on its
+   credit cost are in `AGENTS.md`, next to the model-delivery rules.
 2. **Inspect:** `uv run --locked src/game-models/inspect_meshy.py <download.glb>` (#1523),
    one report on its mesh, material, painted eyes, body columns and rig. Read it before measuring
    anything by hand. It warns when the download is far above step 1's triangle target.
