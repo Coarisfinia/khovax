@@ -687,7 +687,8 @@ World props are generated as **shapes only** (5 credits, the owner's pick on #18
 by us; creatures and the player normally keep Meshy's texture (15). State the texture decision
 and its reason explicitly on each request, including any exception to these defaults (above).
 **There is one small texture set for
-every prop**, in `src/game-models/textures/` (stone, sandstone, wood, moss): CC0 textures
+every prop**, in `src/game-models/textures/` (stone, sandstone, wood, moss; for the handmade
+realm paper, card, bookcloth, yarn, cloth, canvas, brass, iron and its floors, #2484): CC0 textures
 (Poly Haven, ambientCG) that `prop_textures.py` downloads by pinned checksum and reduces to a few
 flat tones, so they keep their surface detail but suit the cel shading. Never a texture of a
 prop's own, and never another grey stone. A prop's script only maps its parts onto the set
@@ -702,6 +703,10 @@ prop's own, and never another grey stone. A prop's script only maps its parts on
    picks (top and ledges), and darken crevices and the foot in flat steps with
    `prop_paint.shade` and `write_shade` (the vertex colours the texture is multiplied by). A
    coarse part is cut finer first (`bmesh.ops.subdivide_edges`, flat) for a cleaner moss edge.
+   A painted part takes its paint as `material`'s `tint` over the set's texture (painted wood, a
+   coloured yarn, a scenery flat over `canvas`), never a texture of its own; the handmade realm's
+   own surfaces stay pale and muted, so its beasts stand out (the owner, #2484). Ink is
+   `prop_paint.flat(<name>, prop_paint.INK, roughness=0.2)`.
 3. A part the game lights (a glow) is `prop_paint.glow(<name>, <colour>)`, its emission off in
    the file.
 4. The `.import` embeds the textures uncompressed (`gltf/embedded_image_handling=3`, as the
