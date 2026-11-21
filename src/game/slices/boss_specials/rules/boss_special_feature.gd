@@ -65,9 +65,10 @@ func requires() -> Array[String]:
 	return needed
 
 
-## The Wards drunk, which an instance may lack, step earlier (WildHit.land reads them).
+## The Wards drunk (WildHit.land reads them) and the wild monsters' auto attacks, which an instance
+## may lack, step earlier.
 func after() -> Array[String]:
-	var earlier: Array[String] = [TonicEffectsFeature.ID]
+	var earlier: Array[String] = [TonicEffectsFeature.ID, WildAttackFeature.ID]
 	return earlier
 
 
