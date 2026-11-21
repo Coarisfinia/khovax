@@ -10,7 +10,7 @@ extends Feature
 ## ability data, as for a companion's (SpecialAttackFeature): it strikes for the power times the
 ## boss's strength (WildMonsterFeature.strength_of: its rage and the host's difficulty included),
 ## after the type chart on a companion where the instance has it (TypeEffectivenessFeature, by the
-## special's strike type), and lands like an auto attack (WildAttackFeature.land): the guards and
+## special's strike type), and lands like an auto attack (WildHit.land): the guards and
 ## the Wards take their share off it, and it raises WildMonsterStruck, so a struck companion's bind
 ## breaks (#1167). An invincible player is struck for nothing (#1147). A dodging companion
 ## (#1499) can't dodge it: its dodges count the auto attacks only (#2449 asks whether a special
@@ -22,12 +22,12 @@ extends Feature
 ## `special_of` alone, so a transformation can swap in its current form's (#2413). Switched off (a
 ## phase, #30), it fires nothing and its cooldowns wait.
 ##
-## Its specials land through WildAttackFeature.land, so it requires the wild monsters' auto attacks:
-## an instance whose region marks a boss but whose blueprint leaves `wild_attacks` out is refused
-## (GameState.order_problem, #2450).
+## Its specials land through WildHit.land, with the passives' guards it was built with, as the auto
+## attacks do, so it doesn't need them: a region marks a boss under a blueprint that leaves
+## `wild_attacks` out too, and its boss fires only its special (#2458).
 ##
-## It runs right after the wild monsters' auto attacks, so it strikes companions where they stood
-## at the end of the last tick, as they step later.
+## It runs right after the wild monsters' auto attacks (where the instance has them), so it strikes
+## companions where they stood at the end of the last tick, as they step later.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "boss_specials"
@@ -35,14 +35,21 @@ const ID: String = "boss_specials"
 ## Each species' special (Ability), by species id, from the content data (the species slice reads
 ## them). A species without one here has none, and its boss fires nothing.
 var specials: Dictionary[String, Ability] = {}
+## Each passive's guard (Ability.guard), in thousandths, by its id, for the passives that have one:
+## its strikes land less of them (WildHit.land).
+var guards: Dictionary[String, int] = {}
 ## The bosses' entity ids, in id order, standing or fainted.
 var bosses: Array[int] = []
 ## The ticks each boss's special still cools down, by its entity id; one that's ready isn't here.
 var _cooling: Dictionary[int, int] = {}
 
 
-func _init(species_specials: Dictionary[String, Ability] = {}) -> void:
+func _init(
+		species_specials: Dictionary[String, Ability] = {},
+		passive_guards: Dictionary[String, int] = {},
+) -> void:
 	specials = species_specials
+	guards = passive_guards
 
 
 func id() -> String:
@@ -54,14 +61,14 @@ func requires() -> Array[String]:
 		HealthFeature.ID,
 		WildMonsterFeature.ID,
 		DominationFeature.ID,
-		WildAttackFeature.ID,
 	]
 	return needed
 
 
-## The Wards drunk, which an instance may lack, step earlier (WildAttackFeature.land reads them).
+## The Wards drunk (WildHit.land reads them) and the wild monsters' auto attacks, which an instance
+## may lack, step earlier.
 func after() -> Array[String]:
-	var earlier: Array[String] = [TonicEffectsFeature.ID]
+	var earlier: Array[String] = [TonicEffectsFeature.ID, WildAttackFeature.ID]
 	return earlier
 
 
@@ -174,8 +181,7 @@ func _fire(state: GameState, wild: WildMonsterFeature, boss: int, target: int) -
 	_cooling[boss] = special.cooldown_seconds * Simulation.TICKS_PER_SECOND
 	var damage: int = Fixed.scale(wild.strength_of(state, boss), special.power)
 	var on_companion: bool = state.entity(target).slot == Entity.NO_SLOT
-	var attacks: WildAttackFeature = state.feature(WildAttackFeature.ID) as WildAttackFeature
-	attacks.land(state, _struck(state, boss, species, target, damage), on_companion)
+	WildHit.land(state, _struck(state, boss, species, target, damage), on_companion, guards)
 
 
 ## The strike of the boss `boss`'s special, `species`' own, on `target` for `damage`: after the type
