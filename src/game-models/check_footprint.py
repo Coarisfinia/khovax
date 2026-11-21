@@ -116,7 +116,7 @@ def measure_crowned(glb, fps, crowned):
     TileDecorations draws it."""
     rig = imported.load_view(glb, fps, crowned.scale)
     lines, _passed = footprint.report_crowned(
-        footprint.meshes(rig, bpy.data.objects), crowned.rings, crowned.off_centre * crowned.scale)
+        footprint.meshes(rig, bpy.data.objects), crowned.rings, crowned.off_centre)
     return [(line, " (a tile's decoration, scale %.2f)" % crowned.scale) for line in lines]
 
 
