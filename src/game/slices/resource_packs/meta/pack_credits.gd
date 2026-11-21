@@ -39,9 +39,7 @@ static func _given_by(pack: ResourcePack, taken: Dictionary[String, bool]) -> Pa
 	credits.pack_name = pack.name
 	var given: bool = false
 	for kind: String in CREDITED:
-		# A LISTED section's files come through files_of, the others are the pack's own fields.
-		var listed: bool = ResourcePack.LISTED.has(kind)
-		var files: Dictionary = pack.files_of(kind) if listed else pack.get(kind)
+		var files: Dictionary = pack.files_in(kind)
 		for resource_id: String in files:
 			# The first pack that has an id gives it; a later one's file is never used.
 			var key: String = kind + "/" + resource_id

@@ -2883,7 +2883,7 @@ func _check_pack_preload() -> String:
 			loads.failed,
 		]
 	for kind: String in ResourcePack.KINDS:
-		var files: Dictionary = {} if ResourcePack.KINDS[kind].is_empty() else pack.get(kind)
+		var files: Dictionary = {} if ResourcePack.KINDS[kind].is_empty() else pack.files_in(kind)
 		for file: Variant in files.values():
 			if not ResourceLoader.has_cached(pack.root + str(file)):
 				return "the default pack's %s isn't kept once loaded" % file
@@ -2902,7 +2902,7 @@ func _check_pack_preload() -> String:
 func _check_stepped_preload(pack: ResourcePack) -> String:
 	var files: int = 0
 	for kind: String in ResourcePack.KINDS:
-		var listed: Dictionary = {} if ResourcePack.KINDS[kind].is_empty() else pack.get(kind)
+		var listed: Dictionary = {} if ResourcePack.KINDS[kind].is_empty() else pack.files_in(kind)
 		files += listed.size()
 	var stepped: PackPreload = PackPreload.start([pack], 0)
 	var steps: int = 1

@@ -135,6 +135,12 @@ func files_of(kind: String) -> Dictionary[String, String]:
 	return files
 
 
+## The files of the section `kind` (one of KINDS), LISTED or looked up by id alike, each relative to
+## `root` by its id.
+func files_in(kind: String) -> Dictionary:
+	return files_of(kind) if LISTED.has(kind) else get(kind)
+
+
 ## imported them, compressed for the GPU; reading a player's raw files is #1858's.
 func texture(texture_id: String) -> Texture2D:
 	return load(root + textures[texture_id]) as Texture2D

@@ -87,7 +87,7 @@ class DefaultPackTest(unittest.TestCase):
         os.chdir(GAME)
         manifest = read_manifest()
         files = listed(manifest)
-        for kind in ("textures", "models", "audio"):
+        for kind in ("textures", "models", "audio", "runes"):
             for path in section(manifest, kind).values():
                 with self.subTest(path=path):
                     self.assertIn(credit_note(path), files)

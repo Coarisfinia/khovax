@@ -144,7 +144,8 @@ func _check_boot(tree: SceneTree) -> String:
 func _uncached_pack_file() -> String:
 	for pack: ResourcePack in ResourcePacks.loaded():
 		for kind: String in ResourcePack.KINDS:
-			var files: Dictionary = {} if ResourcePack.KINDS[kind].is_empty() else pack.get(kind)
+			var loaded: bool = not ResourcePack.KINDS[kind].is_empty()
+			var files: Dictionary = pack.files_in(kind) if loaded else {}
 			for file: Variant in files.values():
 				if not ResourceLoader.has_cached(pack.root + str(file)):
 					return pack.root + str(file)
