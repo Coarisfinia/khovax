@@ -1889,6 +1889,14 @@ func _decoration_problem(
 		return "the %s on %s has no model, or another one" % [id, tile]
 	if model.scale != size * view.risen[tile]:
 		return "the %s on %s has another size: %s" % [id, tile, model.scale]
+	if (view.risen[tile] == 1.0
+			and absi(_drawn_height(view.figures[tile]) - TileLooks.height_of(id)) > 1):
+		return "the %s on %s is drawn %d tall, but measured %d (#2506)" % [
+			id,
+			tile,
+			_drawn_height(view.figures[tile]),
+			TileLooks.height_of(id),
+		]
 	var turn: float = TAU * region.looks.decoration_turns.get(tile, 0) / Hex.DIRECTIONS.size()
 	var off: Vector3 = model.position
 	var off_center: bool = off.length() <= TileDecorations.OFF_CENTER
@@ -1903,6 +1911,16 @@ func _decoration_problem(
 			off,
 		]
 	return ""
+
+
+## How tall `figure`'s decoration is drawn, in TileLooks.height_of's units: the top of its meshes as
+## they stand in the figure, every scale on the way included.
+func _drawn_height(figure: HexPiece) -> int:
+	var top: float = 0.0
+	for mesh: MeshInstance3D in figure.find_children("*", "MeshInstance3D", true, false):
+		var placed: Transform3D = figure.global_transform.affine_inverse() * mesh.global_transform
+		top = maxf(top, (placed * mesh.get_aabb()).end.y)
+	return ceili(top * TileLooks.HEIGHT_UNITS)
 
 
 ## The decorations on `decorated` stand on their tiles, cel-shaded, each shown once an ally has seen
