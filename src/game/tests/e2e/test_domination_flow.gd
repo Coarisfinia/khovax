@@ -1581,9 +1581,8 @@ func _boss_special_on_dodger(count: int) -> Vector2i:
 			continue
 		var missed: bool = struck.dodged and struck.damage == 0 and _hp(state, companion) == hp
 		dealt.x = -1 if missed else struck.damage
-	var counts: Array[int] = []
-	counts.assign(attacks.save_values()["dodge_counts"] as Array)
-	dealt.y = counts[1] if counts.size() == 2 and counts[0] == companion else 0
+	var counts: DataReader = DataReader.new(attacks.save_values())
+	dealt.y = counts.pairs("dodge_counts", 1, DataReader.MOST).get(companion, 0)
 	return dealt
 
 
