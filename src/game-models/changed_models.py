@@ -14,7 +14,9 @@ fails. `--every` lists every .glb whenever anything is to check, as CI does on `
 A model is named by its stem (mana_wolf for resourcepacks/default/models/mana-wolf/build/mana_wolf.py
 and resourcepacks/default/models/mana-wolf/mana_wolf.glb, as check_rebuild.py pairs them). One
 model's own files are its model script and its source, build/source.glb, in its build folder
-(#2438), and its .glb and .glb.import in the pack; every other change in EVERY (the model library
+(#2438), and its .glb and .glb.import in the pack. A model derived from another model's .glb
+(#2493, its script's `ORIGINAL`) is checked whenever its original is, so a stale derived .glb fails
+the rebuild check in the pull request that changed its original. Every other change in EVERY (the model library
 and checks, Blender's setup, the workflow, the game's scripts, views and scenes, the pack's manifest
 and tile blueprints the checks read, and a build folder's other files, such as the player's clip
 sources) checks every model, and so does a diff that fails. Anything else checks nothing."""
@@ -27,7 +29,7 @@ from pathlib import Path
 
 from game_shared import log
 from game_shared.git_files import pack_models
-from game_shared.model_builds import is_build_file, is_model_script as is_script
+from game_shared.model_builds import is_build_file, is_model_script as is_script, original_glb
 
 ROOT = Path(__file__).resolve().parents[2]
 MODELS = "src/game-models/"
@@ -85,7 +87,34 @@ def select(changed: list[str], is_model_script) -> set[str] | None:
         elif any(fnmatch.fnmatchcase(path, pattern) for pattern in EVERY):
             log.info(f"every model: {path} changed")
             return None
-    return models
+    return with_derived(models, originals())
+
+
+def stem(path: str) -> str:
+    """A model's name from its .glb's or its script's path."""
+    return os.path.splitext(os.path.basename(path))[0]
+
+
+def originals() -> dict[str, str]:
+    """Each derived model's original (#2493), by name, from the model scripts in the pack."""
+    found = {}
+    for script in sorted(ROOT.glob("resourcepacks/*/models/*/build/*.py")):
+        path = script.relative_to(ROOT).as_posix()
+        if is_model_script(path):
+            original = original_glb(str(script))
+            if original is not None:
+                found[stem(path)] = stem(original)
+    return found
+
+
+def with_derived(models: set[str], derived: dict[str, str]) -> set[str]:
+    """The models with every model derived from one of them, and from those in turn."""
+    models = set(models)
+    while True:
+        more = {name for name, original in derived.items() if original in models} - models
+        if not more:
+            return models
+        models |= more
 
 
 def is_model_script(path: str) -> bool:
