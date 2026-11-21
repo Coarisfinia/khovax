@@ -63,6 +63,19 @@ func is_hidden(entity_id: int) -> bool:
 	return hidden.has(entity_id)
 
 
+## Brings the hidden wild monster `entity_id` out of hiding at once (a scene moving it, #2415).
+func reveal(state: GameState, entity_id: int) -> void:
+	if not hidden.has(entity_id):
+		return
+	hidden.erase(entity_id)
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	if wild != null:
+		wild.hold(entity_id, false)
+	var standing: Entity = state.entity(entity_id)
+	if standing != null:
+		state.events.append(_jumped_out(entity_id, standing.tile))
+
+
 ## The hidden wild monsters are out of sight (GameState.concealed), so their views needn't know
 ## this slice.
 func conceals(entity_id: int) -> bool:

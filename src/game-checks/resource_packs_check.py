@@ -112,6 +112,7 @@ MOVED = {
     "materials": "materials",
     "tonics": "tonics",
     "runes": "runes",
+    "scenes": "scenes",
     "translations": "translations",
 }
 # Where the default pack's manifest lay before it moved into the pack's own folder (#1978).
@@ -148,6 +149,10 @@ TONICS = f"{PACK_ROOT}tonics"
 # Where the default pack's rune script lies (#1855): each script's glyphs in a folder of their own,
 # beside its credit note, and the data that draws them in that folder's build/.
 RUNES = f"{PACK_ROOT}runes"
+# Where the default pack's scenes lie (#2415); their schema stays in the scenes slice (#412).
+SCENES = f"{PACK_ROOT}scenes"
+# Manifest sections that may be omitted until their first default-pack entry ships (#2415).
+OPTIONAL_SECTIONS = frozenset({"scenes"})
 # Each kind of resource the manifest lists, by its section.
 KINDS: dict[str, Kind] = {
     "textures": Kind("texture", IMAGES, True, TEXTURES),
@@ -177,6 +182,8 @@ KINDS: dict[str, Kind] = {
     "tonics": Kind("tonic", (".jsonc",), False, f"{TONICS}/*.jsonc", listed=True),
     # The whole rune script comes from the packs (#1855), so nothing names one glyph to look it up.
     "runes": Kind("rune", IMAGES, True, f"{RUNES}/*", listed=True),
+    # Every scene the packs have is read whole by SceneContent (#2415).
+    "scenes": Kind("scene", (".jsonc",), False, f"{SCENES}/*.jsonc", listed=True),
 }
 # The project setting through which Godot would load catalogues itself, around the pack (#1902).
 PROJECT = Path("project.godot")
@@ -342,6 +349,8 @@ def manifest_sections() -> tuple[dict[str, Entries], Problems]:
     except ValueError as error:
         return entries, [(f"the default pack's manifest {error}", MANIFEST.as_posix())]
     for name, kind in KINDS.items():
+        if name in OPTIONAL_SECTIONS and name not in manifest:
+            continue
         try:
             if kind.lists:
                 entries[name] = file_lists(manifest, name)
@@ -454,6 +463,7 @@ def main() -> int:
         ("materials", MATERIALS, "material"),
         ("harvest_tables", HARVEST_TABLES, "harvest table"),
         ("tonics", TONICS, "tonic"),
+        ("scenes", SCENES, "scene"),
     ):
         problems += [
             (f"{noun} {entry_id}'s file is {paths}, not {folder}/{entry_id}.jsonc", MANIFEST.as_posix())
@@ -461,7 +471,7 @@ def main() -> int:
             if paths != [f"{folder}/{entry_id}.jsonc"]
         ]
     tracked = set(
-        git_files(MODEL_FILES, TEXTURES, SOUNDS, REGIONS, REALMS, f"{PACK_ROOT}translations", QUESTS, SPECIES, TILES, LOOT_TABLES, MATERIALS, HARVEST_TABLES, TONICS, RUNES)
+        git_files(MODEL_FILES, TEXTURES, SOUNDS, REGIONS, REALMS, f"{PACK_ROOT}translations", QUESTS, SPECIES, TILES, LOOT_TABLES, MATERIALS, HARVEST_TABLES, TONICS, RUNES, SCENES)
     )
     problems += unignored_builds(sorted(tracked))
     models = {path for paths in entries["models"].values() for path in paths}

@@ -41,8 +41,9 @@ static func _world_rules() -> Dictionary[String, Callable]:
 		# Before every rule, so they all play by the settings the host chose this tick (#1309).
 		HostSettingsFeature.ID: _plain(HostSettingsFeature),
 		# First after them, so every rule after it sees a player a locking dialog holds as standing
-		# (#912).
+		# (#912), then scenes holding every player and pausing wild attacks and hunts (#2415).
 		DialogHoldFeature.ID: _plain(DialogHoldFeature),
+		SceneHoldFeature.ID: _plain(SceneHoldFeature),
 		MovementFeature.ID: _plain(MovementFeature),
 		KnockdownFeature.ID: _plain(KnockdownFeature),
 		TrailFeature.ID: _plain(TrailFeature),
@@ -133,6 +134,7 @@ static func _region_and_party_rules() -> Dictionary[String, Callable]:
 		DialogFeature.ID: DialogFactory.build,
 		TerritoryFeature.ID: TerritoryFactory.build,
 		QuestEventFeature.ID: QuestEventFactory.build,
+		SceneFeature.ID: SceneFactory.build,
 	}
 	return rules
 

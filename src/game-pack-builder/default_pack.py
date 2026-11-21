@@ -28,8 +28,9 @@ GAME = Path(__file__).resolve().parents[1] / "game"
 PACK_ROOT = GAME.parents[1] / "resourcepacks" / "default"
 SINGLE = (
     "textures", "models", "audio", "regions", "realms", "quests", "species", "tiles", "translations", "loot_tables",
-    "materials", "harvest_tables", "tonics", "runes",
+    "materials", "harvest_tables", "tonics", "runes", "scenes",
 )
+OPTIONAL = frozenset({"scenes"})
 LISTS = ("region_pieces",)
 # The .import lines that tie the file to the game's project: its uid and imported files.
 PROJECT_BOUND = re.compile(r"^(uid|path(\.[a-z0-9_]+)?|source_file|dest_files)=")
@@ -38,7 +39,12 @@ PROJECT_BOUND = re.compile(r"^(uid|path(\.[a-z0-9_]+)?|source_file|dest_files)="
 def listed(manifest: dict[str, object]) -> list[str]:
     """Every file the manifest lists, a glTF's buffers and images included, and the credit note of
     each texture, model, sound and rune it lists (credit_note), from res://."""
-    files = [path for kind in SINGLE for path in section(manifest, kind).values()]
+    files = [
+        path
+        for kind in SINGLE
+        if kind in manifest or kind not in OPTIONAL
+        for path in section(manifest, kind).values()
+    ]
     files += [path for kind in LISTS for paths in file_lists(manifest, kind).values() for path in paths]
     for model in [path for path in files if path.endswith(".gltf")]:
         files += sorted(gltf_files(model))

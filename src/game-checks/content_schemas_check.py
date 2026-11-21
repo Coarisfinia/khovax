@@ -32,6 +32,8 @@ TARGET = Path("build/data-json")
 PACK_DATA = Path("resourcepacks/default")
 # The kind of the pack's manifest, which lies directly in PACK_DATA (#1978).
 MANIFEST_KIND = "resource_packs"
+# Kinds whose engine support ships before their first default-pack file (#2415).
+OPTIONAL_DATA = frozenset({"scenes"})
 # A script error can leave Godot running forever.
 TIMEOUT_SECONDS = 60
 
@@ -75,7 +77,8 @@ def schema_problems() -> tuple[dict[str, str], list[tuple[str, str | None]]]:
                 folder = PACK_DATA / name
         if folder == Path(f"slices/{name}/data/{name}"):
             manifest = name == MANIFEST_KIND and (PACK_DATA / "pack.jsonc").is_file()
-            if not manifest and not any(schema.parent.glob("*.jsonc")) and not any((PACK_DATA / name).glob("*.jsonc")):
+            optional = name in OPTIONAL_DATA
+            if not manifest and not optional and not any(schema.parent.glob("*.jsonc")) and not any((PACK_DATA / name).glob("*.jsonc")):
                 problems.append(
                     (f"has no {schema.parent.as_posix()}/*.jsonc or {(PACK_DATA / name).as_posix()}/*.jsonc to check", path)
                 )
