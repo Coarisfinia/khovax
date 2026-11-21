@@ -36,6 +36,8 @@ extends RefCounted
 
 ## A model a species can wear (#1223), by its id in the resource packs (#1864).
 const MODEL: String = "model_mana_wolf"
+## A rune of the default pack's script (#1855), which a pack manifest lists under `runes`.
+const RUNE_A: String = "resourcepacks/default/runes/khovax-runes/a.svg"
 ## The tile blueprints whose pack's model is drawn larger, in hundredths: too small to read
 ## from the camera as the pack made it.
 const SCALED: Dictionary[String, int] = {
@@ -2579,7 +2581,7 @@ func _check_pack_manifests() -> String:
 		+ " \"species\": {\"s\": \"species/s.jsonc\"}, \"tiles\": {\"t\": \"tiles/t.jsonc\"},"
 		+ " \"loot_tables\": {\"l\": \"loot/l.jsonc\"}, \"materials\": {\"x\": \"loot/x.jsonc\"},"
 		+ " \"harvest_tables\": {\"h\": \"harvest/h.jsonc\"}, \"tonics\": {\"o\": \"o.jsonc\"},"
-		+ " \"translations\": {}%s}"
+		+ " \"runes\": {\"rune_a\": \"" + RUNE_A + "\"}, \"translations\": {}%s}"
 	)
 	var cog: String = "resourcepacks/default/textures/game-icons/cog.svg"
 	var wolf: String = "resourcepacks/default/models/mana-wolf/mana_wolf.glb"
@@ -2669,8 +2671,8 @@ func _sound_section_cases(valid: String, other: String) -> Dictionary[String, St
 
 
 ## The broken manifests made from `valid` whose realm, quest, species, tile blueprint, loot or
-## harvest table, or material (each read as text) is of another kind or missing, by what's wrong
-## with them; `other`
+## harvest table, or material (each read as text) is of another kind or missing, or whose rune
+## (#1855) isn't an image there is, by what's wrong with them; `other`
 ## is a file of another kind.
 func _text_section_cases(valid: String, other: String) -> Dictionary[String, String]:
 	return {
@@ -2692,6 +2694,9 @@ func _text_section_cases(valid: String, other: String) -> Dictionary[String, Str
 		"no materials": valid.replace(", \"materials\": {\"x\": \"loot/x.jsonc\"}", ""),
 		"a tonic that isn't JSONC": valid.replace("o.jsonc", "o.md"),
 		"no tonics": valid.replace(" \"tonics\": {\"o\": \"o.jsonc\"},", ""),
+		"a rune that isn't an image": valid.replace(RUNE_A, "o.jsonc"),
+		"a missing rune": valid.replace(RUNE_A, RUNE_A.replace("a.svg", "nothing.svg")),
+		"no runes": valid.replace(" \"runes\": {\"rune_a\": \"" + RUNE_A + "\"},", ""),
 	}
 
 
@@ -3073,7 +3078,7 @@ func _pack_manifest(pack_id: String) -> String:
 		+ " \"regions\": {\"r\": \"regions/r.md\"},"
 		+ " \"region_pieces\": {}, \"realms\": {}, \"quests\": {}, \"species\": {},"
 		+ " \"translations\": {}, \"tiles\": {}, \"loot_tables\": {},"
-		+ " \"materials\": {}, \"harvest_tables\": {}, \"tonics\": {}}"
+		+ " \"materials\": {}, \"harvest_tables\": {}, \"tonics\": {}, \"runes\": {}}"
 	) % pack_id
 
 

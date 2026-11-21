@@ -1,6 +1,8 @@
-"""Draws our own rune script (#1855) from its data, runes.json, into one SVG per glyph (svg/) and
-the sheet of the whole set (sheet.svg), each glyph with its letter under it, for the owner to
-approve. Nothing in the game uses them before that.
+"""Draws our own rune script (#1855) from its data into one SVG per glyph and the sheet of the
+whole set, each glyph with its letter under it. The runes come entirely from the default resource
+pack (the owner, on #2593), so a pack can replace the script: the glyphs lie in
+resourcepacks/default/runes/khovax-runes/, which the pack's manifest lists under `runes`, and their
+data (runes.json) and the sheet in its build/ folder, which Godot never sees (.gdignore).
 
 AI-drawn runes come out sloppy, each glyph different, so the script is drawn from data the way the
 starry sky is (#1635): every glyph is a few straight strokes of one width between points of one
@@ -15,8 +17,10 @@ import json
 import sys
 from pathlib import Path
 
-HERE = Path(__file__).resolve().parent
-DATA = HERE / "runes.json"
+# The runes' folder in the default pack, and its build folder beside the glyphs.
+PACK = Path(__file__).resolve().parents[2] / "resourcepacks" / "default" / "runes" / "khovax-runes"
+BUILD = PACK / "build"
+DATA = BUILD / "runes.json"
 INK = "#2b2118"
 PAPER = "#efe6d2"
 FAINT = "#7a6a55"
@@ -134,8 +138,8 @@ def sheet_svg(data: dict) -> str:
 
 
 def outputs(data: dict) -> dict[Path, str]:
-    files = {HERE / "svg" / f"{g['file']}.svg": glyph_svg(g, data["grid"]) for g in data["glyphs"]}
-    files[HERE / "sheet.svg"] = sheet_svg(data)
+    files = {PACK / f"{g['file']}.svg": glyph_svg(g, data["grid"]) for g in data["glyphs"]}
+    files[BUILD / "sheet.svg"] = sheet_svg(data)
     return files
 
 
@@ -147,11 +151,10 @@ def main() -> int:
     files = outputs(data)
     if args.check:
         stale = [p for p, text in files.items() if not p.is_file() or p.read_text("utf-8") != text]
-        stray = set((HERE / "svg").glob("*.svg")) - set(files)
+        stray = set(PACK.glob("*.svg")) - set(files)
         for path in sorted(stale) + sorted(stray):
-            print(f"{path.relative_to(HERE)}: stale, run build_runes.py", file=sys.stderr)
+            print(f"{path.relative_to(PACK)}: stale, run build_runes.py", file=sys.stderr)
         return 1 if stale or stray else 0
-    (HERE / "svg").mkdir(exist_ok=True)
     for path, text in files.items():
         path.write_text(text, encoding="utf-8", newline="\n")
     return 0

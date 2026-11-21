@@ -1,7 +1,7 @@
 """Validates the default resource pack (#1860): the game's own resources, its textures, its models
 (#1864), its sounds (#2014), its region files, region pieces and realms (#1861), its quests
 (#1888), its species (#1903), its translation catalogues (#1902), its tile blueprints (#1901) and its loot tables and
-materials (#1953), harvest tables (#1990) and tonics (#2090), described by the same manifest a player's pack
+materials (#1953), harvest tables (#1990), tonics (#2090) and runes (#1855), described by the same manifest a player's pack
 will have (#1858), and looked up only through ResourcePacks. It fails when
 - the manifest (game_shared.resource_packs.MANIFEST) is missing or isn't a JSON object;
 - an id doesn't resolve: it isn't an id (Ids), or its file isn't tracked, isn't imported by Godot
@@ -10,14 +10,15 @@ will have (#1858), and looked up only through ResourcePacks. It fails when
   blueprint, loot table, harvest table or material, a .po catalogue named after its locale);
 - a resource is unreferenced: the manifest lists it but no script (outside its comments), scene,
   resource or content file of the game's names its id as a string (but for the realms, the
-  quests, species, catalogues, tile blueprints, loot and harvest tables, materials and tonics, which the
-  game finds by listing the pack), or a file of its kind (a model under
+  quests, species, catalogues, tile blueprints, loot and harvest tables, materials, tonics and runes,
+  which the game finds by listing the pack), or a file of its kind (a model under
   resourcepacks/default/models/, an image under resourcepacks/default/textures/, a sound under resourcepacks/default/audio/, a region file or piece under
   resourcepacks/default/regions/, a realm in resourcepacks/default/realms/, a quest in
   resourcepacks/default/quests/, a species in resourcepacks/default/species/, a catalogue under
   resourcepacks/default/translations/, a tile blueprint in resourcepacks/default/tiles/, a loot table, harvest table or
   material in resourcepacks/default/loot_tables/, harvest_tables/ or materials/, a tonic in
-  resourcepacks/default/tonics/) is in the
+  resourcepacks/default/tonics/, a rune's glyph in a folder of resourcepacks/default/runes/, beside
+  its credit note, never in that folder's build/, which holds what draws them) is in the
   repository but not in the manifest;
 - a quest's, species', loot table's, harvest table's, material's or tonic's entry isn't its own file
   (resourcepacks/default/quests/<id>.jsonc, resourcepacks/default/species/<id>.jsonc,
@@ -110,6 +111,7 @@ MOVED = {
     "harvest_tables": "harvest_tables",
     "materials": "materials",
     "tonics": "tonics",
+    "runes": "runes",
     "translations": "translations",
 }
 # Where the default pack's manifest lay before it moved into the pack's own folder (#1978).
@@ -143,6 +145,9 @@ MATERIALS = f"{PACK_ROOT}materials"
 HARVEST_TABLES = f"{PACK_ROOT}harvest_tables"
 # Where the default pack's tonics lie (#2090); their schema stays in the tonics slice (#412).
 TONICS = f"{PACK_ROOT}tonics"
+# Where the default pack's rune script lies (#1855): each script's glyphs in a folder of their own,
+# beside its credit note, and the data that draws them in that folder's build/.
+RUNES = f"{PACK_ROOT}runes"
 # Each kind of resource the manifest lists, by its section.
 KINDS: dict[str, Kind] = {
     "textures": Kind("texture", IMAGES, True, TEXTURES),
@@ -170,6 +175,8 @@ KINDS: dict[str, Kind] = {
     "materials": Kind("material", (".jsonc",), False, f"{MATERIALS}/*.jsonc", listed=True),
     # Every tonic the packs have can be brewed, so nothing names one to look it up (#2090).
     "tonics": Kind("tonic", (".jsonc",), False, f"{TONICS}/*.jsonc", listed=True),
+    # The whole rune script comes from the packs (#1855), so nothing names one glyph to look it up.
+    "runes": Kind("rune", IMAGES, True, f"{RUNES}/*", listed=True),
 }
 # The project setting through which Godot would load catalogues itself, around the pack (#1902).
 PROJECT = Path("project.godot")
@@ -454,7 +461,7 @@ def main() -> int:
             if paths != [f"{folder}/{entry_id}.jsonc"]
         ]
     tracked = set(
-        git_files(MODEL_FILES, TEXTURES, SOUNDS, REGIONS, REALMS, f"{PACK_ROOT}translations", QUESTS, SPECIES, TILES, LOOT_TABLES, MATERIALS, HARVEST_TABLES, TONICS)
+        git_files(MODEL_FILES, TEXTURES, SOUNDS, REGIONS, REALMS, f"{PACK_ROOT}translations", QUESTS, SPECIES, TILES, LOOT_TABLES, MATERIALS, HARVEST_TABLES, TONICS, RUNES)
     )
     problems += unignored_builds(sorted(tracked))
     models = {path for paths in entries["models"].values() for path in paths}
@@ -472,6 +479,8 @@ def main() -> int:
             for path in git_files(kind.files)
             if path.endswith(kind.endings) and path not in used_by_models and not is_build_file(path)
             and (name != "regions" or path.count("/") == REGIONS.count("/") + 1)
+            # A rune script's glyphs lie right in its folder; its build/ holds the sheet it draws.
+            and (name != "runes" or path.count("/") == RUNES.count("/") + 2)
         )
         problems += unresolved(kind, entries[name], tracked)
         problems += unreferenced(kind, entries[name], named, files)

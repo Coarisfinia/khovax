@@ -1,7 +1,8 @@
 class_name PackCredits
 extends RefCounted
 ## What one loaded resource pack is credited for (#2585): the credit notes beside the textures,
-## models and sounds the game takes from it. Each asset's note lies beside it in its pack, a
+## models, sounds and runes (#1855) the game takes from it. Each asset's note lies beside it in its
+## pack, a
 ## SOURCE.md with its title, author, source and license (asset_credits_check.py checks the default
 ## pack's), so a player's pack (#1858) brings its own credits. Only what the resolver gives from a
 ## pack is credited to it: an asset a pack before it overrides credits that pack instead.
@@ -9,7 +10,7 @@ extends RefCounted
 ## The note beside an asset, in its folder or the nearest folder above it in the pack.
 const NOTE: String = "SOURCE.md"
 ## The sections whose files are credited, as game_shared.resource_packs.CREDITED lists them.
-const CREDITED: Array[String] = ["textures", "models", "audio"]
+const CREDITED: Array[String] = ["textures", "models", "audio", "runes"]
 
 ## The pack's name, as its manifest gives it.
 var pack_name: String = ""
@@ -20,7 +21,7 @@ var uncredited: Array[String] = []
 
 
 ## The credits of `packs`, walked in lookup order as ResourcePacks walks them: one for each pack
-## that gives the game a texture, model or sound, in that order.
+## that gives the game a texture, model, sound or rune, in that order.
 static func of(packs: Array[ResourcePack]) -> Array[PackCredits]:
 	var found: Array[PackCredits] = []
 	var taken: Dictionary[String, bool] = {}
@@ -32,13 +33,15 @@ static func of(packs: Array[ResourcePack]) -> Array[PackCredits]:
 
 
 ## What `pack` gives the game that no pack before it gave (`taken`, each kind's id, which this adds
-## to), credited; null when it gives no texture, model or sound.
+## to), credited; null when it gives no texture, model, sound or rune.
 static func _given_by(pack: ResourcePack, taken: Dictionary[String, bool]) -> PackCredits:
 	var credits: PackCredits = PackCredits.new()
 	credits.pack_name = pack.name
 	var given: bool = false
 	for kind: String in CREDITED:
-		var files: Dictionary = pack.get(kind)
+		# A LISTED section's files come through files_of, the others are the pack's own fields.
+		var listed: bool = ResourcePack.LISTED.has(kind)
+		var files: Dictionary = pack.files_of(kind) if listed else pack.get(kind)
 		for resource_id: String in files:
 			# The first pack that has an id gives it; a later one's file is never used.
 			var key: String = kind + "/" + resource_id
