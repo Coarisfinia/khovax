@@ -41,8 +41,9 @@ felled, emptied) gets its "after" model one of two ways, never from a fresh, unr
   needs the parts to remove as separable geometry (their own mesh pieces, or faces we can select by
   their material region), and the derive step closes the holes it leaves, so a request for an
   original that is changed later asks for those parts as separate pieces.
-  The derive step is recorded in the derived model's `SOURCE.md`, so it re-runs when the original
-  changes.
+  The derive step is the derived model's own build script (`build/<name>.py`), which reads the
+  original's GLB; its `SOURCE.md` names the original as its source. When the original changes, CI's
+  rebuild check (`check_rebuild.py`) fails on a stale derived model.
 - **Something new appears** (a chest's open lid showing its contents, a sprouting stump): render our
   model from the game, have Gemini edit that picture into the after state, then generate it in Meshy,
   multi-view where possible. It is a new mesh, so it only stays close to the original (silhouette,
