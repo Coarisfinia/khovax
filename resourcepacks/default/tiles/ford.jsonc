@@ -1,10 +1,11 @@
 // Ford: shallow water with stepping stones, where a stream is crossed (#2486). Walkable, and sight
-// passes over it. Nobody grazes or drinks here: the water to drink from is the stream beside it.
+// passes over it. It's water, so the water surface draws it and drinking wild monsters drink from
+// it; its lighter color reads as shallow next to the stream's.
 {
 	"id": "ford",
 	"color": "#6a9bc9",
 	"symbol": "-", // tells it apart without its color (#68)
 	"model": "model_rock_single_a", // a stock stone until the supplied ones are imported (#2535)
 	"scale": 250, // in hundredths: the pack's stone is too small to read from the camera
-	"traits": { "walkable": true }
+	"traits": { "walkable": true, "drinkable": true }
 }
