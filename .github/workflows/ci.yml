@@ -164,6 +164,11 @@ jobs:
         # A moved folder must not turn them off silently (#2199, #2203).
         run: uv run --locked --package khovax-game-models ../game-models/test_model_lists.py
 
+      - name: "🪨 Check the rune SVGs match their data"
+        # The default pack's rune glyphs and sheet are drawn from runes.json (#1855, #2594); a
+        # difference means an SVG was edited by hand or the data changed without rebuilding.
+        run: uv run --locked --package khovax-game-runes ../game-runes/build_runes.py --check
+
       - name: "🗃️ Check the export presets share their file filters and web loading page"
         run: uv run --locked --package khovax-game-checks ../game-checks/export_filters_check.py
 
