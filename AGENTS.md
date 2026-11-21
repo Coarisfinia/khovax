@@ -734,6 +734,17 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   **Ingots stay vaguely rectangular but dynamic, creative and distinctive** (owner, #2036):
   never plain bricks or variants distinguished only by shallow top details. Generated ingot
   references depict solid metal with a closed underside, never bowls, trays or hollow shells.
+- **A changed object's "after" model matches its original** (owner's ground rule, #2489,
+  2026-11-21): when the player changes an object (harvested, broken, opened, felled, emptied), its
+  "after" state never comes from a fresh, unrelated generation. As the owner put it on #2480: "If the
+  player modifies an object, it doesn't make sense to replace it with a freshly generated different
+  model. it's gonna look completely different from the original." Picked on #2489: "1+2".
+  - **Parts removed or broken** (bare rock, rubble): derive it from the original GLB in our own
+    pipeline (#2493), so it is the original, edited.
+  - **Something new appears:** render our model, have Gemini edit that picture into the after state,
+    then generate it in Meshy (multi-view where possible).
+
+  So a request list never asks for a fresh after-state model; the model skill has the details.
 - **Ordinary tools share base models; legendary parts, gold and copper get their own** (owner,
   #2039): an ordinary tool family (an iron axe, pick or shovel head, a handle) is one base model,
   varied per material by material and shading or reusable procedural shape treatments (crystal a

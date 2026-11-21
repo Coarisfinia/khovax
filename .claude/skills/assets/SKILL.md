@@ -12,7 +12,7 @@ its guide, and holds the license and source rules they share.
 
 | You need | Go to |
 |---|---|
-| A 3D model, rig, clip or texture: request, import or fix | `.claude/skills/model/SKILL.md`, and AGENTS.md's "If you need a new model" |
+| A 3D model, rig, clip or texture: request, import or fix, and a changed object's "after" model (derived from the original or edited from our render, never freshly generated, #2489) | `.claude/skills/model/SKILL.md`, and AGENTS.md's "If you need a new model" |
 | Sound effects, music or ambience | [`references/audio.md`](references/audio.md) |
 | Anything else (icons, fonts, images) | The rules below; `resourcepacks/default/textures/game-icons/` shows a pack of them |
 

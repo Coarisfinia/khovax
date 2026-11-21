@@ -30,6 +30,25 @@ rather than ordinary recolours. Don't request every tool-by-material combination
 deposit and ingot rules above stay as they are. Today's supplied tools are icons and world
 decoration only (AGENTS.md, "Crafting").
 
+**A changed object's "after" model matches its original** (owner's ground rule, #2489,
+2026-11-21). On #2480 the owner wrote: "If the player modifies an object, it doesn't make sense to
+replace it with a freshly generated different model. it's gonna look completely different from the
+original." On #2489 they picked "1+2", so an object the player changes (harvested, broken, opened,
+felled, emptied) gets its "after" model one of two ways, never from a fresh, unrelated generation:
+- **Parts removed or broken:** a derive step in our pipeline edits the original GLB (#2493): bare
+  rock is the mana gem model with its crystal parts removed and the stubs capped; rubble is the
+  original rock fractured into chunks and slumped. It matches exactly, costs no Meshy credits, and
+  relies on the original keeping its parts as separate material regions, as shape-only exports do.
+  The derive step is recorded in the derived model's `SOURCE.md`, so it re-runs when the original
+  changes.
+- **Something new appears** (a chest's open lid showing its contents, a sprouting stump): render our
+  model from the game, have Gemini edit that picture into the after state, then generate it in Meshy,
+  multi-view where possible. The silhouette and proportions stay close, and the shared texture set
+  keeps the colours.
+
+A request list never asks for a fresh after-state model: such an entry asks for the Gemini edit of
+our render (with the render attached) or is no model request at all, but a derive task.
+
 **Every model request has at least three complete, genuinely distinct prompts** (owner, #1996),
 for creatures, props, items and player parts alike, each in its own accordion as AGENTS.md says.
 Its summary conveys a concrete, human-readable vibe or design concept, such as "High umbrella
