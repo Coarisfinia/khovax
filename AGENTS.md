@@ -589,12 +589,12 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   etc. are severely limiting the image gen and overall creativity. Only add mouth, limb and posture
   instructions when it's really necessary." Every creature prompt, base or evolution, leads with
   its core vibe (an evolution copypasta's change right after the owner's opening line) and names
-  no facial details, eye markers, mouth position, limb count or posture
-  unless its concept truly needs it: no fixed eye sentence (it superseded #1682's), no blanket
-  rest-pose or rigging-pose line, and no other universal anatomy recipe in their place. **Mouths
-  are the exception** (owner's ground rule, in chat on 2026-11-21, #2482): "prompts that need a
-  mouth need the detail that the mouth is open - but not every beast needs a mouth". A prompt for
-  a design with a mouth says `Its mouth is open.`, one for a mouthless design says `It has no
+  no facial details, eye markers, mouth position (but its mouth line, below), limb count or
+  posture unless its concept truly needs it: no fixed eye sentence (it superseded #1682's), no
+  blanket rest-pose or rigging-pose line, and no other universal anatomy recipe in their place.
+  **Mouths are the exception** (owner's ground rule, in chat on 2026-11-21, #2482): "prompts that
+  need a mouth need the detail that the mouth is open - but not every beast needs a mouth". A prompt
+  for a design with a mouth says `Its mouth is open.`, one for a mouthless design says `It has no
   mouth.` (its import goes into `MOUTHLESS` in `check_mouth.py`); an evolution variation puts that
   line on its own line right after its change (the model skill). Our eye
   import tooling never dictates the design (an eyeless design goes into the eye check's `EYELESS`
@@ -822,9 +822,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
       fantastical, such as nine tails, a skateboard, wings, extra heads or a landscape on its
       back, and a form later than the pictured one looks more powerful and more fantastical,
       never the same animal recoloured (owner, #1772). The copypastas carry no pose or eye line
-      (#2052, above); each variation's mouth line follows its change (#2482, above). A baby form's prompt says `Draw its baby
-      form.` and `Its body also changes. It becomes younger and smaller - redesign it.` (owner's
-      pick on #1823, 2026-10-30).
+      (#2052, above); each variation's mouth line follows its change (#2482, above). A baby
+      form's prompt says `Draw its baby form.` and `Its body also changes. It becomes younger and
+      smaller - redesign it.` (owner's pick on #1823, 2026-10-30).
     - **Every beast is rigged and animated by us** (owner, #1732, #1754): a model Meshy can't rig
       ("no rig possible") gets its own skeleton and the full set of clips in Blender (the model
       skill, "Rig").
