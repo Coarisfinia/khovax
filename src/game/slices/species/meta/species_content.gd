@@ -7,7 +7,7 @@ extends Content
 ## slice's name, #442). Everything else reads them through this; their abilities are
 ## AbilityContent's. It also holds what each species ascends into (#1252), a link between two
 ## species that only the whole content can check, and each species' core list (#2409), which
-## SpeciesKit checks against the abilities.
+## SpeciesKit checks against the abilities as the species load.
 
 ## The species' key in the content cache (ContentCatalog).
 const KEY: String = "species"
@@ -98,11 +98,15 @@ func _ascends_from(species_id: String) -> String:
 	return found
 
 
-## Reads every species file in `files`, then checks their ascensions against each other.
+## Reads every species file in `files`, then checks their ascensions against each other and their
+## kits and core lists against the abilities (SpeciesKit), so a player's pack that breaks them is
+## refused on load (#2448), not only the default pack in CI.
 func read_files(files: Dictionary[String, String]) -> void:
 	super.read_files(files)
 	if problem.is_empty():
 		problem = ascension_problem()
+	if problem.is_empty():
+		problem = kit_problem(AbilityContent.cached())
 
 
 ## Its id must be one no species read before has.
@@ -132,6 +136,14 @@ func add(file_id: String, text: String) -> String:
 		cores[entry.id] = listed
 	species[entry.id] = entry
 	return ""
+
+
+## Why the species' kits and core lists don't hold together against `abilities` (SpeciesKit), or
+## "": abilities that don't load are the problem too.
+func kit_problem(abilities: AbilityContent) -> String:
+	if not abilities.problem.is_empty():
+		return "the abilities don't load: " + abilities.problem
+	return SpeciesKit.problem(species, abilities.abilities, cores)
 
 
 ## Why a species' ascension can't be (#1252), or "": it ascends into a species there is, never

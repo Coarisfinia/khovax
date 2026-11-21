@@ -4,8 +4,8 @@ extends RefCounted
 ## passives that exist in the ability data and are of their kind, and no two species share a special
 ## attack, which is one species' own (owner, #228). A species' core list (#2409,
 ## SpeciesContent.cores)
-## names abilities of kind core, each once and each that species' own. Checked by the content flow,
-## beside the schemas.
+## names abilities of kind core, each once and each that species' own. Checked as the species load
+## (SpeciesContent, #2448), so a player's pack is held to it too, and by the content flow.
 
 
 ## Why `all_species`' abilities don't hold together against `all_abilities` (both by id), with
