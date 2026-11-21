@@ -103,9 +103,10 @@ lines below): "These instructions about "two legs", "mouth open", "neutral riggi
 severely limiting the image gen and overall creativity. Only add mouth, limb and posture
 instructions when it's really necessary." So every creature prompt, base or evolution, leads with
 its core vibe (an evolution copypasta keeps the owner's opening line, and its change follows it
-straight away) and prescribes no facial details, eye markers, mouth position, limb count or posture
-unless the specific concept truly needs it. No fixed eye sentence, no blanket rest-pose,
-mouth-closed or rigging-pose line, and no other universal anatomy recipe in its place.
+straight away) and prescribes no facial details, eye markers, mouth position (except the mouth
+line, #2482, next), limb count or posture unless the specific concept truly needs it. No fixed
+eye sentence, no blanket rest-pose, mouth-closed or rigging-pose line, and no other universal
+anatomy recipe in its place.
 **A prompt for a beast with a mouth says the mouth is open; a beast may have no mouth** (owner's
 ground rule, in chat on 2026-11-21, #2482, which amends #2052 for mouths only): "prompts that need
 a mouth need the detail that the mouth is open - but not every beast needs a mouth". So every
@@ -156,6 +157,7 @@ the bold line is added (#2051); the rest is the owner's wording as it was.
 ```text
 Generate a brand-new image of a creature. The attached picture is only a reference for it: it shows this creature's earlier form. Draw its next form: the same creature line.
 The change: <the change, as a plain sentence, e.g. "nine long tails of flowing magma fan out behind it like a fox spirit's, each tipped with a glowing ember-shaped crystal.">
+<Its mouth is open. | It has no mouth.>
 
 More powerful body structure! it's the next evolution, so make it fancier, more <theme>-themed, more interesting.
 
@@ -172,6 +174,7 @@ between variations.
 ```text
 Generate a brand-new image of a creature. Draw its baby form.
 <the change, as a plain sentence, e.g. "It has grown a pair of great wings of frosted ice, folded at its sides.">
+<Its mouth is open. | It has no mouth.>
 
 Its body also changes. It becomes younger and smaller - redesign it.
 
