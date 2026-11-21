@@ -43,7 +43,9 @@ felled, emptied) gets its "after" model one of two ways, never from a fresh, unr
   original that is changed later asks for those parts as separate pieces.
   The derive step is the derived model's own build script (`build/<name>.py`), which reads the
   original's GLB through `lib/derive.py` (`derive.original`, then e.g. `derive.stub` to break a
-  part off; `bare-rock/build/bare_rock.py` is the example) and names it on a line of its own,
+  part off; `bare-rock/build/bare_rock.py` is the example; it takes an original whose parts are
+  separate meshes of one material each, and refuses one with several materials in a mesh until an
+  original needs that) and names it on a line of its own,
   `ORIGINAL = "<the .glb from the repository's root>"`; its `SOURCE.md` names the original as its
   source. CI checks a derived model whenever its original changes (`changed_models.py` reads
   `ORIGINAL`), so its rebuild check (`check_rebuild.py`) fails on a stale derived model: rebuild
