@@ -932,8 +932,12 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   its `SOURCE.md` names the project (or its contributors) as the author and says how the asset was
   made (the Fohossa, the Frostfire Hound and the Drakkudor show how). **Each pack lives in
   `resourcepacks/default/<kind>/<pack>/`** (`models`, `textures` or `audio`, #1978) with its license file and a `SOURCE.md` (title, then `- **Author:**`,
-  `- **Source:**`, `- **License:**`); `CREDITS.md` is generated from those by
-  `tools/godot/credits.gd`, and CI fails when it's out of date (owner, #69/#70). Commit only what the game uses, not whole packs.
+  `- **Source:**`, `- **License:**`): the credit note beside the asset in its pack, which the
+  in-game Credits tab reads from the loaded resource packs at runtime, so a player's pack credits
+  what it brings (owner, #69/#70, #2585). Nothing generates a credits file. CI
+  (`asset_credits_check.py`) fails on an asset folder without its note, a listed asset no note
+  covers, a note missing one of the three fields, or an asset under the Quaternius Asset License
+  (#1954). Commit only what the game uses, not whole packs.
   Obtaining or importing any asset starts at the assets skill (`.claude/skills/assets/SKILL.md`, #2013).
 
 ### Testing and CI
@@ -1033,8 +1037,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **Point to the source, never enumerate it** (owner's rule, #99): a list that exists somewhere
   (the presets, the assets, the content files) is read from there, not copied into a workflow, a
   doc or a comment, where it would drift. E.g. CI unpacks the templates
-  `src/game-build/export_templates.py` reads from `export_presets.cfg`, and `CREDITS.md` is
-  generated from the assets.
+  `src/game-build/export_templates.py` reads from `export_presets.cfg`, and the Credits tab reads
+  the credit notes beside the assets.
 - **No measured numbers in docs or comments** (durations, sizes, counts): they go stale. They belong
   in the PR or issue that measured them.
 

@@ -710,7 +710,7 @@ prop's own, and never another grey stone. A prop's script only maps its parts on
 A new material goes into the set (`prop_textures.py`'s `SET` and `textures/SOURCE.md`), for every
 prop. **Any free texture under a licence AGENTS.md allows for assets is permitted** (owner, #1825;
 #1511: CC0, or CC BY with credit): its source and licence go into `textures/SOURCE.md`, its licence
-file beside it, so the generated `CREDITS.md` credits it where the licence asks. **When the set
+file beside it, so the Credits tab credits it where the licence asks. **When the set
 falls short**, a prop is textured in Meshy after all (10 credits more): painted detail the set can't
 place (a sign's lettering, a banner's pattern, a face), or the owner preferring Meshy's look for it.
 No runes or carvings by script: they come from the rune set (#1855) and the engraving work (#1856).
@@ -718,8 +718,9 @@ No runes or carvings by script: they come from the rune set (#1855) and the engr
 ## 1. Build (Blender script)
 - **Where:** each model's folder holds all of it (#2438): `resourcepacks/default/models/<folder>/build/<name>.py`
   builds the model from the sources beside it (`source.glb`), and
-  `resourcepacks/default/models/<folder>/<name>.glb` is its output, with `SOURCE.md`, a license and
-  a `CREDITS.md` entry, as AGENTS.md's asset rules say. The build folder holds a `.gdignore`, so
+  `resourcepacks/default/models/<folder>/<name>.glb` is its output, with its credit note
+  `SOURCE.md` and a license beside it, as AGENTS.md's asset rules say; the Credits tab reads the
+  note from the pack (#2585). The build folder holds a `.gdignore`, so
   Godot never imports, lists or ships what is in it (`resource_packs_check.py` fails one without).
   The script is named after its `.glb`, which pairs them. The shared library, the checks and the
   import tools stay in `src/game-models/`.

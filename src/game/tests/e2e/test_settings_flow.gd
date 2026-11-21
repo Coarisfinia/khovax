@@ -1469,7 +1469,19 @@ func _menu_credits(menu: GameMenu) -> String:
 	var hidden: String = ErrorLog.new(null).scrubbed(OS.get_user_data_dir() + "/world.json")
 	if hidden != "user://world.json":
 		return "the error log names the user folder: " + hidden
-	var pack: ResourcePack = ResourcePacks.loaded()[-1]
+	var credited: String = _credits_from_pack(shown, ResourcePacks.loaded()[-1])
+	if not credited.is_empty():
+		return credited
+	if shown.contains("**") or shown.contains("Files:") or shown.contains("SOURCE.md"):
+		return "the Credits tab shows Markdown marks or repository paths: " + shown.left(200)
+	if not shown.contains("[b]License:[/b]"):
+		return "the Credits tab doesn't name the licenses"
+	return ""
+
+
+## The Credits tab's text `shown` names the pack `pack` and the title of the credit note beside
+## each of its textures, models and sounds (#2585); or why not.
+static func _credits_from_pack(shown: String, pack: ResourcePack) -> String:
 	if not shown.contains("Resource pack: " + pack.name):
 		return "the Credits tab doesn't name the pack %s: %s" % [pack.name, shown.left(300)]
 	for kind: String in ["textures", "models", "audio"]:
@@ -1478,10 +1490,6 @@ func _menu_credits(menu: GameMenu) -> String:
 			var title: String = _note_title(pack.root, str(file))
 			if title.is_empty() or not shown.contains("[b]%s[/b]" % title):
 				return "the Credits tab doesn't credit %s (its note's title: %s)" % [file, title]
-	if shown.contains("**") or shown.contains("Files:") or shown.contains("SOURCE.md"):
-		return "the Credits tab shows Markdown marks or repository paths: " + shown.left(200)
-	if not shown.contains("[b]License:[/b]"):
-		return "the Credits tab doesn't name the licenses"
 	return ""
 
 

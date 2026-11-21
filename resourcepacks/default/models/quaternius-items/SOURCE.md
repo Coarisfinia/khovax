@@ -14,7 +14,8 @@
 - **Why that record matters:** the author's own site offers its files under its own asset license
   since 2026-08-28, which forbids redistributing them as assets. These four were taken from Poly
   Pizza under CC0, a dedication that can't be withdrawn, so CC0 governs them. A new download from
-  the author's site is refused by `tools/godot/credits.gd` unless the owner allows it (#1954).
+  the author's site is refused by `src/game-checks/asset_credits_check.py` unless the owner allows
+  it (#1954).
 - **Used for:** the gear's models (#1581), shown in its gear slot: the necklace for Vis'omera, the
   pouch for the berry pouch and the spikes for the thorn spikes, and the stone material's model
   (#1546), a round pebble a hand holds (item models look held, #1596), until the game's own look

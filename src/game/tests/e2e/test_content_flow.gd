@@ -180,6 +180,7 @@ func run(tree: SceneTree) -> String:
 		_check_text_tags_unread.bind(tree),
 		_check_terms,
 		_check_prefetched,
+		_check_pack_credits,
 	]
 	for check: Callable in checks:
 		var result: String = check.call()
@@ -1247,7 +1248,7 @@ func _check_model_refused() -> String:
 		XO + KIT.replace(", \"model\": \"" + MODEL + "\"", "") + "}",
 		XO + KIT.replace(MODEL, "model_no_wolf") + "}",
 		XO + KIT.replace(MODEL, "icon_cog") + "}",
-		XO + KIT.replace(MODEL, "res://CREDITS.md") + "}",
+		XO + KIT.replace(MODEL, "res://project.godot") + "}",
 	]
 	for text: String in texts:
 		var problem: String = _add_to_empty(text)
@@ -2690,6 +2691,54 @@ func _text_section_cases(valid: String, other: String) -> Dictionary[String, Str
 		"a tonic that isn't JSONC": valid.replace("o.jsonc", "o.md"),
 		"no tonics": valid.replace(" \"tonics\": {\"o\": \"o.jsonc\"},", ""),
 	}
+
+
+## Each pack is credited from the notes beside the assets it gives (#2585): a note in an asset's
+## folder or one above it, the pack's root included, each once; an asset a pack before it overrides
+## credits that pack, not this one, and a file no note covers is counted. The Credits tab names each
+## pack and each note's title.
+func _check_pack_credits() -> String:
+	var folder: String = "user://pack_credits/"
+	var notes: Dictionary[String, String] = {
+		"a/SOURCE.md": "# Own icons",
+		"b/textures/icons/SOURCE.md": "# Icons",
+		"b/models/wolf/SOURCE.md": "# Wolf",
+	}
+	for note: String in notes:
+		var _made: Error = DirAccess.make_dir_recursive_absolute((folder + note).get_base_dir())
+		var fields: String = "\n\n- **Author:** x\n- **Source:** y\n  z\n- **License:** CC0 1.0\n"
+		_write_bytes(folder + note, (notes[note] + fields).to_utf8_buffer())
+	var own: ResourcePack = ResourcePack.new()
+	own.name = "Player's"
+	own.root = folder + "a/"
+	own.textures = { "icon_cog": "textures/cog.svg" }
+	own.models = { "model_wolf": "models/wolf.glb" }
+	var game: ResourcePack = ResourcePack.new()
+	game.name = "Game's"
+	game.root = folder + "b/"
+	game.textures = {
+		"icon_cog": "textures/icons/cog.svg",
+		"icon_moon": "textures/icons/moon.svg",
+	}
+	game.models = { "model_wolf": "models/wolf/wolf.glb" }
+	game.audio = { "music_theme": "audio/theme.ogg" }
+	var credits: Array[PackCredits] = PackCredits.of([own, game])
+	var found: Array[String] = []
+	for pack: PackCredits in credits:
+		found.append("%s %s %s" % [pack.pack_name, pack.notes, pack.uncredited])
+	var expected: Array[String] = [
+		"Player's [\"%sa/SOURCE.md\"] []" % folder,
+		"Game's [\"%sb/textures/icons/SOURCE.md\"] [\"%sb/audio/theme.ogg\"]" % [folder, folder],
+	]
+	if found != expected:
+		return "the packs were credited as %s, not %s" % [found, expected]
+	var shown: String = CreditsTab.to_bbcode(credits)
+	for part: String in ["Resource pack: Player's", "[b]Own icons[/b]", "[b]Icons[/b]", "y z"]:
+		if not shown.contains(part):
+			return "the Credits tab doesn't show %s: %s" % [part, shown]
+	if shown.contains("Wolf") or not shown.contains("1 of its files has no credit note."):
+		return "the Credits tab credits an overridden model, or not its uncredited file: " + shown
+	return ""
 
 
 ## A pack's .pck mounts under res://packs/<id>/ once it's all data, and one that holds code, a

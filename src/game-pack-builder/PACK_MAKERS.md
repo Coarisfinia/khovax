@@ -75,6 +75,25 @@ Paths are relative to the pack's folder. An id the game already uses replaces th
 with yours. A tile kind's traits are rules: a pack that adds a tile kind or changes one changes how
 the game plays, so replays and co-op hold only between games with the same packs.
 
+## Credits
+
+Put a `SOURCE.md` beside your textures, models and sounds: in an asset's folder, or in a folder
+above it in the pack. The pack's root works too. The game's Credits tab reads these notes from the
+loaded packs and shows your pack by its name. It shows each note's title (its first line, `# `)
+and three lines:
+
+```markdown
+# Stone textures
+
+- **Author:** who made them, with a link
+- **Source:** where they come from
+- **License:** their license, e.g. CC BY 4.0
+```
+
+A line may continue on lines indented by two spaces. Only what the game takes from your pack is
+credited to it: a file another pack overrides isn't. The tab counts your files that no note
+covers. The default pack, `resourcepacks/default/`, has one in each asset folder.
+
 ## Building
 
 ```sh
