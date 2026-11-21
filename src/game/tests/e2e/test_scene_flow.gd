@@ -162,8 +162,11 @@ static func _check_steps_and_hold() -> String:
 	var prey_id: int = _wild_by_target(wild, "prey")
 	if ambusher_id == 0 or prey_id == 0 or not hiding.is_hidden(ambusher_id):
 		return "arena setup missing hidden ambusher or prey"
-	state.events.append(EventEmitted.new("ambush_start"))
-	Simulation.step(state, FlowSteps.commands([EAST, WEST]))
+	var trigger_cmd: Array[Command] = [
+		_quest_event_cmd(1, "ambush_start"),
+		Command.new(WEST),
+	]
+	Simulation.step(state, trigger_cmd)
 	if not scenes.is_running() or scenes.active_id != "ambush":
 		return "EventEmitted didn't start the scene"
 	var run_problem: String = _run_ambush_to_end(state, ambusher_id, prey_id)
@@ -182,11 +185,11 @@ static func _run_ambush_to_end(state: GameState, ambusher_id: int, prey_id: int)
 	for _tick: int in 200:
 		if not scenes.is_running():
 			break
-		var events: Array[RefCounted] = Simulation.step(state, FlowSteps.commands([EAST, WEST]))
+		Simulation.step(state, FlowSteps.commands([EAST, WEST]))
 		var hold_err: String = _check_hold_tick(state, p0_held, p1_held, flags)
 		if not hold_err.is_empty():
 			return hold_err
-		_record_scene_events(events, ambusher_id, flags)
+		_record_scene_events(state.events, ambusher_id, flags)
 		if scenes.step_index == 3 and health.hp_of(
 			state,
 			prey_id,
@@ -226,7 +229,7 @@ static func _record_scene_events(
 	flags: Dictionary[String, bool],
 ) -> void:
 	for ev: RefCounted in events:
-		if ev is MonsterJumpedOut and (ev as MonsterJumpedOut).entity_id == ambusher_id:
+		if ev is MonsterJumpedOut and (ev as MonsterJumpedOut).monster_id == ambusher_id:
 			flags["revealed"] = true
 		if ev is EventEmitted and (ev as EventEmitted).event_name == "ambush_done":
 			flags["done"] = true
@@ -251,8 +254,8 @@ static func _check_release_and_once(state: GameState, ambusher_id: int, prey_id:
 		return "wild attacks or hunts weren't re-enabled after scene finished"
 	if state.player(1).tile == before_release:
 		return "player 1 couldn't move after scene released them"
-	state.events.append(EventEmitted.new("ambush_start"))
-	Simulation.step(state, [])
+	var replay_cmd: Array[Command] = [_quest_event_cmd(2, "ambush_start")]
+	Simulation.step(state, replay_cmd)
 	if (state.feature(SceneFeature.ID) as SceneFeature).is_running():
 		return "once scene replayed after finishing"
 	return ""
@@ -300,14 +303,15 @@ static func _check_determinism_and_save_reload() -> String:
 	var script: SceneScript = _ambush_scene()
 	var run_a: GameState = _scene_state(script, 1)
 	var run_b: GameState = _scene_state(script, 1)
-	run_a.events.append(EventEmitted.new("ambush_start"))
-	run_b.events.append(EventEmitted.new("ambush_start"))
 	var saved_data: Dictionary = {}
 	var saved_hash: int = 0
 	var hashes_seen: Dictionary[int, bool] = {}
 	for tick: int in 40:
-		Simulation.step(run_a, FlowSteps.command(EAST))
-		Simulation.step(run_b, FlowSteps.command(EAST))
+		var cmds: Array[Command] = (
+			[_quest_event_cmd(1, "ambush_start")] if tick == 0 else FlowSteps.command(EAST)
+		)
+		Simulation.step(run_a, cmds)
+		Simulation.step(run_b, cmds)
 		if run_a.state_hash() != run_b.state_hash():
 			return "scene diverged between identical runs at tick %d" % tick
 		hashes_seen[run_a.state_hash()] = true
@@ -326,9 +330,10 @@ static func _verify_mid_scene_reload(
 	final_hash: int,
 ) -> String:
 	var reloaded: GameState = _scene_state(script, 0)
-	var load_problem: String = reloaded.load_data(saved_data)
-	if not load_problem.is_empty():
-		return "mid-scene reload failed: " + load_problem
+	var reader: DataReader = DataReader.new(saved_data)
+	reloaded.load_data(reader)
+	if reader.failed():
+		return "mid-scene reload failed: " + reader.problem
 	if reloaded.state_hash() != saved_hash:
 		return "reloaded mid-scene hash didn't match saved hash"
 	var reloaded_scenes: SceneFeature = reloaded.feature(SceneFeature.ID) as SceneFeature
@@ -395,6 +400,9 @@ static func _scene_state(script: SceneScript, players: int) -> GameState:
 	var region: Region = _arena_region()
 	var species_hps: Dictionary[String, int] = { AMBUSHER_SPECIES: 100 }
 	var species_strengths: Dictionary[String, int] = { AMBUSHER_SPECIES: 10 }
+	var quest_events: Dictionary[int, String] = {
+		CommandCodes.of("ambush_start"): "ambush_start",
+	}
 	var ordered: Array[Feature] = [
 		DialogHoldFeature.new(),
 		SceneHoldFeature.new(),
@@ -410,12 +418,21 @@ static func _scene_state(script: SceneScript, players: int) -> GameState:
 		HidingFeature.new(),
 		NpcFeature.new(),
 		DialogFeature.new(),
+		QuestEventFeature.new(quest_events),
 		SceneFeature.new({ script.id: script }),
 	]
 	var state: GameState = GameState.new(region, SEED, ordered)
 	for slot: int in players:
 		var _player: Entity = state.add_entity(slot, region.starts[slot])
 	return state
+
+
+static func _quest_event_cmd(request_id: int, event_name: String) -> Command:
+	var cmd: Command = Command.new()
+	cmd.request = request_id
+	cmd.request_kind = OutboxEntry.QUEST_EVENT
+	cmd.request_data = CommandCodes.of(event_name)
+	return cmd
 
 
 static func _wild_by_target(wild: WildMonsterFeature, target_name: String) -> int:
