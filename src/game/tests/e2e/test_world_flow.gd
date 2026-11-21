@@ -32,6 +32,7 @@ extends RefCounted
 ## Every region a realm's instance can have, each variant's too, has a clearing for every seed
 ## (#2323): a tile players walk to from the first start, neither an exit nor a start, at least
 ## CLEARING_DISTANCE tiles from every wild monster's spot, where #1872 places its standing stone.
+## The castle's paved pieces and every piece of the dungeon lie on flagstone, not grass (#2498).
 
 const SEEDS: int = 40
 ## The damage the companion walks through the exit with, to see it arrive as hurt (#716).
@@ -52,6 +53,11 @@ const CLEARINGS_WAITING: Dictionary[String, int] = {}
 ## The dungeon behind the escort guide's seal (#1591), its end piece and the place marked there.
 const DUNGEON: String = "hrovumel_stolm"
 const DUNGEON_END: String = "shrine"
+## The castle's pieces under a roof or paved (#2498), and the floor they and every piece of the
+## dungeon lie on instead of grass.
+const CASTLE: String = "dhorvone_stolm"
+const CASTLE_PAVED: Array[String] = ["courtyard", "hall", "keep"]
+const FLAGSTONE: String = "flagstone"
 const DUNGEON_END_PLACE: String = "inner_shrine"
 ## The pass whose sealed passage leads into the dungeon (#1590), its guide, and the variant their
 ## opening chooses, which keeps the passage open.
@@ -99,6 +105,7 @@ func run(tree: SceneTree) -> String:
 		_check_start_variants,
 		_check_pieces_connected,
 		_check_dungeon_end,
+		_check_floors,
 		_check_pass_seal,
 		_check_variant_pieces,
 		_check_room,
@@ -1771,6 +1778,24 @@ func _check_dungeon_end() -> String:
 				marked,
 				seed_value,
 			]
+	return ""
+
+
+## The castle's paved pieces and every piece of the dungeon lie on flagstone, not grass (#2498):
+## no tile of theirs is plain ground, the tiles under their starts, wild monsters, connectors, exits
+## and chests included.
+func _check_floors() -> String:
+	var paths: Array[String] = ResourcePacks.region_pieces(DUNGEON)
+	for path: String in ResourcePacks.region_pieces(CASTLE):
+		if CASTLE_PAVED.has(path.get_file().get_basename()):
+			paths.append(path)
+	if paths.size() <= CASTLE_PAVED.size():
+		return "the castle's paved pieces or the dungeon's pieces aren't there: %s" % [paths]
+	for path: String in paths:
+		var piece: Region = InstanceBlueprints.read_region(FileAccess.get_file_as_string(path))
+		var kinds: Array = piece.terrain.values()
+		if not piece.problem.is_empty() or kinds.has(Region.GROUND) or not kinds.has(FLAGSTONE):
+			return "%s isn't floored with %s: %s" % [path, FLAGSTONE, piece.problem]
 	return ""
 
 
