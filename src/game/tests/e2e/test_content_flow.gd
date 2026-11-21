@@ -2431,16 +2431,23 @@ func _check_pack_species(pack: ResourcePack) -> String:
 ## A pack's species whose kit or core list doesn't hold together (SpeciesKit, #2448) is refused on
 ## load with the reason, as CI refuses the default pack's: each case is a player's pack replacing
 ## the finch and the toad, read from the player's folder. Two core abilities stand among the
-## abilities meanwhile, since none exists yet.
+## abilities meanwhile, since none exists yet; an ability the cache held under one of their ids is
+## put back after, so the check never overwrites or drops a real one (#2499).
 func _check_pack_kits_refused() -> String:
 	var abilities: Dictionary[String, Ability] = AbilityContent.cached().abilities
 	var core: String = "{\"id\": \"%s\", \"kind\": \"core\", \"name\": \"N\","
 	core += " \"description\": \"d\"}"
+	var earlier: Dictionary[String, Ability] = {}
 	for id: String in ["xo_absorb", "xo_grow"]:
+		if abilities.has(id):
+			earlier[id] = abilities[id]
 		abilities[id] = Ability.parse(id, core % id)
 	var result: String = _pack_kits_problem()
 	for id: String in ["xo_absorb", "xo_grow"]:
-		var _erased: bool = abilities.erase(id)
+		if earlier.has(id):
+			abilities[id] = earlier[id]
+		else:
+			var _erased: bool = abilities.erase(id)
 	return result
 
 
