@@ -1549,7 +1549,7 @@ func _check_boss_special_dodged() -> String:
 		return "a boss's special on a companion with no dodge saved up didn't land the same"
 	var saved: Vector2i = _boss_special_on_dodger(Fixed.ONE - BOSS_DODGE)
 	if saved != Vector2i(-1, 0):
-		return "a boss's special on a whole dodge saved up dealt %d (-1: dodged), count %d after" % [
+		return "a boss's special on a whole dodge saved up dealt %d (-1: missed), count %d" % [
 			saved.x,
 			saved.y,
 		]
