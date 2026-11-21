@@ -1,0 +1,10 @@
+// Logs: felled trunks stacked on the ground of a felling (#2485). Nobody walks it, but sight passes
+// over it, like a boulder.
+{
+	"id": "logs",
+	"color": "#6b8a4a",
+	"symbol": "H", // tells it apart without its color (#68)
+	"model": "model_resource_lumber", // a stock log pile until the supplied one comes (#2480)
+	"scale": 350, // in hundredths: the pack's pile is too small to read from the camera
+	"traits": { "walkable": false }
+}
