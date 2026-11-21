@@ -683,6 +683,12 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   dh/gh/hr/wh, the hyphen, the apostrophe, vo/na, -ai, -vaun). `ContentTerms.NAME_RULES` holds
   each kind's rule for the content flow; a name breaking one today waits in `NAME_EXCEPTIONS` with
   its rename issue, and that list only shrinks.
+- **An ability's name shows its kind** (#909, #2447, #2488): two beast-call parts joined by a
+  hyphen, the second in lower case, sharing two consonants with the species. A special's parts
+  keep the consonants and change the vowels (Bulum-bolom), a passive's differ only in their first
+  consonant (Mulbo-lulbo), and a core ability's are the same word said twice (Lobum-lobum for
+  Ombulumo), so none can pass for another. The core shape is the agents' pick from #2453; the
+  owner: "idc we roll with what sounds neat. can always change it later" (#2488).
 - **Every new name is checked before it's suggested or used** (owner's rule, #717, #909; for
   suggested names, in chat, #1743): a name offered in a question counts too. It passes its kind's
   rule in `ContentTerms.NAME_RULES`, and it is searched as an exact phrase in Claude in Chrome on
