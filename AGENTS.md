@@ -779,9 +779,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   into geometry that doesn't line up (the lookout post export on #2501). **A short chain of a few
   thick, rigid rings, each linked into the next, is fine** (owner, narrowing it on #2509: "this
   prompt worked third try, with the linked thingies. so not everything breaks", about #2402's
-  41.3), and may stand in where a cord would otherwise be needed; only soft or thin things that
-  weave, braid, knot, bind or cross stay out. For a small item, ending its prompt with `fully
-  visible.` helps (the owner's addition to 41.3).
+  41.3), and may stand in where a cord would otherwise be needed. It is the one exception: nothing
+  else may weave, braid, knot, bind or cross, whatever its material or thickness. For a small item,
+  ending its prompt with `fully visible.` helps (the owner's addition to 41.3).
 - **Every model request includes choices and a texture decision** (owner, #1996): creatures,
   props, items and player parts alike have at least three genuinely distinct, complete prompts,
   each in its own accordion. This is a minimum; the 20-prompt beast requirements below still hold.
