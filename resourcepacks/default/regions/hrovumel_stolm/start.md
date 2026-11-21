@@ -32,7 +32,7 @@ A passage leads southeast from it into the great hall (#2330): a wide vault on s
 
 ## Legend
 
-- `🟫`: ground
+- `🟫`: flagstone, the floor
 - `⬛`: rock
 - `🟦`: water
 - `👾`: a wild monster, of a species rolled from the instance blueprint's list

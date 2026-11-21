@@ -239,6 +239,7 @@
 		"copper_ore": "tiles/copper_ore.jsonc",
 		"cracked_rock": "tiles/cracked_rock.jsonc",
 		"crates": "tiles/crates.jsonc",
+		"flagstone": "tiles/flagstone.jsonc",
 		"forest": "tiles/forest.jsonc",
 		"gems": "tiles/gems.jsonc",
 		"ground": "tiles/ground.jsonc",

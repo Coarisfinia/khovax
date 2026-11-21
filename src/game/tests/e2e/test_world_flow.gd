@@ -1643,7 +1643,47 @@ func _check_refusals(tiles: String) -> String:
 	var forest: String = "forest"
 	if not InstanceBlueprints.read_region(thicket).terrain.values().has(forest):
 		return "the glade's thicket has no forest"
-	return _check_kind_and_place(tiles)
+	var result: String = _check_kind_and_place(tiles)
+	return result if not result.is_empty() else _check_floor(tiles)
+
+
+## A legend's floor (#2498): the tiles of every symbol that names neither a terrain nor a kind, a
+## start, a wild monster, a connector, an exit and a chest on the ground among them, lie on it;
+## the symbols naming `ground`, water or a kind keep theirs. Two floors, or a floor nobody walks,
+## are refused.
+func _check_floor(tiles: String) -> String:
+	var base: String = BASE_LEGEND
+	var two: String = tiles % ["🔴🌲🪓", base + "- `🌲`: forest, the floor\n- `🪓`: stump, the floor"]
+	var unwalked: String = tiles % ["🔴🪨🟫", base + "- `🪨`: boulder, the floor"]
+	for text: String in [two, unwalked]:
+		var problem: String = InstanceBlueprints.read_region(text).problem
+		if not problem.begins_with("the legend's floors"):
+			return "two floors or a floor nobody walks weren't refused: " + problem
+	var legend: String = "- `🔴`: where player 1 starts\n- `🟫`: ground\n- `🟩`: sand, the floor\n"
+	legend += "- `👾`: a wild monster, of a species rolled from the instance blueprint's list\n"
+	legend += "- `🔗`: joins another piece to the west\n- `🚪`: exit to the east\n"
+	legend += "- `🧰`: a treasure chest on the ground\n- `💧`: water\n- `🪓`: stump"
+	var region: Region = InstanceBlueprints.read_region(tiles % [" 🟫🧰\n🔗🔴🚪\n 👾🟩💧🪓", legend])
+	var floored: Array[Vector2i] = [
+		Vector2i(-1, 0),
+		Vector2i.ZERO,
+		Vector2i(1, 0),
+		Vector2i(1, -1),
+		Vector2i(-1, 1),
+		Vector2i(0, 1),
+	]
+	var expected: bool = region.problem.is_empty()
+	for tile: Vector2i in floored:
+		expected = expected and region.terrain.get(tile, "") == "sand"
+	expected = expected and region.terrain.get(Vector2i(0, -1), "") == Region.GROUND
+	expected = expected and region.terrain.get(Vector2i(1, 1), "") == Region.WATER
+	expected = expected and region.terrain.get(Vector2i(2, 1), "") == "stump"
+	if not expected:
+		return "a legend's floor didn't lie under its plain tiles: %s %s" % [
+			region.problem,
+			region.terrain,
+		]
+	return ""
 
 
 ## The species `region`'s legend names for the wild monster spot `spot`, or "".
