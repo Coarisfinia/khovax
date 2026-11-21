@@ -16,8 +16,9 @@ extends Node
 ## eases and draws only the decorations still on their way (#1386).
 
 ## How tall a decoration must stand to hide a figure, in hundredths of a tile's radius
-## (TileLooks.height_of): trees and boulders do, a stump doesn't.
-const HIDING_HEIGHT: int = 75
+## (TileLooks.height_of): trees and boulders do, a stump or cracked rock doesn't. Since heights are
+## measured as drawn (#2506), this is the old 75 at that scale, so the same decorations hide.
+const HIDING_HEIGHT: int = 60
 ## How far around a figure in cover the decorations are cut away, in tiles.
 const RADIUS: int = 5
 ## The neighbours on the camera's side of a tile: the camera looks north (towards -z), so these

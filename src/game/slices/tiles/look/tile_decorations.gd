@@ -16,9 +16,9 @@ extends Node3D
 ## A new decoration stood on `tile`, whole: the region drawn, or the tile changed in place.
 signal stood(tile: Vector2i)
 
-## The hexagon pack's decorations are modeled for a tile about two world units across, wider than
-## ours (HexLayout.SIZE), so they shrink to fit inside it.
-const MODEL_SCALE: float = 0.8
+## How much the hexagon pack's decorations shrink to fit inside a tile: TileLooks measures their
+## heights at the same scale (#2506).
+const MODEL_SCALE: float = TileLooks.MODEL_SCALE
 ## How far from its tile's middle a decoration stands at most, in world units.
 const OFF_CENTER: float = 0.15
 
@@ -68,7 +68,7 @@ func _process(delta: float) -> void:
 func _draw(tile: Vector2i) -> void:
 	var figure: HexPiece = figures[tile]
 	var model: Node3D = figure.get_child(0) as Node3D
-	var size: float = MODEL_SCALE * TileLooks.scale_of(TileLooks.of(_region.terrain[tile]))
+	var size: float = TileLooks.drawn_scale_of(TileLooks.of(_region.terrain[tile]))
 	model.scale = Vector3.ONE * size * smoothstep(0.0, 1.0, risen[tile])
 	figure.visible = risen[tile] > 0.0
 
