@@ -2458,7 +2458,9 @@ func _pack_kits_problem() -> String:
 			"pack_kits_%d" % i,
 			_kits_pack(i, finch, toad, changes),
 		)
-		if problem.is_empty() != wanted.is_empty() or not problem.contains(wanted):
+		# Godot's contains finds no empty text, not even in an empty one.
+		var as_wanted: bool = problem.is_empty() if wanted.is_empty() else problem.contains(wanted)
+		if not as_wanted:
 			return "a pack's species %s were refused with \"%s\", not \"%s\"" % [
 				changes,
 				problem,
