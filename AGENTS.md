@@ -596,15 +596,14 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   need a mouth need the detail that the mouth is open - but not every beast needs a mouth". A prompt
   for a design with a mouth says `Its mouth is open.`, one for a mouthless design says `It has no
   mouth.` (its import goes into `MOUTHLESS` in `check_mouth.py`); an evolution variation puts that
-  line on its own line right after its change (the model skill). Our eye
-  import tooling never dictates the design (an eyeless design goes into the eye check's `EYELESS`
-  list). A concept carries as much visual weight as its base
-  shape (owner, #2051): it transforms the whole anatomy, material, form and behaviour (a melting
-  body, a creature wielding a form its concept gives it), never only a shorter beak, a swapped crest
-  or a small decoration; abstract, loose, floating, thread-like or physically impossible forms stay
-  as bold as they are. Every creature prompt explicitly tells the image generator to be bold and
-  creative, keeping the creature readable. Flight shapes a source only for a creature that flies
-  (the model skill).
+  line on its own line right after its change (the model skill). Our eye import tooling never
+  dictates the design (an eyeless design goes into the eye check's `EYELESS` list). A concept
+  carries as much visual weight as its base shape (owner, #2051): it transforms the whole anatomy,
+  material, form and behaviour (a melting body, a creature wielding a form its concept gives it),
+  never only a shorter beak, a swapped crest or a small decoration; abstract, loose, floating,
+  thread-like or physically impossible forms stay as bold as they are. Every creature prompt
+  explicitly tells the image generator to be bold and creative, keeping the creature readable.
+  Flight shapes a source only for a creature that flies (the model skill).
 - **Monsters are wolf-smart, and humanoids are never fought** (owner's worldbuilding rules): no
   monster is smarter than an average wild wolf (packs with leaders and ambushes, never talking).
   The player fights only monsters, never humanoids. Factions may hate the player, and the player can
@@ -814,17 +813,17 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
     - **A baby form or any other evolution** (owner, #1754): the best picture of the earlier form
       (a clean render), attached as the reference, and 20 variations of its evolution copypasta
       in the model skill, word for word, including capitals and punctuation, each with its own
-      change as a plain sentence. A later form uses the owner's next-form prompt (#1993): `Draw
-      its next form: the same creature line.`, a `The change:` line and `More powerful body
-      structure! it's the next evolution, so make it fancier, more <theme>-themed, more
-      interesting.`, with the creature's own theme. **An evolved form redesigns its body, never copies the earlier one** (owner's
-      ground rule, 2026-10-30, #1821). Every variation adds something unique, unusual or
-      fantastical, such as nine tails, a skateboard, wings, extra heads or a landscape on its
-      back, and a form later than the pictured one looks more powerful and more fantastical,
-      never the same animal recoloured (owner, #1772). The copypastas carry no pose or eye line
-      (#2052, above); each variation's mouth line follows its change (#2482, above). A baby
-      form's prompt says `Draw its baby form.` and `Its body also changes. It becomes younger and
-      smaller - redesign it.` (owner's pick on #1823, 2026-10-30).
+      change as a plain sentence. A later form uses the owner's next-form prompt (#1993): `Draw its
+      next form: the same creature line.`, a `The change:` line and `More powerful body structure!
+      it's the next evolution, so make it fancier, more <theme>-themed, more interesting.`, with the
+      creature's own theme. **An evolved form redesigns its body, never copies the earlier one**
+      (owner's ground rule, 2026-10-30, #1821). Every variation adds something unique, unusual or
+      fantastical, such as nine tails, a skateboard, wings, extra heads or a landscape on its back,
+      and a form later than the pictured one looks more powerful and more fantastical, never the
+      same animal recoloured (owner, #1772). The copypastas carry no pose or eye line (#2052,
+      above); each variation's mouth line follows its change (#2482, above). A baby form's prompt
+      says `Draw its baby form.` and `Its body also changes. It becomes younger and smaller -
+      redesign it.` (owner's pick on #1823, 2026-10-30).
     - **Every beast is rigged and animated by us** (owner, #1732, #1754): a model Meshy can't rig
       ("no rig possible") gets its own skeleton and the full set of clips in Blender (the model
       skill, "Rig").
@@ -901,8 +900,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   covers only the beasts the owner gave a vibe or a model for.
 - **Every item has a 3D model** (owner, #1579, #1581): gear, unique items, anything the player
   holds, named in its data (`model`). The content flow checks the gear's; a material's is optional
-  until every material has one (#1585, #1586). For now each comes from a free source whose license
-  allows it here (B above), like the trees and other non-monster models.
+  until every material has one (#1585, #1586). For now each comes the way B above gives the other
+  non-monster models: a free source whose license allows it here, or else the owner's prompted
+  model from the world-asset list, as the trees now are (#2522).
 - **Item models look held** (owner's ground rule, #1596): an item's model (gear, unique items,
   materials, anything the player holds or carries) looks like something a hand holds or a player
   carries, such as a pebble for stone. A model with a flat base, made to stand on the ground, is a
