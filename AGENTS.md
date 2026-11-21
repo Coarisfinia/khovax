@@ -846,9 +846,14 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   not fulfil its request; keep that request active while the owner retries.
 - **Learn from supplied models before requesting more in those groups** (owner, #1998, #2002):
   discard further player-part prompts for now; resume only after the supplied hair and full-body
-  cloak are implemented and their lessons recorded. Request further trees only after importing
-  the supplied savanna tree and learning from it. These deferred groups do not fill the active
-  20-request minimum.
+  cloak are implemented and their lessons recorded. This deferred group does not fill the active
+  20-request minimum. Trees are no longer deferred (owner, #2519): the savanna tree is imported,
+  #2522 requests 20 more, and they count toward the minimum.
+- **Tree prompts follow the savanna tree's lessons** (#1999, PR #2502): ask for a few large,
+  smooth leaf masses with no small tufts or thin twigs (the import had to cut 15 loose outcrops),
+  a bare trunk with the crown clearly on top (the import splits it into `Trunk` and `Crown` for
+  the canopy cutaway), the trunk and roots within one hex, and a crown that may overhang the ring
+  around it without collision (`reach: 1`), high enough for a figure to stand under it.
 - **The world-asset list, #1824** (owner's ground rule, #1825): the issue of non-monster assets,
   3 prompts each. Accepted deliveries follow the active-request removal and import rule above.
 - **The owner's model exports are pushed to `Coarisfinia/khovax-sources`** (#1849, #2224), the
