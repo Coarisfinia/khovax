@@ -24,7 +24,9 @@ as each view that stands it on the board shows it (#1652, lib/views.py): at the 
 without the parts it hides, standing in its idle clip rather than its T-pose and in the clips it
 plays, against a prop's limits. Two kinds aren't things standing on a hex and are left out by what
 they are: a tile's decoration (a model a tile blueprint names), which is the tile's own look (the
-owner, on #1651), and a pack's model no view puts on the board (an item, shown only in the gear
+owner, on #1651), unless its blueprint gives it a crown overhanging the tiles around it (#1999:
+then its trunk is held to its hex and its crown to the rings it covers, lib/footprint.py's
+`report_crowned`, as TileDecorations draws it), and a pack's model no view puts on the board (an item, shown only in the gear
 panel's pictures). So CI runs it on every .glb.
 The clip rate comes from the .glb's .import, as the game imports it.
 
@@ -109,14 +111,24 @@ def measure(model, glb, fps, scripts):
     return lines
 
 
+def measure_crowned(glb, fps, crowned):
+    """The report lines for a crowned decoration (lib/views.py's `Crowned`), drawn as
+    TileDecorations draws it."""
+    rig = imported.load_view(glb, fps, crowned.scale)
+    lines, _passed = footprint.report_crowned(
+        footprint.meshes(rig, bpy.data.objects), crowned.rings, crowned.off_centre * crowned.scale)
+    return [(line, " (a tile's decoration, scale %.2f)" % crowned.scale) for line in lines]
+
+
 def main():
     glbs = sys.argv[sys.argv.index("--") + 1:]
     tile_looks = views.decorations(GAME)
     scripts = views.Scripts(GAME)
+    crowns = views.crowned(GAME, scripts)
     passed = True
     for glb in glbs:
         model = os.path.splitext(os.path.basename(glb))[0]
-        if model in tile_looks:
+        if model in tile_looks and model not in crowns:
             # The tile's own look, sized to its tile by TileDecorations, not a thing on the hex.
             log.info("FOOTPRINT %s a tile's decoration: the tile's own look" % model)
             continue
@@ -125,7 +137,10 @@ def main():
             log.info("FOOTPRINT %s a clip library: no body to measure" % model)
             continue
         fps, _loops = imported.settings(glb)
-        lines = measure(model, glb, fps, scripts)
+        if model in crowns:
+            lines = measure_crowned(glb, fps, crowns[model])
+        else:
+            lines = measure(model, glb, fps, scripts)
         if lines is None:
             log.info("FOOTPRINT %s no view puts it on the board: an item's picture" % model)
             continue

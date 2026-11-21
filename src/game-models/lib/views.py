@@ -22,6 +22,7 @@ A model no view names isn't put on the board (the items, shown only in the gear
 panel's pictures) and has no views."""
 
 import glob
+import json
 import os
 import re
 from pathlib import Path
@@ -159,6 +160,35 @@ def decorations(game):
     if not names:
         raise ValueError("no tile blueprint the default pack lists names a model: %s" % tiles)
     return names
+
+
+class Crowned:
+    """How TileDecorations draws a decoration whose tile blueprint gives its crown a reach (#232,
+    #1999): the rings of tiles the crown covers, the scale it draws the model at, and how far off
+    its tile's middle it may stand, in metres."""
+
+    def __init__(self, rings, scale, off_centre):
+        self.rings, self.scale, self.off_centre = rings, scale, off_centre
+
+
+def crowned(game, scripts=None):
+    """{model name: Crowned} for the decorations the tile blueprints of the Godot project at `game`
+    give a crown with a reach, read as `decorations` reads them; the drawn scale is the blueprint's
+    (in hundredths) times TileDecorations.MODEL_SCALE."""
+    scripts = scripts or Scripts(game)
+    drawer = scripts.classes["TileDecorations"]
+    shrink, off_centre = scripts.const(drawer, "MODEL_SCALE"), scripts.const(drawer, "OFF_CENTER")
+    manifest = read_manifest(Path(game) / MANIFEST)
+    pack_models = models(manifest)
+    found = {}
+    for path in sorted(section(manifest, "tiles").values()):
+        with open(os.path.join(game, path), encoding="utf-8") as text:
+            body = re.sub(r"(?m)(^|\s)//.*$", "", re.sub(r"/\*.*?\*/", "", text.read(), flags=re.S))
+        blueprint = json.loads(body)
+        if blueprint.get("model") and blueprint.get("reach", 0) > 0:
+            name = os.path.splitext(os.path.basename(pack_models[blueprint["model"]]))[0]
+            found[name] = Crowned(blueprint["reach"], shrink * blueprint.get("scale", 100) / 100.0, off_centre)
+    return found
 
 
 def model_ids(game, model):

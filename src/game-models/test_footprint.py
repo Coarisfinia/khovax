@@ -8,6 +8,11 @@ monster may do so (props have limits of their own, never an exemption).
     uv run --locked src/game-models/blender.py --background --factory-startup \
         --python src/game-models/test_footprint.py
 
+A crowned tile decoration (#1999) is a static trunk box and a crown box above it, named as the
+game finds the crown: the trunk within its hex and the crown within the ring around it pass; a
+trunk too big for its hex, a crown past the ring, one pushed past it by how far the decoration
+may stand off its tile's middle, and a model without a crown fail.
+
 It also reads a pack's model's views from a small Godot project of its own (lib/views.py, #1652):
 views naming its id in the default resource pack (#1864) at a scale, one through another class's
 constants. It prints each model's report and `FOOTPRINT TEST: PASS` or `FAIL` (and exits 1
@@ -35,6 +40,9 @@ FITS, OVERSIZED = 1.10, 2.0
 # How much a clip widens the fitting box: 1.18 times reaches 1.02, past a prop's clip limit (1.00)
 # but within a monster's (1.05).
 SPREAD = 1.18
+
+# A trunk thin enough to stay in its hex when its decoration stands off its tile's middle.
+THIN = 0.5
 
 # How much a figure's standing clip shrinks the oversized box: to the fitting box's width, the
 # way a figure's idle pose draws in its T-pose's arms.
@@ -73,6 +81,20 @@ TWO_HEXES = {
     "two_hexes_too_deep": (2.6, 2.0, False, False),
     "two_hexes_across_the_notch": (1.6, 1.2, False, False),
     "two_hexes_one_hex_box": (FITS, FITS, False, True),
+}
+
+# Crowned decorations (#1999): (trunk width, crown width or None for no crown, rings, metres off
+# the tile's middle, whether the check passes it), each box square. A 3.0 m crown reaches 2.37 of
+# the hex, within one ring (2.95); 4.0 m reaches 3.15, past it; 3.4 m reaches 2.68, and 0.3 m off
+# the middle (0.35 of the hex) pushes it to 3.03, past the ring, though two rings (4.95) still
+# hold it. A thin trunk (0.5 m, 0.39) stays within its hex that far off.
+CROWNED = {
+    "crowned_fits": (FITS, 3.0, 1, 0.0, True),
+    "crowned_trunk_oversized": (OVERSIZED, 3.0, 1, 0.0, False),
+    "crowned_crown_past_its_ring": (FITS, 4.0, 1, 0.0, False),
+    "crowned_off_its_middle": (THIN, 3.4, 1, 0.3, False),
+    "crowned_off_its_middle_two_rings": (THIN, 3.4, 2, 0.3, True),
+    "crowned_without_a_crown": (FITS, None, 1, 0.0, False),
 }
 
 
@@ -121,6 +143,22 @@ def build(width, clips):
     return rig, [skin]
 
 
+def crowned(trunk, crown):
+    """A crowned decoration in an empty scene: a trunk box and, unless `crown` is None, a crown box
+    `crown` metres across standing on the trunk's top. Returns its meshes."""
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    meshes = [box(trunk)]
+    meshes[0].name = "Trunk"
+    if crown is not None:
+        top = box(crown)
+        top.data.transform(Matrix.Scale(0.25, 4, Vector((0.0, 0.0, 1.0))))
+        top.location = (0.0, 0.0, trunk)
+        top.name = footprint.CROWN
+        meshes.append(top)
+    bpy.context.view_layer.update()
+    return meshes
+
+
 # A tiny Godot project: a figure view with its constants (a list over lines, with comments) and its
 # model's id, a person view showing the same model through the figure's constants at its own scale,
 # a chest view at a scale sharing the figure's hidden parts, a tool naming a model (no view), and
@@ -146,10 +184,16 @@ PROJECT = {
         'const CLIPS: Array[StringName] = []\n'
         'func _hide() -> void:\n\tfor part: String in FigureView.HIDDEN_PARTS:\n\t\tpass\n'),
     "tools/render_lamp.gd": 'const MODEL: String = "model_lamp"\n',
+    "slices/tiles/look/tile_decorations.gd": (
+        'class_name TileDecorations\nconst MODEL_SCALE: float = 0.8\nconst OFF_CENTER: float = 0.15\n'),
+    # A tree whose crown reaches a ring, drawn at 1.25 times; a pebble's tile without a crown.
+    "resourcepacks/default/tiles/grove.jsonc": '// A grove.\n{ "id": "grove", "model": "model_tree", "scale": 125, "reach": 1 }\n',
+    "resourcepacks/default/tiles/gravel.jsonc": '{ "id": "gravel", "model": "model_pebble" } // no crown\n',
     "resourcepacks/default/pack.jsonc": (
         "// The tiny project's pack.\n"
         '{ "models": { "model_figure": "assets/figure.glb", "model_chest": "chest.glb",'
-        ' "model_lamp": "lamp.glb", "model_pebble": "assets/pebble.glb" } }\n'),
+        ' "model_lamp": "lamp.glb", "model_pebble": "assets/pebble.glb", "model_tree": "tree.glb" },'
+        ' "tiles": { "grove": "tiles/grove.jsonc", "gravel": "tiles/gravel.jsonc" } }\n'),
 }
 # Per model: what its views read as (name, scale, clips, standing clip, hidden parts).
 VIEWS = {
@@ -162,6 +206,8 @@ VIEWS = {
     "lamp": [],
     "pebble": [],
 }
+# The crowned decorations TileDecorations draws, as (rings, scale, metres off the middle).
+CROWNS = {"tree": (1, 1.0, 0.15)}
 
 
 def views_read():
@@ -180,6 +226,12 @@ def views_read():
             if found != expected:
                 passed = False
                 log.error("FOOTPRINT test: %s's views should read %s" % (model, expected), __file__)
+        found = {name: (crown.rings, round(crown.scale, 6), crown.off_centre)
+                 for name, crown in views.crowned(game).items()}
+        log.info("FOOTPRINT test crowned decorations: %s" % found)
+        if found != CROWNS:
+            passed = False
+            log.error("FOOTPRINT test: the crowned decorations should read %s" % CROWNS, __file__)
     return passed
 
 
@@ -205,6 +257,13 @@ def main():
                 passed = False
                 log.error("FOOTPRINT test: %s should %s on %d hex(es)" % (
                     name, "pass" if passes else "fail", hexes), __file__)
+    for name, (trunk, crown, rings, off_centre, passes) in sorted(CROWNED.items()):
+        lines, verdict = footprint.report_crowned(crowned(trunk, crown), rings, off_centre)
+        for line in lines:
+            log.info("FOOTPRINT test %s %s" % (name, line))
+        if verdict != passes:
+            passed = False
+            log.error("FOOTPRINT test: %s should %s" % (name, "pass" if passes else "fail"), __file__)
     log.info("FOOTPRINT TEST: %s" % ("PASS" if passed else "FAIL"))
     sys.exit(0 if passed else 1)
 

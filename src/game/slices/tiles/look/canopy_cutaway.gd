@@ -5,7 +5,11 @@ extends Node
 ## from the camera's side, every such decoration within RADIUS tiles of that figure is cut down to
 ## its lower part (KEPT), so its tile still reads as what it is (a mountain stays a mountain, #365),
 ## and grows back once nobody needs the view. It eases both ways,
-## never snapping (motion sickness). Only figures that are drawn count: every player, and the wild
+## never snapping (motion sickness). A decoration with a crown of its own (a model with a `CROWN`
+## part, #1999: the savanna tree) keeps its trunk whole and hides its crown instead, shrinking it
+## onto the trunk, and a figure under the crown's reach (its tile blueprint's `reach`) counts as in
+## cover, since the crown overhangs the tiles around it. Only figures that are drawn count: every
+## player, and the wild
 ## monsters an ally sees that aren't hiding in their tile (WildMonsterView.is_shown), so a cut
 ## never gives away what the fog or a hiding place keeps hidden. It only reads the state. It works
 ## out which decorations to cut only when a figure in cover moves or a tile changes in place, and
@@ -23,6 +27,11 @@ const CAMERA_SIDE: Array[Vector2i] = [Vector2i(-1, 1), Vector2i(0, 1)]
 const EASE_PER_SECOND: float = 2.0
 ## How much of a decoration's height stays once it's cut away.
 const KEPT: float = 0.5
+## The part of a decoration's model that is its crown (#1999), hidden alone when it's cut away.
+const CROWN: StringName = &"Crown"
+## How small a crown is drawn just before it's hidden: never scaled to nothing, which has no
+## inverse.
+const CROWN_KEPT: float = 0.01
 
 @export var driver: Session
 @export var decorations: TileDecorations
@@ -51,8 +60,27 @@ func _process(delta: float) -> void:
 	show_state(delta)
 
 
+## Draws `piece` cut away by `amount`: its crown alone when it has one, else the whole figure.
 static func _draw(piece: HexPiece, amount: float) -> void:
-	piece.scale = scale_of(amount)
+	var crown: Node3D = crown_of(piece)
+	if crown == null:
+		piece.scale = scale_of(amount)
+		return
+	crown.scale = Vector3.ONE * crown_scale_of(amount)
+	crown.visible = amount < 1.0
+
+
+## The crown of the decoration `piece` (#1999), or null for one without.
+static func crown_of(piece: HexPiece) -> Node3D:
+	if piece.get_child_count() == 0:
+		return null
+	return piece.get_child(0).find_child(CROWN, true, false) as Node3D
+
+
+## How a crown cut away by `amount` is scaled: shrunk onto the trunk's top, where its origin is,
+## eased at both ends, and hidden once wholly cut (`_draw`).
+static func crown_scale_of(amount: float) -> float:
+	return lerpf(1.0, CROWN_KEPT, smoothstep(0.0, 1.0, amount))
 
 
 ## How a decoration cut away by `amount` is scaled: lowered towards its ground, eased at both
@@ -142,9 +170,21 @@ static func figures_in_cover(state: GameState) -> Array[Vector2i]:
 		var in_front: bool = false
 		for side: Vector2i in CAMERA_SIDE:
 			in_front = in_front or hides(state.region, tile + side)
-		if hides(state.region, tile) or in_front:
+		if hides(state.region, tile) or in_front or under_crown(state.region, tile):
 			covered.append(tile)
 	return covered
+
+
+## Whether `tile` lies under a crown overhanging it from a tile around it (#1999): within the reach
+## its tile blueprint gives.
+static func under_crown(region: Region, tile: Vector2i) -> bool:
+	for other: Vector2i in Hex.disc(TileBlueprint.MAX_REACH, tile):
+		if other == tile or not region.has_tile(other):
+			continue
+		var blueprint: TileBlueprint = TileLooks.of(region.terrain[other])
+		if blueprint != null and blueprint.reach >= Hex.distance(tile, other):
+			return true
+	return false
 
 
 ## Whether the decoration on `tile` stands tall enough to hide a figure.
