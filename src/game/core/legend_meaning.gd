@@ -92,7 +92,8 @@ static func read(meaning: String, readers: Array[PlacementReader]) -> LegendMean
 
 
 ## Builds what lies on `tile` itself: its terrain, or the document's `floor` where it says none,
-## its kind with its clauses, and a wild monster on it. Returns why it can't, or "".
+## its kind with its clauses, standing on that floor (#2587), and a wild monster on it. Returns why
+## it can't, or "".
 func lay(region: Region, tile: Vector2i, floor_kind: String = Region.GROUND) -> String:
 	region.terrain[tile] = floor_kind if on_floor else terrain
 	if wild_monster:
@@ -100,6 +101,8 @@ func lay(region: Region, tile: Vector2i, floor_kind: String = Region.GROUND) -> 
 	if kind.is_empty():
 		return ""
 	region.terrain[tile] = kind
+	if floor_kind != Region.GROUND and kind != floor_kind:
+		region.looks.floors[tile] = floor_kind
 	if turns.size() > 1 or walkable_overrides.size() > 1 or heights.size() > 1:
 		return "tile %s says its turn, its walkable trait or its height twice" % tile
 	for turn: int in turns:
