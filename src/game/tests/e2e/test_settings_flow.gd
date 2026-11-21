@@ -1494,22 +1494,13 @@ static func _credits_from_pack(shown: String, pack: ResourcePack) -> String:
 
 
 ## The title of the credit note beside the file `file` of the pack under `root` (#2585): the
-## SOURCE.md in its folder or the nearest one above it in the pack, its first line without its
-## `# `; or "" when there's none.
+## first line of the note PackCredits finds for it, without its `# `; or "" when there's none.
 static func _note_title(root: String, file: String) -> String:
-	var folder: String = file.get_base_dir()
-	while not FileAccess.file_exists(_note_in(root, folder)) and not folder.is_empty():
-		folder = folder.get_base_dir()
-	var note: String = _note_in(root, folder)
-	if not FileAccess.file_exists(note):
+	var note: String = PackCredits.note_of(root, file)
+	if note.is_empty():
 		return ""
 	var first: String = FileAccess.get_file_as_string(note).get_slice("\n", 0)
 	return first.trim_prefix("# ").strip_edges()
-
-
-## The credit note's path in `folder` of the pack under `root` ("" for the root itself).
-static func _note_in(root: String, folder: String) -> String:
-	return root + (folder + "/" if not folder.is_empty() else "") + "SOURCE.md"
 
 
 ## The Controls tab (#1414) lists every action the project binds, each row with the glyphs of what
