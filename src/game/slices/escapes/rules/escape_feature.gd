@@ -203,10 +203,10 @@ func load_values(state: GameState, values: DataReader) -> void:
 	for monster: int in lines:
 		health.hold_at(monster, 0)
 	lines.clear()
+	var wild: WildMonsterFeature = _wild(state)
 	var saved: Dictionary[int, int] = values.pairs("lines", 0, DataReader.MOST)
 	for monster: int in saved:
 		var line: int = saved[monster]
-		var wild: WildMonsterFeature = _wild(state)
 		var known: bool = wild.monsters.has(monster) or wild.is_fainted(monster)
 		if not known or line <= 0 or line >= Fixed.ONE:
 			values.fail("escaper %d isn't one wild monster with a line" % monster)

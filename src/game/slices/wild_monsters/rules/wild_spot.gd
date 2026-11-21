@@ -18,7 +18,8 @@ const TARGETED: String = "the quest target "
 const BOSS: String = "a boss"
 const ON: String = "on "
 ## `, escaping at <percent>%` (#2411, EscapeFeature): once its HP, or a seal around it, is down to
-## that share, from 1% to 99%, it escapes instead of fainting or being dominated.
+## that share, from 1% to 99%, it escapes instead of fainting or being dominated. With `wounded`,
+## the line must lie below Tuning.WOUNDED_HP (#2446), or it would start past its line.
 const ESCAPING: String = "escaping at "
 const PERCENT: String = "%"
 const WHOLE: int = 100
@@ -44,30 +45,36 @@ static func read(meaning: String) -> WildSpot:
 	spot.species = clauses[0]
 	for i: int in range(1, clauses.size()):
 		var clause: String = clauses[i]
-		var emitted: String = clause.trim_prefix(EMITTING)
-		var targeted: String = clause.trim_prefix(TARGETED)
 		if clause.begins_with(ON):
 			spot.stands_on = ", ".join(clauses.slice(i)).trim_prefix(ON)
 			break
-		if clause == WOUNDED and not spot.wounded:
-			spot.wounded = true
-		elif clause == BOSS and not spot.boss:
-			spot.boss = true
-		elif (clause.begins_with(EMITTING)
-				and spot.emits.is_empty()
-				and Ids.is_id(emitted)):
-			spot.emits = emitted
-		elif (clause.begins_with(TARGETED)
-				and spot.target.is_empty()
-				and Ids.is_id(targeted)):
-			spot.target = targeted
-		elif clause.begins_with(ESCAPING) and spot.escapes_at == 0:
-			spot.escapes_at = _share_of(clause.trim_prefix(ESCAPING))
-			if spot.escapes_at == 0:
-				return null
-		else:
+		if not _read_clause(spot, clause):
 			return null
+	if spot.wounded and spot.escapes_at >= Tuning.WOUNDED_HP:
+		return null
 	return spot if Ids.is_id(spot.species) else null
+
+
+## Applies one non-`on` legend `clause` to `spot`; returns false when it's unknown or repeated.
+static func _read_clause(spot: WildSpot, clause: String) -> bool:
+	var emitted: String = clause.trim_prefix(EMITTING)
+	var targeted: String = clause.trim_prefix(TARGETED)
+	if clause == WOUNDED and not spot.wounded:
+		spot.wounded = true
+		return true
+	if clause == BOSS and not spot.boss:
+		spot.boss = true
+		return true
+	if clause.begins_with(EMITTING) and spot.emits.is_empty() and Ids.is_id(emitted):
+		spot.emits = emitted
+		return true
+	if clause.begins_with(TARGETED) and spot.target.is_empty() and Ids.is_id(targeted):
+		spot.target = targeted
+		return true
+	if clause.begins_with(ESCAPING) and spot.escapes_at == 0:
+		spot.escapes_at = _share_of(clause.trim_prefix(ESCAPING))
+		return spot.escapes_at > 0
+	return false
 
 
 ## The share a `percent` like `25%` gives, in thousandths, or 0 when it isn't a whole percent from 1

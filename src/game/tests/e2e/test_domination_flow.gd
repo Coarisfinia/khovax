@@ -798,7 +798,8 @@ func _check_target_dominated() -> String:
 
 
 ## A legend marks a wild monster escaping at a whole percent from 1% to 99% (#2411), beside its
-## other clauses, and a region with one brings the escapes; any other share is refused.
+## other clauses, and a region with one brings the escapes; any other share, or `wounded` with a
+## line at or above WOUNDED_HP (#2446), is refused.
 func _check_escape_legend() -> String:
 	var marked: WildSpot = WildSpot.read(
 		WildSpot.NAMED + WEAK + ", escaping at 25%, emitting " + ESCAPED_EVENT + ", on sand",
@@ -808,6 +809,12 @@ func _check_escape_legend() -> String:
 	for refused: String in ["0%", "100%", "25", "025%", "-5%", "x%"]:
 		if WildSpot.read(WildSpot.NAMED + WEAK + ", escaping at " + refused) != null:
 			return "a legend marked a wild monster escaping at " + refused
+	for refused: String in [", wounded, escaping at 25%", ", escaping at 50%, wounded"]:
+		if WildSpot.read(WildSpot.NAMED + WEAK + refused) != null:
+			return "a legend marked a wounded wild monster escaping past its HP: " + refused
+	var below: WildSpot = WildSpot.read(WildSpot.NAMED + WEAK + ", wounded, escaping at 24%")
+	if below == null or not below.wounded or below.escapes_at != 240:
+		return "a legend refused a wounded wild monster escaping below its starting HP"
 	var region: Region = _escape_state(false).region
 	if not RegionFeatures.of(region).has(EscapeFeature.ID):
 		return "a region with a wild monster marked escaping doesn't bring the escapes"
@@ -884,7 +891,8 @@ func _escape_held(state: GameState) -> String:
 
 ## A ring sealing around an escaper (#2411) breaks once only its line's share of the seal is left,
 ## before it holds: a RingBroken event, the ring off the trail, and the escaper gone without a
-## domination.
+## domination. The same holds when an escaper hits its HP line inside a ring still waiting for a
+## totem, and when two escapers share a seal and reach their lines together (#2446).
 func _check_escape_seal() -> String:
 	var state: GameState = _escape_state(true)
 	var monster: int = _wild(state).monsters[0]
@@ -892,45 +900,122 @@ func _check_escape_seal() -> String:
 	var _player: Entity = state.add_entity(0, ring[0])
 	_close(state, ring.slice(1))
 	var events: Array[RefCounted] = _settle(state)
-	var broken: bool = false
+	var broken: String = _ring_broken_cleanly(state, events, ring)
+	if not broken.is_empty():
+		return broken
+	var escaped: String = _escaped_once(state, events, monster)
+	if not escaped.is_empty():
+		return escaped
+	var waiting: String = _check_escape_waiting()
+	if not waiting.is_empty():
+		return waiting
+	return _check_escape_shared_seal()
+
+
+## An escaper wounded to its line inside a ring still waiting for a totem breaks that ring (#2446)
+## and escapes without a domination.
+func _check_escape_waiting() -> String:
+	var state: GameState = _escape_state(true)
+	var monster: int = _wild(state).monsters[0]
+	var ring: Array[Vector2i] = Hex.ring(SMALL_RING)
+	var _player: Entity = state.add_entity(0, ring[0])
+	_close(state, ring.slice(1), false)
+	if _domination(state).encircled.is_empty() or not _domination(state).seals.is_empty():
+		return "the waiting-ring escape check's ring isn't waiting for a totem"
+	_wild(state).wound(state, monster, OUTCOME_HP * 10, true)
+	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	var broken: String = _ring_broken_cleanly(state, state.events, ring)
+	if not broken.is_empty():
+		return broken
+	return _escaped_once(state, state.events, monster)
+
+
+## Two escapers sharing one seal that reach their lines on the same tick both escape (#2446), though
+## the first breaks the seal.
+func _check_escape_shared_seal() -> String:
+	var spots: Array[Vector2i] = [Vector2i(1, 0), Vector2i(-1, 0)]
+	var state: GameState = _escape_state(true, spots)
+	var monsters: Array[int] = _wild(state).monsters.duplicate()
+	var ring: Array[Vector2i] = Hex.ring(2)
+	var player: Entity = state.add_entity(0, ring[0])
+	_close(state, ring.slice(1))
+	var seal: RingSeal = _domination(state).seals.get(player.id)
+	if seal == null or seal.monsters.size() != 2:
+		return "the shared-seal escape check didn't seal both escapers in one ring"
+	var events: Array[RefCounted] = _settle(state)
+	var broken: String = _ring_broken_cleanly(state, events, ring)
+	if not broken.is_empty():
+		return broken
+	return _escaped_all(state, events, monsters)
+
+
+## Whether `events` show a ring broken once, with no ring sealing or waiting in `state` and `ring`
+## off the trail (except where the player stands).
+func _ring_broken_cleanly(
+	state: GameState,
+	events: Array[RefCounted],
+	ring: Array[Vector2i],
+) -> String:
+	var broken: int = 0
 	for event: RefCounted in events:
-		broken = broken or event is RingBroken
-	if not broken or not _domination(state).seals.is_empty():
-		return "a ring sealing around an escaper didn't break at its line"
+		broken += 1 if event is RingBroken else 0
+	var domination: DominationFeature = _domination(state)
+	if broken != 1 or not domination.seals.is_empty() or not domination.encircled.is_empty():
+		return "an escaper's ring didn't break once (%d) and clear" % broken
 	for wall: Vector2i in ring:
 		if _trails(state).shared.tiles.has(wall) and state.player(0).tile != wall:
 			return "the ring an escaper broke stayed on the trail at %s" % wall
-	return _escaped_once(state, events, monster)
+	return ""
 
 
 ## Whether `events` show the escaper `monster` of `state` escaping once: out of the instance, its
 ## event emitted, and no domination.
 func _escaped_once(state: GameState, events: Array[RefCounted], monster: int) -> String:
-	var escaped: Array[WildMonsterEscaped] = []
+	var expected: Array[int] = [monster]
+	return _escaped_all(state, events, expected)
+
+
+## Whether `events` show every escaper in `monsters` (in id order) escaping once: out of the
+## instance, each emitting its legend's event, and no domination.
+func _escaped_all(
+	state: GameState,
+	events: Array[RefCounted],
+	monsters: Array[int],
+) -> String:
+	var escaped: Array[int] = []
 	var emitted: Array[String] = []
 	for event: RefCounted in events:
 		if event is WildMonsterEscaped:
-			escaped.append(event as WildMonsterEscaped)
+			var escape: WildMonsterEscaped = event as WildMonsterEscaped
+			if escape.species != WEAK:
+				return "an escaper escaped as %s, not %s" % [escape.species, WEAK]
+			escaped.append(escape.monster_id)
 		elif event is EventEmitted:
 			emitted.append((event as EventEmitted).event_name)
-	if escaped.size() != 1 or escaped[0].monster_id != monster or escaped[0].species != WEAK:
-		return "an escaper at its line didn't escape once: %d escapes" % escaped.size()
-	if state.entity(monster) != null or not _dominated(events).is_empty():
-		return "an escaper stayed in the instance, or was dominated"
-	if emitted.size() != 1 or emitted[0] != ESCAPED_EVENT:
-		return "an escaper emitted %s, not its legend's event" % [emitted]
+	if escaped != monsters:
+		return "escapers %s didn't match expected %s" % [escaped, monsters]
+	for monster: int in monsters:
+		if state.entity(monster) != null:
+			return "an escaper stayed in the instance"
+	if not _dominated(events).is_empty():
+		return "an escaper was dominated"
+	if emitted.size() != monsters.size():
+		return "escapers emitted %s, not %d events" % [emitted, monsters.size()]
+	for event_name: String in emitted:
+		if event_name != ESCAPED_EVENT:
+			return "an escaper emitted %s, not %s" % [event_name, ESCAPED_EVENT]
 	return ""
 
 
-## A disc with one weak monster in its middle that escapes at ESCAPE_LINE and emits ESCAPED_EVENT
-## (#2411), and the escapes after domination; `ringed` gives it the outcome checks' features, so a
-## player can ring it.
-func _escape_state(ringed: bool) -> GameState:
+## A disc with weak monsters on `spots` that escape at ESCAPE_LINE and emit ESCAPED_EVENT (#2411),
+## and the escapes after domination; `ringed` gives it the outcome checks' features, so a player
+## can ring them.
+func _escape_state(ringed: bool, spots: Array[Vector2i] = [Vector2i.ZERO]) -> GameState:
 	var region: Region = Region.disc(OUTCOME_RADIUS)
-	var spots: Array[Vector2i] = [Vector2i.ZERO]
 	region.wild_monsters = spots
 	var meaning: String = WildSpot.NAMED + WEAK + ", escaping at 25%, emitting " + ESCAPED_EVENT
-	region.add_placement(WildSpotPlacements.KIND, Vector2i.ZERO, meaning)
+	for spot: Vector2i in spots:
+		region.add_placement(WildSpotPlacements.KIND, spot, meaning)
 	var hp: Dictionary[String, int] = { WEAK: OUTCOME_HP }
 	var strength: Dictionary[String, int] = { WEAK: WEAK_STRENGTH }
 	var features: Array[Feature] = [MovementFeature.new(), KnockdownFeature.new()]
