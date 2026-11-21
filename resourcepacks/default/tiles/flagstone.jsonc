@@ -1,0 +1,8 @@
+// Flagstone: the paved floor of a castle's halls and a dungeon's chambers (#2498), laid where grass
+// would read as meadow indoors. Walkable, but no grass to graze. No decoration yet.
+{
+	"id": "flagstone",
+	"color": "#9c9588",
+	"symbol": "-", // tells it apart without its color (#68)
+	"traits": { "walkable": true }
+}

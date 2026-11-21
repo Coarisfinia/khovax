@@ -4,7 +4,9 @@ extends RefCounted
 ## drawn as an EmojiGrid, which reads the grid and the legend (#865). Nothing refers to a tile by
 ## numbers: connectors, exits and named species are symbols in the grid, which the legend
 ## explains. Each meaning is one LegendMeaning reads, with the readers of what the slices place
-## (PlacementReader), and the document builds its Region with them (#824).
+## (PlacementReader), and the document builds its Region with them (#824). One symbol at most may
+## name the document's floor (#2498), a walkable kind the tiles on plain ground lie on instead of
+## grass.
 
 
 ## The region a Markdown region document describes, with what the slices place read by `readers`
@@ -21,12 +23,16 @@ static func parse(text: String, readers: Array[PlacementReader] = []) -> Region:
 		return _refused("the legend doesn't explain `%s`" % unexplained)
 	if grid.symbols.size() > Region.MAX_TILES:
 		return _refused("the region has more than %d tiles" % Region.MAX_TILES)
+	var floors: Array[String] = _floors(meanings)
+	var floor_kind: String = Region.GROUND if floors.is_empty() else floors[0]
+	if floors.size() > 1 or not TileKinds.is_walkable(floor_kind):
+		return _refused("the legend's floors %s aren't one walkable kind" % [floors])
 	var region: Region = Region.new()
 	# Each drawn tile's meaning, in reading order: what stands on it is placed once all are laid.
 	var drawn: Dictionary[Vector2i, LegendMeaning] = {}
 	for tile: Vector2i in grid.symbols:
 		drawn[tile] = meanings[grid.symbols[tile]]
-		region.problem = drawn[tile].lay(region, tile)
+		region.problem = drawn[tile].lay(region, tile, floor_kind)
 		if not region.problem.is_empty():
 			return region
 	region.problem = _starts(region, drawn)
@@ -54,6 +60,17 @@ static func _starts(region: Region, drawn: Dictionary[Vector2i, LegendMeaning]) 
 			return "the player starts aren't numbered 1, 2, 3, … without gaps"
 		region.starts.append(starts_by_slot[slot])
 	return ""
+
+
+## The kinds the legend's `meanings` name as the document's floor (#2498), one per symbol saying
+## it.
+static func _floors(meanings: Dictionary[String, LegendMeaning]) -> Array[String]:
+	var floors: Array[String] = []
+	for symbol: String in meanings:
+		var said: LegendMeaning = meanings[symbol]
+		if said != null and said.is_floor:
+			floors.append(said.kind)
+	return floors
 
 
 static func _refused(problem: String) -> Region:

@@ -20,7 +20,7 @@ The stair of Hrovumel Stolm (#1591): a passage winding down through the rock bet
 
 ## Legend
 
-- `🟫`: ground
+- `🟫`: flagstone, the floor
 - `⬛`: rock
 - `🔗`: joins another piece to the west
 - `🧷`: joins another piece to the east

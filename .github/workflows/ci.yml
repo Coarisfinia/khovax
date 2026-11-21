@@ -194,23 +194,6 @@ jobs:
       - name: "🤖 Set up Godot and import the project"
         uses: ./.github/actions/setup-godot
 
-      - name: "📜 Check CREDITS.md matches the assets"
-        # tools/godot/credits.gd writes it from every resourcepacks/default/<kind>/<pack>/SOURCE.md
-        # (#1978); a difference means an asset
-        # was added or changed without regenerating the credits.
-        run: |
-          # Godot exits 0 on a script error, which would leave an old CREDITS.md looking current.
-          timeout 60 ~/godot/godot --headless --path . -s res://tools/godot/credits.gd 2>&1 | tee /tmp/credits.log
-          test "${PIPESTATUS[0]}" -eq 0
-          if grep -q "SCRIPT ERROR" /tmp/credits.log; then
-            echo "::error file=src/game/tools/godot/credits.gd::the credits tool hit a script error"
-            exit 1
-          fi
-          if ! git diff --exit-code CREDITS.md || [ -n "$(git status --porcelain CREDITS.md)" ]; then
-            echo "::error file=src/game/CREDITS.md::out of date: run tools/godot/credits.gd and commit the result"
-            exit 1
-          fi
-
       - name: "📦 Check every asset is used"
         # Commit only what the game uses (AGENTS.md, #69): every file under resourcepacks/default/audio/, textures/ or models/ (#1978) is named by a
         # scene, script, content file or setting, or by a glTF that is (#320).
@@ -224,6 +207,15 @@ jobs:
         run: |
           uv run --locked --package khovax-game-checks ../game-checks/test_catalogue_gaps.py
           uv run --locked --package khovax-game-checks ../game-checks/resource_packs_check.py
+
+      - name: "📜 Check every asset's credit note"
+        # Each texture, model and sound in the default pack has its SOURCE.md beside it, with its
+        # title, author, source and license, which the Credits tab reads from the loaded packs
+        # (#2585); an asset under the Quaternius Asset License is refused (#1954). Its own test
+        # runs first.
+        run: |
+          uv run --locked --package khovax-game-checks ../game-checks/test_asset_credits_check.py
+          uv run --locked --package khovax-game-checks ../game-checks/asset_credits_check.py
 
       - name: "🧪 Check the dev release against a stand-in for GitHub"
         # The dev-release job only runs on main, so its failures would show only there (#1991).
