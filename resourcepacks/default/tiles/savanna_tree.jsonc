@@ -1,0 +1,14 @@
+// Savanna tree: one tree on open ground, a winding trunk under a wide, flat crown (#1999). Nobody
+// walks its trunk's tile, but sight passes it. Its crown overhangs the ring of tiles around it
+// without blocking them: a figure under it stands in cover, and the crown hides as they come
+// (CanopyCutaway).
+{
+	"id": "savanna_tree",
+	"color": "#5c8c52",
+	"symbol": "Y", // tells it apart without its color (#68)
+	"model": "model_savanna_tree",
+	"scale": 125, // in hundredths: the tree is built at the size the game draws it, which the decorations shrink
+	"reach": 1, // the crown overhangs the ring of tiles around the trunk's
+	"clearance": 174, // the crown's lowest point over that ring, as the build prints it
+	"traits": { "walkable": false }
+}

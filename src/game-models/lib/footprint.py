@@ -28,6 +28,15 @@ the other. Its reach is measured as one hex's is, with the two hexes as one outl
 origin: 1.00 touches the outline, so a vertex reaching across either hex's outer edges, or into the
 notches at the shared edge's ends, counts, and the same limits apply.
 
+A tile's decoration is the tile's own look, not a thing standing on it, and isn't measured (the
+owner, on #1651), unless its tile blueprint gives it a crown overhanging the tiles around it (a
+`reach`, #232; the savanna tree, #1999): then its model is two parts, judged apart by
+`report_crowned`. Its `CROWN` part may overhang the rings of tiles the reach covers, never past
+them (`crown_limit`), and the rest, the trunk, stands within its own hex at a prop's limits, so the
+tree blocks no tile but its own. The game hides the crown when a figure stands under it
+(CanopyCutaway), so it collides with nothing. Each reach counts how far the decoration may stand
+off its tile's middle (TileDecorations.OFF_CENTER), so no placement tips it over.
+
 `fit` sizes a model to its hex before any clip exists (#1522), from its rest pose alone: the
 scale the gait and every render are made at, settled first, since a later rescale redoes them."""
 
@@ -54,6 +63,9 @@ HEXES = {
 REGULAR = (0.95, 1.05)
 LARGE = (1.05, 1.10)
 PROP = (0.95, 1.00)
+# The part of a crowned decoration's model that is its crown (#1999), as the game finds it
+# (CanopyCutaway.CROWN).
+CROWN = "Crown"
 # The clip every monster has (lib/clip_set.py's creature set); a model without it is a prop.
 WALK = "Walk"
 # The clips that strike, and how far past the hex they may reach.
@@ -193,6 +205,35 @@ def report(rig, meshes, limits, clips=None, standing=None, hexes=1):
         passed = passed and not fails
         lines.append("%s %s: reach %.3f of %s (frame %d, limit %.2f)" % (
             "FAIL" if fails else "ok", name, far, where, at, limit))
+    return lines, passed
+
+
+def crown_limit(rings):
+    """How far a crown covering `rings` rings of tiles may reach: to the outer edges of its last
+    ring, 1 + 2 * `rings` inradii out, less a prop's padding."""
+    return PROP[0] + 2.0 * rings
+
+
+def report_crowned(meshes, rings, off_centre=0.0):
+    """The report lines for a crowned decoration's static `meshes` (see the module's notes): its
+    trunk (every part but the crown) against a prop's rest limit, its crown against
+    `crown_limit(rings)`, each reach `off_centre` metres further for how far it may stand off its
+    tile's middle. Returns (lines, passed); a model without a crown or a trunk fails."""
+    crown = [obj for obj in meshes if obj.name == CROWN]
+    trunk = [obj for obj in meshes if obj.name != CROWN]
+    if not crown or not trunk:
+        missing = "crown (a part named %s)" % CROWN if not crown else "trunk"
+        return ["FAIL rest: no %s, though its tile blueprint gives its crown a reach" % missing], False
+    bpy.context.scene.frame_set(bpy.context.scene.frame_current)
+    shift = off_centre / INRADIUS
+    lines, passed = [], True
+    for name, parts, limit, where in (("trunk", trunk, PROP[0], "the hex"),
+                                      ("crown", crown, crown_limit(rings), "the hex, %d ring(s) around it" % rings)):
+        far = reach(parts) + shift
+        fits = far <= limit
+        passed = passed and fits
+        lines.append("%s %s: reach %.3f of %s (%.3f off its middle included, limit %.2f)" % (
+            "ok" if fits else "FAIL", name, far, where, shift, limit))
     return lines, passed
 
 

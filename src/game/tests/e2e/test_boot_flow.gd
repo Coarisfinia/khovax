@@ -88,6 +88,7 @@ func _steps() -> Array[Callable]:
 		_check_music,
 		_check_lookouts,
 		_check_canopy_cutaway,
+		_check_crown_cutaway,
 		# In the glade from here: the playground, which only the tests play, has nothing next door.
 		_check_neighbour_grids,
 		_check_neighbour_cloud,
@@ -2016,6 +2017,107 @@ func _check_canopy_cutaway(main: Node) -> String:
 	monster.tile = monster_spot
 	cutaway.show_state(10.0)
 	return result
+
+
+## The crown cut-away (#1999), in the glade: a savanna tree stood on open ground in sight, away
+## from every figure. Out in the open its crown stays whole; once the player stands under it, beside
+## its trunk, the crown alone shrinks away, easing, never snapping, and hides, while the trunk
+## stays whole; and it eases back once they're in the open again. The tile turns back after.
+func _check_crown_cutaway(main: Node) -> String:
+	var state: GameState = (main.get_node("Driver") as GameDriver).state
+	var cutaway: CanopyCutaway = main.get_node("CanopyCutaway") as CanopyCutaway
+	var decorations: TileDecorations = main.get_node("Instance/TileDecorations") as TileDecorations
+	var player: Entity = state.player(0)
+	var open: Vector2i = player.tile
+	var tree: Vector2i = Vector2i.MAX
+	var under: Vector2i = Vector2i.MAX
+	for tile: Vector2i in _split_by_sight(state, true):
+		under = _beside_in_the_open(state, tile)
+		if state.region.terrain[tile] == "ground" and _alone(state, tile) and under != Vector2i.MAX:
+			tree = tile
+			break
+	if tree == Vector2i.MAX:
+		return "no open ground in sight in the glade to stand a savanna tree on"
+	var kind: String = state.region.terrain[tree]
+	state.region.terrain[tree] = "savanna_tree"
+	decorations.show_changes()
+	decorations.show_state(10.0)
+	cutaway.show_state(10.0)
+	var result: String = _crown_problem(cutaway, tree, 0.0, "in the open")
+	if result.is_empty():
+		player.tile = under
+		result = _crown_eases(cutaway, tree, 1.0, "with the player under it")
+	if result.is_empty():
+		player.tile = open
+		result = _crown_eases(cutaway, tree, 0.0, "once the player is in the open again")
+	player.tile = open
+	state.region.terrain[tree] = kind
+	decorations.show_changes()
+	decorations.show_state(10.0)
+	cutaway.show_state(10.0)
+	return result
+
+
+## Whether no figure stands within two tiles of `tile`, under or in front of a crown standing there.
+func _alone(state: GameState, tile: Vector2i) -> bool:
+	for entity: Entity in state.entities:
+		if Hex.distance(entity.tile, tile) <= 2:
+			return false
+	return true
+
+
+## A tile beside `tile` that nothing but a crown on `tile` would hide a figure on, or Vector2i.MAX.
+func _beside_in_the_open(state: GameState, tile: Vector2i) -> Vector2i:
+	for step: Vector2i in Hex.DIRECTIONS:
+		var beside: Vector2i = tile + step
+		if not state.region.has_tile(beside) or state.region.terrain[beside] != "ground":
+			continue
+		var hidden: bool = CanopyCutaway.hides(
+			state.region,
+			beside,
+		) or CanopyCutaway.under_crown(state.region, beside)
+		for side: Vector2i in CanopyCutaway.CAMERA_SIDE:
+			hidden = hidden or CanopyCutaway.hides(state.region, beside + side)
+		if not hidden:
+			return beside
+	return Vector2i.MAX
+
+
+## Eases `cutaway` a moment, which must leave the crown on `tree` on its way towards `target`
+## (no snap), then until it settles there.
+func _crown_eases(cutaway: CanopyCutaway, tree: Vector2i, target: float, where: String) -> String:
+	var before: float = cutaway.cut[tree]
+	cutaway.show_state(0.1)
+	var now: float = cutaway.cut[tree]
+	if now == before or now == target:
+		return "the savanna tree's crown didn't ease %s: cut %f, then %f" % [where, before, now]
+	var result: String = _crown_problem(cutaway, tree, now, where + ", on its way")
+	if result.is_empty():
+		cutaway.show_state(10.0)
+		result = _crown_problem(cutaway, tree, target, where)
+	return result
+
+
+## What's wrong with the savanna tree on `tree` cut away by `amount`, or "": its trunk whole, its
+## crown drawn as cut, and hidden only once wholly cut.
+func _crown_problem(cutaway: CanopyCutaway, tree: Vector2i, amount: float, where: String) -> String:
+	var piece: HexPiece = cutaway.decorations.figures[tree]
+	var crown: Node3D = CanopyCutaway.crown_of(piece)
+	if crown == null:
+		return "the savanna tree has no crown"
+	if cutaway.cut[tree] != amount:
+		return "the savanna tree is cut %f %s, not %f" % [cutaway.cut[tree], where, amount]
+	if not piece.scale.is_equal_approx(Vector3.ONE):
+		return "the savanna tree's trunk is drawn at %s %s, not whole" % [piece.scale, where]
+	if not crown.scale.is_equal_approx(Vector3.ONE * CanopyCutaway.crown_scale_of(amount)):
+		return "the savanna tree's crown is drawn at %s %s, cut %f" % [crown.scale, where, amount]
+	if crown.visible != (amount < 1.0):
+		return "the savanna tree's crown is %s %s, cut %f" % [
+			"shown" if crown.visible else "hidden",
+			where,
+			amount,
+		]
+	return ""
 
 
 ## Eases `cutaway` a moment, which must leave every decoration changing on its way (no snap), then
