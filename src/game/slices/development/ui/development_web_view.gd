@@ -1,7 +1,9 @@
 class_name DevelopmentWebView
 extends VBoxContainer
-## A dominated monster's development web on screen (#679), under fog of war (#1417): its directions
-## run out from the middle like spokes, each node a step further out, and only the nodes it has
+## A dominated monster's development web on screen (#679), under fog of war (#1417): its innate
+## core skills (special, two passives and any `core` abilities, #2409) sit at the middle, marked as
+## taken from level 1 (#2418), and its directions run out from them like spokes, each node a step
+## further out. Only the nodes it has
 ## taken and the ones open next to them show (DevelopmentWeb.open_nodes); the rest stays hidden,
 ## and so do the links that don't start at a taken node. Each node is a button saying in words what
 ## it grants (#1452): what it shifts, how much stronger the special grows, or the passive by name; a
@@ -37,11 +39,16 @@ const SQUEEZE_STEPS: int = 20
 const BOW_ROOMS: float = 0.75
 ## How many straight pieces draw a bowed link.
 const BOW_PIECES: int = 16
+## Widest a core skill button grows, in font sizes, before wrapping its description (#2418).
+const CORE_WIDTH_FONTS: float = 26.0
 
 ## What the view says above the web, one line each. Kept here so tests can read it.
 var shown: Array[String] = []
 ## The button of each node it shows, by node id, hidden ones left out. Kept here for tests.
 var buttons: Dictionary[String, Button] = {}
+## The button of each innate core skill at the web's middle, by ability id (#2418). Kept here for
+## tests.
+var core_buttons: Dictionary[String, Button] = {}
 ## The monster shown, by short id, its species and the nodes it has taken, with its picks left:
 ## the web is built anew only when one of them changes.
 var _key: Array = []
@@ -59,6 +66,8 @@ var _shown_web: DevelopmentWeb
 ## node's words.
 var _abilities: Dictionary[String, String] = {}
 var _taken: Array[String] = []
+## Extra clearance beyond the first step so spoke nodes sit a gap clear of the core skill stack.
+var _hub_extra: Vector2 = Vector2.ZERO
 ## How far a step out along a spoke goes, across and down, from the buttons' size.
 var _ring: Vector2 = Vector2.ZERO
 ## How much of its share across each step out past the first still goes, from 0 to 1: 1 spaces the
@@ -144,6 +153,37 @@ static func taken_text() -> String:
 	return TranslationServer.tr("Taken")
 
 
+## The first line of a core skill's button: taken from level 1 and innate, in words (#68, #2418).
+static func innate_text() -> String:
+	return TranslationServer.tr("Taken (Innate)")
+
+
+## The words on the button of the core skill `skill_id` (#2418): that it's taken from level 1 and
+## innate (#68), its kind and name (with path mark), and what it does.
+func core_text(skill_id: String) -> String:
+	var parts: Array[String] = [innate_text()]
+	var ability: Ability = AbilityContent.cached().abilities.get(skill_id)
+	var shown_name: String = _abilities.get(skill_id, skill_id)
+	if ability == null:
+		parts.append(shown_name)
+		return "\n".join(parts)
+	parts.append(_core_heading(ability.kind, shown_name))
+	parts.append(TextTags.shown(tr(ability.description)))
+	return "\n".join(parts)
+
+
+## A core skill's kind and name in words, matching MonsterDetails for the kit's three kinds.
+func _core_heading(kind: String, shown_name: String) -> String:
+	match kind:
+		Ability.SPECIAL:
+			return tr("Special: %s") % shown_name
+		Ability.PLAYER_PASSIVE:
+			return tr("Passive for you: %s") % shown_name
+		Ability.SELF_PASSIVE:
+			return tr("Own passive: %s") % shown_name
+	return tr("Core: %s") % shown_name
+
+
 ## The words on the button of the shown web's `node`, after "Taken" once taken: what its leaning
 ## shifts, one stat a line, each stat's name `short`ened for a narrow screen; how much stronger it
 ## makes the special; or "Passive" and the passive's name below it (#1452).
@@ -188,7 +228,8 @@ static func _percent(thousandths: int) -> String:
 	return ("%.1f" % (thousandths / 10.0)).trim_suffix(".0")
 
 
-## Builds a button for each node of the shown web that the fog reveals for `monster`.
+## Builds a button for each innate core skill at the middle and each node of the shown web that the
+## fog reveals for `monster`.
 func _build(monster: DominatedMonster) -> void:
 	var focused: String = _focus_next
 	_focus_next = ""
@@ -196,9 +237,20 @@ func _build(monster: DominatedMonster) -> void:
 		_web.remove_child(old)
 		old.queue_free()
 	buttons.clear()
+	core_buttons.clear()
 	if _shown_web == null:
 		_place()
 		return
+	var known: SpeciesContent = SpeciesContent.cached()
+	var skills: Array[String] = (
+		known.core_skills(monster.species)
+		if known.species.has(monster.species)
+		else ([] as Array[String])
+	)
+	for skill_id: String in skills:
+		var core_button: Button = _core_button()
+		_web.add_child(core_button)
+		core_buttons[skill_id] = core_button
 	var open: Array[String] = _shown_web.open_nodes(_taken)
 	var can_take: bool = monster.picks_left() > 0
 	for node: String in _shown_web.nodes:
@@ -238,6 +290,14 @@ static func _node_button() -> Button:
 	return made
 
 
+## A core skill's button at the web's middle: focusable for a controller (#438), never disabled,
+## never connected to take, and wrapping its description so it fits a narrow screen.
+static func _core_button() -> Button:
+	var made: Button = _node_button()
+	made.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	return made
+
+
 ## Scrolls `node`'s button into sight, if the web still shows it.
 func _reveal(node: String) -> void:
 	if buttons.has(node):
@@ -265,13 +325,21 @@ func _place() -> void:
 	var reach: Vector2 = Vector2.ZERO
 	for node: String in buttons:
 		reach = reach.max(_offset(node, _squeeze).abs())
-	var needed: Vector2 = 2.0 * reach + biggest
+	var gap: float = font * GAP_FONTS
+	var core_box: Vector2 = _core_box_size(gap)
+	var needed: Vector2 = (2.0 * reach + biggest).max(core_box)
 	# A link bowing up or down needs the height, as the web can't scroll that way; across, a bow
 	# keeps inside the web's width instead (_link_line).
 	for link: PackedStringArray in _links():
 		for point: Vector2 in _link_line(link[0], link[1], INF):
 			needed.y = maxf(needed.y, 2.0 * absf(point.y) + font * TAKEN_LINK_FONTS)
 	_web.custom_minimum_size = needed
+	var cursor_y: float = _web.size.y * 0.5 - core_box.y * 0.5
+	for button: Button in core_buttons.values():
+		var sized: Vector2 = _measured_core(button)
+		button.size = sized
+		button.position = Vector2(_web.size.x * 0.5 - sized.x * 0.5, cursor_y)
+		cursor_y += sized.y + gap
 	for node: String in buttons:
 		var button: Button = buttons[node]
 		button.size = button.get_combined_minimum_size()
@@ -284,13 +352,19 @@ func _place() -> void:
 func _space_out(short: bool) -> Vector2:
 	var biggest: Vector2 = Vector2.ZERO
 	var font: int = get_theme_default_font_size()
+	var gap: float = font * GAP_FONTS
+	var core_box: Vector2 = _size_core_buttons(font, gap)
 	for node: String in buttons:
 		var button: Button = buttons[node]
 		button.text = node_text(node, short)
 		button.custom_minimum_size = Vector2.ONE * font * TOUCH_FONTS
 		biggest = biggest.max(button.get_combined_minimum_size())
-	var room: Vector2 = biggest + Vector2.ONE * font * GAP_FONTS
+	var room: Vector2 = biggest + Vector2.ONE * gap
 	_room_across = room.x
+	_hub_extra = Vector2(
+		maxf(0.0, core_box.x * 0.5 - biggest.x * 0.5),
+		maxf(0.0, core_box.y * 0.5 - biggest.y * 0.5),
+	)
 	# The smallest share of a step that goes across, and down, on any spoke that has some.
 	var least: Vector2 = Vector2.ONE
 	var flat: bool = false
@@ -304,6 +378,40 @@ func _space_out(short: bool) -> Vector2:
 	_ring = Vector2(room.x * (1.0 if flat else 0.5) / least.x, room.y / least.y)
 	_squeeze = _fitting_squeeze(room, biggest.x)
 	return biggest
+
+
+## Sizes the core skill buttons at the web's middle, wrapping each to fit the available width, and
+## returns their stacked bounding size (#2418).
+func _size_core_buttons(font: int, gap: float) -> Vector2:
+	if core_buttons.is_empty():
+		return Vector2.ZERO
+	var core_width: float = font * CORE_WIDTH_FONTS
+	if _across.size.x > 0.0:
+		core_width = minf(core_width, _across.size.x)
+	for skill_id: String in core_buttons:
+		var button: Button = core_buttons[skill_id]
+		button.text = core_text(skill_id)
+		button.custom_minimum_size = Vector2(core_width, font * TOUCH_FONTS)
+		button.size = Vector2(core_width, 0.0)
+	return _core_box_size(gap)
+
+
+## The bounding size of the stacked core skill buttons, separated by `gap`.
+func _core_box_size(gap: float) -> Vector2:
+	var box: Vector2 = Vector2.ZERO
+	for button: Button in core_buttons.values():
+		var sized: Vector2 = _measured_core(button)
+		box.x = maxf(box.x, sized.x)
+		if box.y > 0.0:
+			box.y += gap
+		box.y += sized.y
+	return box
+
+
+## A sized core skill button's width and wrapped height.
+static func _measured_core(button: Button) -> Vector2:
+	var sized: Vector2 = button.get_combined_minimum_size()
+	return Vector2(maxf(sized.x, button.custom_minimum_size.x), sized.y)
 
 
 ## How much each step out past the first may go across, from 1 down, for the web to fit the width
@@ -326,7 +434,7 @@ func _width(squeeze: float, biggest: float) -> float:
 	var reach: float = 0.0
 	for node: String in buttons:
 		reach = maxf(reach, absf(_offset(node, squeeze).x))
-	return 2.0 * reach + biggest
+	return maxf(2.0 * reach + biggest, _core_box_size(0.0).x)
 
 
 ## Whether two nodes come closer than `room` both across and down with the spokes at `squeeze`.
@@ -349,13 +457,20 @@ func _spot(node: String) -> Vector2:
 
 
 ## How far `node` sits from the web's middle with the spokes at `squeeze`: a whole step down for
-## each step out, and across the first step whole and each one past it `squeeze` of one.
+## each step out, and across the first step whole and each one past it `squeeze` of one, pushed
+## clear of the core skill stack at the middle.
 func _offset(node: String, squeeze: float) -> Vector2:
 	if node.is_empty():
 		return Vector2.ZERO
-	var spoke: Vector2 = _spoke(_directions().find(node.get_slice("_", 0))) * _ring
+	var unit: Vector2 = _spoke(_directions().find(node.get_slice("_", 0)))
+	var spoke: Vector2 = unit * _ring
 	var steps: int = node.get_slice("_", 1).to_int()
-	return Vector2(spoke.x * (1.0 + (steps - 1) * squeeze), spoke.y * steps)
+	var at: Vector2 = Vector2(spoke.x * (1.0 + (steps - 1) * squeeze), spoke.y * steps)
+	if absf(unit.y) > SLANT:
+		at.y += signf(unit.y) * _hub_extra.y
+	elif absf(unit.x) > SLANT:
+		at.x += signf(unit.x) * _hub_extra.x
+	return at
 
 
 ## Which way the direction in place `direction` of the web's order runs out from the middle:
@@ -367,7 +482,7 @@ func _spoke(direction: int) -> Vector2:
 ## Draws each link that starts at a taken node: from the middle to every direction's first node,
 ## along a direction, a bridge or a portal; a link between two taken nodes is drawn wider.
 func _draw_links() -> void:
-	if _shown_web == null or buttons.is_empty():
+	if _shown_web == null or (buttons.is_empty() and core_buttons.is_empty()):
 		return
 	var font: int = get_theme_default_font_size()
 	var color: Color = get_theme_color("font_color", "Label")
@@ -377,6 +492,17 @@ func _draw_links() -> void:
 		var side: float = _web.size.x * 0.5 - font * TAKEN_LINK_FONTS
 		var line: PackedVector2Array = _link_line(link[0], link[1], side)
 		_web.draw_polyline(Transform2D(0.0, _web.size * 0.5) * line, color, width, true)
+	var core: Array[Button] = core_buttons.values()
+	if core.size() > 1:
+		var first_button: Button = core[0]
+		var last_button: Button = core[core.size() - 1]
+		var spine: PackedVector2Array = PackedVector2Array(
+			[
+				first_button.position + first_button.size * 0.5,
+				last_button.position + last_button.size * 0.5,
+			]
+		)
+		_web.draw_polyline(spine, color, font * TAKEN_LINK_FONTS, true)
 
 
 ## Each link the web draws, as its two nodes ("" for the middle): from every direction's first

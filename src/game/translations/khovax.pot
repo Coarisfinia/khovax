@@ -629,16 +629,19 @@ msgid "Types:"
 msgstr ""
 
 #: slices/codex/ui/bestiary_entry.gd
+#: slices/development/ui/development_web_view.gd
 #: slices/species/ui/monster_details.gd
 msgid "Special: %s"
 msgstr ""
 
 #: slices/codex/ui/bestiary_entry.gd
+#: slices/development/ui/development_web_view.gd
 #: slices/species/ui/monster_details.gd
 msgid "Passive for you: %s"
 msgstr ""
 
 #: slices/codex/ui/bestiary_entry.gd
+#: slices/development/ui/development_web_view.gd
 #: slices/species/ui/monster_details.gd
 msgid "Own passive: %s"
 msgstr ""
@@ -791,6 +794,14 @@ msgstr ""
 
 #: slices/development/ui/development_web_view.gd
 msgid "Taken"
+msgstr ""
+
+#: slices/development/ui/development_web_view.gd
+msgid "Taken (Innate)"
+msgstr ""
+
+#: slices/development/ui/development_web_view.gd
+msgid "Core: %s"
 msgstr ""
 
 #: slices/development/ui/development_web_view.gd
