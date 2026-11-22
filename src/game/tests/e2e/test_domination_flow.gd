@@ -201,6 +201,7 @@ func run(tree: SceneTree) -> String:
 		_check_early_monster,
 		_check_boss_specials,
 		_check_boss_without_auto_attacks,
+		_check_boss_special_event,
 	]
 	for check: Callable in steps:
 		var result: String = check.call()
@@ -1470,6 +1471,32 @@ func _check_boss_without_auto_attacks() -> String:
 			struck,
 			expected,
 		]
+	return ""
+
+
+## A boss's special marks its WildMonsterStruck as `special`, while auto attacks leave `special`
+## false (#2439).
+func _check_boss_special_event() -> String:
+	var boss: GameState = _boss_state(true)
+	var plain: GameState = _boss_state(false)
+	var special: Ability = SpeciesContent.cached().specials()[COMPANION]
+	var ticks: int = special.cooldown_seconds * Simulation.TICKS_PER_SECOND
+	var boss_strikes: Array[WildMonsterStruck] = _wild_strikes_over(boss, ticks, Vector2i(1, 0))
+	var special_hits: int = 0
+	var auto_hits: int = 0
+	for hit: WildMonsterStruck in boss_strikes:
+		if hit.special:
+			special_hits += 1
+		else:
+			auto_hits += 1
+	if special_hits != 1 or auto_hits < 1:
+		return "a boss over one cooldown raised %d special and %d auto strikes" % [
+			special_hits,
+			auto_hits,
+		]
+	for hit: WildMonsterStruck in _wild_strikes_over(plain, ticks, Vector2i(1, 0)):
+		if hit.special:
+			return "an unmarked wild monster's auto attack raised a special strike"
 	return ""
 
 
@@ -3058,7 +3085,95 @@ func _check_bind_thread(tree: SceneTree) -> String:
 			result = "the thread didn't snap as the bind broke early"
 	main.queue_free()
 	await tree.process_frame
+	return result if not result.is_empty() else await _check_boss_special_view(tree)
+
+
+## A boss's special look (#2439): shows a full cooldown ring on a ready boss, plays a caster burst
+## on the boss and an impact starburst on the struck target (and full-sized damage numbers) only for
+## special strikes (skipping the impact burst when dodged), and empties then refills the ring as
+## the cooldown runs.
+func _check_boss_special_view(tree: SceneTree) -> String:
+	var main: Node = await FlowGame.start_held(tree)
+	var driver: GameDriver = FlowGame.held_driver(main)
+	var state: GameState = _boss_state(true)
+	var fog: FogFeature = state.feature(FogFeature.ID) as FogFeature
+	if fog != null:
+		fog.step(state, [])
+	driver.world.instances[driver.world.start_name] = state
+	driver.state = state
+	var view: BossSpecialView = main.get_node("Instance/BossSpecialView") as BossSpecialView
+	var numbers: DamageNumbersView = (
+		main.get_node("Instance/DamageNumbersView") as DamageNumbersView
+	)
+	view.show_state()
+	var result: String = _verify_boss_special_visuals(driver, view, numbers, _boss_of(state))
+	main.queue_free()
+	await tree.process_frame
 	return result
+
+
+func _verify_boss_special_visuals(
+		driver: GameDriver,
+		view: BossSpecialView,
+		numbers: DamageNumbersView,
+		boss_id: int,
+) -> String:
+	if view.filled_marks(boss_id) != BossSpecialView.COOLDOWN_SEGMENTS:
+		return "a ready boss showed %d cooldown marks, not %d" % [
+			view.filled_marks(boss_id),
+			BossSpecialView.COOLDOWN_SEGMENTS,
+		]
+	var target: int = driver.state.player(0).id
+	var tile: Vector2i = driver.state.player(0).tile
+	var auto: WildMonsterStruck = WildMonsterStruck.new(boss_id, target, tile, 10)
+	FlowSteps.raise(driver, [auto])
+	if not view.caster_bursts.is_empty() or not view.impact_bursts.is_empty():
+		return "a boss's auto attack played a special burst"
+	var auto_size: float = numbers.strikes[-1].pixel_size
+	var special: WildMonsterStruck = WildMonsterStruck.new(boss_id, target, tile, 25)
+	special.special = true
+	FlowSteps.raise(driver, [special])
+	if view.caster_bursts.size() != 1 or view.impact_bursts.size() != 1:
+		return "a boss's special played %d caster and %d impact bursts" % [
+			view.caster_bursts.size(),
+			view.impact_bursts.size(),
+		]
+	if numbers.strikes[-1].pixel_size <= auto_size:
+		return "a boss's special damage number wasn't larger than an auto attack's"
+	var dodged: WildMonsterStruck = WildMonsterStruck.new(boss_id, target, tile, 0)
+	dodged.special = true
+	dodged.dodged = true
+	FlowSteps.raise(driver, [dodged])
+	if view.caster_bursts.size() != 2 or view.impact_bursts.size() != 1:
+		return "a dodged boss special played an impact burst or skipped its caster burst"
+	return _verify_boss_cooldown_ring(driver, view, boss_id)
+
+
+func _verify_boss_cooldown_ring(
+		driver: GameDriver,
+		view: BossSpecialView,
+		boss_id: int,
+) -> String:
+	var bosses: BossSpecialFeature = (
+		driver.state.feature(BossSpecialFeature.ID) as BossSpecialFeature
+	)
+	for _tick: int in 4:
+		_announce_step(driver, FlowSteps.command(Command.NO_MOVE))
+		if bosses.cooldown_left(boss_id) > 0:
+			break
+	view.show_state()
+	if view.filled_marks(boss_id) != 0:
+		return "a boss that just fired its special still showed %d cooldown marks" % [
+			view.filled_marks(boss_id),
+		]
+	var half: int = floori(bosses.cooldown_left(boss_id) / 2.0)
+	for _tick: int in half:
+		Simulation.step(driver.state, FlowSteps.command(Command.NO_MOVE))
+	view.show_state()
+	var mid: int = view.filled_marks(boss_id)
+	if mid <= 0 or mid >= BossSpecialView.COOLDOWN_SEGMENTS:
+		return "halfway through cooldown a boss showed %d marks" % mid
+	return ""
 
 
 ## Puts the companion of the player in slot 0 next to the first wild monster and fires its special,

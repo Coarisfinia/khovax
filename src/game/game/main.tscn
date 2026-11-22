@@ -88,6 +88,7 @@
 [ext_resource type="Script" path="res://slices/tonics/ui/drink_tie.gd" id="92_drink_tie"]
 [ext_resource type="Script" path="res://slices/tonics/ui/drink_button.gd" id="93_drink_button"]
 [ext_resource type="Script" path="res://slices/tonics/ui/brew_pick_list.gd" id="94_brew_pick_list"]
+[ext_resource type="Script" path="res://slices/boss_specials/look/boss_special_view.gd" id="95_boss_special"]
 
 [sub_resource type="Environment" id="Environment_daylight"]
 ambient_light_source = 2
@@ -251,6 +252,11 @@ driver = NodePath("../../Driver")
 script = ExtResource("57_crown_bind")
 driver = NodePath("../../Driver")
 companions = NodePath("../CompanionView")
+wild_monsters = NodePath("../WildMonsterView")
+
+[node name="BossSpecialView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver", "wild_monsters")]
+script = ExtResource("95_boss_special")
+driver = NodePath("../../Driver")
 wild_monsters = NodePath("../WildMonsterView")
 
 [node name="FeedingTie" type="Node" parent="Instance" node_paths=PackedStringArray("driver", "wild_monsters")]
