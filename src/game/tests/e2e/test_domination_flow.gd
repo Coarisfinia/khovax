@@ -1158,19 +1158,21 @@ func _shy_state(on_shrubs: bool, instance_id: String = "") -> GameState:
 	if on_shrubs:
 		meaning += ", on " + HIDING_TILE
 	region.add_placement(WildSpotPlacements.KIND, Vector2i.ZERO, meaning)
+	var features: Array[Feature] = _weak_wild_features(true)
+	features.append_array([HidingFeature.new(), ShyWatcherFeature.new(instance_id)])
+	return GameState.new(region, 1, features)
+
+
+## Base features for tests with one weak wild monster species, with or without domination.
+func _weak_wild_features(ringed: bool) -> Array[Feature]:
 	var hp: Dictionary[String, int] = { WEAK: OUTCOME_HP }
 	var strength: Dictionary[String, int] = { WEAK: WEAK_STRENGTH }
-	var features: Array[Feature] = [
-		MovementFeature.new(),
-		KnockdownFeature.new(),
-		TrailFeature.new(),
-		HealthFeature.new(hp),
-		WildMonsterFeature.new([], [], strength),
-		DominationFeature.new(),
-		HidingFeature.new(),
-		ShyWatcherFeature.new(instance_id),
-	]
-	return GameState.new(region, 1, features)
+	var features: Array[Feature] = [MovementFeature.new(), KnockdownFeature.new()]
+	features.append_array([TrailFeature.new(), HealthFeature.new(hp)])
+	features.append(WildMonsterFeature.new([], [], strength))
+	if ringed:
+		features.append(DominationFeature.new())
+	return features
 
 
 static func _has_jumped_out(events: Array[RefCounted]) -> bool:
@@ -1236,13 +1238,7 @@ func _escape_state(ringed: bool, spots: Array[Vector2i] = [Vector2i.ZERO]) -> Ga
 	var meaning: String = WildSpot.NAMED + WEAK + ", escaping at 25%, emitting " + ESCAPED_EVENT
 	for spot: Vector2i in spots:
 		region.add_placement(WildSpotPlacements.KIND, spot, meaning)
-	var hp: Dictionary[String, int] = { WEAK: OUTCOME_HP }
-	var strength: Dictionary[String, int] = { WEAK: WEAK_STRENGTH }
-	var features: Array[Feature] = [MovementFeature.new(), KnockdownFeature.new()]
-	features.append_array([TrailFeature.new(), HealthFeature.new(hp)])
-	features.append(WildMonsterFeature.new([], [], strength))
-	if ringed:
-		features.append(DominationFeature.new())
+	var features: Array[Feature] = _weak_wild_features(ringed)
 	features.append(EscapeFeature.new())
 	return GameState.new(region, 1, features)
 
