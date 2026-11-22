@@ -74,12 +74,11 @@ func show_state() -> void:
 
 ## How many of the cooldown ring's marks stand for the boss `entity_id`, or -1 without a ring.
 func filled_marks(entity_id: int) -> int:
-	if not rings.has(entity_id):
+	var ring: HexPiece = rings.get(entity_id)
+	if ring == null:
 		return -1
-	var count: int = 0
-	for mark: Node in rings[entity_id].get_children():
-		count += 1 if (mark as Node3D).visible else 0
-	return count
+	var standing: Callable = func(mark: Node) -> bool: return (mark as Node3D).visible
+	return ring.get_children().filter(standing).size()
 
 
 ## Plays the boss's caster burst on `tile`, with glowing wisps bursting from `origin` in `color`.
