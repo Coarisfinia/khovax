@@ -320,6 +320,11 @@ static func _features(named: Blueprint, region: Region) -> Array[String]:
 	listed.append_array(RegionFeatures.of(region))
 	if not named.chest_table.is_empty():
 		listed.append(ChestFeature.ID)
+	if (
+		AbsorptionFactory.has_absorber(region, named.wild_species)
+		and not listed.has(AbsorptionFeature.ID)
+	):
+		listed.append(AbsorptionFeature.ID)
 	return listed
 
 

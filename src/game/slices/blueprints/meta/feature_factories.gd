@@ -78,9 +78,10 @@ static func _world_rules() -> Dictionary[String, Callable]:
 		# (#1204).
 		HuntFeature.ID: _plain(HuntFeature),
 		# After domination, enrage and the hunts, so a wild monster in a ring or enraged this tick
-		# doesn't
-		# wander off to graze or drink (#1203).
+		# doesn't wander off to graze or drink (#1203).
 		ForagingFeature.ID: _plain(ForagingFeature),
+		# After wild movement and domination, to absorb adjacent fainted monsters (#2412).
+		AbsorptionFeature.ID: AbsorptionFactory.build,
 		FogFeature.ID: _plain(FogFeature),
 	}
 	return rules
