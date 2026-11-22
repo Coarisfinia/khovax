@@ -17,10 +17,11 @@ static func involves(state: GameState, slot: int) -> bool:
 	if wild == null:
 		return false
 	var hiding: HidingFeature = state.feature(HidingFeature.ID) as HidingFeature
+	var shy: ShyWatcherFeature = state.feature(ShyWatcherFeature.ID) as ShyWatcherFeature
 	var tiles: Array[Vector2i] = _tiles_of(state, slot)
 	for monster_id: int in wild.monsters:
 		var monster: Entity = state.entity(monster_id)
-		if monster == null:
+		if monster == null or (shy != null and shy.is_shy(monster_id)):
 			continue
 		if wild.rage_of(monster_id) > 0:
 			return true

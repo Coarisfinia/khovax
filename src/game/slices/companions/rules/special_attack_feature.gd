@@ -70,6 +70,7 @@ func after() -> Array[String]:
 	var earlier: Array[String] = [
 		WildMonsterFeature.ID,
 		HidingFeature.ID,
+		ShyWatcherFeature.ID,
 		DominationFeature.ID,
 		TypeEffectivenessFeature.ID,
 		TonicEffectsFeature.ID,

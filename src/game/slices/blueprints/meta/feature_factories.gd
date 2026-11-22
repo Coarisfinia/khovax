@@ -29,9 +29,10 @@ static func build(listed: Array[String], setup: FeatureSetup) -> Array[Feature]:
 
 static func _all() -> Dictionary[String, Callable]:
 	if _factories.is_empty():
-		# Two parts of the one order, kept apart only to keep each short.
+		# Parts of the one order, kept apart only to keep each short.
 		_factories = _world_rules()
-		_factories.merge(_region_and_party_rules())
+		_factories.merge(_region_rules())
+		_factories.merge(_party_rules())
 	return _factories
 
 
@@ -87,8 +88,8 @@ static func _world_rules() -> Dictionary[String, Callable]:
 	return rules
 
 
-## The order's second part: what the region holds, then the companions and their strikes.
-static func _region_and_party_rules() -> Dictionary[String, Callable]:
+## The order's second part: what the region holds.
+static func _region_rules() -> Dictionary[String, Callable]:
 	var rules: Dictionary[String, Callable] = {
 		# What the region holds (RegionFeatures): exits, triggers, region pieces to enter, wild
 		# monsters in hiding, people to talk to and the guides among them.
@@ -96,6 +97,7 @@ static func _region_and_party_rules() -> Dictionary[String, Callable]:
 		TriggerFeature.ID: _plain(TriggerFeature),
 		EnteringFeature.ID: _plain(EnteringFeature),
 		HidingFeature.ID: _plain(HidingFeature),
+		ShyWatcherFeature.ID: _shy_watchers,
 		NpcFeature.ID: _plain(NpcFeature),
 		# Right after the people, whose talks start an escort (#1588), and after the exits and the
 		# health, whose events say a guide's player leaves.
@@ -104,6 +106,13 @@ static func _region_and_party_rules() -> Dictionary[String, Callable]:
 		# The control points of a battle (#643), after domination, which places a totem on a ring
 		# with wild monsters inside first and holds the totems a point is taken with (#644).
 		ControlPointFeature.ID: _plain(ControlPointFeature),
+	}
+	return rules
+
+
+## The order's third part: the companions, their strikes, harvesting, dialogs and story rules.
+static func _party_rules() -> Dictionary[String, Callable]:
+	var rules: Dictionary[String, Callable] = {
 		# The companions and the features built on them. A companion whose player walks out
 		# through an exit goes with them whatever the order: the world moves it after the tick
 		# (#716).
@@ -137,6 +146,11 @@ static func _region_and_party_rules() -> Dictionary[String, Callable]:
 		SceneFeature.ID: SceneFactory.build,
 	}
 	return rules
+
+
+## Shy watchers, which name their instance in the left-spots store they record (#2416).
+static func _shy_watchers(setup: FeatureSetup) -> Feature:
+	return ShyWatcherFeature.new(setup.instance)
 
 
 ## Waystones, which name their instance in the respawn point they set.
