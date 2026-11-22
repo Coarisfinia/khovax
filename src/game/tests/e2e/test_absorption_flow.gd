@@ -168,12 +168,9 @@ func _check_once_per_individual_and_copies() -> String:
 
 ## Authored forms (empty short_id) can be seeded; asleep, held or disabled absorbers absorb nothing.
 func _check_seed_and_guards() -> String:
-	var state: GameState = _state([
-		Vector2i(0, 0),
-		Vector2i(1, 0),
-	], [ABSORBER, PREY])
-	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
-	var absorption: AbsorptionFeature = state.feature(AbsorptionFeature.ID) as AbsorptionFeature
+	var state: GameState = _pair_state()
+	var wild: WildMonsterFeature = _wild(state)
+	var absorption: AbsorptionFeature = _absorption(state)
 	var absorber_id: int = wild.monsters[0]
 	var victim_id: int = wild.monsters[1]
 	var authored: AbsorbedForm = absorption.form_of_species(PREY)
@@ -215,7 +212,7 @@ func _check_save_load_and_determinism() -> String:
 	reloaded.load_data(reader)
 	if reader.failed():
 		return "valid absorption save failed to load: " + reader.problem
-	if reloaded.state_hash() != first.state_hash():
+	if reloaded.own_hash() != first.own_hash():
 		return "reloaded absorption state hash differs from saved state"
 	return _check_forged_saves(first, spots, kinds)
 
@@ -242,7 +239,8 @@ func _check_forged_saves(
 		return "forged save with empty catalogue loaded"
 	var forged_dup: Dictionary = base.duplicate(true)
 	var forms: Array = _feature_values(forged_dup)["catalogues"][0]["forms"]
-	forms.append((forms[0] as Dictionary).duplicate(true))
+	var first_form: Dictionary = forms[0]
+	forms.append(first_form.duplicate(true))
 	if _loads(spots, kinds, forged_dup):
 		return "forged save with duplicate short_id loaded"
 	var forged_copy: Dictionary = base.duplicate(true)
@@ -260,11 +258,22 @@ func _loads(spots: Array[Vector2i], kinds: Array[String], data: Dictionary) -> b
 
 
 static func _feature_values(saved: Dictionary) -> Dictionary:
-	for entry: Variant in saved["features"]:
-		var table: Dictionary = entry as Dictionary
+	for table: Dictionary in saved["features"]:
 		if table["id"] == AbsorptionFeature.ID:
-			return table["values"] as Dictionary
+			return table["values"]
 	return {}
+
+
+func _pair_state() -> GameState:
+	return _state([Vector2i(0, 0), Vector2i(1, 0)], [ABSORBER, PREY])
+
+
+static func _wild(state: GameState) -> WildMonsterFeature:
+	return state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+
+
+static func _absorption(state: GameState) -> AbsorptionFeature:
+	return state.feature(AbsorptionFeature.ID) as AbsorptionFeature
 
 
 ## Minimal deterministic GameState with a flat hex disc and named wild monsters at `spots`.
@@ -287,6 +296,7 @@ func _state(spots: Array[Vector2i], kinds: Array[String]) -> GameState:
 		BYSTANDER: PREY_STRENGTH,
 	}
 	var features: Array[Feature] = [
+		MovementFeature.new(),
 		KnockdownFeature.new(),
 		TrailFeature.new(),
 		HealthFeature.new(hps),

@@ -121,9 +121,7 @@ func form_of_species(species_id: String, short_id: String = "") -> AbsorbedForm:
 ## Copies of every form in `absorber_id`'s catalogue, in absorption/grant order.
 func catalogue_of(absorber_id: int) -> Array[AbsorbedForm]:
 	var result: Array[AbsorbedForm] = []
-	var forms: Array = _catalogues.get(absorber_id, [])
-	for item: Variant in forms:
-		var form: AbsorbedForm = item as AbsorbedForm
+	for form: AbsorbedForm in _forms_of(absorber_id):
 		result.append(form.copy())
 	return result
 
@@ -132,9 +130,7 @@ func catalogue_of(absorber_id: int) -> Array[AbsorbedForm]:
 func has_absorbed(absorber_id: int, short_id: String) -> bool:
 	if short_id.is_empty():
 		return false
-	var forms: Array = _catalogues.get(absorber_id, [])
-	for item: Variant in forms:
-		var form: AbsorbedForm = item as AbsorbedForm
+	for form: AbsorbedForm in _forms_of(absorber_id):
 		if form.short_id == short_id:
 			return true
 	return false
@@ -199,6 +195,14 @@ func _may_absorb(
 	return true
 
 
+## The typed forms stored for `absorber_id`, in absorption/grant order.
+func _forms_of(absorber_id: int) -> Array[AbsorbedForm]:
+	var typed: Array[AbsorbedForm] = []
+	if _catalogues.has(absorber_id):
+		typed.assign(_catalogues[absorber_id])
+	return typed
+
+
 ## The absorber entity ids that have a non-empty catalogue, in id order.
 func _absorber_ids() -> Array[int]:
 	var ids: Array[int] = []
@@ -215,10 +219,9 @@ func hash_values() -> Array[int]:
 	var ids: Array[int] = _absorber_ids()
 	var values: Array[int] = [ids.size()]
 	for absorber_id: int in ids:
-		var forms: Array = _catalogues[absorber_id]
+		var forms: Array[AbsorbedForm] = _forms_of(absorber_id)
 		values.append_array([absorber_id, forms.size()])
-		for item: Variant in forms:
-			var form: AbsorbedForm = item as AbsorbedForm
+		for form: AbsorbedForm in forms:
 			values.append_array(form.hash_values())
 	values.append(copies.size())
 	values.append_array(copies)
@@ -230,8 +233,7 @@ func save_values() -> Dictionary:
 	var saved: Array[Dictionary] = []
 	for absorber_id: int in _absorber_ids():
 		var forms: Array[Dictionary] = []
-		for item: Variant in _catalogues[absorber_id]:
-			var form: AbsorbedForm = item as AbsorbedForm
+		for form: AbsorbedForm in _forms_of(absorber_id):
 			forms.append(form.to_data())
 		saved.append({ "absorber": absorber_id, "forms": forms })
 	return { "catalogues": saved, "copies": copies.duplicate() }
