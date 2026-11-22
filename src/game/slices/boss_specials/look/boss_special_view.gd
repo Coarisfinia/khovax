@@ -139,15 +139,15 @@ func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 		if struck == null or not struck.special:
 			continue
 		var boss: Entity = driver.state.entity(struck.monster_id)
-		var sees_boss: bool = boss != null and FogView.ally_sees(driver.state, boss.tile)
+		var sees_boss: bool = WildMonsterView.is_shown(driver.state, struck.monster_id)
 		var sees_target: bool = FogView.ally_sees(driver.state, struck.tile)
 		if not sees_boss and not sees_target:
 			continue
 		var species: String = BossSpecialFeature.special_of(wild, struck.monster_id)
 		var color: Color = TypeGlow.of(species)
-		if boss != null:
+		if sees_boss:
 			show_caster_burst(boss.tile, _origin_of(struck.monster_id, boss.tile), color)
-		if not struck.dodged:
+		if sees_target and not struck.dodged:
 			show_impact_burst(struck.tile, color)
 
 
