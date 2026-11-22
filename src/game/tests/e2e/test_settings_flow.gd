@@ -686,7 +686,7 @@ func _menu_development(tab: CharacterTab) -> String:
 	var picks: Array[String] = [DevelopmentWebView.title_text(), DevelopmentWebView.picks_text(1)]
 	if view.shown != picks or nodes != ["deep_1", "heavy_1", "sturdy_1", "swift_1"]:
 		return "the web doesn't show each direction's first node only: %s %s" % [view.shown, nodes]
-	var looks: String = _development_looks(view)
+	var looks: String = _development_looks(view, tab, first)
 	if not looks.is_empty():
 		return looks
 	view.buttons["sturdy_1"].pressed.emit()
@@ -926,6 +926,8 @@ func _taken_in_sight(view: DevelopmentWebView, node: String) -> String:
 	var rects: Array[Rect2] = []
 	for each: Button in view.buttons.values():
 		rects.append(each.get_global_rect().grow(-1.0))
+	for each: Button in view.core_buttons.values():
+		rects.append(each.get_global_rect().grow(-1.0))
 	for first: int in rects.size():
 		for second: int in range(first + 1, rects.size()):
 			if rects[first].intersects(rects[second]):
@@ -939,7 +941,11 @@ func _taken_in_sight(view: DevelopmentWebView, node: String) -> String:
 ## An open node of the web says what it shifts in words, is finger-sized, and stays reachable on a
 ## narrow screen: the web scrolls sideways on its own (#1441). A special or a passive node says what
 ## it grants (#1452).
-func _development_looks(view: DevelopmentWebView) -> String:
+func _development_looks(
+	view: DevelopmentWebView,
+	tab: CharacterTab,
+	short_id: String,
+) -> String:
 	var web: Control = view.buttons["sturdy_1"].get_parent()
 	var across: ScrollContainer = web.get_parent() as ScrollContainer
 	if across == null or across.horizontal_scroll_mode == ScrollContainer.SCROLL_MODE_DISABLED:
@@ -952,6 +958,39 @@ func _development_looks(view: DevelopmentWebView) -> String:
 	var grants: Array[String] = [view.node_text("heavy_4"), view.node_text("deep_4")]
 	if grants != (["Special +20%", "Passive\nLombu-bombu"] as Array[String]):
 		return "a special or a passive node doesn't say what it grants: %s" % [grants]
+	return _core_skills_shown(tab, view, short_id)
+
+
+## The monster's core skills sit at the web's middle, marked taken and innate in words (#68,
+## #2418), focusable for a controller (#438), costing no pick and doing nothing when pressed.
+func _core_skills_shown(tab: CharacterTab, view: DevelopmentWebView, short_id: String) -> String:
+	var expected: Array[String] = SpeciesContent.cached().core_skills("ombulumo")
+	var shown_core: Array[String] = []
+	shown_core.assign(view.core_buttons.keys())
+	if shown_core != expected:
+		return "the web's middle shows %s, not %s" % [shown_core, expected]
+	var abilities: Dictionary[String, Ability] = AbilityContent.cached().abilities
+	var monster: DominatedMonster = (
+		(tab.driver.holder as ProfileHolder).keeper.profile.monster_of(short_id)
+	)
+	var outbox: Outbox = (tab.driver.holder as ProfileHolder).keeper.profile.outbox
+	var before_outbox: int = outbox.entries.size()
+	for skill_id: String in expected:
+		var button: Button = view.core_buttons[skill_id]
+		var desc: String = TextTags.shown(abilities[skill_id].description)
+		if (not button.text.begins_with(DevelopmentWebView.innate_text())
+				or not button.text.contains(desc)):
+			return "core skill %s doesn't say it's innate and what it does: %s" % [
+				skill_id,
+				button.text,
+			]
+		if button.focus_mode != Control.FOCUS_ALL or button.disabled:
+			return "core skill %s can't take controller focus" % skill_id
+		button.pressed.emit()
+	if (not monster.taken.is_empty()
+			or monster.picks_left() != 1
+			or outbox.entries.size() != before_outbox):
+		return "pressing a core skill changed taken nodes, picks left or the outbox"
 	return ""
 
 
