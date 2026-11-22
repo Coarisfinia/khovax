@@ -8,7 +8,9 @@ extends RefCounted
 ## against it (weak otherwise); it's empty otherwise and while the chart is off
 ## (TypeEffectivenessFeature.strong_against, #701), and only the damage numbers read it (#764).
 ## `dodged` says the hit missed a companion that dodged it (#1499): it deals nothing, and the damage
-## numbers show it as a miss (#1564).
+## numbers show it as a miss (#1564). `special` says the hit is a boss's special
+## (BossSpecialFeature, #2439), not an auto attack, so the damage numbers show it larger and the
+## boss special's look plays its own effect on the boss and on what it struck.
 
 var monster_id: int
 var target_id: int
@@ -16,6 +18,7 @@ var tile: Vector2i
 var damage: int
 var strong: Array[bool]
 var dodged: bool = false
+var special: bool = false
 
 
 func _init(

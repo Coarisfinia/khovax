@@ -55,6 +55,19 @@ func show_auto(tile: Vector2i, damage: int, strong: Array[bool], dodged: bool = 
 		_rise(tile, auto_text(damage, dodged), no_marks if dodged else strong, true)
 
 
+## Shows a boss's special's `damage` landing on `tile`, `strong` as the type chart had it, or a
+## miss where it was `dodged`: full size and unhurried, like a companion's special (#2439).
+func show_boss_special(
+		tile: Vector2i,
+		damage: int,
+		strong: Array[bool],
+		dodged: bool = false,
+) -> void:
+	if _shown():
+		var no_marks: Array[bool] = []
+		_rise(tile, auto_text(damage, dodged), no_marks if dodged else strong, false)
+
+
 ## What an auto attack's `damage` shows: the miss's words where it was `dodged`.
 static func auto_text(damage: int, dodged: bool = false) -> String:
 	return TranslationServer.tr("miss") if dodged else "-%d" % damage
@@ -85,7 +98,10 @@ func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 		elif event is WildMonsterStruck:
 			var wild: WildMonsterStruck = event as WildMonsterStruck
 			if wild.target_id != 0:
-				show_auto(wild.tile, wild.damage, wild.strong, wild.dodged)
+				if wild.special:
+					show_boss_special(wild.tile, wild.damage, wild.strong, wild.dodged)
+				else:
+					show_auto(wild.tile, wild.damage, wild.strong, wild.dodged)
 
 
 ## Lets `text` rise from `tile` with `strong`'s marks, an `auto` attack's smaller and quicker, at

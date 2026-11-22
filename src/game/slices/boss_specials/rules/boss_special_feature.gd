@@ -191,7 +191,8 @@ func _fire(state: GameState, wild: WildMonsterFeature, boss: int, target: int) -
 
 
 ## The strike of the boss `boss`'s special, `species`' own, on `target` for `damage`: after the type
-## chart on a companion, for nothing on an invincible player.
+## chart on a companion, for nothing on an invincible player, and marked `special` (#2439) so views
+## show it apart from an auto attack.
 static func _struck(
 		state: GameState,
 		boss: int,
@@ -200,19 +201,23 @@ static func _struck(
 		damage: int,
 ) -> WildMonsterStruck:
 	var tile: Vector2i = state.entity(target).tile
+	var struck: WildMonsterStruck
 	if state.entity(target).slot != Entity.NO_SLOT:
 		var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
 		var dealt: int = 0 if health.is_invincible(state, target) else damage
-		return WildMonsterStruck.new(boss, target, tile, dealt)
-	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
-	var defender: String = companions.species_of(target)
-	return WildMonsterStruck.new(
-		boss,
-		target,
-		tile,
-		TypeEffectivenessFeature.scaled(state, damage, species, true, defender),
-		TypeEffectivenessFeature.strong_against(state, species, true, defender),
-	)
+		struck = WildMonsterStruck.new(boss, target, tile, dealt)
+	else:
+		var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
+		var defender: String = companions.species_of(target)
+		struck = WildMonsterStruck.new(
+			boss,
+			target,
+			tile,
+			TypeEffectivenessFeature.scaled(state, damage, species, true, defender),
+			TypeEffectivenessFeature.strong_against(state, species, true, defender),
+		)
+	struck.special = true
+	return struck
 
 
 ## The cooling bosses, in id order.
