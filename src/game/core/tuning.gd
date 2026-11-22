@@ -90,6 +90,10 @@ const PACK_KEEP_NEAR: int = 2
 ## instance's bundles, not rolled (owner's ground rule, #1697; #2239): young of their line, level 1
 ## and unevolved, beside the grown ones.
 const WILD_BABY_CHANCE: int = 600
+## How near any player has to come before a shy watcher hides and scurries away, in tiles, and how
+## many steps away out of sight it takes before leaving the region (#2416).
+const SHY_TRIGGER_RANGE: int = 4
+const SHY_LEAVE_STEPS: int = 3
 # Wild monsters' days (#1201).
 ## How many hours a diurnal or nocturnal monster sleeps in one block, and over how many hours after
 ## dusk (diurnal) or dawn (nocturnal) its bedtime is spread. A night or a day has room for both:

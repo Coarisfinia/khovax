@@ -940,7 +940,10 @@ func _check_escape_shared_seal() -> String:
 	var broken: String = _ring_broken_cleanly(state, events, ring)
 	if not broken.is_empty():
 		return broken
-	return _escaped_all(state, events, monsters)
+	var escaped: String = _escaped_all(state, events, monsters)
+	if not escaped.is_empty():
+		return escaped
+	return _check_shy_watcher()
 
 
 ## An escape state with weak escapers on `spots` enclosed by `ring`, with or without a totem placed
@@ -973,6 +976,216 @@ func _ring_broken_cleanly(
 		if _trails(state).shared.tiles.has(wall) and state.player(0).tile != wall:
 			return "the ring an escaper broke stayed on the trail at %s" % wall
 	return ""
+
+
+## A legend marks a wild monster `, shy` (#2416), and a region with one brings both the shy
+## watchers and the hiding slice; a duplicate `, shy` clause is refused.
+func _check_shy_watcher() -> String:
+	var marked: WildSpot = WildSpot.read(WildSpot.NAMED + WEAK + ", shy, on sand")
+	if marked == null or not marked.shy or marked.stands_on != "sand" or marked.species != WEAK:
+		return "a legend didn't mark its wild monster shy on sand"
+	if WildSpot.read(WildSpot.NAMED + WEAK + ", shy, shy") != null:
+		return "a legend accepted a duplicate shy clause"
+	var region: Region = _shy_state(false).region
+	var brought: Array[String] = RegionFeatures.of(region)
+	if not brought.has(ShyWatcherFeature.ID) or not brought.has(HidingFeature.ID):
+		return "a region with a shy watcher didn't bring shy_watchers and hiding"
+	if RegionFeatures.of(_outcome_state(WEAK, [Vector2i.ZERO]).region).has(ShyWatcherFeature.ID):
+		return "a region without a shy watcher brought shy_watchers"
+	return _check_shy_protected()
+
+
+## A shy watcher starts shown (even on shrubs) and held in place, can't be struck by a companion
+## or put a player in a fight, and can't be ringed or dominated (#2416).
+func _check_shy_protected() -> String:
+	var state: GameState = _shy_state(true)
+	var monster: int = _wild(state).monsters[0]
+	var shy: ShyWatcherFeature = state.feature(ShyWatcherFeature.ID) as ShyWatcherFeature
+	if not shy.is_shy(monster) or state.concealed(monster):
+		return "a shy watcher wasn't marked shy and shown at start"
+	if not _wild(state).held.has(monster):
+		return "a shy watcher wasn't held in place at start"
+	var far_tile: Vector2i = Vector2i(0, ShyWatcherFeature.TRIGGER_RANGE + 1)
+	var _player: Entity = state.add_entity(0, far_tile)
+	if CompanionAttackFeature.can_strike(state, _wild(state), Vector2i(1, 0), monster):
+		return "a companion could strike a shy watcher"
+	if Fight.involves(state, 0):
+		return "a shy watcher put a player in a fight"
+	# Walking a ring around the shy watcher doesn't encircle or dominate it.
+	var ring_state: GameState = _shy_state(false)
+	var ring: Array[Vector2i] = Hex.ring(SMALL_RING)
+	var _ringer: Entity = ring_state.add_entity(0, ring[0])
+	var _walked: Array[RefCounted] = FlowSteps.walk(ring_state, ring.slice(1))
+	if (not _domination(ring_state).encircled.is_empty()
+			or not _domination(ring_state).seals.is_empty()):
+		return "a ring encircled or sealed a shy watcher"
+	return _check_shy_hide_and_leave()
+
+
+## When a player comes within TRIGGER_RANGE tiles, a shy watcher hides via HidingFeature without
+## jumping out, steps away at its pace, hashes its progress, reloads mid-leaving identically,
+## leaves raising ShyMonsterLeft, and never returns to that spot in the same world (#2416).
+func _check_shy_hide_and_leave() -> String:
+	var state: GameState = _shy_state(false, "shy_woods")
+	var monster: int = _wild(state).monsters[0]
+	var short_id: String = _wild(state).short_id_of(monster)
+	var hiding: HidingFeature = state.feature(HidingFeature.ID) as HidingFeature
+	var shy: ShyWatcherFeature = state.feature(ShyWatcherFeature.ID) as ShyWatcherFeature
+	var player: Entity = state.add_entity(0, Vector2i(0, ShyWatcherFeature.TRIGGER_RANGE + 1))
+	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	if hiding.is_hidden(monster) or shy.is_leaving(monster) or state.concealed(monster):
+		return "a shy watcher hid while the player was outside trigger range"
+	var hash_watching: int = state.own_hash()
+	player.tile = Vector2i(0, ShyWatcherFeature.TRIGGER_RANGE)
+	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	if not hiding.is_hidden(monster) or not state.concealed(monster) or not shy.is_leaving(monster):
+		return "a shy watcher didn't hide and start leaving when a player neared"
+	if _has_jumped_out(state.events) or state.own_hash() == hash_watching:
+		return "a shy watcher jumped out or didn't change the state hash when hiding"
+	return _check_shy_step_and_reload(state, monster, short_id)
+
+
+## Steps the already-hidden shy watcher `monster` away with the player right next to it (verifying
+## no jump-out), reloads mid-leaving and verifies both finish identically with ShyMonsterLeft.
+func _check_shy_step_and_reload(state: GameState, monster: int, short_id: String) -> String:
+	var player: Entity = state.player(0)
+	player.tile = Vector2i(0, 1)
+	var step_problem: String = _step_shy_until(state, monster, true)
+	if not step_problem.is_empty():
+		return step_problem
+	var reloaded: GameState = _reload_shy_state(state, "shy_woods")
+	if reloaded == null:
+		return "a shy watcher didn't reload cleanly mid-leaving"
+	var left: ShyMonsterLeft = _finish_shy_leave(state)
+	var reloaded_left: ShyMonsterLeft = _finish_shy_leave(reloaded)
+	if left == null or reloaded_left == null or reloaded_left.tile != left.tile:
+		return "a shy watcher or its reload didn't finish leaving identically"
+	if (
+		left.monster_id != monster
+		or left.spot != Vector2i.ZERO
+		or left.species != WEAK
+		or left.short_id != short_id
+		or state.entity(monster) != null
+		or Hex.distance(left.tile, player.tile) <= Hex.distance(Vector2i.ZERO, player.tile)
+	):
+		return "ShyMonsterLeft didn't carry the shy watcher's spot, stepped tile and identity"
+	return _check_shy_persistence(state)
+
+
+## Advances `state` until `monster` takes its first step away (`until_moved`), failing on jump-out.
+func _step_shy_until(state: GameState, monster: int, until_moved: bool) -> String:
+	var limit: int = WildMonsterFeature.STEP_TICKS + 2
+	for _t: int in limit:
+		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+		if _has_jumped_out(state.events):
+			return "a hidden shy watcher jumped out when the player stood next to it"
+		if (until_moved
+				and state.entity(monster) != null
+				and state.entity(monster).tile != Vector2i.ZERO):
+			return ""
+	return "a hidden shy watcher didn't step away at its pace"
+
+
+## Steps `state` until one ShyMonsterLeft event is raised, returning it or null.
+func _finish_shy_leave(state: GameState) -> ShyMonsterLeft:
+	var limit: int = (ShyWatcherFeature.LEAVE_STEPS + 2) * WildMonsterFeature.STEP_TICKS
+	for _t: int in limit:
+		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+		if _has_jumped_out(state.events):
+			return null
+		var found: Array[ShyMonsterLeft] = _shy_left_in(state.events)
+		if found.size() == 1:
+			return found[0]
+	return null
+
+
+## Reloads `state` into a fresh shy-watcher state for `instance_id`, or null on mismatch.
+func _reload_shy_state(state: GameState, instance_id: String) -> GameState:
+	var restored: GameState = _shy_state(false, instance_id)
+	var data: DataReader = DataReader.new(state.to_data())
+	restored.load_data(data)
+	if data.failed() or restored.own_hash() != state.own_hash():
+		return null
+	return restored
+
+
+## A shy watcher that left stays gone on save/reload and after a fresh reload of the same instance
+## in the same world (even for another co-op player), and a cornered one still leaves (#2416).
+func _check_shy_persistence(after_left: GameState) -> String:
+	var restored: GameState = _shy_state(false, "shy_woods")
+	var data: DataReader = DataReader.new(after_left.to_data())
+	restored.load_data(data)
+	if data.failed() or restored.own_hash() != after_left.own_hash():
+		return "a shy watcher that left didn't save/reload with the same hash: " + data.problem
+	if not _wild(restored).monsters.is_empty():
+		return "a shy watcher returned after save/reload"
+	# Simulate an instance purge and re-entry in the same world by sharing the saved PlayerStores.
+	var purged: GameState = _shy_state(false, "shy_woods")
+	purged.stores = after_left.stores
+	var _other_player: Entity = purged.add_entity(
+		1,
+		Vector2i(0, ShyWatcherFeature.TRIGGER_RANGE + 1),
+	)
+	Simulation.step(purged, FlowSteps.command(Command.NO_MOVE))
+	if not _wild(purged).monsters.is_empty() or not _shy_left_in(purged.events).is_empty():
+		return "a shy watcher came back to its spot after the instance purged in the same world"
+	# A cornered shy watcher behind impassable terrain still hides and leaves without stalling.
+	var cornered: GameState = _shy_state(false, "shy_cornered")
+	for direction: Vector2i in Hex.DIRECTIONS:
+		cornered.region.terrain[direction] = Region.BLOCKED
+	var _watcher_id: int = _wild(cornered).monsters[0]
+	var _near: Entity = cornered.add_entity(0, Vector2i(0, 2))
+	var events: Array[ShyMonsterLeft] = []
+	for _t: int in WildMonsterFeature.STEP_TICKS + 3:
+		Simulation.step(cornered, FlowSteps.command(Command.NO_MOVE))
+		events.append_array(_shy_left_in(cornered.events))
+		if not events.is_empty():
+			break
+	if events.size() != 1 or not _wild(cornered).monsters.is_empty():
+		return "a cornered shy watcher didn't leave cleanly"
+	return ""
+
+
+## A disc of radius 6 with one shy wild monster at (0, 0) (#2416); `on_shrubs` puts it on a hiding
+## tile so tests can check it still starts shown.
+func _shy_state(on_shrubs: bool, instance_id: String = "") -> GameState:
+	var region: Region = Region.disc(ShyWatcherFeature.TRIGGER_RANGE + 2)
+	if on_shrubs:
+		region.terrain[Vector2i.ZERO] = HIDING_TILE
+	var spots: Array[Vector2i] = [Vector2i.ZERO]
+	region.wild_monsters = spots
+	var meaning: String = WildSpot.NAMED + WEAK + ", shy"
+	if on_shrubs:
+		meaning += ", on " + HIDING_TILE
+	region.add_placement(WildSpotPlacements.KIND, Vector2i.ZERO, meaning)
+	var hp: Dictionary[String, int] = { WEAK: OUTCOME_HP }
+	var strength: Dictionary[String, int] = { WEAK: WEAK_STRENGTH }
+	var features: Array[Feature] = [
+		MovementFeature.new(),
+		KnockdownFeature.new(),
+		TrailFeature.new(),
+		HealthFeature.new(hp),
+		WildMonsterFeature.new([], [], strength),
+		DominationFeature.new(),
+		HidingFeature.new(),
+		ShyWatcherFeature.new(instance_id),
+	]
+	return GameState.new(region, 1, features)
+
+
+static func _has_jumped_out(events: Array[RefCounted]) -> bool:
+	for event: RefCounted in events:
+		if event is MonsterJumpedOut:
+			return true
+	return false
+
+
+static func _shy_left_in(events: Array[RefCounted]) -> Array[ShyMonsterLeft]:
+	var found: Array[ShyMonsterLeft] = []
+	for event: RefCounted in events:
+		if event is ShyMonsterLeft:
+			found.append(event as ShyMonsterLeft)
+	return found
 
 
 ## Whether `events` show the escaper `monster` of `state` escaping once: out of the instance, its

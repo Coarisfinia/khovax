@@ -15,6 +15,9 @@ const NEAR: int = 1
 
 ## Every hidden wild monster's entity id, in id order.
 var hidden: Array[int] = []
+## The hidden wild monsters that stay out of sight without jumping out when a player nears (#2416,
+## ShyWatcherFeature), in id order.
+var quiet: Array[int] = []
 
 
 func id() -> String:
@@ -46,7 +49,7 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 	var still: Array[int] = []
 	for monster: int in hidden:
 		var tile: Vector2i = state.entity(monster).tile
-		if _player_near(state, tile):
+		if not quiet.has(monster) and _player_near(state, tile):
 			state.events.append(_jumped_out(monster, tile))
 			wild.hold(monster, false)
 		else:
@@ -56,6 +59,24 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 
 func entity_removed(_state: GameState, removed_id: int) -> void:
 	hidden.erase(removed_id)
+	quiet.erase(removed_id)
+
+
+## Hides the wild monster `entity_id` out of sight; when `no_jump` is true (#2416), it stays hidden
+## without jumping out when a player nears.
+func hide(entity_id: int, no_jump: bool = false) -> void:
+	if not hidden.has(entity_id):
+		hidden.append(entity_id)
+		hidden.sort()
+	if no_jump and not quiet.has(entity_id):
+		quiet.append(entity_id)
+		quiet.sort()
+
+
+## Reveals `entity_id` without jumping out or changing whether another rule holds it.
+func unhide(entity_id: int) -> void:
+	hidden.erase(entity_id)
+	quiet.erase(entity_id)
 
 
 ## Whether the wild monster with this entity id is hidden.
@@ -99,18 +120,26 @@ static func has_hiding(region: Region) -> bool:
 func hash_values() -> Array[int]:
 	var values: Array[int] = [hidden.size()]
 	values.append_array(hidden)
+	# Only mix quiet ids when present so instances without quiet hiders keep their hash (#876).
+	if not quiet.is_empty():
+		values.append(quiet.size())
+		values.append_array(quiet)
 	return values
 
 
-## The wild monsters still hidden, by entity id.
+## The wild monsters still hidden, by entity id, and the quiet ones when any are.
 func save_values() -> Dictionary:
-	return { "hidden": hidden }
+	var saved: Dictionary = { "hidden": hidden }
+	if not quiet.is_empty():
+		saved["quiet"] = quiet
+	return saved
 
 
 func load_values(state: GameState, values: DataReader) -> void:
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	var saved: Array[int] = values.wholes("hidden", 1, DataReader.MOST)
 	hidden.clear()
+	quiet.clear()
 	for monster: int in saved:
 		if wild == null or not wild.monsters.has(monster) or hidden.has(monster):
 			values.fail("hidden %d isn't one wild monster" % monster)
@@ -118,6 +147,14 @@ func load_values(state: GameState, values: DataReader) -> void:
 		hidden.append(monster)
 		wild.hold(monster, true)
 	hidden.sort()
+	if (values.data as Dictionary).has("quiet"):
+		var saved_quiet: Array[int] = values.wholes("quiet", 1, DataReader.MOST)
+		for monster: int in saved_quiet:
+			if not hidden.has(monster) or quiet.has(monster):
+				values.fail("quiet %d isn't one hidden wild monster" % monster)
+				return
+			quiet.append(monster)
+		quiet.sort()
 
 
 static func _jumped_out(monster: int, tile: Vector2i) -> MonsterJumpedOut:

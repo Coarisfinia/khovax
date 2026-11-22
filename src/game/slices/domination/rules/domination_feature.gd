@@ -66,6 +66,12 @@ func after() -> Array[String]:
 	return earlier
 
 
+## Shy watchers step later (#2416), and can't be ringed or dominated.
+func before() -> Array[String]:
+	var later: Array[String] = [ShyWatcherFeature.ID]
+	return later
+
+
 func step(state: GameState, commands: Array[Command]) -> void:
 	# Rings sealing since an earlier tick push first, so a seal started this tick pushes next tick,
 	# and a ring closed this tick waits at least until the next.
@@ -148,10 +154,16 @@ func _close_rings(state: GameState) -> void:
 		# One flood per move, for every monster at once (#104).
 		var edge: Array[Vector2i] = _edge_of(state.region)
 		var reachable: Dictionary[Vector2i, bool] = RingShape.outside(state.region, trail, edge)
+		var shy: ShyWatcherFeature = state.feature(ShyWatcherFeature.ID) as ShyWatcherFeature
 		var inside: Array[int] = []
 		for monster_id: int in wild.monsters:
 			var spot: Vector2i = state.entity(monster_id).tile
-			if not trail.tiles.has(spot) and not reachable.has(spot) and not _in_ring(monster_id):
+			if (
+				(shy == null or not shy.is_shy(monster_id))
+				and not trail.tiles.has(spot)
+				and not reachable.has(spot)
+				and not _in_ring(monster_id)
+			):
 				inside.append(monster_id)
 		if inside.is_empty():
 			continue
@@ -160,7 +172,7 @@ func _close_rings(state: GameState) -> void:
 			trail,
 			_spots(state, inside),
 		)
-		var dominator_id: int = dominator_of(state, trail, walls)
+		var dominator_id: int = _dominator_of(state, trail, walls)
 		if dominator_id > 0 and not seals.has(dominator_id) and not encircled.has(dominator_id):
 			encircled[dominator_id] = inside
 
@@ -176,7 +188,7 @@ static func _spots(state: GameState, ids: Array) -> Array[Vector2i]:
 ## Who a ring's domination goes to: of the players in the instance who colored a tile of its
 ## `walls`, the one in the lowest slot (owner, #86), as their entity id; 0 when none of them is here
 ## any more.
-static func dominator_of(state: GameState, trail: Trail, walls: Array[Vector2i]) -> int:
+static func _dominator_of(state: GameState, trail: Trail, walls: Array[Vector2i]) -> int:
 	var best: Entity = null
 	for wall: Vector2i in walls:
 		var colorer_id: int = trail.tiles.get(wall, 0)
@@ -440,7 +452,7 @@ func load_values(state: GameState, values: DataReader) -> void:
 		if (entry.data as Dictionary).has("ward_power"):
 			ward_power_then = entry.whole("ward_power", 0, DataReader.MOST)
 		var seal: RingSeal = RingSealing.build(state, trail, monsters, ward_power_then)
-		if dominator_of(state, trail, seal.walls) != dominator_id:
+		if _dominator_of(state, trail, seal.walls) != dominator_id:
 			values.fail("sealing ring of %d: its domination goes to someone else" % dominator_id)
 			return
 		problem = _progress_problem(state, seal, entry)
@@ -476,7 +488,7 @@ func _load_waiting(state: GameState, values: DataReader) -> void:
 			trail,
 			_spots(state, monsters),
 		)
-		if dominator_of(state, trail, walls) != dominator_id:
+		if _dominator_of(state, trail, walls) != dominator_id:
 			values.fail("waiting ring of %d: its domination goes to someone else" % dominator_id)
 			return
 		encircled[dominator_id] = monsters

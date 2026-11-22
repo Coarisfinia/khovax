@@ -52,6 +52,7 @@ func after() -> Array[String]:
 		HealthFeature.ID,
 		WildMonsterFeature.ID,
 		HidingFeature.ID,
+		ShyWatcherFeature.ID,
 		DominationFeature.ID,
 		TypeEffectivenessFeature.ID,
 		TonicEffectsFeature.ID,
@@ -177,7 +178,14 @@ static func can_strike(
 	if not wild.monsters.has(monster_id) or state.entity(monster_id) == null:
 		return false
 	var hiding: HidingFeature = state.feature(HidingFeature.ID) as HidingFeature
+	var shy: ShyWatcherFeature = state.feature(ShyWatcherFeature.ID) as ShyWatcherFeature
 	var domination: DominationFeature = state.feature(DominationFeature.ID) as DominationFeature
 	var hidden: bool = hiding != null and hiding.is_hidden(monster_id)
+	var watcher: bool = shy != null and shy.is_shy(monster_id)
 	var sealed: bool = domination != null and domination.is_sealed(monster_id)
-	return not hidden and not sealed and Hex.distance(state.entity(monster_id).tile, tile) == 1
+	return (
+		not hidden
+		and not watcher
+		and not sealed
+		and Hex.distance(state.entity(monster_id).tile, tile) == 1
+	)

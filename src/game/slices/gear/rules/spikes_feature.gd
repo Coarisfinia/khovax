@@ -57,7 +57,7 @@ func after() -> Array[String]:
 ## The hiding and the companions, which tell with the wild monsters and the rings whether a player
 ## is in a fight (Fight), where their trap doesn't change (#776), as the last tick left them.
 func before() -> Array[String]:
-	var later: Array[String] = [HidingFeature.ID, CompanionFeature.ID]
+	var later: Array[String] = [HidingFeature.ID, ShyWatcherFeature.ID, CompanionFeature.ID]
 	return later
 
 

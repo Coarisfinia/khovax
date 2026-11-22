@@ -96,6 +96,7 @@ static func _region_and_party_rules() -> Dictionary[String, Callable]:
 		TriggerFeature.ID: _plain(TriggerFeature),
 		EnteringFeature.ID: _plain(EnteringFeature),
 		HidingFeature.ID: _plain(HidingFeature),
+		ShyWatcherFeature.ID: _shy_watchers,
 		NpcFeature.ID: _plain(NpcFeature),
 		# Right after the people, whose talks start an escort (#1588), and after the exits and the
 		# health, whose events say a guide's player leaves.
@@ -137,6 +138,11 @@ static func _region_and_party_rules() -> Dictionary[String, Callable]:
 		SceneFeature.ID: SceneFactory.build,
 	}
 	return rules
+
+
+## Shy watchers, which name their instance in the left-spots store they record (#2416).
+static func _shy_watchers(setup: FeatureSetup) -> Feature:
+	return ShyWatcherFeature.new(setup.instance)
 
 
 ## Waystones, which name their instance in the respawn point they set.

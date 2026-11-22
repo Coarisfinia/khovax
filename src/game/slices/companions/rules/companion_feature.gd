@@ -117,6 +117,7 @@ func after() -> Array[String]:
 		WildMonsterFeature.ID,
 		DominationFeature.ID,
 		HidingFeature.ID,
+		ShyWatcherFeature.ID,
 	]
 	return earlier
 

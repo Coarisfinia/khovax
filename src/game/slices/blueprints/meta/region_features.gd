@@ -51,7 +51,7 @@ static func of(region: Region) -> Array[String]:
 				ForagingFeature.ID,
 			],
 		)
-	if HidingFeature.has_hiding(region):
+	if HidingFeature.has_hiding(region) or ShyWatcherFeature.has_shy(region):
 		needed.append(HidingFeature.ID)
 	needed.append_array(_marked_wild_rules(region))
 	if TileHarvestFeature.has_harvestable(region):
@@ -66,13 +66,16 @@ static func of(region: Region) -> Array[String]:
 
 
 ## The features for what `region`'s legend marks its named wild monsters with: a boss fires its
-## special (#2410), and one marked escaping escapes at its line (#2411).
+## special (#2410), one marked escaping escapes at its line (#2411), and a shy watcher hides and
+## leaves when a player nears (#2416).
 static func _marked_wild_rules(region: Region) -> Array[String]:
 	var needed: Array[String] = []
 	if BossSpecialFeature.has_boss(region):
 		needed.append(BossSpecialFeature.ID)
 	if EscapeFeature.has_escaper(region):
 		needed.append(EscapeFeature.ID)
+	if ShyWatcherFeature.has_shy(region):
+		needed.append(ShyWatcherFeature.ID)
 	return needed
 
 
@@ -88,6 +91,7 @@ static func _built_in() -> Array[String]:
 		HuntFeature.ID,
 		ForagingFeature.ID,
 		HidingFeature.ID,
+		ShyWatcherFeature.ID,
 		BossSpecialFeature.ID,
 		TileHarvestFeature.ID,
 		WaystoneFeature.ID,

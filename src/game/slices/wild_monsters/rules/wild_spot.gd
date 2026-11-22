@@ -21,6 +21,9 @@ const ON: String = "on "
 ## that share, from 1% to 99%, it escapes instead of fainting or being dominated. With `wounded`,
 ## the line must lie below Tuning.WOUNDED_HP (#2446), or it would start past its line.
 const ESCAPING: String = "escaping at "
+## `, shy` (#2416, ShyWatcherFeature): watches out of reach, can't be struck, ringed or dominated,
+## and hides and leaves the region for good in this world when any player comes near.
+const SHY: String = "shy"
 const PERCENT: String = "%"
 const WHOLE: int = 100
 
@@ -29,6 +32,7 @@ var wounded: bool = false
 var emits: String = ""
 var target: String = ""
 var boss: bool = false
+var shy: bool = false
 ## The meaning of the tile kind it stands on (`sand`), or "" for ground.
 var stands_on: String = ""
 ## The share of the way left where it escapes (`, escaping at`), in thousandths (Fixed), or 0 when
@@ -64,6 +68,9 @@ static func _read_clause(spot: WildSpot, clause: String) -> bool:
 		return true
 	if clause == BOSS and not spot.boss:
 		spot.boss = true
+		return true
+	if clause == SHY and not spot.shy:
+		spot.shy = true
 		return true
 	if clause.begins_with(EMITTING) and spot.emits.is_empty() and Ids.is_id(emitted):
 		spot.emits = emitted
