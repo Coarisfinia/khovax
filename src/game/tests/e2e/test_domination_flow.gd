@@ -3074,7 +3074,7 @@ func _verify_boss_cooldown_ring(
 		return "a boss that just fired its special still showed %d cooldown marks" % [
 			view.filled_marks(boss_id),
 		]
-	var half: int = bosses.cooldown_left(boss_id) / 2
+	var half: int = floori(bosses.cooldown_left(boss_id) / 2.0)
 	for _tick: int in half:
 		Simulation.step(driver.state, FlowSteps.command(Command.NO_MOVE))
 	view.show_state()
