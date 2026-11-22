@@ -158,6 +158,15 @@
 				"type": "string",
 				"pattern": "^[A-Za-z0-9_-][A-Za-z0-9._/-]*\\.(svg|png|jpg|jpeg|webp)$"
 			}
+		},
+		"scenes": {
+			"description": "Optional. Each scene's JSONC file (#2415), in the scenes slice's format (slices/scenes/data/scenes.schema.json), by its id, relative to the pack's root, never climbing out of it.",
+			"type": "object",
+			"propertyNames": { "pattern": "^[a-z][a-z0-9_]*$" },
+			"additionalProperties": {
+				"type": "string",
+				"pattern": "^[A-Za-z0-9_-][A-Za-z0-9._/-]*\\.jsonc$"
+			}
 		}
 	}
 }

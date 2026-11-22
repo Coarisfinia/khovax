@@ -26,6 +26,7 @@ const FIELDS: Array[String] = [
 	"harvest_tables",
 	"tonics",
 	"runes",
+	"scenes",
 ]
 ## Each section of resources the manifest lists, one file per id, with the type its files load as;
 ## "" for a file read as text (a region file or a realm, #1861, a quest, #1888, a species, #1903, a
@@ -47,6 +48,7 @@ const KINDS: Dictionary[String, String] = {
 	"harvest_tables": "",
 	"tonics": "",
 	"runes": "Texture2D",
+	"scenes": "",
 }
 ## The section of regions arranged from pieces (#1861): each region's piece files by its id, read as
 ## text like the region files.
@@ -67,15 +69,18 @@ const ENDINGS: Dictionary[String, Array] = {
 	"harvest_tables": ["jsonc"],
 	"tonics": ["jsonc"],
 	"runes": ["svg", "png", "jpg", "jpeg", "webp"],
+	"scenes": ["jsonc"],
 }
 ## The sections read whole by their Content from the files files_of gives, never looked up by one
 ## id: each realm (#1861), quest (#1888), species (#1903), tile blueprint (#1901), loot table and
-## material (#1953), harvest table (#1990) and tonic (#2090), and the rune script's glyphs
-## (#1855), a whole script a pack replaces.
+## material (#1953), harvest table (#1990) and tonic (#2090), the rune script's glyphs
+## (#1855), and scenes (#2415).
 const LISTED: Array[String] = [
 	"realms", "quests", "species", "tiles", "loot_tables", "materials", "harvest_tables", "tonics",
-	"runes",
+	"runes", "scenes",
 ]
+## Sections that may be omitted from a pack manifest (defaulting to empty).
+const OPTIONAL: Array[String] = ["scenes"]
 ## A version: major.minor.patch.
 const VERSION: String = "\\A[0-9]+\\.[0-9]+\\.[0-9]+\\z"
 
@@ -184,6 +189,8 @@ func _read(data: Dictionary) -> String:
 	var found: Dictionary[String, Dictionary] = {}
 	for kind: String in KINDS:
 		var raw: Variant = data.get(kind)
+		if raw == null and OPTIONAL.has(kind):
+			raw = {}
 		if not raw is Dictionary:
 			return "its %s must be an object" % kind
 		var entries: Dictionary = raw

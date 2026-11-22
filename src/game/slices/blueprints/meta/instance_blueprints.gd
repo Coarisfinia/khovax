@@ -320,6 +320,9 @@ static func _features(named: Blueprint, region: Region) -> Array[String]:
 	listed.append_array(RegionFeatures.of(region))
 	if not named.chest_table.is_empty():
 		listed.append(ChestFeature.ID)
+	if SceneContent.cached().has_for(named.id):
+		listed.append(SceneHoldFeature.ID)
+		listed.append(SceneFeature.ID)
 	return listed
 
 

@@ -1,0 +1,117 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://github.com/Coarisfinia/khovax/slices/scenes/data/scenes.schema.json",
+	"title": "Scene",
+	"description": "A deterministic scene (#2415): starts on an EventEmitted in its instance, holds every player there and pauses wild attacks and hunts while running its steps in order. One file per scene in resourcepacks/default/scenes/<id>.jsonc.",
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["id", "on", "steps"],
+	"properties": {
+		"id": {
+			"description": "Stable scene id, matching its file name: lowercase words joined by underscores.",
+			"type": "string",
+			"pattern": "^[a-z][a-z0-9_]*$"
+		},
+		"instance": {
+			"description": "Optional instance blueprint id where this scene runs; omitted means any instance where its `on` event fires.",
+			"type": "string",
+			"pattern": "^[a-z][a-z0-9_]*$"
+		},
+		"on": {
+			"description": "The EventEmitted name (legend emitting event, escape, or quest event) that starts this scene.",
+			"type": "string",
+			"pattern": "^[a-z][a-z0-9_]*$"
+		},
+		"once": {
+			"description": "Whether this scene runs at most once per instance (default true).",
+			"type": "boolean"
+		},
+		"steps": {
+			"description": "The steps the runner executes in order.",
+			"type": "array",
+			"minItems": 1,
+			"items": {
+				"oneOf": [
+					{
+						"type": "object",
+						"additionalProperties": false,
+						"required": ["kind", "ticks"],
+						"properties": {
+							"kind": { "const": "wait" },
+							"ticks": {
+								"description": "Whole ticks to wait before advancing.",
+								"type": "integer",
+								"minimum": 1
+							}
+						}
+					},
+					{
+						"type": "object",
+						"additionalProperties": false,
+						"required": ["kind", "actor", "to"],
+						"properties": {
+							"kind": { "const": "move" },
+							"actor": {
+								"description": "Actor id: an NPC id, a wild monster's quest target or species id, or player / player_0..player_3.",
+								"type": "string",
+								"pattern": "^[a-z][a-z0-9_]*$"
+							},
+							"to": {
+								"description": "Destination hex tile [q, r].",
+								"type": "array",
+								"minItems": 2,
+								"maxItems": 2,
+								"items": { "type": "integer" }
+							},
+							"pace": {
+								"description": "Optional ticks per tile step; omitted uses the actor's natural pace.",
+								"type": "integer",
+								"minimum": 1
+							}
+						}
+					},
+					{
+						"type": "object",
+						"additionalProperties": false,
+						"required": ["kind", "actor", "target", "amount"],
+						"properties": {
+							"kind": { "const": "strike" },
+							"actor": {
+								"description": "Attacking actor id.",
+								"type": "string",
+								"pattern": "^[a-z][a-z0-9_]*$"
+							},
+							"target": {
+								"description": "Target actor id.",
+								"type": "string",
+								"pattern": "^[a-z][a-z0-9_]*$"
+							},
+							"amount": {
+								"description": "Whole damage dealt.",
+								"type": "integer",
+								"minimum": 1
+							},
+							"lethal": {
+								"description": "Whether the strike may fell the target (default false: stops at 1 HP).",
+								"type": "boolean"
+							}
+						}
+					},
+					{
+						"type": "object",
+						"additionalProperties": false,
+						"required": ["kind", "event"],
+						"properties": {
+							"kind": { "const": "emit" },
+							"event": {
+								"description": "The EventEmitted name raised for quests and other rules.",
+								"type": "string",
+								"pattern": "^[a-z][a-z0-9_]*$"
+							}
+						}
+					}
+				]
+			}
+		}
+	}
+}
